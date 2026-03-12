@@ -7,6 +7,12 @@ Recent changes to the Specify CLI and templates are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-03-13
+
+### Changed
+
+- chore: publish 1.3.0 from `bigsmartben/sdd` main
+
 ## [0.2.1] - 2026-03-11
 
 ### Changed
@@ -50,7 +56,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - fix: use RELEASE_PAT so tag push triggers release workflow (#1736)
 - fix: release-trigger uses release branch + PR instead of direct push to main (#1733)
 - fix: Split release process to sync pyproject.toml version with git tags (#1732)
-
 
 ## [Unreleased]
 
@@ -133,7 +138,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - fix: release-trigger uses release branch + PR instead of direct push to main (#1733)
 - fix: Split release process to sync pyproject.toml version with git tags (#1732)
 
-
 ## [0.1.13] - 2026-03-03
 
 ### Fixed
@@ -143,6 +147,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added generation of companion `.prompt.md` files in `.github/prompts/` during extension command registration, matching the release packaging behavior
   - Added cleanup of `.prompt.md` companion files when removing extensions via `specify extension remove`
 - Fixed a syntax regression in `src/specify_cli/__init__.py` in `_build_ai_assistant_help()` that broke `ruff` and `pytest` collection in CI.
+
 ## [0.1.12] - 2026-03-02
 
 ### Changed
@@ -150,7 +155,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - fix: use RELEASE_PAT so tag push triggers release workflow (#1736)
 - fix: release-trigger uses release branch + PR instead of direct push to main (#1733)
 - fix: Split release process to sync pyproject.toml version with git tags (#1732)
-
 
 ## [0.1.10] - 2026-03-02
 
