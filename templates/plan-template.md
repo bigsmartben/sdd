@@ -9,6 +9,28 @@
 
 [Extract from feature spec: primary requirement + technical approach from research]
 
+## Stage Overview
+
+| Stage | Name | Core Goal | Primary Outputs |
+|------:|------|-----------|-----------------|
+| 0 | Research | Resolve unknowns and record evidence-based decisions | `research.md` |
+| 1 | Data Model & Contracts | Define core model + contracts semantics (including state machine) | `data-model.md`, `contracts/` |
+| 2 | Test | Refine/enhance spec-stage UIF and complete normal/exception scenario coverage | `test-matrix.md` (or equivalent coverage artifact) |
+| 3 | Interface Detailed Design | Produce interface-level detailed design with method-level sequencing and update agent context | `interface-details/*.md`, agent-specific context file |
+
+## Design Terminology Boundaries
+
+- **Data Model UML Class (`data-model.md`)**: module-interface/core-class level. Focus on core entities, relationships, constraints, and lifecycle semantics.
+- **Interface Detailed Design UML Class (`interface-details/*.md`)**: detailed-design/full-class level. Focus on per-interface collaboration and implementation-level structure.
+- **Sequence diagrams in Stage 3** must use **method-call-level granularity**.
+- **Contracts semantics are canonical**: use `contracts` terminology uniformly. Downstream artifacts must reference contracts semantics.
+
+## Stage 1 State Machine Requirement
+
+- `data-model.md` MUST include the business state machine when domain lifecycle/state transition exists.
+- At minimum, define states, transitions, and transition guards/constraints.
+- State-machine semantics belong to model/design artifacts, not governance status snapshots.
+
 ## Technical Context
 
 <!--
@@ -29,7 +51,7 @@
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+*GATE: Must pass before Stage 0 research. Re-check after Stage 3 design.*
 
 [Gates determined based on constitution file]
 
@@ -40,11 +62,13 @@
 ```text
 specs/[###-feature]/
 ├── plan.md              # This file (/speckit.plan command output)
-├── research.md          # Phase 0 output (/speckit.plan command)
-├── data-model.md        # Phase 1 output (/speckit.plan command)
-├── quickstart.md        # Phase 1 output (/speckit.plan command)
-├── contracts/           # Phase 1 output (/speckit.plan command)
-└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
+├── research.md          # Stage 0 output (/speckit.plan command)
+├── data-model.md        # Stage 1 output (/speckit.plan command)
+├── contracts/           # Stage 1 mandatory output (/speckit.plan command, canonical contracts semantics)
+├── test-matrix.md       # Stage 2 output (/speckit.plan command, if applicable)
+├── interface-details/   # Stage 3 output (/speckit.plan command)
+├── quickstart.md        # Optional output (/speckit.plan command)
+└── tasks.md             # Next stage output (/speckit.tasks command - NOT created by /speckit.plan)
 ```
 
 ### Source Code (repository root)

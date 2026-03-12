@@ -16,6 +16,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 ## Pre-Execution Checks
 
 **Check for extension hooks (before implementation)**:
+
 - Check if `.specify/extensions.yml` exists in the project root.
 - If it exists, read it and look for entries under the `hooks.before_implement` key
 - If the YAML cannot be parsed or is invalid, skip hook checking silently and continue normally
@@ -25,7 +26,8 @@ You **MUST** consider the user input before proceeding (if not empty).
   - If the hook defines a non-empty `condition`, skip the hook and leave condition evaluation to the HookExecutor implementation
 - For each executable hook, output the following based on its `optional` flag:
   - **Optional hook** (`optional: true`):
-    ```
+
+    ```text
     ## Extension Hooks
 
     **Optional Pre-Hook**: {extension}
@@ -35,8 +37,10 @@ You **MUST** consider the user input before proceeding (if not empty).
     Prompt: {prompt}
     To execute: `/{command}`
     ```
+
   - **Mandatory hook** (`optional: false`):
-    ```
+
+    ```text
     ## Extension Hooks
 
     **Automatic Pre-Hook**: {extension}
@@ -45,6 +49,7 @@ You **MUST** consider the user input before proceeding (if not empty).
     
     Wait for the result of the hook command before proceeding to the Outline.
     ```
+
 - If no hooks are registered or `.specify/extensions.yml` does not exist, skip silently
 
 ## Outline
@@ -83,7 +88,21 @@ You **MUST** consider the user input before proceeding (if not empty).
      - Automatically proceed to step 3
 
 3. Load and analyze the implementation context:
-   - **REQUIRED**: Read tasks.md for the complete task list and execution plan
+   - **REQUIRED**: Read tasks.md as the runtime execution orchestration source
+   - **REQUIRED**: Consume these sections from tasks.md:
+     - `Generation Readiness Summary`
+     - `Upstream Reference Index`
+     - `Task Traceability Projection Index`
+     - `Execution Ordering Model` (especially `Task DAG`)
+     - `Global Foundation Tasks`
+     - `Interface Delivery Units (IFxx)`
+     - `Cross-Cutting and Finalization`
+   - **REQUIRED**: Treat `Task DAG` as the only dependency authority for runtime scheduling
+   - **REQUIRED**: Treat `[Pre:T###,...]` only as an inline dependency mirror (consistency check), not as dependency authority
+   - **REQUIRED**: Parse readiness status before execution:
+     - `BLOCKED`: stop and ask user for remediation decision before continuing
+     - `DEGRADED`: show risk/remediation notes and ask user whether to proceed
+     - `READY`: proceed normally
    - **REQUIRED**: Read plan.md for tech stack, architecture, and file structure
    - **IF EXISTS**: Read data-model.md for entities and relationships
    - **IF EXISTS**: Read contracts/ for API specifications and test requirements
@@ -135,43 +154,49 @@ You **MUST** consider the user input before proceeding (if not empty).
    - **Kubernetes/k8s**: `*.secret.yaml`, `secrets/`, `.kube/`, `kubeconfig*`, `*.key`, `*.crt`
 
 5. Parse tasks.md structure and extract:
-   - **Task phases**: Setup, Tests, Core, Integration, Polish
-   - **Task dependencies**: Sequential vs parallel execution rules
-   - **Task details**: ID, description, file paths, parallel markers [P]
-   - **Execution flow**: Order and dependency requirements
+   - **Execution scopes**: `GLOBAL` and `IFxx` units
+   - **Task DAG**: adjacency list and topological execution layers
+   - **Task metadata**: `TaskID`, `Type`, `Scope`, `Role`, `Pre`, description, file paths, completion anchors
+   - **Traceability metadata**: `InterfaceID`, `operationId`, requirement refs, verification refs, source refs, readiness/status notes
+   - **Execution flow**: DAG-driven order and file-level conflict constraints
 
 6. Execute implementation following the task plan:
-   - **Phase-by-phase execution**: Complete each phase before moving to the next
-   - **Respect dependencies**: Run sequential tasks in order, parallel tasks [P] can run together  
-   - **Follow TDD approach**: Execute test tasks before their corresponding implementation tasks
-   - **File-based coordination**: Tasks affecting the same files must run sequentially
-   - **Validation checkpoints**: Verify each phase completion before proceeding
+   - **DAG-first execution**: Schedule tasks strictly by `Task DAG` dependency satisfaction
+   - **Scope-aware flow**: Execute `GLOBAL` foundation tasks and `IFxx` unit tasks according to DAG, not section order alone
+   - **Parallel eligibility**: Tasks in the same DAG-ready layer may execute in parallel only when they have no shared file-path conflicts
+   - **Verify-before-Interface preference**: Prefer running `Type:Verify` tasks before corresponding `Type:Interface` tasks when DAG allows
+   - **Validation checkpoints**: Verify completion anchors and dependency closure before advancing to downstream DAG layers
 
 7. Implementation execution rules:
-   - **Setup first**: Initialize project structure, dependencies, configuration
-   - **Tests before code**: If you need to write tests for contracts, entities, and integration scenarios
-   - **Core development**: Implement models, services, CLI commands, endpoints
-   - **Integration work**: Database connections, middleware, logging, external services
-   - **Polish and validation**: Unit tests, performance optimization, documentation
+   - **GLOBAL foundation first when required by DAG**: Complete shared infra/bootstrap/config prerequisites before dependent IF tasks
+   - **Interface-unit delivery**: For each `IFxx`, execute verify + implementation work using task `Role` (e.g., contract, handler, service, persistence, wiring, smoke)
+   - **Traceability-preserving execution**: For each task, keep linkage to `operationId`, requirement refs, CaseID/TM/TC refs, and source refs from traceability index
+   - **Cross-cutting/finalization last when DAG-scheduled**: Run docs/final validation/cross-interface tasks after prerequisite IF/GLOBAL tasks complete
 
 8. Progress tracking and error handling:
    - Report progress after each completed task
-   - Halt execution if any non-parallel task fails
-   - For parallel tasks [P], continue with successful tasks, report failed ones
+   - Halt execution if any required DAG predecessor task fails
+   - For parallel-eligible DAG-ready tasks, continue successful tasks, report failed ones, and skip newly blocked descendants
+   - If traceability status for a target task is `BLOCKED`, do not execute it; report remediation
+   - If traceability status is `DEGRADED`, execute only after explicit user confirmation
    - Provide clear error messages with context for debugging
    - Suggest next steps if implementation cannot proceed
    - **IMPORTANT** For completed tasks, make sure to mark the task off as [X] in the tasks file.
 
 9. Completion validation:
-   - Verify all required tasks are completed
+   - Verify all reachable required DAG tasks are completed or explicitly waived by user
+   - Verify `Task DAG` dependency closure (no completed task missing required predecessors)
+   - Verify each `READY` interface unit (`IFxx`) meets its Definition of Done and completion anchors
+   - Verify traceability closure: each completed task can be mapped back to its required refs/source refs in the traceability index
    - Check that implemented features match the original specification
    - Validate that tests pass and coverage meets requirements
    - Confirm the implementation follows the technical plan
-   - Report final status with summary of completed work
+   - Confirm tasks.md checkboxes accurately reflect execution results
+   - Report final status with summary of completed work, blocked items, and remediation follow-ups
 
-Note: This command assumes a complete task breakdown exists in tasks.md. If tasks are incomplete or missing, suggest running `/speckit.tasks` first to regenerate the task list.
+Note: This command assumes a complete, DAG-usable tasks breakdown exists in tasks.md. If required sections are missing, DAG is invalid, or task rows are incomplete, suggest running `/speckit.tasks` first to regenerate the task list.
 
-10. **Check for extension hooks**: After completion validation, check if `.specify/extensions.yml` exists in the project root.
+1. **Check for extension hooks**: After completion validation, check if `.specify/extensions.yml` exists in the project root.
     - If it exists, read it and look for entries under the `hooks.after_implement` key
     - If the YAML cannot be parsed or is invalid, skip hook checking silently and continue normally
     - Filter to only hooks where `enabled: true`
@@ -180,7 +205,8 @@ Note: This command assumes a complete task breakdown exists in tasks.md. If task
       - If the hook defines a non-empty `condition`, skip the hook and leave condition evaluation to the HookExecutor implementation
     - For each executable hook, output the following based on its `optional` flag:
       - **Optional hook** (`optional: true`):
-        ```
+
+        ```text
         ## Extension Hooks
 
         **Optional Hook**: {extension}
@@ -190,12 +216,15 @@ Note: This command assumes a complete task breakdown exists in tasks.md. If task
         Prompt: {prompt}
         To execute: `/{command}`
         ```
+
       - **Mandatory hook** (`optional: false`):
-        ```
+
+        ```text
         ## Extension Hooks
 
         **Automatic Hook**: {extension}
         Executing: `/{command}`
         EXECUTE_COMMAND: {command}
         ```
+
     - If no hooks are registered or `.specify/extensions.yml` does not exist, skip silently

@@ -1,50 +1,180 @@
 # [PROJECT_NAME] Constitution
 <!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
 
+## Preamble
+
+This constitution defines the long-lived governance rules for this project.
+It exists to keep decisions consistent across specification, planning, task decomposition, and implementation.
+
+All principles in this constitution MUST:
+
+- be grounded in real project scenarios, risks, or boundary decisions;
+- be specific enough to verify during review and execution;
+- define clear constraints, not aspirational slogans only.
+
+If a governance rule is required but not yet fully defined, it MUST be recorded explicitly as `TODO(<TOPIC>): <reason>` rather than implied or silently omitted.
+
 ## Core Principles
+
+> Each principle should be written as an enforceable rule.
+> Recommended structure per principle:
+>
+> - **Rule**: what is required or prohibited
+> - **Scope**: where it applies
+> - **Rationale**: why it exists
+> - **Verification**: how compliance is checked
+> - **Exceptions**: when deviation is allowed and how it must be documented
 
 ### [PRINCIPLE_1_NAME]
 <!-- Example: I. Library-First -->
 [PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+<!--
+Suggested writing pattern:
+- Rule: ...
+- Scope: ...
+- Rationale: ...
+- Verification: ...
+- Exceptions: ...
+-->
 
 ### [PRINCIPLE_2_NAME]
 <!-- Example: II. CLI Interface -->
 [PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+<!--
+Suggested writing pattern:
+- Rule: ...
+- Scope: ...
+- Rationale: ...
+- Verification: ...
+- Exceptions: ...
+-->
 
 ### [PRINCIPLE_3_NAME]
 <!-- Example: III. Test-First (NON-NEGOTIABLE) -->
 [PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+<!--
+Suggested writing pattern:
+- Rule: ...
+- Scope: ...
+- Rationale: ...
+- Verification: ...
+- Exceptions: ...
+-->
 
 ### [PRINCIPLE_4_NAME]
 <!-- Example: IV. Integration Testing -->
 [PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+<!--
+Suggested writing pattern:
+- Rule: ...
+- Scope: ...
+- Rationale: ...
+- Verification: ...
+- Exceptions: ...
+-->
 
 ### [PRINCIPLE_5_NAME]
 <!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
 [PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+<!--
+Suggested writing pattern:
+- Rule: ...
+- Scope: ...
+- Rationale: ...
+- Verification: ...
+- Exceptions: ...
+-->
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Terminology & Boundary Definitions
+
+This section defines the key terms, boundaries, and semantic distinctions that MUST remain stable across downstream artifacts.
+
+Include only project-critical concepts here, for example:
+
+- core business terms that have precise meanings;
+- distinctions between user-facing concepts and internal technical representations;
+- phase or layer boundaries that must not be mixed;
+- terms that are commonly confused and therefore require explicit separation.
+
+[TERMINOLOGY_AND_BOUNDARIES]
+<!-- Example:
+- “User-visible field” means ...
+- “Contract model” means ... and MUST NOT be confused with persistence schema.
+- “Business state” MUST NOT be mixed with workflow status.
+-->
+
+## State Machine Applicability Gate
+
+This section defines when a feature MUST include a full business lifecycle state machine,
+and when a lightweight model is sufficient.
+
+### Definitions
+
+- `N`: number of distinct user-meaningful lifecycle states.
+- `T`: number of effective transitions (`FromState -> ToState` unique edges).
+
+### Applicability Rule
+
+A **Full FSM** (transition table + transition pseudocode + state diagram) is required iff:
+
+- `N > 3` **OR** `T >= 2N`
+
+If the rule is not met, use a **Lightweight State Model** instead:
+
+- state field definition (if any)
+- allowed transitions
+- forbidden transitions
+- key invariants (if any)
+
+### Exception Handling
+
+If a Full FSM is used below threshold, the plan MUST include explicit justification under
+complexity tracking (why lightweight is insufficient).
+
+## Constraints & Evolution Rules
+
+This section defines long-lived constraints that guide change over time.
+These rules should focus on compatibility, simplicity, and controlled evolution.
 
 [SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+<!-- Example:
+- Prefer additive changes over breaking changes.
+- Breaking changes MUST include explicit justification, migration plan, and rollout strategy.
+- New complexity MUST be justified by concrete scenario needs.
+- If a heavyweight design approach is used, document why a simpler approach is insufficient.
+-->
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+## Compliance & Review Gates
+
+This section defines how constitution compliance is evaluated in downstream work.
+
+Each gate SHOULD be expressed in terms of:
+
+- **Gate**: what must be true
+- **Severity**: `ERROR`, `WARN`, or equivalent project-defined level
+- **Evidence**: what artifact, test, review note, or trace is used to verify compliance
+- **Disposition**: whether work is blocked, allowed with justification, or advisory only
 
 [SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+<!-- Example:
+- Missing constitution-mandated test evidence = ERROR
+- Unjustified breaking interface change = ERROR
+- Terminology drift across spec/plan/tasks = WARN or ERROR
+- Undocumented exception to a core principle = ERROR
+-->
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
+
+This constitution supersedes lower-level conventions when conflicts arise.
+Amendments MUST be explicit, reviewed, and reflected in downstream guidance where applicable.
 
 [GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+<!-- Example:
+- All reviews MUST verify constitution compliance.
+- Exceptions MUST be documented with rationale and approval.
+- Amendments MUST include a summary of what changed, why it changed, and whether downstream artifacts require updates.
+- Version increments MUST reflect the semantic impact of the amendment.
+-->
 
 **Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
 <!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
