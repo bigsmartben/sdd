@@ -19,6 +19,9 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+003*
+.clinerules
+.history
 
 # Virtual environments
 venv/

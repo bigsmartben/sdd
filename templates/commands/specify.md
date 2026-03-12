@@ -68,17 +68,31 @@ Given that feature description, do this:
          - No reasonable default exists
        - **LIMIT: Maximum 3 [NEEDS CLARIFICATION] markers total**
        - Prioritize clarifications by impact: scope > security/privacy > user experience > technical details
-    4. Fill User Scenarios & Testing section
-       If no clear user flow: ERROR "Cannot determine user scenarios"
-    5. Generate Functional Requirements
-       Each requirement must be testable
-       Use reasonable defaults for unspecified details (document assumptions in Assumptions section)
-    6. Define Success Criteria
+    4. Build Global Context and boundaries
+       - Define actors
+       - Define in-scope and out-of-scope boundaries
+    5. Build field-level UDD (mandatory)
+       - Define core user-visible entities
+       - Define `Entity.field` rows with business calculation, boundaries, display rules, source type, and key path
+       - If user-visible data exists but no field-level UDD is provided: ERROR "UDD is required for user-visible data"
+    6. Build UC Overview and FR Index
+       - Define UC table with priority
+       - Define FR Index mapping UC ↔ FR ↔ scenarios
+    7. Build heavy UX flow sections
+       - Create Global UX Flow Overview for cross-UC flows
+       - For each interactive UC, provide main flow (Mermaid), path inventory, interaction step table, exception paths, postconditions
+       - If interactive UC lacks flow tables: ERROR "Heavy UX flow tables are required for interactive UCs"
+    8. Build UI sections (UI subnode)
+       - For each user-facing UC, define page/view info, component definitions, state rules, and component-data dependency table
+    9. Generate Functional Requirements
+       Each requirement must be testable and linked to scenarios and UDD references
+    10. Define Success Criteria
        Create measurable, technology-agnostic outcomes
        Include both quantitative metrics (time, performance, volume) and qualitative measures (user satisfaction, task completion)
        Each criterion must be verifiable without implementation details
-    7. Identify Key Entities (if data involved)
-    8. Return: SUCCESS (spec ready for planning)
+    11. Add Environment Edge Cases
+    12. Add Assumptions/Open Questions only when needed
+    13. Return: SUCCESS (spec ready for planning)
 
 5. Write the specification to SPEC_FILE using the template structure, replacing placeholders with concrete details derived from the feature description (arguments) while preserving section order and headings.
 
@@ -186,12 +200,26 @@ Given that feature description, do this:
 - Avoid HOW to implement (no tech stack, APIs, code structure).
 - Written for business stakeholders, not developers.
 - DO NOT create any checklists that are embedded in the spec. That will be a separate command.
+- Do NOT add governance content in spec (no SSOT governance states, stage dispatchers, interface registries, conversion reports, or coverage audit sections).
 
 ### Section Requirements
 
 - **Mandatory sections**: Must be completed for every feature
 - **Optional sections**: Include only when relevant to the feature
 - When a section doesn't apply, remove it entirely (don't leave as "N/A")
+
+### Required Spec Structure Rules (for this template)
+
+1. **Field-level UDD is mandatory** for core user-visible data.
+2. **Heavy UX flow tables are mandatory** for interactive UCs:
+   - Preconditions
+   - Main Flow (Mermaid)
+   - Path Inventory
+   - Interaction Step Table
+   - Exception Paths
+   - Postconditions
+3. **UI and UX subnodes are mandatory** for user-facing/interactive UCs.
+4. Keep spec focused on business semantics; avoid governance/process-control sections.
 
 ### For AI Generation
 
@@ -240,3 +268,13 @@ Success criteria must be:
 - "Database can handle 1000 TPS" (implementation detail, use user-facing metric)
 - "React components render efficiently" (framework-specific)
 - "Redis cache hit rate above 80%" (technology-specific)
+
+### Validation Additions for New Structure
+
+When validating the generated spec, also ensure:
+
+- UDD exists and is field-level (`Entity.field`) for core user-visible entities
+- Each interactive UC includes the heavy UX flow tables
+- Each user-facing UC includes UI definitions and component-data dependency table
+- FR sections reference scenarios and relevant UDD fields
+- No governance/audit payload is embedded in the spec body
