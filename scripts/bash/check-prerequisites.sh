@@ -131,6 +131,10 @@ if [[ -d "$CONTRACTS_DIR" ]] && [[ -n "$(ls -A "$CONTRACTS_DIR" 2>/dev/null)" ]]
     docs+=("contracts/")
 fi
 
+[[ -f "$TEST_MATRIX" ]] && docs+=("test-matrix.md")
+if [[ -d "$INTERFACE_DETAILS_DIR" ]] && [[ -n "$(ls -A "$INTERFACE_DETAILS_DIR" 2>/dev/null)" ]]; then
+    docs+=("interface-details/")
+fi
 [[ -f "$QUICKSTART" ]] && docs+=("quickstart.md")
 
 # Include tasks.md if requested and it exists
@@ -158,6 +162,8 @@ else
     check_file "$RESEARCH" "research.md"
     check_file "$DATA_MODEL" "data-model.md"
     check_dir "$CONTRACTS_DIR" "contracts/"
+    check_file "$TEST_MATRIX" "test-matrix.md"
+    check_dir "$INTERFACE_DETAILS_DIR" "interface-details/"
     check_file "$QUICKSTART" "quickstart.md"
     
     if $INCLUDE_TASKS; then

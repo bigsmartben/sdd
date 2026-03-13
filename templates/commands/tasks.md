@@ -86,29 +86,26 @@ You **MUST** consider the user input before proceeding (if not empty).
    - If data-model.md exists: identify global object baselines that tasks must reference (without rewriting semantics)
    - Generate a lightweight execution mapping by keeping task-level refs inside IF/global task definitions
    - Generate **Task DAG** as adjacency list and use it as the baseline dependency source for execution order
-   - Generate **Execution Flexibility Policy** section with default policy:
-     - `strict`: follow Task DAG exactly
-     - `adaptive`: allow local split/merge/resequence under dependency safety and task intent preservation
+   - Add a brief adaptation note only when the task graph or file layout suggests that `adaptive` mode needs special caution beyond normal dependency safety
    - Ensure each task line is concrete enough for execution while preserving room for bounded runtime adaptation
    - Generate tasks grouped by **GLOBAL** and **Interface Delivery Units (IFxx)** (see Task Generation Rules below)
-   - Validate task completeness: each IF unit has implementable tasks and verifiable completion criteria; each task has concrete path + completion anchor when relevant
+   - Validate task completeness: each IF unit has implementable tasks; each task has a concrete path, command target, or completion signal when relevant
 
 4. **Generate tasks.md**: Use `templates/tasks-template.md` as structure, fill with:
    - Correct feature name from plan.md
    - Upstream inputs reference table
    - Execution ordering model with **Task DAG**
-   - Execution flexibility policy (`strict`/`adaptive`)
    - Shared foundation tasks (cross-interface prerequisites)
    - Interface delivery units (`IFxx`) with verify + implementation tasks
    - Final cross-interface finalization tasks
-   - All tasks must follow the strict checklist format (see Task Generation Rules below)
-   - Clear file paths and completion anchors
+   - All tasks must follow the canonical task format (see Task Generation Rules below)
+   - Clear file paths, command targets, or completion signals where relevant
 
 5. **Report**: Output path to generated tasks.md and summary:
    - Total task count
    - Task count per interface unit (`IFxx`) and `GLOBAL`
    - DAG sanity check summary (e.g., missing predecessors or obvious cycles)
-   - Format validation: confirm ALL tasks follow the checklist format (checkbox, ID, type, role, path)
+   - Format validation: confirm ALL tasks follow the canonical task format closely enough for direct execution
 
 6. **Check for extension hooks**: After tasks.md is generated, check if `.specify/extensions.yml` exists in the project root.
    - If it exists, read it and look for entries under the `hooks.after_tasks` key
@@ -155,12 +152,12 @@ The tasks.md should be immediately executable - each task must be specific enoug
 Contract semantics come from `contracts/` only.
 Verification semantics come from `test-matrix.md` (if present).
 
-### Checklist Format (REQUIRED)
+### Canonical Task Format (REQUIRED)
 
-Every task MUST strictly follow this format:
+Every task MUST follow this format closely enough to be executed directly:
 
 ```text
-- [ ] T### [Type:Research|Interface|Verify|Infra|Docs] [IFxx?] [Role:...] [Pre:T###,...] Description with file path
+- [ ] T### [Type:Research|Interface|Verify|Infra|Docs] [IFxx?] [Role:...] [Pre:T###,...] Description with file path or command target
 ```
 
 **Format Components**:
@@ -171,18 +168,18 @@ Every task MUST strictly follow this format:
 4. **[IFxx] scope tag**:
    - Include when task belongs to an interface delivery unit
    - Omit only for true cross-interface/global tasks
-5. **[Role:...]**: REQUIRED execution role (e.g., `contract`, `handler`, `service`, `persistence`, `wiring`, `smoke`, `manual-check`)
+5. **[Role:...]**: Recommended when it clarifies execution focus (e.g., `contract`, `handler`, `service`, `persistence`, `wiring`, `smoke`, `manual-check`)
 6. **[Pre:T###,...]**: Optional inline dependency mirror; Task DAG remains authority
-7. **Description**: Clear action with exact file path and completion anchor where relevant
+7. **Description**: Clear action with exact file path, command target, or completion signal where relevant
 
 **Examples**:
 
 - ✅ CORRECT: `- [ ] T001 [Type:Infra] [Role:bootstrap] Initialize service scaffolding in backend/src/app.py`
 - ✅ CORRECT: `- [ ] T007 [Type:Verify] [IF01] [Role:contract] [Pre:T006] Validate submitGushiwenPracticeSession contract in tests/contract/test_submit_session.py`
 - ✅ CORRECT: `- [ ] T009 [Type:Interface] [IF01] [Role:handler] [Pre:T007] Implement submit handler in backend/src/handlers/submit_session.py (Completion Anchor: CaseID C-017 pass)`
-- ❌ WRONG: `- [ ] Create handler` (missing ID/type/role/path)
-- ❌ WRONG: `- [ ] T010 [IF01] Implement handler` (missing Type and Role)
-- ❌ WRONG: `- [ ] T011 [Type:Interface] Implement handler` (missing Role and path)
+- ❌ WRONG: `- [ ] Create handler` (missing ID/type and useful execution boundary)
+- ❌ WRONG: `- [ ] T010 [IF01] Implement handler` (missing Type and target)
+- ❌ WRONG: `- [ ] T011 [Type:Interface] Implement handler` (missing useful execution boundary)
 
 ### Task Organization
 
@@ -202,7 +199,7 @@ Every task MUST strictly follow this format:
 4. **From Verification Artifacts**:
    - Use deterministic refs (`operationId`, `CaseID`, `TM-*`, `TC-*`) for verify task targeting
    - Verification semantics come from upstream artifacts; tasks only reference and execute
-   - When both `FR/UC/UIF` refs and `CaseID/TM/TC` refs are present, treat `FR/UC/UIF` as requirement traceability context and `CaseID/TM/TC` as primary verification anchors
+   - When both `FR/UC/UIF` refs and `CaseID/TM/TC` refs are present, include only the refs that help execution or completion checking
 
 ### Runtime Adaptation Compatibility Rules
 
@@ -210,14 +207,13 @@ Every task MUST strictly follow this format:
 - Generation rules:
   - Keep Task DAG dependency-safe and minimally sufficient (avoid speculative over-constraint).
   - Keep `[Pre:T###,...]` consistent with DAG while recognizing it is an inline mirror.
-  - Prefer intent-oriented `Role` labels when possible (e.g., `input-boundary`, `business-rule`, `state-change`, `integration`, `verification`) instead of over-binding to one architecture style.
-  - Keep completion anchors deterministic (`CaseID/TM/TC`, contract pass, build/test pass) so adaptive execution remains checkable.
+  - Prefer intent-oriented `Role` labels when they help execution (e.g., `input-boundary`, `business-rule`, `state-change`, `integration`, `verification`) instead of over-binding to one architecture style.
+  - Use deterministic completion anchors when they are needed to prove task completion.
 
 ### Required Sections in Generated tasks.md
 
 - Upstream Inputs (Execution References)
 - Execution Ordering Model (`Task DAG` as dependency source)
-- Execution Flexibility Policy (`strict`/`adaptive` semantics)
 - Shared Foundation
 - Interface Delivery Units (`IFxx`)
 - Cross-Interface Finalization

@@ -24,6 +24,11 @@
     "MD060": false
   },
   "ignores": [
-    ".genreleases/"
+    ".genreleases/",
+    ".history/",
+    ".pytest_cache/",
+    ".specify/",
+    ".venv/",
+    ".ruff_cache/"
   ]
 }

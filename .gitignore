@@ -25,6 +25,9 @@ wheels/
 .github/
 specs/
 .ven311/
+.dev311/
+demos/
+demo-cline/
 
 # Virtual environments
 venv/

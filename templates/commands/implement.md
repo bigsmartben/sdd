@@ -111,7 +111,7 @@ You **MUST** consider the user input before proceeding (if not empty).
      - Display the table showing all checklists passed
      - Automatically proceed to step 3
 
-3. Load and analyze the implementation context:
+3. Load the execution context needed for the current run:
    - **REQUIRED**: Read tasks.md as the runtime execution orchestration source
    - **REQUIRED**: Consume these sections from tasks.md:
      - `Upstream Inputs (Execution References)`
@@ -127,11 +127,13 @@ You **MUST** consider the user input before proceeding (if not empty).
      - Runtime adaptation notes are reported in execution output
    - **REQUIRED**: Treat `[Pre:T###,...]` only as an inline dependency mirror (consistency check), not as dependency authority
    - **REQUIRED**: Read plan.md for tech stack, architecture, and file structure
-   - **IF EXISTS**: Read interface-details/ for per-interface detailed design projection (contract-bound behavior, field-level class refinement from data-model, and method-level sequencing details)
-   - **IF EXISTS**: Read data-model.md for entities and relationships
-   - **IF EXISTS**: Read contracts/ for API specifications and test requirements
-   - **IF EXISTS**: Read research.md for technical decisions and constraints
-   - **IF EXISTS**: Read quickstart.md for integration scenarios
+   - Load supporting artifacts only when they are needed to execute a ready task or validate its completion anchor:
+     - `interface-details/` for per-interface behavior and sequencing details
+     - `data-model.md` for entity and lifecycle context
+     - `contracts/` for interface semantics and contract checks
+     - `test-matrix.md` for task-defined verification anchors
+     - `research.md` for implementation constraints and decisions
+     - `quickstart.md` for integration scenarios or validation notes
 
 4. Generate an execution strategy summary before modifying code:
    - Produce a short `Execution Strategy Summary` that states:
@@ -154,7 +156,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 5. Parse tasks.md structure and extract:
    - **Execution scopes**: `GLOBAL` and `IFxx` units
    - **Task DAG**: adjacency list and topological execution layers
-   - **Task metadata**: `TaskID`, `Type`, `Scope`, `Role`, `Pre`, description, file paths, completion anchors
+   - **Task metadata**: `TaskID`, `Type`, `Scope`, `Role` (when present), `Pre`, description, file paths or command targets, completion anchors (when present)
    - **Reference metadata** (when present): `operationId`, requirement refs, verification refs
    - **Execution flow**: DAG-driven order and file-level conflict constraints
 
@@ -173,8 +175,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 7. Implementation execution rules:
    - **GLOBAL foundation first when required by DAG**: Complete shared infra/bootstrap/config prerequisites before dependent IF tasks
-   - **Interface-unit delivery**: For each `IFxx`, execute verify + implementation work using task `Role` (e.g., contract, handler, service, persistence, wiring, smoke)
-   - **Reference-preserving execution**: For each task, keep linkage to available operation/requirement/verification refs
+   - **Interface-unit delivery**: For each `IFxx`, execute verify + implementation work using task `Role` when present, or the task description when `Role` is omitted
    - **Cross-cutting/finalization last when DAG-scheduled**: Run docs/final validation/cross-interface tasks after prerequisite IF/GLOBAL tasks complete
 
 8. Progress tracking and error handling:
@@ -182,7 +183,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Emit periodic heartbeat updates when execution has no visible completion for a while (typically every ~1-2 minutes)
    - Halt execution if any required DAG predecessor task fails
    - For parallel-eligible DAG-ready tasks, continue successful tasks, report failed ones, and skip newly blocked descendants
-   - In `adaptive` mode, if adaptation is required due to runtime reality (unexpected file structure/API drift), propose minimal safe adaptation and request confirmation before continuing
+   - In `adaptive` mode, if runtime drift exceeds safe local adaptation (unexpected file structure/API drift, missing upstream detail, conflicting contract expectation), stop and point the user to upstream artifact repair or `/sdd.analyze` before continuing
    - Provide clear error messages with context for debugging
    - On recoverable stalls (tooling/network/build wait), print explicit status + wait reason + estimated next update time
    - Suggest next steps if implementation cannot proceed
@@ -191,14 +192,12 @@ You **MUST** consider the user input before proceeding (if not empty).
 9. Completion validation:
    - Verify all reachable required DAG tasks are completed or explicitly waived by user
    - Verify `Task DAG` dependency closure (no completed task missing required predecessors)
-   - Verify each interface unit (`IFxx`) meets its Definition of Done and completion anchors
-   - Verify completed tasks still map to available requirement/verification refs
-   - Check that implemented features match the original specification
-   - Validate that tests pass and coverage meets requirements
-   - Confirm the implementation follows the technical plan
+   - Verify each interface unit (`IFxx`) reaches the task-defined completion anchors that exist for that unit
+   - Verify task-defined validation commands, tests, or contract checks passed for completed work
    - Confirm tasks.md checkboxes accurately reflect execution results
    - In `adaptive` mode, summarize adaptations and their dependency impact in final output
    - Report final status with summary of completed work, blocked items, and remediation follow-ups
+   - If unresolved drift remains, recommend upstream artifact repair or `/sdd.analyze` rather than attempting an inline audit
 
 Note: This command assumes a complete, DAG-usable tasks breakdown exists in tasks.md. If required sections are missing, DAG is invalid, or task rows are incomplete, suggest running `/sdd.tasks` first to regenerate the task list.
 

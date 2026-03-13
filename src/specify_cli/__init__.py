@@ -292,6 +292,12 @@ AI_ASSISTANT_ALIASES = {
     "kiro": "kiro-cli",
 }
 
+# When an older published release does not yet contain agent-specific assets,
+# fall back to a compatible template package so init can still proceed.
+TEMPLATE_ASSET_FALLBACKS = {
+    "cline": "generic",
+}
+
 def _build_ai_assistant_help() -> str:
     """Build the --ai help text from AGENT_CONFIG so it stays in sync with runtime config."""
 
@@ -774,19 +780,36 @@ def download_template_from_github(ai_assistant: str, download_dir: Path, *, scri
         raise typer.Exit(1)
 
     assets = release_data.get("assets", [])
-    pattern = f"{RELEASE_ASSET_PREFIX}-{ai_assistant}-{script_type}"
-    matching_assets = [
-        asset for asset in assets
-        if pattern in asset["name"] and asset["name"].endswith(".zip")
-    ]
+    candidate_agents = [ai_assistant]
+    fallback_agent = TEMPLATE_ASSET_FALLBACKS.get(ai_assistant)
+    if fallback_agent and fallback_agent not in candidate_agents:
+        candidate_agents.append(fallback_agent)
 
-    asset = matching_assets[0] if matching_assets else None
+    asset = None
+    asset_agent = ai_assistant
+    for candidate in candidate_agents:
+        pattern = f"{RELEASE_ASSET_PREFIX}-{candidate}-{script_type}"
+        matching_assets = [
+            found_asset for found_asset in assets
+            if pattern in found_asset["name"] and found_asset["name"].endswith(".zip")
+        ]
+        if matching_assets:
+            asset = matching_assets[0]
+            asset_agent = candidate
+            break
 
     if asset is None:
-        console.print(f"[red]No matching release asset found[/red] for [bold]{ai_assistant}[/bold] (expected pattern: [bold]{pattern}[/bold])")
+        expected_patterns = ", ".join(f"{RELEASE_ASSET_PREFIX}-{candidate}-{script_type}" for candidate in candidate_agents)
+        console.print(f"[red]No matching release asset found[/red] for [bold]{ai_assistant}[/bold] (expected pattern: [bold]{expected_patterns}[/bold])")
         asset_names = [a.get('name', '?') for a in assets]
         console.print(Panel("\n".join(asset_names) or "(no assets)", title="Available Assets", border_style="yellow"))
         raise typer.Exit(1)
+
+    if asset_agent != ai_assistant and verbose:
+        console.print(
+            f"[yellow]Template asset for '{ai_assistant}' not found in latest release; "
+            f"falling back to '{asset_agent}' template package.[/yellow]"
+        )
 
     download_url = asset["browser_download_url"]
     filename = asset["name"]
@@ -850,13 +873,15 @@ def download_template_from_github(ai_assistant: str, download_dir: Path, *, scri
         "filename": filename,
         "size": file_size,
         "release": release_data["tag_name"],
-        "asset_url": download_url
+        "asset_url": download_url,
+        "asset_agent": asset_agent,
     }
     return zip_path, metadata
 
-def download_and_extract_template(project_path: Path, ai_assistant: str, script_type: str, is_current_dir: bool = False, *, verbose: bool = True, tracker: StepTracker | None = None, client: httpx.Client = None, debug: bool = False, github_token: str = None) -> Path:
+def download_and_extract_template(project_path: Path, ai_assistant: str, script_type: str, is_current_dir: bool = False, *, verbose: bool = True, tracker: StepTracker | None = None, client: httpx.Client = None, debug: bool = False, github_token: str = None) -> Tuple[Path, str]:
     """Download the latest release and extract it to create a new project.
-    Returns project_path. Uses tracker if provided (with keys: fetch, download, extract, cleanup)
+    Returns (project_path, template_asset_agent). Uses tracker if provided
+    (with keys: fetch, download, extract, cleanup)
     """
     current_dir = Path.cwd()
 
@@ -1001,7 +1026,28 @@ def download_and_extract_template(project_path: Path, ai_assistant: str, script_
             elif verbose:
                 console.print(f"Cleaned up: {zip_path.name}")
 
-    return project_path
+    return project_path, meta.get("asset_agent", ai_assistant)
+
+
+def _merge_or_move_directory(source_dir: Path, target_dir: Path) -> None:
+    """Move source directory to target, or merge files when target exists."""
+    if not source_dir.exists() or not source_dir.is_dir():
+        return
+
+    target_dir.parent.mkdir(parents=True, exist_ok=True)
+    if not target_dir.exists():
+        shutil.move(str(source_dir), str(target_dir))
+        return
+
+    for src_file in source_dir.rglob("*"):
+        if not src_file.is_file():
+            continue
+        rel_path = src_file.relative_to(source_dir)
+        dest_file = target_dir / rel_path
+        dest_file.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src_file, dest_file)
+
+    shutil.rmtree(source_dir)
 
 
 def ensure_executable_scripts(project_path: Path, tracker: StepTracker | None = None) -> None:
@@ -1100,9 +1146,9 @@ DEFAULT_SKILLS_DIR = ".agents/skills"
 SKILL_DESCRIPTIONS = {
     "specify": "Create or update feature specifications from natural language descriptions. Use when starting new features or refining requirements. Generates spec.md with user stories, functional requirements, and acceptance criteria following spec-driven development methodology.",
     "plan": "Generate technical implementation plans from feature specifications. Use after creating a spec to define architecture, tech stack, and implementation phases. Creates plan.md with detailed technical design.",
-    "tasks": "Break down implementation plans into actionable task lists. Use after planning to create a structured task breakdown. Generates tasks.md with ordered, dependency-aware tasks.",
-    "implement": "Execute all tasks from the task breakdown to build the feature. Use after task generation to systematically implement the planned solution following TDD approach where applicable.",
-    "analyze": "Perform cross-artifact consistency analysis across spec.md, plan.md, and tasks.md. Use after task generation to identify gaps, duplications, and inconsistencies before implementation.",
+    "tasks": "Break down implementation plans into actionable task lists. Use after planning to create a structured task breakdown organized by GLOBAL and IFxx scopes with a Task DAG for dependency-safe execution.",
+    "implement": "Execute all tasks from the task breakdown to build the feature. Use after task generation to run the planned solution from tasks.md, validate execution closure, and follow TDD where applicable.",
+    "analyze": "Run the dedicated cross-artifact audit across spec.md, plan.md, and tasks.md. Use after task generation to surface drift, contradictions, uncovered MUST requirements, and other pre-implementation issues.",
     "clarify": "Structured clarification workflow for underspecified requirements. Use before planning to resolve ambiguities through coverage-based questioning. Records answers in spec clarifications section.",
     "constitution": "Create or update project governing principles and development guidelines. Use at project start to establish code quality, testing standards, and architectural constraints that guide all development.",
     "checklist": "Generate custom quality checklists for validating requirements completeness and clarity. Use to create unit tests for English that ensure spec quality before implementation.",
@@ -1520,7 +1566,66 @@ def init(
             local_ssl_context = ssl_context if verify else False
             local_client = httpx.Client(verify=local_ssl_context)
 
-            download_and_extract_template(project_path, selected_ai, selected_script, here, verbose=False, tracker=tracker, client=local_client, debug=debug, github_token=github_token)
+            template_download_result = download_and_extract_template(
+                project_path,
+                selected_ai,
+                selected_script,
+                here,
+                verbose=False,
+                tracker=tracker,
+                client=local_client,
+                debug=debug,
+                github_token=github_token,
+            )
+
+            # Backward/test compatibility: some tests patch
+            # download_and_extract_template() with a side effect that does not
+            # explicitly return the newer (project_path, template_asset_agent)
+            # tuple contract. Treat a missing return as "no fallback used".
+            template_asset_agent = selected_ai
+            if isinstance(template_download_result, tuple):
+                if len(template_download_result) >= 2 and template_download_result[1]:
+                    template_asset_agent = template_download_result[1]
+
+            # If we had to fall back to another template package (for example,
+            # cline -> generic on older releases), remap command directories to
+            # the selected agent layout.
+            if template_asset_agent != selected_ai:
+                selected_cfg = AGENT_CONFIG.get(selected_ai, {})
+                fallback_cfg = AGENT_CONFIG.get(template_asset_agent, {})
+
+                selected_folder = selected_cfg.get("folder")
+                fallback_folder = fallback_cfg.get("folder")
+                selected_subdir = selected_cfg.get("commands_subdir", "commands")
+                fallback_subdir = fallback_cfg.get("commands_subdir", "commands")
+
+                if selected_folder:
+                    target_dir = project_path / selected_folder.rstrip("/") / selected_subdir
+
+                    source_dirs: list[Path] = []
+                    if fallback_folder:
+                        source_dirs.append(project_path / fallback_folder.rstrip("/") / fallback_subdir)
+                    else:
+                        # Generic template packages may place command files under
+                        # either the current namespace folder (e.g. .sdd/commands)
+                        # or the legacy folder (.speckit/commands).
+                        source_dirs.append(project_path / f".{COMMAND_NAMESPACE}" / fallback_subdir)
+                        source_dirs.append(project_path / ".speckit" / fallback_subdir)
+
+                    for source_dir in source_dirs:
+                        _merge_or_move_directory(source_dir, target_dir)
+
+                    # Best-effort cleanup of now-empty fallback root directories.
+                    cleanup_roots = []
+                    if fallback_folder:
+                        cleanup_roots.append(project_path / fallback_folder.rstrip("/"))
+                    else:
+                        cleanup_roots.append(project_path / f".{COMMAND_NAMESPACE}")
+                        cleanup_roots.append(project_path / ".speckit")
+
+                    for fallback_root in cleanup_roots:
+                        if fallback_root.is_dir() and not any(fallback_root.iterdir()):
+                            fallback_root.rmdir()
 
             # For generic agent, rename placeholder directory to user-specified path
             if selected_ai == "generic" and ai_commands_dir:
@@ -1668,7 +1773,7 @@ def init(
         "Optional commands that you can use for your specs [bright_black](improve quality & confidence)[/bright_black]",
         "",
         f"○ [cyan]/{COMMAND_NAMESPACE}.clarify[/] [bright_black](optional)[/bright_black] - Ask structured questions to de-risk ambiguous areas before planning (run before [cyan]/{COMMAND_NAMESPACE}.plan[/] if used)",
-        f"○ [cyan]/{COMMAND_NAMESPACE}.analyze[/] [bright_black](optional)[/bright_black] - Cross-artifact consistency & alignment report (after [cyan]/{COMMAND_NAMESPACE}.tasks[/], before [cyan]/{COMMAND_NAMESPACE}.implement[/])",
+        f"○ [cyan]/{COMMAND_NAMESPACE}.analyze[/] [bright_black](optional)[/bright_black] - Dedicated audit pass for drift, contradictions, and coverage gaps (after [cyan]/{COMMAND_NAMESPACE}.tasks[/], before [cyan]/{COMMAND_NAMESPACE}.implement[/])",
         f"○ [cyan]/{COMMAND_NAMESPACE}.checklist[/] [bright_black](optional)[/bright_black] - Generate quality checklists to validate requirements completeness, clarity, and consistency (after [cyan]/{COMMAND_NAMESPACE}.plan[/])"
     ]
     enhancements_panel = Panel("\n".join(enhancement_lines), title="Enhancement Commands", border_style="cyan", padding=(1,2))

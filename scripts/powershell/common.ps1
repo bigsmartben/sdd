@@ -108,8 +108,10 @@ function Get-FeaturePathsEnv {
         TASKS         = Join-Path $featureDir 'tasks.md'
         RESEARCH      = Join-Path $featureDir 'research.md'
         DATA_MODEL    = Join-Path $featureDir 'data-model.md'
+        TEST_MATRIX   = Join-Path $featureDir 'test-matrix.md'
         QUICKSTART    = Join-Path $featureDir 'quickstart.md'
         CONTRACTS_DIR = Join-Path $featureDir 'contracts'
+        INTERFACE_DETAILS_DIR = Join-Path $featureDir 'interface-details'
     }
 }
 
@@ -134,4 +136,3 @@ function Test-DirHasFiles {
         return $false
     }
 }
-

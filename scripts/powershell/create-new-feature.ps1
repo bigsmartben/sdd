@@ -112,11 +112,13 @@ function Get-NextBranchNumber {
 
     # Best-effort remote sync that avoids interactive/network hangs.
     # Behavior controls:
-    # - SPECIFY_SKIP_FETCH=1      -> skip remote fetch entirely
-    # - SPECIFY_FETCH_TIMEOUT=<s> -> timeout seconds (default: 8)
+    # - SPECIFY_SKIP_FETCH=1        -> skip remote fetch entirely
+    # - SPECIFY_FETCH_TIMEOUT=<s>   -> timeout seconds (default: 8)
+    # - SPECIFY_FETCH_MODE=<mode>   -> preferred (default), all, none
     $skipFetch = $env:SPECIFY_SKIP_FETCH
-    if ($skipFetch -eq '1') {
-        Write-Warning "[specify] Skipping remote fetch because SPECIFY_SKIP_FETCH=1"
+    $fetchMode = if ([string]::IsNullOrWhiteSpace($env:SPECIFY_FETCH_MODE)) { 'preferred' } else { $env:SPECIFY_FETCH_MODE }
+    if ($skipFetch -eq '1' -or $fetchMode -eq 'none') {
+        Write-Warning "[specify] Skipping remote fetch (SPECIFY_SKIP_FETCH=1 or SPECIFY_FETCH_MODE=none)"
     } else {
         $fetchTimeout = 8
         if ($env:SPECIFY_FETCH_TIMEOUT -and ($env:SPECIFY_FETCH_TIMEOUT -as [int])) {
@@ -130,7 +132,19 @@ function Get-NextBranchNumber {
 
         try {
             # Make fetch non-interactive and bounded by timeout.
-            $fetchArgs = @('-c', 'credential.interactive=never', 'fetch', '--all', '--prune', '--quiet')
+            $fetchTarget = '--all'
+            if ($fetchMode -ne 'all') {
+                $remotes = @(git remote 2>$null)
+                if ($remotes.Count -gt 0) {
+                    if ($remotes -contains 'origin') {
+                        $fetchTarget = 'origin'
+                    } else {
+                        $fetchTarget = $remotes[0]
+                    }
+                }
+            }
+
+            $fetchArgs = @('-c', 'credential.interactive=never', 'fetch', $fetchTarget, '--prune', '--no-tags', '--quiet')
             $proc = Start-Process -FilePath 'git' -ArgumentList $fetchArgs -NoNewWindow -PassThru
             if (-not $proc.WaitForExit($fetchTimeout * 1000)) {
                 try { $proc.Kill() } catch {}

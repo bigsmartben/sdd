@@ -69,7 +69,7 @@ uvx --from git+https://github.com/bigsmartben/sdd.git specify init <PROJECT_NAME
 /sdd.tasks
 ```
 
-Optionally, validate the plan with `/sdd.analyze`:
+Optionally, run the dedicated audit pass with `/sdd.analyze` before implementation:
 
 ```markdown
 /sdd.analyze
@@ -148,7 +148,7 @@ Generate an actionable task list using the `/sdd.tasks` command:
 
 ### Step 7: Validate and Implement
 
-Have your AI agent audit the implementation plan using `/sdd.analyze`:
+Have your AI agent run the dedicated cross-artifact audit using `/sdd.analyze`:
 
 ```bash
 /sdd.analyze
