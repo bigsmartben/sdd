@@ -412,6 +412,11 @@ class TestCommandRegistrar:
         assert "codex" in CommandRegistrar.AGENT_CONFIGS
         assert CommandRegistrar.AGENT_CONFIGS["codex"]["dir"] == ".codex/prompts"
 
+    def test_cline_agent_config_present(self):
+        """Cline should be mapped to .clinerules/workflows."""
+        assert "cline" in CommandRegistrar.AGENT_CONFIGS
+        assert CommandRegistrar.AGENT_CONFIGS["cline"]["dir"] == ".clinerules/workflows"
+
     def test_parse_frontmatter_valid(self):
         """Test parsing valid YAML frontmatter."""
         content = """---

@@ -153,6 +153,13 @@ AGENT_CONFIG = {
         "install_url": None,  # IDE-based
         "requires_cli": False,
     },
+    "cline": {
+        "name": "Cline",
+        "folder": ".clinerules/",
+        "commands_subdir": "workflows",
+        "install_url": None,  # IDE-based
+        "requires_cli": False,
+    },
     "qwen": {
         "name": "Qwen Code",
         "folder": ".qwen/",
@@ -1322,6 +1329,7 @@ def init(
         specify init --here --ai claude    # Alternative syntax for current directory
         specify init --here --ai codex
         specify init --here --ai codebuddy
+        specify init --here --ai cline     # Initialize with Cline support
         specify init --here --ai vibe      # Initialize with Mistral Vibe support
         specify init --here
         specify init --here --force  # Skip confirmation when current directory not empty

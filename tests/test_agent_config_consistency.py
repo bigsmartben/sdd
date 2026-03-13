@@ -172,6 +172,48 @@ class TestAgentConfigConsistency:
         """CLI help text for --ai should include tabnine."""
         assert "tabnine" in AI_ASSISTANT_HELP
 
+    # --- Cline consistency checks ---
+
+    def test_runtime_config_includes_cline(self):
+        """AGENT_CONFIG should include cline with .clinerules/workflows."""
+        assert "cline" in AGENT_CONFIG
+        assert AGENT_CONFIG["cline"]["folder"] == ".clinerules/"
+        assert AGENT_CONFIG["cline"]["commands_subdir"] == "workflows"
+        assert AGENT_CONFIG["cline"]["requires_cli"] is False
+
+    def test_extension_registrar_includes_cline(self):
+        """CommandRegistrar.AGENT_CONFIGS should include cline workflow directory."""
+        cfg = CommandRegistrar.AGENT_CONFIGS
+        assert "cline" in cfg
+        assert cfg["cline"]["dir"] == ".clinerules/workflows"
+
+    def test_release_scripts_include_cline(self):
+        """Release scripts should include cline in agent list and output assets."""
+        sh_text = (REPO_ROOT / ".github" / "workflows" / "scripts" / "create-release-packages.sh").read_text(encoding="utf-8")
+        ps_text = (REPO_ROOT / ".github" / "workflows" / "scripts" / "create-release-packages.ps1").read_text(encoding="utf-8")
+        gh_release_text = (REPO_ROOT / ".github" / "workflows" / "scripts" / "create-github-release.sh").read_text(encoding="utf-8")
+
+        assert "cline" in sh_text
+        assert "cline" in ps_text
+        assert ".clinerules/workflows" in sh_text
+        assert ".clinerules/workflows" in ps_text
+        assert "spec-kit-template-cline-sh-" in gh_release_text
+        assert "spec-kit-template-cline-ps-" in gh_release_text
+
+    def test_agent_context_scripts_include_cline(self):
+        """Agent context scripts should support cline agent type."""
+        bash_text = (REPO_ROOT / "scripts" / "bash" / "update-agent-context.sh").read_text(encoding="utf-8")
+        pwsh_text = (REPO_ROOT / "scripts" / "powershell" / "update-agent-context.ps1").read_text(encoding="utf-8")
+
+        assert "cline" in bash_text
+        assert "CLINE_FILE" in bash_text
+        assert "cline" in pwsh_text
+        assert "CLINE_FILE" in pwsh_text
+
+    def test_ai_help_includes_cline(self):
+        """CLI help text for --ai should include cline."""
+        assert "cline" in AI_ASSISTANT_HELP
+
     # --- Kimi Code CLI consistency checks ---
 
     def test_kimi_in_agent_config(self):
