@@ -84,6 +84,15 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Entity name, fields, relationships
    - Validation rules and business invariants from requirements
    - State transitions if applicable (business state machine required when lifecycle exists)
+   - Add a spec-wide `## UML Class Diagram` in Mermaid `classDiagram`
+   - Treat Stage 1 UML as a backbone breadth view, not a per-interface projection
+   - Cover the full set of classes materially involved in this spec, including:
+     - spec-defined domain entities / value objects / policies / lifecycle carriers
+     - stable contract/request/response/DTO classes when they are already canonical in contracts or existing repo symbols
+     - relevant first-party repository symbols already present in the codebase when they anchor the planned design
+     - material second-party referenced classes / facades / gateways / services that this feature depends on across module boundaries
+   - If stable repository symbols exist, reuse those class names verbatim in the Stage 1 UML or provide an explicit one-to-one mapping from business aliases to repo symbols
+   - Make second-party references explicit in the UML with a short responsibility label or stereotype so downstream stages can tell owned classes from referenced dependencies
    - Prefer stable reference anchors for downstream stages when applicable:
      - invariant IDs (e.g., `INV-*`)
      - transition IDs (e.g., `T-*`)
@@ -93,6 +102,14 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Document the contract format appropriate for the project type
    - Use **contracts terminology and contracts semantics** as the single source for downstream references
    - Examples: public APIs for libraries, command schemas for CLI tools, endpoints for web services, grammars for parsers, UI contracts for applications
+
+3. **Stage 1 minimum completeness for `data-model.md`**:
+   - Domain class inventory with fields and constraints
+   - Relationship semantics captured in the UML class diagram; add concise prose notes only when the diagram cannot express them clearly
+   - Stable invariant / transition anchors when lifecycle or rules matter downstream
+   - Business state machine when lifecycle exists
+   - `## UML Class Diagram` that renders the spec-wide class backbone, including full spec coverage plus material second-party references
+   - Optional naming/mapping notes when business terms and stable repo symbols intentionally differ
 
 **Output**: data-model.md, /contracts/*, quickstart.md
 
@@ -124,6 +141,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Each interface detail doc MUST map to exactly one contract operation (prefer operationId-aligned naming)
    - File naming SHOULD be operationId-aligned and stable (e.g., `<operationId>.md`) unless the project has an explicit naming convention
    - Each interface detail doc MUST project only the interface-relevant subset of `data-model.md`; avoid restating the full global model
+   - Keep `## Scope & Projection` as a single flattened bullet-list view; do not split the same projection into mini-sections such as `In-scope entities`, `Field projection`, and `Relationship projection` unless absolutely required for readability
    - Carry forward interface-relevant main/exception interaction paths from `test-matrix.md` into interface-level detailed behavior
    - Include `CaseID` / `TM-*` / `TC-*` anchors only when they materially clarify behavior or verification intent
    - Keep detailed design consistent with contracts and data model
@@ -150,6 +168,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - `## Behavior Paths` is the authoritative local source for sequence-diagram message flow
    - `## Scope & Projection` plus `## Invariants & Transition Responsibilities` are the authoritative local source for UML class/member selection
    - Contract binding: explicit operationId (or equivalent unique contract operation anchor)
+   - `## Scope & Projection` should be written as one flat bullet list; each bullet should inline the projected class/object, operation role, relevant fields/methods/relationships, and source anchor or inclusion reason
    - Operation semantic projection from `data-model.md`, including:
      - entities / value objects / FSMs in scope
      - field projection (read / write / output / internal use)

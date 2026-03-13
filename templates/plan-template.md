@@ -21,7 +21,7 @@
 
 ## Design Terminology Boundaries
 
-- **Data Model UML Class (`data-model.md`)**: module-interface/core-class level. Focus on core entities, relationships, constraints, and lifecycle semantics.
+- **Data Model UML Class (`data-model.md`)**: spec-wide backbone coverage at module-interface/core-class level. Focus on the full class inventory materially involved in this spec, stable repo symbols, material second-party references, relationships, constraints, and lifecycle semantics; prioritize breadth over per-interface implementation detail.
 - **Interface Detailed Design UML Class (`interface-details/*.md`)**: detailed-design/full-class level. Focus on per-interface collaboration and implementation-level structure.
 - **Sequence diagrams in Stage 3** must use **method-call-level granularity**.
 - Use `contracts` terminology uniformly in downstream artifacts.
@@ -33,7 +33,7 @@
 - **Operation accountability must be explicit**: each interface detail doc should state which data-model fields/invariants/transitions are consumed, validated, or triggered.
 - **Path accountability should be practical**: reference `CaseID` / `TM-*` / `TC-*` anchors only when they clarify behavior, enforcement, or verification intent.
 - **Behavior Paths authority**: `## Behavior Paths` is the authoritative local source for sequence-diagram message flow.
-- **Projection authority**: `## Scope & Projection` plus `## Invariants & Transition Responsibilities` are the authoritative local source for UML class/member selection.
+- **Projection authority**: `## Scope & Projection` plus `## Invariants & Transition Responsibilities` are the authoritative local source for UML class/member selection; `## Scope & Projection` should flatten the projection into one list-style view rather than fragment it into mini-sections.
 - **Stage 2 UIF refinement role**: refine spec-stage UIF and cross-UC flow into a verification-oriented view for case design (`CaseID` / `TM-*` / `TC-*`).
 - **Test matrix boundary**: `test-matrix.md` serves coverage and verification design only. It must not redefine requirement semantics (`spec.md`), contract semantics (`contracts/`), or global model semantics (`data-model.md`).
 
@@ -53,6 +53,7 @@ If a dimension is truly not applicable, provide explicit reason + nearest upstre
 For each `interface-details/*.md` doc, ensure content is implementation-informative (not only structural placeholders):
 
 - **Field projection depth**: include operation-relevant key fields across input/validation/read/write/output/internal-use dimensions; avoid ultra-thin projection with only 1-2 superficial fields unless justified.
+- **Projection presentation discipline**: keep `## Scope & Projection` as one flat bullet-list projection view. Do not split the same projection into local mini-sections such as `In-scope entities`, `Field projection`, and `Relationship projection` unless absolutely required for readability.
 - **Invariant/transition accountability depth**: for each mapped invariant/transition, include responsibility type (establish/validate/preserve), enforcement location, and contract-visible failure behavior.
 - **Pre/Post condition checkability**: preconditions and postconditions should be verifiable conditions (not vague summaries).
 - **Behavior path completeness**: include main success path and numbered key exception/error paths.
@@ -70,7 +71,7 @@ For each `interface-details/*.md` doc, ensure content is implementation-informat
 For each `interface-details/*.md` doc, use a stable section skeleton to keep outputs complete and reviewable:
 
 1. `## Contract Binding` (operationId + contract anchor)
-2. `## Scope & Projection` (entities/fields/relationships in scope with anchors)
+2. `## Scope & Projection` (single flat bullet-list view covering class/object role, relevant fields/methods/relationships, and anchors)
 3. `## Invariants & Transition Responsibilities` (INV/T anchors + responsibility + failure behavior)
 4. `## Preconditions / Postconditions` (checkable conditions)
 5. `## Behavior Paths` (main path + numbered key exception paths; authoritative local source for sequence flow)
@@ -79,6 +80,8 @@ For each `interface-details/*.md` doc, use a stable section skeleton to keep out
 8. `## Upstream References` (contract anchor plus only the spec/model/test refs actually used by the operation)
 
 If a section is truly not applicable, keep the section and provide explicit rationale with nearest upstream anchor (never remove required sections silently).
+
+Within `## Scope & Projection`, prefer a single flat bullet list. Each bullet should inline the projected class/object, operation role, relevant fields/methods/relationships, and anchor or source reason.
 
 ## Stage 3 Markdown Formatting Rules (Required)
 
@@ -96,6 +99,19 @@ If a section is truly not applicable, keep the section and provide explicit rati
 - At minimum, define states, transitions, and transition guards/constraints.
 - State-machine semantics belong to model/design artifacts, not governance status snapshots.
 - When a state machine exists, each affected `interface-details/*.md` doc MUST explicitly map operation-level transition usage, guards/constraints, and guard-failure contract behavior.
+
+## Stage 1 Data Model Coverage Requirement
+
+- `data-model.md` MUST include a `## UML Class Diagram` section using Mermaid `classDiagram`.
+- The Stage 1 UML class diagram is the spec-wide backbone view: it MUST cover the full set of classes materially involved in this spec, not only the subset used by one interface.
+- Coverage MUST include:
+  - spec-defined domain entities / value objects / policies / lifecycle carriers
+  - stable contract/request/response/DTO classes when they are already canonical in contracts or existing repo symbols
+  - relevant first-party repository symbols already present in the codebase (for example PO/DTO/VO/service/repository/gateway names) when they anchor the planned design
+  - material second-party referenced classes / facades / gateways / services that this feature depends on across module boundaries
+- Breadth-first rule: Stage 1 UML should show why each class exists and how classes relate, but it should not expand every operation into Stage 3 full-class design detail.
+- Do not add a standalone `## Relationships` section when the UML class diagram already expresses the relationships clearly; add concise prose notes only for relationship semantics the diagram cannot express well.
+- If business naming differs from stable repo symbols, record a one-to-one mapping in `data-model.md` and keep diagram naming consistent across downstream artifacts.
 
 ## Stage 3 Quality Gate (Before Finalizing Plan Outputs)
 

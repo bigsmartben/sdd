@@ -128,8 +128,10 @@ Focus on high-signal findings. Limit to 50 findings total; aggregate remainder i
 - Repeated audit requirements that should be handled in `/sdd.analyze`, not in plan or implement instructions
 - Optional references presented as blocking requirements without execution need
 
-#### H. Stage 3 Diagram Drift
+#### H. Diagram Drift
 
+- `data-model.md` missing the required spec-wide UML class diagram or using the wrong notation
+- `data-model.md` UML omitting spec-wide core classes, stable repo symbols, or material second-party references later depended on by contracts / interface-details / tasks
 - Invented participant / class / method symbols in `interface-details/` despite available repository anchors
 - Sequence diagrams missing required exception / guard-failure branches from `Behavior Paths` when they affect contract-visible behavior
 - UML diagrams containing only layered placeholders or classes with no operation-relevant members / constraints
@@ -142,7 +144,7 @@ Use this heuristic to prioritize findings and separate blocking issues from opti
 
 - **Blocking**: Missing execution-critical inputs, contract contradictions, constitution MUST violations, or uncovered MUST requirements that block baseline functionality
 - **Non-Blocking**: Naming drift, missing optional references, over-verbose traceability sections, or minor wording/structure issues
-- **CRITICAL**: Violates constitution MUST, contract contradiction, diagram contradiction that changes contract-visible behavior, missing execution-critical input, or uncovered MUST requirement blocking baseline functionality
+- **CRITICAL**: Violates constitution MUST, contract contradiction, spec-wide data-model UML missing for a feature that requires it, diagram contradiction that changes contract-visible behavior, missing execution-critical input, or uncovered MUST requirement blocking baseline functionality
 - **HIGH**: Duplicate or conflicting requirement, ambiguous security/performance attribute, untestable acceptance criterion, missing required Stage 3 exception/guard branch, or task model contradiction that can derail implementation
 - **MEDIUM**: Terminology drift, missing non-functional task coverage, underspecified edge case, placeholder Stage 3 diagrams, or over-verbose traceability payload
 - **LOW**: Style/wording improvements, optional reference cleanup, minor redundancy not affecting execution order
