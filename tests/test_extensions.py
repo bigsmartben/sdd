@@ -56,12 +56,12 @@ def valid_manifest_data():
         },
         "requires": {
             "speckit_version": ">=0.1.0",
-            "commands": ["speckit.tasks"],
+            "commands": ["sdd.tasks"],
         },
         "provides": {
             "commands": [
                 {
-                    "name": "speckit.test.hello",
+                    "name": "sdd.test.hello",
                     "file": "commands/hello.md",
                     "description": "Test command",
                 }
@@ -69,7 +69,7 @@ def valid_manifest_data():
         },
         "hooks": {
             "after_tasks": {
-                "command": "speckit.test.hello",
+                "command": "sdd.test.hello",
                 "optional": True,
                 "prompt": "Run test?",
             }
@@ -136,7 +136,7 @@ class TestExtensionManifest:
         assert manifest.version == "1.0.0"
         assert manifest.description == "A test extension"
         assert len(manifest.commands) == 1
-        assert manifest.commands[0]["name"] == "speckit.test.hello"
+        assert manifest.commands[0]["name"] == "sdd.test.hello"
 
     def test_missing_required_field(self, temp_dir):
         """Test manifest missing required field."""
@@ -473,10 +473,10 @@ $ARGUMENTS
         )
 
         assert len(registered) == 1
-        assert "speckit.test.hello" in registered
+        assert "sdd.test.hello" in registered
 
         # Check command file was created
-        cmd_file = claude_dir / "speckit.test.hello.md"
+        cmd_file = claude_dir / "sdd.test.hello.md"
         assert cmd_file.exists()
 
         content = cmd_file.read_text()
@@ -506,9 +506,9 @@ $ARGUMENTS
             "provides": {
                 "commands": [
                     {
-                        "name": "speckit.alias.cmd",
+                        "name": "sdd.alias.cmd",
                         "file": "commands/cmd.md",
-                        "aliases": ["speckit.shortcut"],
+                        "aliases": ["sdd.shortcut"],
                     }
                 ]
             },
@@ -528,10 +528,10 @@ $ARGUMENTS
         registered = registrar.register_commands_for_claude(manifest, ext_dir, project_dir)
 
         assert len(registered) == 2
-        assert "speckit.alias.cmd" in registered
-        assert "speckit.shortcut" in registered
-        assert (claude_dir / "speckit.alias.cmd.md").exists()
-        assert (claude_dir / "speckit.shortcut.md").exists()
+        assert "sdd.alias.cmd" in registered
+        assert "sdd.shortcut" in registered
+        assert (claude_dir / "sdd.alias.cmd.md").exists()
+        assert (claude_dir / "sdd.shortcut.md").exists()
 
     def test_register_commands_for_copilot(self, extension_dir, project_dir):
         """Test registering commands for Copilot agent with .agent.md extension."""
@@ -547,14 +547,14 @@ $ARGUMENTS
         )
 
         assert len(registered) == 1
-        assert "speckit.test.hello" in registered
+        assert "sdd.test.hello" in registered
 
         # Verify command file uses .agent.md extension
-        cmd_file = agents_dir / "speckit.test.hello.agent.md"
+        cmd_file = agents_dir / "sdd.test.hello.agent.md"
         assert cmd_file.exists()
 
         # Verify NO plain .md file was created
-        plain_md_file = agents_dir / "speckit.test.hello.md"
+        plain_md_file = agents_dir / "sdd.test.hello.md"
         assert not plain_md_file.exists()
 
         content = cmd_file.read_text()
@@ -574,12 +574,12 @@ $ARGUMENTS
         )
 
         # Verify companion .prompt.md file exists
-        prompt_file = project_dir / ".github" / "prompts" / "speckit.test.hello.prompt.md"
+        prompt_file = project_dir / ".github" / "prompts" / "sdd.test.hello.prompt.md"
         assert prompt_file.exists()
 
         # Verify content has correct agent frontmatter
         content = prompt_file.read_text()
-        assert content == "---\nagent: speckit.test.hello\n---\n"
+        assert content == "---\nagent: sdd.test.hello\n---\n"
 
     def test_copilot_aliases_get_companion_prompts(self, project_dir, temp_dir):
         """Test that aliases also get companion .prompt.md files for Copilot."""
@@ -600,9 +600,9 @@ $ARGUMENTS
             "provides": {
                 "commands": [
                     {
-                        "name": "speckit.alias-copilot.cmd",
+                        "name": "sdd.alias-copilot.cmd",
                         "file": "commands/cmd.md",
-                        "aliases": ["speckit.shortcut-copilot"],
+                        "aliases": ["sdd.shortcut-copilot"],
                     }
                 ]
             },
@@ -629,8 +629,8 @@ $ARGUMENTS
 
         # Both primary and alias get companion .prompt.md
         prompts_dir = project_dir / ".github" / "prompts"
-        assert (prompts_dir / "speckit.alias-copilot.cmd.prompt.md").exists()
-        assert (prompts_dir / "speckit.shortcut-copilot.prompt.md").exists()
+        assert (prompts_dir / "sdd.alias-copilot.cmd.prompt.md").exists()
+        assert (prompts_dir / "sdd.shortcut-copilot.prompt.md").exists()
 
     def test_non_copilot_agent_no_companion_file(self, extension_dir, project_dir):
         """Test that non-copilot agents do NOT create .prompt.md files."""
@@ -703,7 +703,7 @@ class TestIntegration:
         assert installed[0]["id"] == "test-ext"
 
         # Verify command registered
-        cmd_file = project_dir / ".claude" / "commands" / "speckit.test.hello.md"
+        cmd_file = project_dir / ".claude" / "commands" / "sdd.test.hello.md"
         assert cmd_file.exists()
 
         # Verify registry has registered commands (now a dict keyed by agent)
@@ -711,7 +711,7 @@ class TestIntegration:
         registered_commands = metadata["registered_commands"]
         # Check that the command is registered for at least one agent
         assert any(
-            "speckit.test.hello" in cmds
+            "sdd.test.hello" in cmds
             for cmds in registered_commands.values()
         )
 
@@ -737,8 +737,8 @@ class TestIntegration:
         assert "copilot" in metadata["registered_commands"]
 
         # Verify files exist before cleanup
-        agent_file = agents_dir / "speckit.test.hello.agent.md"
-        prompt_file = project_dir / ".github" / "prompts" / "speckit.test.hello.prompt.md"
+        agent_file = agents_dir / "sdd.test.hello.agent.md"
+        prompt_file = project_dir / ".github" / "prompts" / "sdd.test.hello.prompt.md"
         assert agent_file.exists()
         assert prompt_file.exists()
 
@@ -770,7 +770,7 @@ class TestIntegration:
                 "provides": {
                     "commands": [
                         {
-                            "name": f"speckit.ext{i}.cmd",
+                            "name": f"sdd.ext{i}.cmd",
                             "file": "commands/cmd.md",
                         }
                     ]

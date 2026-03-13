@@ -69,7 +69,7 @@ vim .specify/extensions/jira/jira-config.yml
 
 # 5. Use it
 # (Commands are now available in Claude Code)
-/speckit.jira.specstoissues
+/sdd.jira.specstoissues
 ```
 
 ---
@@ -179,9 +179,9 @@ Jira Integration (v1.0.0)
   Create Jira Epics, Stories, and Issues from spec-kit artifacts
 
 Provided commands:
-  • speckit.jira.specstoissues - Create Jira hierarchy from spec and tasks
-  • speckit.jira.discover-fields - Discover Jira custom fields for configuration
-  • speckit.jira.sync-status - Sync task completion status to Jira
+  • sdd.jira.specstoissues - Create Jira hierarchy from spec and tasks
+  • sdd.jira.discover-fields - Discover Jira custom fields for configuration
+  • sdd.jira.sync-status - Sync task completion status to Jira
 
 ⚠  Configuration may be required
    Check: .specify/extensions/jira/
@@ -197,10 +197,10 @@ Extensions add commands that appear in your AI agent (Claude Code):
 
 ```text
 # In Claude Code
-> /speckit.jira.specstoissues
+> /sdd.jira.specstoissues
 
 # Or use short alias (if provided)
-> /speckit.specstoissues
+> /sdd.specstoissues
 ```
 
 ### Extension Configuration
@@ -226,21 +226,21 @@ vim .specify/extensions/jira/jira-config.yml
 
 Some extensions provide hooks that execute after core commands:
 
-**Example**: Jira extension hooks into `/speckit.tasks`
+**Example**: Jira extension hooks into `/sdd.tasks`
 
 ```text
 # Run core command
-> /speckit.tasks
+> /sdd.tasks
 
 # Output includes:
 ## Extension Hooks
 
 **Optional Hook**: jira
-Command: `/speckit.jira.specstoissues`
+Command: `/sdd.jira.specstoissues`
 Description: Automatically create Jira hierarchy after task generation
 
 Prompt: Create Jira issues from tasks?
-To execute: `/speckit.jira.specstoissues`
+To execute: `/sdd.jira.specstoissues`
 ```
 
 You can then choose to run the hook or skip it.
@@ -390,7 +390,7 @@ settings:
 hooks:
   after_tasks:
     - extension: jira
-      command: speckit.jira.specstoissues
+      command: sdd.jira.specstoissues
       enabled: true
       optional: true
       prompt: "Create Jira issues from tasks?"
@@ -484,7 +484,7 @@ You can also edit `.specify/extension-catalogs.yml` directly:
 ```yaml
 catalogs:
   - name: "default"
-    url: "https://raw.githubusercontent.com/github/spec-kit/main/extensions/catalog.json"
+    url: "https://raw.githubusercontent.com/bigsmartben/sdd/main/extensions/catalog.json"
     priority: 1
     install_allowed: true
     description: "Built-in catalog of installable extensions"
@@ -496,7 +496,7 @@ catalogs:
     description: "Internal company extensions"
 
   - name: "community"
-    url: "https://raw.githubusercontent.com/github/spec-kit/main/extensions/catalog.community.json"
+    url: "https://raw.githubusercontent.com/bigsmartben/sdd/main/extensions/catalog.community.json"
     priority: 3
     install_allowed: false
     description: "Community-contributed extensions (discovery only)"
@@ -769,7 +769,7 @@ specify extension add --dev /path/to/extension
 3. Check command file exists:
 
    ```bash
-   ls .claude/commands/speckit.jira.*.md
+   ls .claude/commands/sdd.jira.*.md
    ```
 
 4. Reinstall extension
@@ -926,9 +926,9 @@ Document extension usage in your project:
 ## Working with Jira
 
 After creating tasks, sync to Jira:
-1. Run `/speckit.tasks` to generate tasks
-2. Run `/speckit.jira.specstoissues` to create Jira issues
-3. Run `/speckit.jira.sync-status` to update status
+1. Run `/sdd.tasks` to generate tasks
+2. Run `/sdd.jira.specstoissues` to create Jira issues
+3. Run `/sdd.jira.sync-status` to update status
 ```
 
 ---
@@ -957,7 +957,7 @@ After creating tasks, sync to Jira:
 
 ### Q: What happens if two extensions have the same command name?
 
-**A**: Extensions use namespaced commands (`speckit.{extension}.{command}`), so conflicts are very rare. The extension system will warn you if conflicts occur.
+**A**: Extensions use namespaced commands (`sdd.{extension}.{command}`), so conflicts are very rare. The extension system will warn you if conflicts occur.
 
 ### Q: Can I contribute to existing extensions?
 

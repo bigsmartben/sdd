@@ -160,7 +160,7 @@ function Generate-Commands {
         $body = Rewrite-Paths -Content $body
 
         # Generate output file based on extension
-        $outputFile = Join-Path $OutputDir "speckit.$name.$Extension"
+        $outputFile = Join-Path $OutputDir "sdd.$name.$Extension"
 
         switch ($Extension) {
             'toml' {
@@ -186,7 +186,7 @@ function Generate-CopilotPrompts {
 
     New-Item -ItemType Directory -Path $PromptsDir -Force | Out-Null
 
-    $agentFiles = Get-ChildItem -Path "$AgentsDir/speckit.*.agent.md" -File -ErrorAction SilentlyContinue
+    $agentFiles = Get-ChildItem -Path "$AgentsDir/sdd.*.agent.md" -File -ErrorAction SilentlyContinue
 
     foreach ($agentFile in $agentFiles) {
         $basename = $agentFile.Name -replace '\.agent\.md$', ''
@@ -203,7 +203,7 @@ agent: $basename
 
 # Create Kimi Code skills in .kimi/skills/<name>/SKILL.md format.
 # Kimi CLI discovers skills as directories containing a SKILL.md file,
-# invoked with /skill:<name> (e.g. /skill:speckit.specify).
+# invoked with /skill:<name> (e.g. /skill:sdd.specify).
 function New-KimiSkills {
     param(
         [string]$SkillsDir,
@@ -214,7 +214,7 @@ function New-KimiSkills {
 
     foreach ($template in $templates) {
         $name = [System.IO.Path]::GetFileNameWithoutExtension($template.Name)
-        $skillName = "speckit.$name"
+        $skillName = "sdd.$name"
         $skillDir = Join-Path $SkillsDir $skillName
         New-Item -ItemType Directory -Force -Path $skillDir | Out-Null
 
@@ -455,7 +455,7 @@ function Build-Variant {
             New-KimiSkills -SkillsDir $skillsDir -ScriptVariant $Script
         }
         'generic' {
-            $cmdDir = Join-Path $baseDir ".speckit/commands"
+            $cmdDir = Join-Path $baseDir ".sdd/commands"
             Generate-Commands -Agent 'generic' -Extension 'md' -ArgFormat '$ARGUMENTS' -OutputDir $cmdDir -ScriptVariant $Script
         }
         default {

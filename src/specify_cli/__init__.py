@@ -323,6 +323,19 @@ BANNER = """
 """
 
 TAGLINE = "GitHub Spec Kit - Spec-Driven Development Toolkit"
+
+RELEASE_REPO_OWNER = "bigsmartben"
+RELEASE_REPO_NAME = "sdd"
+RELEASE_ASSET_PREFIX = "spec-kit-template"
+COMMAND_NAMESPACE = "sdd"
+LEGACY_COMMAND_NAMESPACE = "speckit"
+COMMAND_FILE_PREFIX = f"{COMMAND_NAMESPACE}."
+LEGACY_COMMAND_FILE_PREFIX = f"{LEGACY_COMMAND_NAMESPACE}."
+SKILL_NAME_PREFIX = f"{COMMAND_NAMESPACE}-"
+KIMI_SKILL_NAME_PREFIX = f"{COMMAND_NAMESPACE}."
+SKILL_METADATA_AUTHOR = f"{RELEASE_REPO_OWNER}/{RELEASE_REPO_NAME}"
+
+
 class StepTracker:
     """Track and render hierarchical steps without emojis, similar to Claude Code tree output.
     Supports live auto-refresh via an attached refresh callback.
@@ -721,8 +734,8 @@ def merge_json_files(existing_path: Path, new_content: dict, verbose: bool = Fal
     return merged
 
 def download_template_from_github(ai_assistant: str, download_dir: Path, *, script_type: str = "sh", verbose: bool = True, show_progress: bool = True, client: httpx.Client = None, debug: bool = False, github_token: str = None) -> Tuple[Path, dict]:
-    repo_owner = "github"
-    repo_name = "spec-kit"
+    repo_owner = RELEASE_REPO_OWNER
+    repo_name = RELEASE_REPO_NAME
     if client is None:
         client = httpx.Client(verify=ssl_context)
 
@@ -754,7 +767,7 @@ def download_template_from_github(ai_assistant: str, download_dir: Path, *, scri
         raise typer.Exit(1)
 
     assets = release_data.get("assets", [])
-    pattern = f"spec-kit-template-{ai_assistant}-{script_type}"
+    pattern = f"{RELEASE_ASSET_PREFIX}-{ai_assistant}-{script_type}"
     matching_assets = [
         asset for asset in assets
         if pattern in asset["name"] and asset["name"].endswith(".zip")
@@ -1076,7 +1089,7 @@ AGENT_SKILLS_DIR_OVERRIDES = {
 # Default skills directory for agents not in AGENT_CONFIG
 DEFAULT_SKILLS_DIR = ".agents/skills"
 
-# Enhanced descriptions for each spec-kit command skill
+# Enhanced descriptions for each SDD command skill
 SKILL_DESCRIPTIONS = {
     "specify": "Create or update feature specifications from natural language descriptions. Use when starting new features or refining requirements. Generates spec.md with user stories, functional requirements, and acceptance criteria following spec-driven development methodology.",
     "plan": "Generate technical implementation plans from feature specifications. Use after creating a spec to define architecture, tech stack, and implementation phases. Creates plan.md with detailed technical design.",
@@ -1190,17 +1203,18 @@ def install_ai_skills(project_path: Path, selected_ai: str, tracker: StepTracker
                 body = content
 
             command_name = command_file.stem
-            # Normalize: extracted commands may be named "speckit.<cmd>.md";
-            # strip the "speckit." prefix so skill names stay clean and
-            # SKILL_DESCRIPTIONS lookups work.
-            if command_name.startswith("speckit."):
-                command_name = command_name[len("speckit."):]
+            # Normalize generated command file stems down to the logical command
+            # name so skill names remain stable and SKILL_DESCRIPTIONS lookups work.
+            if command_name.startswith(COMMAND_FILE_PREFIX):
+                command_name = command_name[len(COMMAND_FILE_PREFIX):]
+            elif command_name.startswith(LEGACY_COMMAND_FILE_PREFIX):
+                command_name = command_name[len(LEGACY_COMMAND_FILE_PREFIX):]
             # Kimi CLI discovers skills by directory name and invokes them as
             # /skill:<name> — use dot separator to match packaging convention.
             if selected_ai == "kimi":
-                skill_name = f"speckit.{command_name}"
+                skill_name = f"{KIMI_SKILL_NAME_PREFIX}{command_name}"
             else:
-                skill_name = f"speckit-{command_name}"
+                skill_name = f"{SKILL_NAME_PREFIX}{command_name}"
 
             # Create skill directory (additive — never removes existing content)
             skill_dir = skills_dir / skill_name
@@ -1208,24 +1222,26 @@ def install_ai_skills(project_path: Path, selected_ai: str, tracker: StepTracker
 
             # Select the best description available
             original_desc = frontmatter.get("description", "")
-            enhanced_desc = SKILL_DESCRIPTIONS.get(command_name, original_desc or f"Spec-kit workflow command: {command_name}")
+            enhanced_desc = SKILL_DESCRIPTIONS.get(command_name, original_desc or f"SDD workflow command: {command_name}")
 
             # Build SKILL.md following agentskills.io spec
             # Use yaml.safe_dump to safely serialise the frontmatter and
             # avoid YAML injection from descriptions containing colons,
             # quotes, or newlines.
-            # Normalize source filename for metadata — strip speckit. prefix
-            # so it matches the canonical templates/commands/<cmd>.md path.
+            # Normalize source filename for metadata so it matches the canonical
+            # templates/commands/<cmd>.md path regardless of generated prefix.
             source_name = command_file.name
-            if source_name.startswith("speckit."):
-                source_name = source_name[len("speckit."):]
+            if source_name.startswith(COMMAND_FILE_PREFIX):
+                source_name = source_name[len(COMMAND_FILE_PREFIX):]
+            elif source_name.startswith(LEGACY_COMMAND_FILE_PREFIX):
+                source_name = source_name[len(LEGACY_COMMAND_FILE_PREFIX):]
 
             frontmatter_data = {
                 "name": skill_name,
                 "description": enhanced_desc,
-                "compatibility": "Requires spec-kit project structure with .specify/ directory",
+                "compatibility": "Requires project structure with .specify/ directory",
                 "metadata": {
-                    "author": "github-spec-kit",
+                    "author": SKILL_METADATA_AUTHOR,
                     "source": f"templates/commands/{source_name}",
                 },
             }
@@ -1234,7 +1250,7 @@ def install_ai_skills(project_path: Path, selected_ai: str, tracker: StepTracker
                 f"---\n"
                 f"{frontmatter_text}\n"
                 f"---\n\n"
-                f"# Speckit {command_name.title()} Skill\n\n"
+                f"# SDD {command_name.title()} Skill\n\n"
                 f"{body}\n"
             )
 
@@ -1630,11 +1646,11 @@ def init(
 
     steps_lines.append(f"{step_num}. Start using slash commands with your AI agent:")
 
-    steps_lines.append("   2.1 [cyan]/speckit.constitution[/] - Establish project principles")
-    steps_lines.append("   2.2 [cyan]/speckit.specify[/] - Create baseline specification")
-    steps_lines.append("   2.3 [cyan]/speckit.plan[/] - Create implementation plan")
-    steps_lines.append("   2.4 [cyan]/speckit.tasks[/] - Generate actionable tasks")
-    steps_lines.append("   2.5 [cyan]/speckit.implement[/] - Execute implementation")
+    steps_lines.append(f"   2.1 [cyan]/{COMMAND_NAMESPACE}.constitution[/] - Establish project principles")
+    steps_lines.append(f"   2.2 [cyan]/{COMMAND_NAMESPACE}.specify[/] - Create baseline specification")
+    steps_lines.append(f"   2.3 [cyan]/{COMMAND_NAMESPACE}.plan[/] - Create implementation plan")
+    steps_lines.append(f"   2.4 [cyan]/{COMMAND_NAMESPACE}.tasks[/] - Generate actionable tasks")
+    steps_lines.append(f"   2.5 [cyan]/{COMMAND_NAMESPACE}.implement[/] - Execute implementation")
 
     steps_panel = Panel("\n".join(steps_lines), title="Next Steps", border_style="cyan", padding=(1,2))
     console.print()
@@ -1643,9 +1659,9 @@ def init(
     enhancement_lines = [
         "Optional commands that you can use for your specs [bright_black](improve quality & confidence)[/bright_black]",
         "",
-        "○ [cyan]/speckit.clarify[/] [bright_black](optional)[/bright_black] - Ask structured questions to de-risk ambiguous areas before planning (run before [cyan]/speckit.plan[/] if used)",
-        "○ [cyan]/speckit.analyze[/] [bright_black](optional)[/bright_black] - Cross-artifact consistency & alignment report (after [cyan]/speckit.tasks[/], before [cyan]/speckit.implement[/])",
-        "○ [cyan]/speckit.checklist[/] [bright_black](optional)[/bright_black] - Generate quality checklists to validate requirements completeness, clarity, and consistency (after [cyan]/speckit.plan[/])"
+        f"○ [cyan]/{COMMAND_NAMESPACE}.clarify[/] [bright_black](optional)[/bright_black] - Ask structured questions to de-risk ambiguous areas before planning (run before [cyan]/{COMMAND_NAMESPACE}.plan[/] if used)",
+        f"○ [cyan]/{COMMAND_NAMESPACE}.analyze[/] [bright_black](optional)[/bright_black] - Cross-artifact consistency & alignment report (after [cyan]/{COMMAND_NAMESPACE}.tasks[/], before [cyan]/{COMMAND_NAMESPACE}.implement[/])",
+        f"○ [cyan]/{COMMAND_NAMESPACE}.checklist[/] [bright_black](optional)[/bright_black] - Generate quality checklists to validate requirements completeness, clarity, and consistency (after [cyan]/{COMMAND_NAMESPACE}.plan[/])"
     ]
     enhancements_panel = Panel("\n".join(enhancement_lines), title="Enhancement Commands", border_style="cyan", padding=(1,2))
     console.print()

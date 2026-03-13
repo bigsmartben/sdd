@@ -128,10 +128,10 @@ class ExtensionManifest:
                 raise ValidationError("Command missing 'name' or 'file'")
 
             # Validate command name format
-            if not re.match(r'^speckit\.[a-z0-9-]+\.[a-z0-9-]+$', cmd["name"]):
+            if not re.match(r'^sdd\.[a-z0-9-]+\.[a-z0-9-]+$', cmd["name"]):
                 raise ValidationError(
                     f"Invalid command name '{cmd['name']}': "
-                    "must follow pattern 'speckit.{extension}.{command}'"
+                    "must follow pattern 'sdd.{extension}.{command}'"
                 )
 
     @property
@@ -1003,7 +1003,7 @@ class CommandRegistrar:
 
         Args:
             project_root: Path to project root
-            cmd_name: Command name (used as the file stem, e.g. 'speckit.my-ext.example')
+            cmd_name: Command name (used as the file stem, e.g. 'sdd.my-ext.example')
         """
         prompts_dir = project_root / ".github" / "prompts"
         prompts_dir.mkdir(parents=True, exist_ok=True)
@@ -1068,8 +1068,8 @@ class CommandRegistrar:
 class ExtensionCatalog:
     """Manages extension catalog fetching, caching, and searching."""
 
-    DEFAULT_CATALOG_URL = "https://raw.githubusercontent.com/github/spec-kit/main/extensions/catalog.json"
-    COMMUNITY_CATALOG_URL = "https://raw.githubusercontent.com/github/spec-kit/main/extensions/catalog.community.json"
+    DEFAULT_CATALOG_URL = "https://raw.githubusercontent.com/bigsmartben/sdd/main/extensions/catalog.json"
+    COMMUNITY_CATALOG_URL = "https://raw.githubusercontent.com/bigsmartben/sdd/main/extensions/catalog.community.json"
     CACHE_DURATION = 3600  # 1 hour in seconds
 
     def __init__(self, project_root: Path):

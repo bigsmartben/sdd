@@ -3,7 +3,7 @@
 **Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
 **Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
 
-**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/plan-template.md` for the execution workflow.
+**Note**: This template is filled in by the `/sdd.plan` command. See `.specify/templates/plan-template.md` for the execution workflow.
 
 ## Summary
 
@@ -68,17 +68,17 @@ Check constitution-aligned constraints before Stage 0 research, and re-check aft
 
 ```text
 specs/[###-feature]/
-├── plan.md              # This file (/speckit.plan command output)
-├── research.md          # Stage 0 output (/speckit.plan command)
-├── data-model.md        # Stage 1 output (/speckit.plan command)
-├── contracts/           # Stage 1 mandatory output (/speckit.plan command, canonical contracts semantics)
-├── test-matrix.md       # Stage 2 output (/speckit.plan command, if applicable)
-├── interface-details/   # Stage 3 output (/speckit.plan command, one doc per contract operation with operation binding, data-model projection, invariant/transition mapping, and method-level sequencing)
-├── quickstart.md        # Optional output (/speckit.plan command)
-└── tasks.md             # Next stage output (/speckit.tasks command - NOT created by /speckit.plan)
+├── plan.md              # This file (/sdd.plan command output)
+├── research.md          # Stage 0 output (/sdd.plan command)
+├── data-model.md        # Stage 1 output (/sdd.plan command)
+├── contracts/           # Stage 1 mandatory output (/sdd.plan command, canonical contracts semantics)
+├── test-matrix.md       # Stage 2 output (/sdd.plan command, if applicable)
+├── interface-details/   # Stage 3 output (/sdd.plan command, one doc per contract operation with operation binding, data-model projection, invariant/transition mapping, and method-level sequencing)
+├── quickstart.md        # Optional output (/sdd.plan command)
+└── tasks.md             # Next stage output (/sdd.tasks command - NOT created by /sdd.plan)
 ```
 
-`agent-specific context file` is a repository-level auxiliary output of Stage 4 (`/speckit.plan`) and is not stored under `specs/[###-feature]/`.
+`agent-specific context file` is a repository-level auxiliary output of Stage 4 (`/sdd.plan`) and is not stored under `specs/[###-feature]/`.
 
 ### Source Code (repository root)
 <!--
