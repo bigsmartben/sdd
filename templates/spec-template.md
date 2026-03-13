@@ -7,6 +7,23 @@
 
 ---
 
+## Backbone Focus Rules *(mandatory)*
+
+Use this document to express business/design semantics only. Keep a strict backbone-first structure and avoid governance/process noise.
+
+- Build and maintain this backbone in order:
+  1) Global business overview
+  2) System/context boundaries
+  3) UC set and priorities
+  4) User-visible data (UDD) entities
+  5) Key rules (interaction, feedback, publish/validation)
+  6) Open questions only when truly blocking
+- Do **not** hardcode sample project/domain names from analysis notes unless explicitly provided by user input.
+- Keep examples generic and reusable across domains.
+- Avoid non-essential detours in the spec body (for example: governance states, stage dispatching, coverage audits, or conversion reports).
+
+---
+
 ## Artifacts Overview & Navigation *(mandatory)*
 
 This section is navigation only.
@@ -27,6 +44,8 @@ This section is navigation only.
   - `contracts/`
 
 ## § 1 Global Context *(mandatory)*
+
+> Write this section as a true business backbone summary, not as implementation or governance commentary.
 
 ### 1.1 Actors
 
@@ -89,6 +108,8 @@ This section is navigation only.
 
 ## § 2 UC Overview *(mandatory)*
 
+> Define the minimum UC set that closes the core user/business loop. Keep numbering consistent, but prioritize semantic completeness over numbering style.
+
 | UC ID | Use Case Description | Primary Actor | Priority | Details |
 |-------|----------------------|---------------|----------|---------|
 | UC-001 | [Use case summary] | [Actor] | P1 | [Section link] |
@@ -103,6 +124,8 @@ This section is navigation only.
 | UC-002 | FR-001 | [Testable capability] | MUST/SHOULD/MAY | S1 | [Section link] |
 
 ### 2.2 Global UX Flow Overview *(mandatory when business flow spans multiple UCs)*
+
+> Focus on cross-UC backbone flow only. Do not add side-track diagnostics or implementation-level branching details here.
 
 #### Cross-UC Flow Scope
 

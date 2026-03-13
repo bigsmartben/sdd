@@ -21,6 +21,8 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 Goal: Detect and reduce ambiguity or missing decision points in the active feature specification and record the clarifications directly in the spec file.
 
+Anti-solidification rule (mandatory): clarification must refine the current spec context only. Do not introduce domain/project/entity names that are not grounded in current spec content, current user input, or explicitly stated assumptions.
+
 Note: This clarification workflow is expected to run (and be completed) BEFORE invoking `/sdd.plan`. If the user explicitly states they are skipping clarification (e.g., exploratory spike), you may proceed, but must warn that downstream rework risk increases.
 
 Execution steps:
@@ -152,6 +154,9 @@ Execution steps:
     - Save the spec file AFTER each integration to minimize risk of context loss (atomic overwrite).
     - Preserve formatting: do not reorder unrelated sections; keep heading hierarchy intact.
     - Keep each inserted clarification minimal and testable (avoid narrative drift).
+    - Keep terminology context-pure:
+      - Do not inject legacy/example domain identifiers from prior conversations.
+      - If a candidate term is not present in current spec/user input/assumptions, replace it with neutral wording or ask a bounded clarification.
 
 6. Validation (performed after EACH write plus final pass):
    - Clarifications session contains exactly one bullet per accepted answer (no duplicates).
@@ -160,6 +165,7 @@ Execution steps:
    - No contradictory earlier statement remains (scan for now-invalid alternative choices removed).
    - Markdown structure valid; only allowed new headings: `## Clarifications`, `### Session YYYY-MM-DD`.
    - Terminology consistency: same canonical term used across all updated sections.
+   - Anti-solidification: no newly added term should be traceable only to prior analysis/examples.
 
 7. Write the updated spec back to `FEATURE_SPEC`.
 

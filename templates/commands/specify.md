@@ -25,6 +25,22 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 The text the user typed after `/sdd.specify` in the triggering message **is** the feature description. Assume you always have it available in this conversation even if `{ARGS}` appears literally below. Do not ask the user to repeat it unless they provided an empty command.
 
+## Backbone-First Guardrails (mandatory)
+
+When generating or updating `spec.md`, enforce backbone-first output and keep content domain-generic unless the user explicitly provides domain details.
+
+- Keep the backbone order stable:
+  1. Global business overview
+  2. Context/system boundaries
+  3. UC set and priorities
+  4. User-visible data entities (UDD)
+  5. Key interaction/feedback/publish-validation rules
+  6. Open questions only when blocking
+- Do **not** hardcode analysis-only sample domains, entities, UC names, or project identifiers into the final spec.
+- Do **not** spend tokens on side-track verification narratives in the spec body; keep focus on core business flow.
+- Preserve template reusability across projects.
+- Treat any domain noun not grounded in current user input as suspect until validated.
+
 Given that feature description, do this:
 
 1. **Generate a concise short name** (2-4 words) for the branch:
@@ -68,9 +84,11 @@ Given that feature description, do this:
          - No reasonable default exists
        - **LIMIT: Maximum 3 [NEEDS CLARIFICATION] markers total**
        - Prioritize clarifications by impact: scope > security/privacy > user experience > technical details
+       - Never use example-domain placeholders from prior analysis as if they were user requirements
     4. Build Global Context and boundaries
        - Define actors
        - Define in-scope and out-of-scope boundaries
+       - Keep this section business-semantic only (no governance/process-control payload)
     5. Build field-level UDD (mandatory)
        - Define core user-visible entities
        - Define `Entity.field` rows with business calculation, boundaries, display rules, source type, and key path
@@ -78,6 +96,7 @@ Given that feature description, do this:
     6. Build UC Overview and FR Index
        - Define UC table with priority
        - Define FR Index mapping UC ↔ FR ↔ scenarios
+       - Keep UC naming generic and requirement-driven; avoid importing sample UC labels unless provided by user input
     7. Build heavy UX flow sections
        - Create Global UX Flow Overview for cross-UC flows
        - For each interactive UC, provide main flow (Mermaid), path inventory, interaction step table, exception paths, postconditions
@@ -95,8 +114,18 @@ Given that feature description, do this:
     13. Return: SUCCESS (spec ready for planning)
 
 5. Write the specification to SPEC_FILE using the template structure, replacing placeholders with concrete details derived from the feature description (arguments) while preserving section order and headings.
+   - Ensure all concrete names come from user input or reasonable neutral defaults (not from unrelated example projects).
 
 6. **Specification Quality Validation**: After writing the initial spec, validate it against quality criteria:
+
+   a0. **Run an Anti-Solidification Pass (mandatory before checklist validation)**:
+      - Build a term set from current user input (`$ARGUMENTS`) plus neutral template vocabulary.
+      - Scan the generated spec for domain/project/entity terms that are not supported by:
+        1) user input,
+        2) explicit assumptions written in this spec session, or
+        3) neutral placeholders.
+      - If unsupported terms are found, replace with neutral wording or terms derived from user input.
+      - Do not keep legacy/example project terms from prior conversations.
 
    a. **Create Spec Quality Checklist**: Generate a checklist file at `FEATURE_DIR/checklists/requirements.md` using the checklist template structure with these validation items:
 
@@ -113,6 +142,7 @@ Given that feature description, do this:
       - [ ] Focused on user value and business needs
       - [ ] Written for non-technical stakeholders
       - [ ] All mandatory sections completed
+      - [ ] No unsupported domain terms leaked from prior analysis/examples
       
       ## Requirement Completeness
       
@@ -140,6 +170,7 @@ Given that feature description, do this:
    b. **Run Validation Check**: Review the spec against each checklist item:
       - For each item, determine if it passes or fails
       - Document specific issues found (quote relevant spec sections)
+      - Validation MUST fail if unsupported domain terms are present
 
    c. **Handle Validation Results**:
 
@@ -201,6 +232,7 @@ Given that feature description, do this:
 - Written for business stakeholders, not developers.
 - DO NOT create any checklists that are embedded in the spec. That will be a separate command.
 - Do NOT add governance content in spec (no SSOT governance states, stage dispatchers, interface registries, conversion reports, or coverage audit sections).
+- Do NOT inject prior analysis examples as project facts (keep template outputs portable and domain-neutral).
 
 ### Section Requirements
 
@@ -278,3 +310,4 @@ When validating the generated spec, also ensure:
 - Each user-facing UC includes UI definitions and component-data dependency table
 - FR sections reference scenarios and relevant UDD fields
 - No governance/audit payload is embedded in the spec body
+- No carry-over domain identifiers appear unless traceable to current user input or explicit in-spec assumptions
