@@ -14,7 +14,7 @@
 
 .PARAMETER Agents
     Comma or space separated subset of agents to build (default: all)
-    Valid agents: claude, gemini, copilot, cursor-agent, qwen, opencode, windsurf, codex, kilocode, auggie, roo, codebuddy, amp, kiro-cli, bob, qodercli, shai, tabnine, agy, vibe, kimi, generic
+    Valid agents: claude, gemini, copilot, cursor-agent, cline, qwen, opencode, windsurf, codex, kilocode, auggie, roo, codebuddy, amp, kiro-cli, bob, qodercli, shai, tabnine, agy, vibe, kimi, generic
 
 .PARAMETER Scripts
     Comma or space separated subset of script types to build (default: both)
@@ -380,6 +380,10 @@ function Build-Variant {
             $cmdDir = Join-Path $baseDir ".cursor/commands"
             Generate-Commands -Agent 'cursor-agent' -Extension 'md' -ArgFormat '$ARGUMENTS' -OutputDir $cmdDir -ScriptVariant $Script
         }
+        'cline' {
+            $cmdDir = Join-Path $baseDir ".clinerules/workflows"
+            Generate-Commands -Agent 'cline' -Extension 'md' -ArgFormat '$ARGUMENTS' -OutputDir $cmdDir -ScriptVariant $Script
+        }
         'qwen' {
             $cmdDir = Join-Path $baseDir ".qwen/commands"
             Generate-Commands -Agent 'qwen' -Extension 'toml' -ArgFormat '{{args}}' -OutputDir $cmdDir -ScriptVariant $Script
@@ -470,7 +474,7 @@ function Build-Variant {
 }
 
 # Define all agents and scripts
-$AllAgents = @('claude', 'gemini', 'copilot', 'cursor-agent', 'qwen', 'opencode', 'windsurf', 'codex', 'kilocode', 'auggie', 'roo', 'codebuddy', 'amp', 'kiro-cli', 'bob', 'qodercli', 'shai', 'tabnine', 'agy', 'vibe', 'kimi', 'generic')
+$AllAgents = @('claude', 'gemini', 'copilot', 'cursor-agent', 'cline', 'qwen', 'opencode', 'windsurf', 'codex', 'kilocode', 'auggie', 'roo', 'codebuddy', 'amp', 'kiro-cli', 'bob', 'qodercli', 'shai', 'tabnine', 'agy', 'vibe', 'kimi', 'generic')
 $AllScripts = @('sh', 'ps')
 
 function Normalize-List {

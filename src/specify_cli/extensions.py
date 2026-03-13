@@ -714,6 +714,12 @@ class CommandRegistrar:
             "args": "$ARGUMENTS",
             "extension": ".md"
         },
+        "cline": {
+            "dir": ".clinerules/workflows",
+            "format": "markdown",
+            "args": "$ARGUMENTS",
+            "extension": ".md"
+        },
         "kilocode": {
             "dir": ".kilocode/rules",
             "format": "markdown",

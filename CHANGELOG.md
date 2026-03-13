@@ -13,6 +13,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fix release workflow repository targeting: ensure `check-release-exists.sh` checks releases in `${GITHUB_REPOSITORY}` to avoid false negatives/positives when local `gh` default repo differs
 
+## [2.0.3] - 2026-03-13
+
+### Added
+
+- Add Cline agent support via `--ai cline` with slash command directory `.clinerules/workflows`
+
+### Changed
+
+- Include Cline across release packaging/release scripts and agent-context update scripts (bash + PowerShell)
+- Update README and consistency tests to cover Cline integration
+
 ## [2.0.1] - 2026-03-13
 
 ### Fixed
