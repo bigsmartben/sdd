@@ -15,8 +15,8 @@
 |------:|------|-----------|-----------------|
 | 0 | Research | Resolve unknowns and record evidence-based decisions | `research.md` |
 | 1 | Data Model & Contracts | Define core model + contracts semantics (including state machine) | `data-model.md`, `contracts/`, `quickstart.md` |
-| 2 | Test-Matrix Generation | Generate `test-matrix.md` as a verification design input based on spec/UIF, including normal/exception coverage and case anchors (without rewriting `spec.md`) | `test-matrix.md` (or equivalent coverage artifact) |
-| 3 | Interface Detailed Design | Produce per-operation semantic projection and interface-level detailed design by binding contracts to data-model fields, invariants, and lifecycle transitions | `interface-details/*.md` |
+| 2 | Test-Matrix Generation | Generate `test-matrix.md` as a verification design input based on spec/UIF, capturing actionable normal/exception scenarios and any downstream-needed case anchors (without rewriting `spec.md`) | `test-matrix.md` (or equivalent coverage artifact) |
+| 3 | Interface Detailed Design | Produce per-operation design projections that bind contracts to the relevant data-model fields, invariants, and lifecycle transitions without turning interface docs into audit reports | `interface-details/*.md` |
 | 4 | Agent Context Update | Update agent-specific context from current plan outputs | repository-level agent-specific context file (outside `specs/[###-feature]/`) |
 
 ## Design Terminology Boundaries
@@ -25,16 +25,21 @@
 - **Interface Detailed Design UML Class (`interface-details/*.md`)**: detailed-design/full-class level. Focus on per-interface collaboration and implementation-level structure.
 - **Sequence diagrams in Stage 3** must use **method-call-level granularity**.
 - Use `contracts` terminology uniformly in downstream artifacts.
+- **Diagram source precedence**: contract behavior and operation semantics come only from `contracts/`; domain objects, fields, invariants, relationships, and transitions come only from `data-model.md`; main/exception execution paths come only from `test-matrix.md`.
+- **Repository symbol reuse first**: if relevant repository participants, classes, or methods already exist, reuse those names verbatim in prose and diagrams.
+- **Greenfield naming fallback**: if no relevant repository symbols exist, choose one stable planned name per role for the bound operation and reuse it across prose, sequence diagram, and UML.
 - **Interface detailed design is semantic projection**: each `interface-details/*.md` doc projects and refines only the `data-model.md` subset required by exactly one contract operation.
 - **Do not redefine global model semantics in interface details**: entity identity, field meaning, relationships, invariants, and lifecycle semantics stay anchored in `data-model.md`.
 - **Operation accountability must be explicit**: each interface detail doc should state which data-model fields/invariants/transitions are consumed, validated, or triggered.
-- **Path accountability should be practical**: each interface detail doc should at least map main path and major exception paths to relevant `CaseID` / `TM-*` / `TC-*` anchors from `test-matrix.md`.
+- **Path accountability should be practical**: reference `CaseID` / `TM-*` / `TC-*` anchors only when they clarify behavior, enforcement, or verification intent.
+- **Behavior Paths authority**: `## Behavior Paths` is the authoritative local source for sequence-diagram message flow.
+- **Projection authority**: `## Scope & Projection` plus `## Invariants & Transition Responsibilities` are the authoritative local source for UML class/member selection.
 - **Stage 2 UIF refinement role**: refine spec-stage UIF and cross-UC flow into a verification-oriented view for case design (`CaseID` / `TM-*` / `TC-*`).
 - **Test matrix boundary**: `test-matrix.md` serves coverage and verification design only. It must not redefine requirement semantics (`spec.md`), contract semantics (`contracts/`), or global model semantics (`data-model.md`).
 
 ## Stage 3 Interface Detail Anchors (Recommended)
 
-For each `interface-details/*.md` doc, prefer concrete anchors (avoid opaque placeholders when possible):
+For each `interface-details/*.md` doc, prefer concrete anchors only when they clarify behavior, enforcement, or verification (avoid opaque placeholders when possible):
 
 - Contract anchor: `operationId` (or equivalent unique contract operation key)
 - Data-model anchors: `Entity`, `Entity.field`, invariant IDs, transition IDs (when applicable)
@@ -51,7 +56,12 @@ For each `interface-details/*.md` doc, ensure content is implementation-informat
 - **Invariant/transition accountability depth**: for each mapped invariant/transition, include responsibility type (establish/validate/preserve), enforcement location, and contract-visible failure behavior.
 - **Pre/Post condition checkability**: preconditions and postconditions should be verifiable conditions (not vague summaries).
 - **Behavior path completeness**: include main success path and numbered key exception/error paths.
-- **Path mapping clarity**: map main path and major exception paths to useful case anchors; keep mapping lightweight and implementation-serving.
+- **Path mapping clarity**: include case anchors only when they materially aid implementation or verification.
+- **Concrete naming discipline**: reuse in-repo participant/class/method names verbatim when available; otherwise keep one stable planned name per role across text and diagrams.
+- **Sequence participant discipline**: include only operation-used participants from these buckets: external actor/caller, interface boundary/entrypoint, application/service orchestrator, domain entity/value object/policy, persistence adapter/repository, external system/gateway.
+- **Sequence flow derivation**: derive call order from `## Behavior Paths`; include each main success path once; render contract-visible exception/guard-failure paths as `alt` branches; place guard checks before protected side effects; show cross-boundary side effects explicitly; use Mermaid `sequenceDiagram` with `autonumber`.
+- **UML inclusion discipline**: include only operation-relevant contract DTOs, domain types, and participating application/service/repository/gateway classes.
+- **UML member discipline**: fields appear only when used by the operation; methods align with sequence messages or invariant/transition enforcement; relationships stay operation-relevant; affected classes show the relevant state field and transition constraints when applicable.
 - **No layered placeholder UML**: UML class design must include interface-relevant concrete fields/methods/relationships/constraints, not only layer names.
 - **Sequence exception branches**: sequence design must reflect key guard-failure/error branches in addition to success flow.
 
@@ -63,10 +73,10 @@ For each `interface-details/*.md` doc, use a stable section skeleton to keep out
 2. `## Scope & Projection` (entities/fields/relationships in scope with anchors)
 3. `## Invariants & Transition Responsibilities` (INV/T anchors + responsibility + failure behavior)
 4. `## Preconditions / Postconditions` (checkable conditions)
-5. `## Behavior Paths` (main path + numbered key exception paths)
-6. `## Sequence Diagram` (Mermaid, method-call-level, includes key exception/guard-failure branches)
-7. `## UML Class Design` (field-level, interface-relevant concrete structure)
-8. `## References & Case Mapping` (main/major exception path mapping + related upstream references)
+5. `## Behavior Paths` (main path + numbered key exception paths; authoritative local source for sequence flow)
+6. `## Sequence Diagram` (Mermaid `sequenceDiagram` with `autonumber`, method-call-level, derived from `## Behavior Paths`, includes key exception/guard-failure branches)
+7. `## UML Class Design` (field-level, interface-relevant concrete structure derived from `## Scope & Projection` plus `## Invariants & Transition Responsibilities`)
+8. `## Upstream References` (contract anchor plus only the spec/model/test refs actually used by the operation)
 
 If a section is truly not applicable, keep the section and provide explicit rationale with nearest upstream anchor (never remove required sections silently).
 
@@ -91,12 +101,17 @@ If a section is truly not applicable, keep the section and provide explicit rati
 
 - One interface detail doc binds to one contract operation, unambiguously.
 - Required sections are present and non-empty.
-- Field projection / invariant mapping / transition mapping should use concrete anchors where helpful.
 - Main success path and key exception paths are reflected in both behavior text and sequence design.
 - UML class is field-level and interface-relevant (not only layered placeholders).
 - Sequence diagram is method-call-level with concrete method names and key exception/guard-failure branches.
-- Main path and major exception paths include concise case mapping.
+- Existing repo symbols are reused verbatim when available; otherwise greenfield names stay stable across prose and diagrams.
+- Sequence participants are limited to real operation roles and allowed participant buckets.
+- `Behavior Paths` is fully reflected in sequence design, including key exception/guard-failure branches that alter contract-visible behavior.
+- Guard / invariant / transition checks appear before the protected side effects they gate.
+- UML includes only operation-relevant classes with concrete members/constraints and clear reasons to appear.
+- No class/member contradicts `data-model.md`; no diagram branch contradicts contract-visible failure behavior.
 - Required section skeleton is preserved; non-applicable sections include explicit rationale + nearest upstream anchor.
+- Upstream references stay concise and only include refs that help implementation, enforcement, or verification.
 - Markdown structure renders correctly in preview (headings/lists/tables/code fences).
 
 ## Technical Context
@@ -134,7 +149,7 @@ specs/[###-feature]/
 ├── data-model.md        # Stage 1 output (/sdd.plan command)
 ├── contracts/           # Stage 1 mandatory output (/sdd.plan command, canonical contracts semantics)
 ├── test-matrix.md       # Stage 2 output (/sdd.plan command, if applicable)
-├── interface-details/   # Stage 3 output (/sdd.plan command, one doc per contract operation with operation binding, data-model projection, invariant/transition mapping, and method-level sequencing)
+├── interface-details/   # Stage 3 output (/sdd.plan command, one doc per contract operation with implementation-serving design projection and concise upstream references)
 ├── quickstart.md        # Optional output (/sdd.plan command)
 └── tasks.md             # Next stage output (/sdd.tasks command - NOT created by /sdd.plan)
 ```

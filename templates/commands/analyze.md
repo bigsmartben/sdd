@@ -15,11 +15,11 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Goal
 
-Identify inconsistencies, duplications, ambiguities, and underspecified items across the three core artifacts (`spec.md`, `plan.md`, `tasks.md`) before implementation. This command MUST run only after `/sdd.tasks` has successfully produced a complete `tasks.md`.
+Run the dedicated pre-implementation audit across the three core artifacts (`spec.md`, `plan.md`, `tasks.md`) after `/sdd.tasks`. Identify inconsistencies, ambiguities, uncovered MUST requirements, execution gaps, and unnecessary traceability payload before `/sdd.implement`.
 
 ## Operating Constraints
 
-**STRICTLY READ-ONLY**: Do **not** modify any files. Output a structured analysis report. Offer an optional remediation plan (user must explicitly approve before any follow-up editing commands would be invoked manually).
+**STRICTLY READ-ONLY**: Do **not** modify any files. Output a structured audit report. Offer an optional remediation plan (user must explicitly approve before any follow-up editing commands would be invoked manually).
 
 **Constitution Authority**: The project constitution (`/memory/constitution.md`) is **non-negotiable** within this analysis scope. Constitution conflicts are automatically CRITICAL and require adjustment of the spec, plan, or tasks—not dilution, reinterpretation, or silent ignoring of the principle. If a principle itself needs to change, that must occur in a separate, explicit constitution update outside `/sdd.analyze`.
 
@@ -51,17 +51,25 @@ Load only the minimal necessary context from each artifact:
 **From plan.md:**
 
 - Architecture/stack choices
-- Data Model references
+- Contract / data-model / verification design references when present
 - Phases
 - Technical constraints
 
 **From tasks.md:**
 
 - Task IDs
-- Descriptions
-- Phase grouping
-- Parallel markers [P]
+- Execution scopes (`GLOBAL`, `IFxx`)
+- `Task DAG`
+- Descriptions and completion anchors
+- Referenced requirement / verification refs when present
 - Referenced file paths
+
+**From supporting planning artifacts (load only when needed for Stage 3 consistency checks):**
+
+- `contracts/` for canonical interface semantics
+- `data-model.md` for global object / invariant / transition semantics
+- `test-matrix.md` for main/exception path anchors
+- `interface-details/` for per-operation behavior text, sequence diagrams, and UML class diagrams
 
 **From constitution:**
 
@@ -114,14 +122,30 @@ Focus on high-signal findings. Limit to 50 findings total; aggregate remainder i
 - Task ordering contradictions (e.g., integration tasks before foundational setup tasks without dependency note)
 - Conflicting requirements (e.g., one requires Next.js while other specifies Vue)
 
+#### G. Audit Hygiene
+
+- Unnecessary traceability payload embedded in design/execution artifacts
+- Repeated audit requirements that should be handled in `/sdd.analyze`, not in plan or implement instructions
+- Optional references presented as blocking requirements without execution need
+
+#### H. Stage 3 Diagram Drift
+
+- Invented participant / class / method symbols in `interface-details/` despite available repository anchors
+- Sequence diagrams missing required exception / guard-failure branches from `Behavior Paths` when they affect contract-visible behavior
+- UML diagrams containing only layered placeholders or classes with no operation-relevant members / constraints
+- Diagram content contradicting `contracts/`, `data-model.md`, or `test-matrix.md`
+- Interface detail prose and diagrams disagreeing on method names, participants, or responsibilities
+
 ### 5. Severity Assignment
 
-Use this heuristic to prioritize findings:
+Use this heuristic to prioritize findings and separate blocking issues from optional cleanliness work:
 
-- **CRITICAL**: Violates constitution MUST, missing core spec artifact, or requirement with zero coverage that blocks baseline functionality
-- **HIGH**: Duplicate or conflicting requirement, ambiguous security/performance attribute, untestable acceptance criterion
-- **MEDIUM**: Terminology drift, missing non-functional task coverage, underspecified edge case
-- **LOW**: Style/wording improvements, minor redundancy not affecting execution order
+- **Blocking**: Missing execution-critical inputs, contract contradictions, constitution MUST violations, or uncovered MUST requirements that block baseline functionality
+- **Non-Blocking**: Naming drift, missing optional references, over-verbose traceability sections, or minor wording/structure issues
+- **CRITICAL**: Violates constitution MUST, contract contradiction, diagram contradiction that changes contract-visible behavior, missing execution-critical input, or uncovered MUST requirement blocking baseline functionality
+- **HIGH**: Duplicate or conflicting requirement, ambiguous security/performance attribute, untestable acceptance criterion, missing required Stage 3 exception/guard branch, or task model contradiction that can derail implementation
+- **MEDIUM**: Terminology drift, missing non-functional task coverage, underspecified edge case, placeholder Stage 3 diagrams, or over-verbose traceability payload
+- **LOW**: Style/wording improvements, optional reference cleanup, minor redundancy not affecting execution order
 
 ### 6. Produce Compact Analysis Report
 
@@ -129,9 +153,9 @@ Output a Markdown report (no file writes) with the following structure:
 
 ## Specification Analysis Report
 
-| ID | Category | Severity | Location(s) | Summary | Recommendation |
-|----|----------|----------|-------------|---------|----------------|
-| A1 | Duplication | HIGH | spec.md:L120-134 | Two similar requirements ... | Merge phrasing; keep clearer version |
+| ID | Category | Impact | Severity | Location(s) | Summary | Recommendation |
+|----|----------|--------|----------|-------------|---------|----------------|
+| A1 | Duplication | Non-Blocking | HIGH | spec.md:L120-134 | Two similar requirements ... | Merge phrasing; keep clearer version |
 
 (Add one row per finding; generate stable IDs prefixed by category initial.)
 
@@ -159,7 +183,8 @@ At end of report, output a concise Next Actions block:
 
 - If CRITICAL issues exist: Recommend resolving before `/sdd.implement`
 - If only LOW/MEDIUM: User may proceed, but provide improvement suggestions
-- Provide explicit command suggestions: e.g., "Run /sdd.specify with refinement", "Run /sdd.plan to adjust architecture", "Manually edit tasks.md to add coverage for 'performance-metrics'"
+- Provide explicit command suggestions: e.g., "Run `/sdd.specify` with refinement", "Run `/sdd.plan` to adjust architecture", "Manually edit `tasks.md` to add coverage for 'performance-metrics'"
+- Frame this command as the dedicated audit pass before implementation, not as a generic extra validation step
 
 ### 8. Offer Remediation
 
@@ -179,6 +204,7 @@ Ask the user: "Would you like me to suggest concrete remediation edits for the t
 - **NEVER modify files** (this is read-only analysis)
 - **NEVER hallucinate missing sections** (if absent, report them accurately)
 - **Prioritize constitution violations** (these are always CRITICAL)
+- **Treat this command as the single concentrated audit step** for cross-artifact drift and duplicated governance overhead
 - **Use examples over exhaustive rules** (cite specific instances, not generic patterns)
 - **Report zero issues gracefully** (emit success report with coverage statistics)
 

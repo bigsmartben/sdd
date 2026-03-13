@@ -117,6 +117,10 @@ if ((Test-Path $paths.CONTRACTS_DIR) -and (Get-ChildItem -Path $paths.CONTRACTS_
     $docs += 'contracts/' 
 }
 
+if (Test-Path $paths.TEST_MATRIX) { $docs += 'test-matrix.md' }
+if ((Test-Path $paths.INTERFACE_DETAILS_DIR) -and (Get-ChildItem -Path $paths.INTERFACE_DETAILS_DIR -ErrorAction SilentlyContinue | Select-Object -First 1)) {
+    $docs += 'interface-details/'
+}
 if (Test-Path $paths.QUICKSTART) { $docs += 'quickstart.md' }
 
 # Include tasks.md if requested and it exists
@@ -140,6 +144,8 @@ if ($Json) {
     Test-FileExists -Path $paths.RESEARCH -Description 'research.md' | Out-Null
     Test-FileExists -Path $paths.DATA_MODEL -Description 'data-model.md' | Out-Null
     Test-DirHasFiles -Path $paths.CONTRACTS_DIR -Description 'contracts/' | Out-Null
+    Test-FileExists -Path $paths.TEST_MATRIX -Description 'test-matrix.md' | Out-Null
+    Test-DirHasFiles -Path $paths.INTERFACE_DETAILS_DIR -Description 'interface-details/' | Out-Null
     Test-FileExists -Path $paths.QUICKSTART -Description 'quickstart.md' | Out-Null
     
     if ($IncludeTasks) {

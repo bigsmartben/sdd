@@ -310,7 +310,7 @@ Additional commands for enhanced quality and validation:
 | Command              | Description                                                                                                                          |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `/sdd.clarify`   | Clarify underspecified areas (recommended before `/sdd.plan`; formerly `/quizme`)                                                |
-| `/sdd.analyze`   | Cross-artifact consistency & coverage analysis (run after `/sdd.tasks`, before `/sdd.implement`)                             |
+| `/sdd.analyze`   | Dedicated cross-artifact audit across `spec.md`, `plan.md`, and `tasks.md` (run after `/sdd.tasks`, before `/sdd.implement`) |
 | `/sdd.checklist` | Generate custom quality checklists that validate requirements completeness, clarity, and consistency (like "unit tests for English") |
 
 ### Environment Variables
@@ -561,9 +561,13 @@ The output of this step will include a number of implementation detail documents
 │      │  ├── api-spec.json
 │      │  └── signalr-spec.md
 │      ├── data-model.md
+│      ├── interface-details
+│      │  ├── create-project.md
+│      │  └── create-task.md
 │      ├── plan.md
 │      ├── quickstart.md
 │      ├── research.md
+│      ├── test-matrix.md
 │      └── spec.md
 └── templates
     ├── CLAUDE-template.md
@@ -628,14 +632,15 @@ With the implementation plan validated, you can now break down the plan into spe
 
 This step creates a `tasks.md` file in your feature specification directory that contains:
 
-- **Task breakdown organized by user story** - Each user story becomes a separate implementation phase with its own set of tasks
-- **Dependency management** - Tasks are ordered to respect dependencies between components (e.g., models before services, services before endpoints)
-- **Parallel execution markers** - Tasks that can run in parallel are marked with `[P]` to optimize development workflow
+- **Execution scopes** - Shared foundation work is separated from interface delivery units (`GLOBAL` + `IFxx`)
+- **Task DAG dependency model** - `Task DAG` is the execution authority for ordering and safe parallelism
 - **File path specifications** - Each task includes the exact file paths where implementation should occur
-- **Test-driven development structure** - If tests are requested, test tasks are included and ordered to be written before implementation
-- **Checkpoint validation** - Each user story phase includes checkpoints to validate independent functionality
+- **Verification-first delivery loops** - Verify, implement, and completion tasks are grouped around each interface unit
+- **Completion anchors** - Tasks carry deterministic pass signals such as contract checks, build/test commands, or case anchors
 
-The generated tasks.md provides a clear roadmap for the `/sdd.implement` command, ensuring systematic implementation that maintains code quality and allows for incremental delivery of user stories.
+Run `/sdd.analyze` after `/sdd.tasks` when you want the dedicated pre-implementation audit pass for drift, contradictions, uncovered MUST requirements, and other cross-artifact issues.
+
+The generated tasks.md provides a clear roadmap for the `/sdd.implement` command, ensuring systematic implementation that maintains code quality without turning the task artifact itself into an audit ledger.
 
 ### **STEP 7:** Implementation
 
@@ -648,10 +653,10 @@ Once ready, use the `/sdd.implement` command to execute your implementation plan
 The `/sdd.implement` command will:
 
 - Validate that all prerequisites are in place (constitution, spec, plan, and tasks)
-- Parse the task breakdown from `tasks.md`
-- Execute tasks in the correct order, respecting dependencies and parallel execution markers
+- Parse the execution plan from `tasks.md`
+- Execute tasks according to `Task DAG`, `GLOBAL`, and `IFxx` delivery units
 - Follow the TDD approach defined in your task plan
-- Provide progress updates and handle errors appropriately
+- Provide progress updates, honor strict/adaptive execution mode, and stop for upstream repair when runtime drift exceeds safe local adaptation
 
 > [!IMPORTANT]
 > The AI agent will execute local CLI commands (such as `dotnet`, `npm`, etc.) - make sure you have the required tools installed on your machine.

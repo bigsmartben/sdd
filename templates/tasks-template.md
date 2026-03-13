@@ -11,7 +11,7 @@ description: "Interface-delivery-oriented execution orchestration template for f
 
 - This document is the executable delivery orchestration source for implementation.
 - `tasks.md` organizes work primarily by shared foundation and interface delivery units (`IFxx`).
-- `tasks.md` MUST define clear task units, explicit execution dependencies, and completion anchors.
+- `tasks.md` MUST define clear task units and explicit execution dependencies.
 - `tasks.md` MUST NOT duplicate interface/data-model/test semantics from upstream documents.
 
 Boundary ownership:
@@ -53,7 +53,6 @@ Use concise references only. Do not build registry/audit tables here.
 
 - Task DAG is the baseline dependency authority for runtime scheduling.
 - In `strict` mode, Task DAG is followed exactly.
-- In `adaptive` mode, local split/merge/resequence is allowed only within Section 3.3 guardrails.
 - Dependencies MUST be declared as adjacency list.
 
 ```text
@@ -67,26 +66,13 @@ T003 -> T010
 - Runtime scheduling follows Task DAG.
 - Section order and task numbering are readability aids, not dependency authority.
 - `[Pre:T###,...]` is an inline mirror and SHOULD stay consistent with Task DAG.
-
-### 3.3 Execution Flexibility Policy
-
-- Default mode: `strict`
-- Supported modes:
-  - `strict`: execute exactly against Task DAG and task rows
-  - `adaptive`: allow bounded runtime split/merge/resequence while preserving dependency safety and task intent
-
-Adaptive guardrails:
-
-- Do not violate Task DAG predecessor constraints.
-- Do not remove task references to operationId/requirement/verification anchors when they exist.
-- Keep completion anchors explicit.
-- Record runtime adaptations in implementation runtime output.
+- If adaptive execution needs special caution, add one short note here; otherwise omit extra policy text.
 
 ## 4) Task Definition Canon
 
 ### 4.1 Task Line Format
 
-`- [ ] T### [Type:Research|Interface|Verify|Infra|Docs] [IFxx?] [Role:...] [Pre:T###,...] Description with file path`
+`- [ ] T### [Type:Research|Interface|Verify|Infra|Docs] [IFxx?] [Role:...] [Pre:T###,...] Description with file path or command target`
 
 ### 4.2 Task Type Canon
 
@@ -99,10 +85,10 @@ Adaptive guardrails:
 ### 4.3 Metadata Semantics
 
 - `IFxx`: interface delivery scope tag; optional only for global tasks.
-- `Role`: execution focus for downstream implementation.
+- `Role`: execution focus for downstream implementation when useful.
 - `Pre`: optional inline predecessors; DAG remains authority.
-- File paths define execution boundary and must be explicit.
-- Core `Interface` / `Verify` tasks SHOULD include completion anchors (build pass / CaseID pass / acceptance check).
+- File paths or command targets define execution boundary and should be explicit.
+- Core `Interface` / `Verify` tasks SHOULD include completion anchors when they help prove completion.
 
 Role guidance:
 
@@ -129,9 +115,7 @@ Rules:
 
 - Goal: [one-line delivery goal]
 - Contract: [operationId / method path]
-- Primary Refs: [FR / UC / UIF / CaseID / TM / TC]
-- Served User Stories: [US refs]
-- Definition of Done: [verifiable completion criteria]
+- Primary Refs: [refs that help execution or completion checks]
 
 Recommended delivery loop:
 - establish verification target
@@ -148,7 +132,7 @@ Rules:
 - Organize implementation primarily by IF delivery units.
 - Each IF unit SHOULD form a verification-implementation-completion loop (document exceptions).
 - Keep IF sections reference-oriented; do not copy upstream design prose.
-- Use `CaseID/TM/TC` as completion anchors for verification whenever test-matrix is available.
+- Use `CaseID/TM/TC` as completion anchors only when they help prove delivery.
 
 ## 7) Cross-Interface Finalization
 

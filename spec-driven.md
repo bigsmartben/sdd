@@ -97,10 +97,12 @@ Once a feature specification exists, this command creates a comprehensive implem
 
 After a plan is created, this command analyzes the plan and related design documents to generate an executable task list:
 
-1. **Inputs**: Reads `plan.md` (required) and, if present, `data-model.md`, `contracts/`, and `research.md`
-2. **Task Derivation**: Converts contracts, entities, and scenarios into specific tasks
-3. **Parallelization**: Marks independent tasks `[P]` and outlines safe parallel groups
+1. **Inputs**: Reads `plan.md` (required) and, when present, `data-model.md`, `contracts/`, `test-matrix.md`, `interface-details/`, and `research.md`
+2. **Task Derivation**: Converts contracts, entities, and verification scenarios into executable tasks organized by `GLOBAL` and `IFxx`
+3. **Dependency Modeling**: Builds a `Task DAG` that becomes the runtime ordering authority
 4. **Output**: Writes `tasks.md` in the feature directory, ready for execution by a Task agent
+
+Before implementation, `/sdd.analyze` can be used as the dedicated audit pass to detect drift, contradictions, uncovered MUST requirements, and unnecessary traceability overhead across `spec.md`, `plan.md`, and `tasks.md`.
 
 ### Example: Building a Chat Feature
 
@@ -139,6 +141,8 @@ Total: ~12 hours of documentation work
 # - specs/003-chat-system/research.md (WebSocket library comparisons)
 # - specs/003-chat-system/data-model.md (Message and User schemas)
 # - specs/003-chat-system/contracts/ (WebSocket events, REST endpoints)
+# - specs/003-chat-system/test-matrix.md (Verification paths and key scenarios)
+# - specs/003-chat-system/interface-details/ (Per-operation implementation design projections)
 # - specs/003-chat-system/quickstart.md (Key validation scenarios)
 # - specs/003-chat-system/tasks.md (Task list derived from the plan)
 ```
@@ -149,6 +153,7 @@ In 15 minutes, you have:
 - A detailed implementation plan with technology choices and rationale
 - API contracts and data models ready for code generation
 - Comprehensive test scenarios for both automated and manual testing
+- Interface-level design artifacts and a dedicated audit step before implementation
 - All documents properly versioned in a feature branch
 
 ### The Power of Structured Automation
