@@ -1735,10 +1735,8 @@ def version():
         except Exception:
             pass
     
-    # Fetch latest template release version
-    repo_owner = "github"
-    repo_name = "spec-kit"
-    api_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/releases/latest"
+    # Fetch latest template release version (keep consistent with init download source)
+    api_url = f"https://api.github.com/repos/{RELEASE_REPO_OWNER}/{RELEASE_REPO_NAME}/releases/latest"
     
     template_version = "unknown"
     release_date = "unknown"
