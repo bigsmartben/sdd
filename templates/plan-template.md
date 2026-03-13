@@ -14,22 +14,29 @@
 | Stage | Name | Core Goal | Primary Outputs |
 |------:|------|-----------|-----------------|
 | 0 | Research | Resolve unknowns and record evidence-based decisions | `research.md` |
-| 1 | Data Model & Contracts | Define core model + contracts semantics (including state machine) | `data-model.md`, `contracts/` |
-| 2 | Test | Refine/enhance spec-stage UIF and complete normal/exception scenario coverage | `test-matrix.md` (or equivalent coverage artifact) |
-| 3 | Interface Detailed Design | Produce interface-level detailed design with method-level sequencing and update agent context | `interface-details/*.md`, agent-specific context file |
+| 1 | Data Model & Contracts | Define core model + contracts semantics (including state machine) | `data-model.md`, `contracts/`, `quickstart.md` |
+| 2 | Test-Matrix Generation | Generate `test-matrix.md` as a verification design input based on spec/UIF, including normal/exception coverage and case anchors (without rewriting `spec.md`) | `test-matrix.md` (or equivalent coverage artifact) |
+| 3 | Interface Detailed Design | Produce per-operation semantic projection and interface-level detailed design by binding contracts to data-model fields, invariants, and lifecycle transitions | `interface-details/*.md` |
+| 4 | Agent Context Update | Update agent-specific context from current plan outputs | repository-level agent-specific context file (outside `specs/[###-feature]/`) |
 
 ## Design Terminology Boundaries
 
 - **Data Model UML Class (`data-model.md`)**: module-interface/core-class level. Focus on core entities, relationships, constraints, and lifecycle semantics.
 - **Interface Detailed Design UML Class (`interface-details/*.md`)**: detailed-design/full-class level. Focus on per-interface collaboration and implementation-level structure.
 - **Sequence diagrams in Stage 3** must use **method-call-level granularity**.
-- **Contracts semantics are canonical**: use `contracts` terminology uniformly. Downstream artifacts must reference contracts semantics.
+- Use `contracts` terminology uniformly in downstream artifacts.
+- **Interface detailed design is semantic projection**: each `interface-details/*.md` doc projects and refines only the `data-model.md` subset required by exactly one contract operation.
+- **Do not redefine global model semantics in interface details**: entity identity, field meaning, relationships, invariants, and lifecycle semantics stay anchored in `data-model.md`.
+- **Operation accountability must be explicit**: each interface detail doc should state which data-model fields/invariants/transitions are consumed, validated, or triggered.
+- **Stage 2 UIF refinement role**: refine spec-stage UIF and cross-UC flow into a verification-oriented view for case design (`CaseID` / `TM-*` / `TC-*`).
+- **Test matrix boundary**: `test-matrix.md` serves coverage and verification design only. It must not redefine requirement semantics (`spec.md`), contract semantics (`contracts/`), or global model semantics (`data-model.md`).
 
 ## Stage 1 State Machine Requirement
 
 - `data-model.md` MUST include the business state machine when domain lifecycle/state transition exists.
 - At minimum, define states, transitions, and transition guards/constraints.
 - State-machine semantics belong to model/design artifacts, not governance status snapshots.
+- When a state machine exists, each affected `interface-details/*.md` doc MUST explicitly map operation-level transition usage, guards/constraints, and guard-failure contract behavior.
 
 ## Technical Context
 
@@ -51,7 +58,7 @@
 
 ## Constitution Check
 
-*GATE: Must pass before Stage 0 research. Re-check after Stage 3 design.*
+Check constitution-aligned constraints before Stage 0 research, and re-check after Stage 3 design.
 
 [Gates determined based on constitution file]
 
@@ -66,10 +73,12 @@ specs/[###-feature]/
 ├── data-model.md        # Stage 1 output (/speckit.plan command)
 ├── contracts/           # Stage 1 mandatory output (/speckit.plan command, canonical contracts semantics)
 ├── test-matrix.md       # Stage 2 output (/speckit.plan command, if applicable)
-├── interface-details/   # Stage 3 output (/speckit.plan command)
+├── interface-details/   # Stage 3 output (/speckit.plan command, one doc per contract operation with operation binding, data-model projection, invariant/transition mapping, and method-level sequencing)
 ├── quickstart.md        # Optional output (/speckit.plan command)
 └── tasks.md             # Next stage output (/speckit.tasks command - NOT created by /speckit.plan)
 ```
+
+`agent-specific context file` is a repository-level auxiliary output of Stage 4 (`/speckit.plan`) and is not stored under `specs/[###-feature]/`.
 
 ### Source Code (repository root)
 <!--

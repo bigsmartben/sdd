@@ -139,7 +139,7 @@ Spec Kit uses a dual-catalog system. For details about how catalogs work, see th
 
 ```bash
 # Fork on GitHub
-# https://github.com/github/spec-kit/fork
+# https://github.com/bigsmartben/sdd/fork
 
 # Clone your fork
 git clone https://github.com/YOUR-USERNAME/spec-kit.git
@@ -234,7 +234,7 @@ git commit -m "Add your-extension to community catalog
 git push origin add-your-extension
 
 # Create Pull Request on GitHub
-# https://github.com/github/spec-kit/compare
+# https://github.com/bigsmartben/sdd/compare
 ```
 
 **Pull Request Template**:

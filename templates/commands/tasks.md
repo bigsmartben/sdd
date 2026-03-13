@@ -75,21 +75,32 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Load spec.md and extract requirement/user-story references for task mapping (not as primary task grouping)
    - Load contracts/ as the canonical interface semantics source for implementation and verification task targets
    - If interface-details/ exists: map `IFxx -> operationId -> detail doc path`
+   - If interface operations exist in contracts but required interface detail docs are missing, stop and ask for upstream completion first (do not backfill Stage 3 in `/speckit.tasks`)
    - If test-matrix.md exists: map verification refs (`CaseID` / `TM-*` / `TC-*`) to interfaces or global behaviors
+   - Apply reference precedence when multiple artifacts mention similar scenarios:
+     - requirement semantics from `spec.md`
+     - contract semantics from `contracts/`
+     - global model semantics from `data-model.md`
+     - verification/coverage semantics from `test-matrix.md`
+     - `tasks.md` only maps execution and must not redefine the above semantics
    - If data-model.md exists: identify global object baselines that tasks must reference (without rewriting semantics)
-   - Generate **Task Mapping Index** (`TaskID -> IFxx|GLOBAL -> operationId -> requirement/test refs -> source refs`)
-   - Generate **Task DAG** as adjacency list and use it as the dependency source for execution order
+   - Generate a lightweight execution mapping by keeping task-level refs inside IF/global task definitions
+   - Generate **Task DAG** as adjacency list and use it as the baseline dependency source for execution order
+   - Generate **Execution Flexibility Policy** section with default policy:
+     - `strict`: follow Task DAG exactly
+     - `adaptive`: allow local split/merge/resequence under dependency safety and task intent preservation
+   - Ensure each task line is concrete enough for execution while preserving room for bounded runtime adaptation
    - Generate tasks grouped by **GLOBAL** and **Interface Delivery Units (IFxx)** (see Task Generation Rules below)
    - Validate task completeness: each IF unit has implementable tasks and verifiable completion criteria; each task has concrete path + completion anchor when relevant
 
 4. **Generate tasks.md**: Use `templates/tasks-template.md` as structure, fill with:
    - Correct feature name from plan.md
-   - Upstream reference index (IF registry, interface details, data-model baseline, test-matrix refs)
-   - Task mapping index
+   - Upstream inputs reference table
    - Execution ordering model with **Task DAG**
-   - Global foundation tasks (cross-interface prerequisites)
+   - Execution flexibility policy (`strict`/`adaptive`)
+   - Shared foundation tasks (cross-interface prerequisites)
    - Interface delivery units (`IFxx`) with verify + implementation tasks
-   - Final cross-cutting/finalization tasks
+   - Final cross-interface finalization tasks
    - All tasks must follow the strict checklist format (see Task Generation Rules below)
    - Clear file paths and completion anchors
 
@@ -142,6 +153,7 @@ The tasks.md should be immediately executable - each task must be specific enoug
 
 `tasks.md` is an execution orchestration artifact. Do not duplicate interface semantics, data-model semantics, or test prose from upstream docs.
 Contract semantics come from `contracts/` only.
+Verification semantics come from `test-matrix.md` (if present).
 
 ### Checklist Format (REQUIRED)
 
@@ -190,12 +202,22 @@ Every task MUST strictly follow this format:
 4. **From Verification Artifacts**:
    - Use deterministic refs (`operationId`, `CaseID`, `TM-*`, `TC-*`) for verify task targeting
    - Verification semantics come from upstream artifacts; tasks only reference and execute
+   - When both `FR/UC/UIF` refs and `CaseID/TM/TC` refs are present, treat `FR/UC/UIF` as requirement traceability context and `CaseID/TM/TC` as primary verification anchors
+
+### Runtime Adaptation Compatibility Rules
+
+- tasks.md is primarily an execution orchestration artifact, but must support bounded runtime adaptation during `/speckit.implement mode: adaptive`.
+- Generation rules:
+  - Keep Task DAG dependency-safe and minimally sufficient (avoid speculative over-constraint).
+  - Keep `[Pre:T###,...]` consistent with DAG while recognizing it is an inline mirror.
+  - Prefer intent-oriented `Role` labels when possible (e.g., `input-boundary`, `business-rule`, `state-change`, `integration`, `verification`) instead of over-binding to one architecture style.
+  - Keep completion anchors deterministic (`CaseID/TM/TC`, contract pass, build/test pass) so adaptive execution remains checkable.
 
 ### Required Sections in Generated tasks.md
 
-- Upstream Reference Index
-- Task Mapping Index
+- Upstream Inputs (Execution References)
 - Execution Ordering Model (`Task DAG` as dependency source)
-- Global Foundation Tasks
+- Execution Flexibility Policy (`strict`/`adaptive` semantics)
+- Shared Foundation
 - Interface Delivery Units (`IFxx`)
-- Cross-Cutting and Finalization
+- Cross-Interface Finalization

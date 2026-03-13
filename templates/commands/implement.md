@@ -13,6 +13,30 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+### Execution Mode Selection
+
+- Parse optional mode hints from user input:
+  - `mode: strict` (default)
+  - `mode: adaptive`
+- If no mode is explicitly provided, use `strict`.
+- Mode intent:
+  - `strict`: maximize determinism; execute exactly against `tasks.md` and `Task DAG`.
+  - `adaptive`: preserve dependency safety and completion intent while allowing bounded runtime task adaptation.
+
+### Long-Running Execution Visibility (Anti-Stall UX)
+
+- `/speckit.implement` is often long-running. To avoid "no output / maybe stuck" confusion, the agent MUST emit visible progress signals throughout execution.
+- Required visibility behaviors (minimal and implementation-agnostic):
+  - Emit an initial `Execution Start Banner` before heavy work begins.
+  - Emit progress on each task transition (`Task Start` / `Task Complete`).
+  - If there is no visible completion for a while, emit periodic `still running` heartbeat updates (typically every ~1-2 minutes).
+  - For obviously long-running commands (build/test/install/migration), emit status before and after command execution.
+- Heartbeat updates SHOULD be concise and include at least one of:
+  - current task or current phase
+  - completed/total progress
+  - blocking reason (if waiting)
+  - next expected update checkpoint
+
 ## Pre-Execution Checks
 
 **Check for extension hooks (before implementation)**:
@@ -90,74 +114,48 @@ You **MUST** consider the user input before proceeding (if not empty).
 3. Load and analyze the implementation context:
    - **REQUIRED**: Read tasks.md as the runtime execution orchestration source
    - **REQUIRED**: Consume these sections from tasks.md:
-     - `Generation Readiness Summary`
-     - `Upstream Reference Index`
-     - `Task Traceability Projection Index`
+     - `Upstream Inputs (Execution References)`
      - `Execution Ordering Model` (especially `Task DAG`)
-     - `Global Foundation Tasks`
+     - `Shared Foundation`
      - `Interface Delivery Units (IFxx)`
-     - `Cross-Cutting and Finalization`
-   - **REQUIRED**: Treat `Task DAG` as the only dependency authority for runtime scheduling
+     - `Cross-Interface Finalization`
+   - **REQUIRED**: Treat `Task DAG` as the baseline dependency authority for runtime scheduling
+   - **REQUIRED**: In `strict` mode, follow `Task DAG` exactly as written.
+   - **REQUIRED**: In `adaptive` mode, local resequencing is allowed only when all conditions below hold:
+     - Dependency safety is preserved (no predecessor violation)
+     - Final completion anchors remain satisfiable
+     - Runtime adaptation notes are reported in execution output
    - **REQUIRED**: Treat `[Pre:T###,...]` only as an inline dependency mirror (consistency check), not as dependency authority
-   - **REQUIRED**: Parse readiness status before execution:
-     - `BLOCKED`: stop and ask user for remediation decision before continuing
-     - `DEGRADED`: show risk/remediation notes and ask user whether to proceed
-     - `READY`: proceed normally
    - **REQUIRED**: Read plan.md for tech stack, architecture, and file structure
+   - **IF EXISTS**: Read interface-details/ for per-interface detailed design projection (contract-bound behavior, field-level class refinement from data-model, and method-level sequencing details)
    - **IF EXISTS**: Read data-model.md for entities and relationships
    - **IF EXISTS**: Read contracts/ for API specifications and test requirements
    - **IF EXISTS**: Read research.md for technical decisions and constraints
    - **IF EXISTS**: Read quickstart.md for integration scenarios
 
-4. **Project Setup Verification**:
-   - **REQUIRED**: Create/verify ignore files based on actual project setup:
+4. Generate an execution strategy summary before modifying code:
+   - Produce a short `Execution Strategy Summary` that states:
+     - planned execution batches/layers from DAG
+     - candidate file-path conflicts
+     - verify-before-interface opportunities
+     - in `adaptive` mode, any proposed local resequencing/merge/split decisions and rationale
+   - In `strict` mode, this summary is descriptive only.
+   - In `adaptive` mode, include any expected runtime adaptation notes.
+   - Also print a concise `Execution Start Banner` in this format:
 
-   **Detection & Creation Logic**:
-   - Check if the following command succeeds to determine if the repository is a git repo (create/verify .gitignore if so):
-
-     ```sh
-     git rev-parse --git-dir 2>/dev/null
+     ```text
+     ## Implement Run Started
+     Mode: {strict|adaptive}
+     Total Tasks: {N}
+     Ready Now: {T###, ...}
+     Heartbeat Interval: 60-90s
      ```
-
-   - Check if Dockerfile* exists or Docker in plan.md → create/verify .dockerignore
-   - Check if .eslintrc* exists → create/verify .eslintignore
-   - Check if eslint.config.* exists → ensure the config's `ignores` entries cover required patterns
-   - Check if .prettierrc* exists → create/verify .prettierignore
-   - Check if .npmrc or package.json exists → create/verify .npmignore (if publishing)
-   - Check if terraform files (*.tf) exist → create/verify .terraformignore
-   - Check if .helmignore needed (helm charts present) → create/verify .helmignore
-
-   **If ignore file already exists**: Verify it contains essential patterns, append missing critical patterns only
-   **If ignore file missing**: Create with full pattern set for detected technology
-
-   **Common Patterns by Technology** (from plan.md tech stack):
-   - **Node.js/JavaScript/TypeScript**: `node_modules/`, `dist/`, `build/`, `*.log`, `.env*`
-   - **Python**: `__pycache__/`, `*.pyc`, `.venv/`, `venv/`, `dist/`, `*.egg-info/`
-   - **Java**: `target/`, `*.class`, `*.jar`, `.gradle/`, `build/`
-   - **C#/.NET**: `bin/`, `obj/`, `*.user`, `*.suo`, `packages/`
-   - **Go**: `*.exe`, `*.test`, `vendor/`, `*.out`
-   - **Ruby**: `.bundle/`, `log/`, `tmp/`, `*.gem`, `vendor/bundle/`
-   - **PHP**: `vendor/`, `*.log`, `*.cache`, `*.env`
-   - **Rust**: `target/`, `debug/`, `release/`, `*.rs.bk`, `*.rlib`, `*.prof*`, `.idea/`, `*.log`, `.env*`
-   - **Kotlin**: `build/`, `out/`, `.gradle/`, `.idea/`, `*.class`, `*.jar`, `*.iml`, `*.log`, `.env*`
-   - **C++**: `build/`, `bin/`, `obj/`, `out/`, `*.o`, `*.so`, `*.a`, `*.exe`, `*.dll`, `.idea/`, `*.log`, `.env*`
-   - **C**: `build/`, `bin/`, `obj/`, `out/`, `*.o`, `*.a`, `*.so`, `*.exe`, `*.dll`, `autom4te.cache/`, `config.status`, `config.log`, `.idea/`, `*.log`, `.env*`
-   - **Swift**: `.build/`, `DerivedData/`, `*.swiftpm/`, `Packages/`
-   - **R**: `.Rproj.user/`, `.Rhistory`, `.RData`, `.Ruserdata`, `*.Rproj`, `packrat/`, `renv/`
-   - **Universal**: `.DS_Store`, `Thumbs.db`, `*.tmp`, `*.swp`, `.vscode/`, `.idea/`
-
-   **Tool-Specific Patterns**:
-   - **Docker**: `node_modules/`, `.git/`, `Dockerfile*`, `.dockerignore`, `*.log*`, `.env*`, `coverage/`
-   - **ESLint**: `node_modules/`, `dist/`, `build/`, `coverage/`, `*.min.js`
-   - **Prettier**: `node_modules/`, `dist/`, `build/`, `coverage/`, `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`
-   - **Terraform**: `.terraform/`, `*.tfstate*`, `*.tfvars`, `.terraform.lock.hcl`
-   - **Kubernetes/k8s**: `*.secret.yaml`, `secrets/`, `.kube/`, `kubeconfig*`, `*.key`, `*.crt`
 
 5. Parse tasks.md structure and extract:
    - **Execution scopes**: `GLOBAL` and `IFxx` units
    - **Task DAG**: adjacency list and topological execution layers
    - **Task metadata**: `TaskID`, `Type`, `Scope`, `Role`, `Pre`, description, file paths, completion anchors
-   - **Traceability metadata**: `InterfaceID`, `operationId`, requirement refs, verification refs, source refs, readiness/status notes
+   - **Reference metadata** (when present): `operationId`, requirement refs, verification refs
    - **Execution flow**: DAG-driven order and file-level conflict constraints
 
 6. Execute implementation following the task plan:
@@ -166,35 +164,55 @@ You **MUST** consider the user input before proceeding (if not empty).
    - **Parallel eligibility**: Tasks in the same DAG-ready layer may execute in parallel only when they have no shared file-path conflicts
    - **Verify-before-Interface preference**: Prefer running `Type:Verify` tasks before corresponding `Type:Interface` tasks when DAG allows
    - **Validation checkpoints**: Verify completion anchors and dependency closure before advancing to downstream DAG layers
+   - **Adaptive execution bounds** (`mode: adaptive` only):
+     - MAY split a task into smaller executable steps when this reduces file conflict or de-risks delivery
+     - MAY merge same-layer tasks when they target the same artifact and share completion anchors
+     - MAY locally resequence same-layer tasks when no dependency/file-conflict rule is violated
+     - MUST keep original task IDs traceable (do not erase source task lineage)
+     - MUST update task checkboxes and report adaptations in execution output
 
 7. Implementation execution rules:
    - **GLOBAL foundation first when required by DAG**: Complete shared infra/bootstrap/config prerequisites before dependent IF tasks
    - **Interface-unit delivery**: For each `IFxx`, execute verify + implementation work using task `Role` (e.g., contract, handler, service, persistence, wiring, smoke)
-   - **Traceability-preserving execution**: For each task, keep linkage to `operationId`, requirement refs, CaseID/TM/TC refs, and source refs from traceability index
+   - **Reference-preserving execution**: For each task, keep linkage to available operation/requirement/verification refs
    - **Cross-cutting/finalization last when DAG-scheduled**: Run docs/final validation/cross-interface tasks after prerequisite IF/GLOBAL tasks complete
 
 8. Progress tracking and error handling:
    - Report progress after each completed task
+   - Emit periodic heartbeat updates when execution has no visible completion for a while (typically every ~1-2 minutes)
    - Halt execution if any required DAG predecessor task fails
    - For parallel-eligible DAG-ready tasks, continue successful tasks, report failed ones, and skip newly blocked descendants
-   - If traceability status for a target task is `BLOCKED`, do not execute it; report remediation
-   - If traceability status is `DEGRADED`, execute only after explicit user confirmation
+   - In `adaptive` mode, if adaptation is required due to runtime reality (unexpected file structure/API drift), propose minimal safe adaptation and request confirmation before continuing
    - Provide clear error messages with context for debugging
+   - On recoverable stalls (tooling/network/build wait), print explicit status + wait reason + estimated next update time
    - Suggest next steps if implementation cannot proceed
    - **IMPORTANT** For completed tasks, make sure to mark the task off as [X] in the tasks file.
 
 9. Completion validation:
    - Verify all reachable required DAG tasks are completed or explicitly waived by user
    - Verify `Task DAG` dependency closure (no completed task missing required predecessors)
-   - Verify each `READY` interface unit (`IFxx`) meets its Definition of Done and completion anchors
-   - Verify traceability closure: each completed task can be mapped back to its required refs/source refs in the traceability index
+   - Verify each interface unit (`IFxx`) meets its Definition of Done and completion anchors
+   - Verify completed tasks still map to available requirement/verification refs
    - Check that implemented features match the original specification
    - Validate that tests pass and coverage meets requirements
    - Confirm the implementation follows the technical plan
    - Confirm tasks.md checkboxes accurately reflect execution results
+   - In `adaptive` mode, summarize adaptations and their dependency impact in final output
    - Report final status with summary of completed work, blocked items, and remediation follow-ups
 
 Note: This command assumes a complete, DAG-usable tasks breakdown exists in tasks.md. If required sections are missing, DAG is invalid, or task rows are incomplete, suggest running `/speckit.tasks` first to regenerate the task list.
+
+### Progress Output Examples (Non-Normative)
+
+Any concise, consistent, human-readable style is acceptable. Example:
+
+```text
+Started implementation (mode=adaptive, total=37)
+Task T012 started: implement submit handler
+Still running: waiting on build lock, next update in <= 2m
+Command finished: npm test -- submit_session (exit=0)
+Task T012 completed (Completion Anchor: CaseID C-017 pass)
+```
 
 1. **Check for extension hooks**: After completion validation, check if `.specify/extensions.yml` exists in the project root.
     - If it exists, read it and look for entries under the `hooks.after_implement` key
