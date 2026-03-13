@@ -28,8 +28,57 @@
 - **Interface detailed design is semantic projection**: each `interface-details/*.md` doc projects and refines only the `data-model.md` subset required by exactly one contract operation.
 - **Do not redefine global model semantics in interface details**: entity identity, field meaning, relationships, invariants, and lifecycle semantics stay anchored in `data-model.md`.
 - **Operation accountability must be explicit**: each interface detail doc should state which data-model fields/invariants/transitions are consumed, validated, or triggered.
+- **Path accountability should be practical**: each interface detail doc should at least map main path and major exception paths to relevant `CaseID` / `TM-*` / `TC-*` anchors from `test-matrix.md`.
 - **Stage 2 UIF refinement role**: refine spec-stage UIF and cross-UC flow into a verification-oriented view for case design (`CaseID` / `TM-*` / `TC-*`).
 - **Test matrix boundary**: `test-matrix.md` serves coverage and verification design only. It must not redefine requirement semantics (`spec.md`), contract semantics (`contracts/`), or global model semantics (`data-model.md`).
+
+## Stage 3 Interface Detail Anchors (Recommended)
+
+For each `interface-details/*.md` doc, prefer concrete anchors (avoid opaque placeholders when possible):
+
+- Contract anchor: `operationId` (or equivalent unique contract operation key)
+- Data-model anchors: `Entity`, `Entity.field`, invariant IDs, transition IDs (when applicable)
+- Test anchors: key `CaseID` / `TM-*` / `TC-*` for main and major exception paths
+- References: related spec/contracts/data-model/test-matrix links
+
+If a dimension is truly not applicable, provide explicit reason + nearest upstream anchor (instead of bare `N/A`).
+
+## Stage 3 Interface Detail Content Depth Rules (Required)
+
+For each `interface-details/*.md` doc, ensure content is implementation-informative (not only structural placeholders):
+
+- **Field projection depth**: include operation-relevant key fields across input/validation/read/write/output/internal-use dimensions; avoid ultra-thin projection with only 1-2 superficial fields unless justified.
+- **Invariant/transition accountability depth**: for each mapped invariant/transition, include responsibility type (establish/validate/preserve), enforcement location, and contract-visible failure behavior.
+- **Pre/Post condition checkability**: preconditions and postconditions should be verifiable conditions (not vague summaries).
+- **Behavior path completeness**: include main success path and numbered key exception/error paths.
+- **Path mapping clarity**: map main path and major exception paths to useful case anchors; keep mapping lightweight and implementation-serving.
+- **No layered placeholder UML**: UML class design must include interface-relevant concrete fields/methods/relationships/constraints, not only layer names.
+- **Sequence exception branches**: sequence design must reflect key guard-failure/error branches in addition to success flow.
+
+## Stage 3 Interface Detail Section Skeleton (Required)
+
+For each `interface-details/*.md` doc, use a stable section skeleton to keep outputs complete and reviewable:
+
+1. `## Contract Binding` (operationId + contract anchor)
+2. `## Scope & Projection` (entities/fields/relationships in scope with anchors)
+3. `## Invariants & Transition Responsibilities` (INV/T anchors + responsibility + failure behavior)
+4. `## Preconditions / Postconditions` (checkable conditions)
+5. `## Behavior Paths` (main path + numbered key exception paths)
+6. `## Sequence Diagram` (Mermaid, method-call-level, includes key exception/guard-failure branches)
+7. `## UML Class Design` (field-level, interface-relevant concrete structure)
+8. `## References & Case Mapping` (main/major exception path mapping + related upstream references)
+
+If a section is truly not applicable, keep the section and provide explicit rationale with nearest upstream anchor (never remove required sections silently).
+
+## Stage 3 Markdown Formatting Rules (Required)
+
+- Use CommonMark-compatible Markdown with clean structure.
+- Do not prepend unintended leading spaces to headings, tables, lists, and fenced code blocks.
+- Keep heading levels ordered and stable; avoid heading jumps.
+- Keep one list item per line; do not collapse multi-step items into wrapped mixed lines.
+- Keep table structure valid (`header` + `separator` + data rows) and avoid broken rows.
+- Use Mermaid for all diagrams, fenced with triple backticks and `mermaid` language tag.
+- Normalize spacing before finalization (single blank line between sections, no trailing indentation).
 
 ## Stage 1 State Machine Requirement
 
@@ -37,6 +86,18 @@
 - At minimum, define states, transitions, and transition guards/constraints.
 - State-machine semantics belong to model/design artifacts, not governance status snapshots.
 - When a state machine exists, each affected `interface-details/*.md` doc MUST explicitly map operation-level transition usage, guards/constraints, and guard-failure contract behavior.
+
+## Stage 3 Quality Gate (Before Finalizing Plan Outputs)
+
+- One interface detail doc binds to one contract operation, unambiguously.
+- Required sections are present and non-empty.
+- Field projection / invariant mapping / transition mapping should use concrete anchors where helpful.
+- Main success path and key exception paths are reflected in both behavior text and sequence design.
+- UML class is field-level and interface-relevant (not only layered placeholders).
+- Sequence diagram is method-call-level with concrete method names and key exception/guard-failure branches.
+- Main path and major exception paths include concise case mapping.
+- Required section skeleton is preserved; non-applicable sections include explicit rationale + nearest upstream anchor.
+- Markdown structure renders correctly in preview (headings/lists/tables/code fences).
 
 ## Technical Context
 

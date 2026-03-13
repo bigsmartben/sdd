@@ -123,46 +123,83 @@ You **MUST** consider the user input before proceeding (if not empty).
 1. **Produce per-interface detailed design artifacts**:
    - Add/update interface detail docs (e.g., `interface-details/*.md`)
    - Each interface detail doc MUST map to exactly one contract operation (prefer operationId-aligned naming)
+   - File naming SHOULD be operationId-aligned and stable (e.g., `<operationId>.md`) unless the project has an explicit naming convention
    - Each interface detail doc MUST project only the interface-relevant subset of `data-model.md`; avoid restating the full global model
    - Carry forward interface-relevant main/exception interaction paths from `test-matrix.md` into interface-level detailed behavior
+   - Each interface detail doc SHOULD map main path and major exception paths to `CaseID` / `TM-*` / `TC-*` anchors (keep it practical)
    - Keep detailed design consistent with contracts and data model
    - Treat `interface-details/` as the per-interface detailed design projection consumed by downstream `/sdd.tasks` and `/sdd.implement`
    - Downstream artifacts must reference contracts; do not redefine contract semantics in detailed design
    - For each interface detail artifact, identify which normal and exception paths from `test-matrix.md` are realized by the bound operation and reflect them in behavior/sequence design
+   - Keep Stage 3 anchors aligned with upstream artifacts where available; if some anchors are unavailable, record concise clarifications without blocking progress
 
 2. **Minimum required content per interface detail doc**:
+   - Stable section skeleton (keep section names and order stable for reviewability):
+     - `## Contract Binding`
+     - `## Scope & Projection`
+     - `## Invariants & Transition Responsibilities`
+     - `## Preconditions / Postconditions`
+     - `## Behavior Paths`
+     - `## Sequence Diagram`
+     - `## UML Class Design`
+     - `## Traceability Mapping`
+   - If a required section is not applicable, keep the section and provide explicit rationale (do not silently remove sections)
    - Contract binding: explicit operationId (or equivalent unique contract operation anchor)
    - Operation semantic projection from `data-model.md`, including:
      - entities / value objects / FSMs in scope
      - field projection (read / write / output / internal use)
+     - source anchors for projected fields (e.g., `Entity.field`) when helpful
      - relationship projection relevant to the operation
+     - projection depth sufficient for implementation (avoid ultra-thin 1-2 field summaries unless justified)
    - Invariant responsibility mapping:
      - identify which global invariants are established, validated, preserved, or not applicable in this operation
      - identify where enforcement occurs (application / domain / repository / other component)
+     - include invariant meaning and contract-visible failure behavior when invariant checks fail
+     - avoid opaque placeholders (e.g., bare `N/A`); if not applicable, provide explicit reason
    - Lifecycle transition binding (when relevant state machine exists):
      - transition IDs (or equivalent transition anchors)
      - guards / constraints
      - contract-visible guard-failure behavior
    - Field-level UML class design refined from `data-model.md` (include interface-relevant fields/relationships/constraints)
-   - Preconditions and postconditions aligned with contracts/data model
-   - Main success path and key exception/error path behavior at interface level
+   - Preconditions and postconditions aligned with contracts/data model and written as verifiable conditions
+   - Main success path and numbered key exception/error path behavior at interface level
    - Consistency boundary / side-effect notes when operation crosses persistence or external interaction boundaries
-   - Method-call-level sequence diagram (participants + call order)
-   - Traceability references to spec / data-model / contracts / test-matrix anchors
+   - Method-call-level sequence diagram (participants + call order + key exception/guard-failure branches)
+   - Concise path/case mapping to spec / data-model / contracts / test-matrix references (avoid heavy traceability overhead)
 
-3. **Design notation requirements**:
+3. **Markdown formatting contract (mandatory)**:
+   - Use clean CommonMark-compatible Markdown; do not indent headings, tables, lists, or fenced code blocks with leading spaces unless nested by design
+   - Keep heading levels stable and ordered (H1 title once, then H2/H3 as needed); avoid heading level jumps
+   - Every list item must start on its own line; do not merge multiple numbered/bulleted items into a single wrapped line
+   - Tables must keep a valid header separator row and one logical record per row (no accidental line breaks inside a row)
+   - Diagrams must use Mermaid syntax and be fenced with plain triple backticks and `mermaid` language tag
+   - Before finalizing, normalize spacing (single blank line between sections, no trailing indentation)
+
+4. **Stage 3 quality gate (mandatory before finalizing)**:
+   - Contract operation binding is one-to-one and unambiguous
+   - Required section skeleton is preserved; non-applicable sections include explicit rationale
+   - No required section is empty or filled with unqualified placeholders
+   - Field projection, invariant mapping, transition mapping, and traceability all have concrete anchors
+   - Main path and key exception paths are both represented in behavior and sequence design
+   - UML class diagram includes interface-relevant concrete fields/relationships (not only layer names)
+   - Sequence diagram uses method-call-level granularity and concrete method names, including key exception/guard-failure branches
+   - Main and major exception paths include concise case mapping (`CaseID` / `TM-*` / `TC-*`)
+   - Key anchors are aligned with upstream artifacts (`contracts/`, `data-model.md`, `test-matrix.md`) where available
+   - Markdown rendering is structurally correct (headings/lists/tables/code blocks display normally in preview)
+
+5. **Design notation requirements**:
    - UML class at this stage is detailed-design/full-class level with concrete field-level definitions
    - Sequence diagrams must be method-call-level granularity
 
-4. **Contract reference rule**:
+6. **Contract reference rule**:
    - Use contracts terminology and semantics consistently across downstream artifacts
 
-5. **Data-model reference rule**:
+7. **Data-model reference rule**:
    - Use `data-model.md` as canonical source for global object semantics, invariants, relationships, and lifecycle definitions
    - Interface detailed design may refine/project these semantics for one bound operation, but must not redefine or contradict them
    - Prefer explicit anchors (entity names, invariant IDs, transition IDs) over free-text paraphrase when available
 
-6. **Test-matrix reference rule**:
+8. **Test-matrix reference rule**:
    - Use `test-matrix.md` as the planning-stage source for coverage and verification anchors (e.g., `CaseID` / `TM-*` / `TC-*`)
    - `test-matrix.md` may refine scenario coverage from spec/UIF for verification purposes, but must not redefine requirement semantics from `spec.md`
    - Treat Stage 2 global UIF refinement as key case-design input and map selected main/exception paths explicitly at operation level

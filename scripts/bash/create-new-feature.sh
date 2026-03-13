@@ -137,28 +137,48 @@ get_highest_from_branches() {
 # Behavior controls:
 # - SPECIFY_SKIP_FETCH=1      -> skip remote fetch entirely
 # - SPECIFY_FETCH_TIMEOUT=<s> -> timeout seconds (default: 8)
+# - SPECIFY_FETCH_MODE=<mode> -> preferred (default), all, none
 safe_fetch_remote_branches() {
-    if [ "${SPECIFY_SKIP_FETCH:-0}" = "1" ]; then
-        >&2 echo "[specify] Warning: skipping remote fetch because SPECIFY_SKIP_FETCH=1"
+    if [ "${SPECIFY_SKIP_FETCH:-0}" = "1" ] || [ "${SPECIFY_FETCH_MODE:-preferred}" = "none" ]; then
+        >&2 echo "[specify] Warning: skipping remote fetch (SPECIFY_SKIP_FETCH=1 or SPECIFY_FETCH_MODE=none)"
         return 0
     fi
 
     local fetch_timeout="${SPECIFY_FETCH_TIMEOUT:-8}"
     local ssh_cmd="${GIT_SSH_COMMAND:-ssh -o BatchMode=yes -o ConnectTimeout=5}"
+    local fetch_mode="${SPECIFY_FETCH_MODE:-preferred}"
+    local remotes=""
+
+    remotes=$(git remote 2>/dev/null || true)
+    if [ -z "$remotes" ]; then
+        return 0
+    fi
+
+    local fetch_target=("--all")
+    if [ "$fetch_mode" != "all" ]; then
+        # Prefer the most common primary remote to avoid slow fan-out fetches.
+        local preferred_remote=""
+        if echo "$remotes" | grep -qx "origin"; then
+            preferred_remote="origin"
+        else
+            preferred_remote=$(echo "$remotes" | head -n1)
+        fi
+        fetch_target=("$preferred_remote")
+    fi
 
     if command -v timeout >/dev/null 2>&1; then
         GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="$ssh_cmd" \
             timeout "${fetch_timeout}s" \
-            git -c credential.interactive=never fetch --all --prune --quiet >/dev/null 2>&1 || \
+            git -c credential.interactive=never fetch "${fetch_target[@]}" --prune --no-tags --quiet >/dev/null 2>&1 || \
             >&2 echo "[specify] Warning: git fetch skipped/failed (timeout or network issue); using local branch/spec data"
     elif command -v gtimeout >/dev/null 2>&1; then
         GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="$ssh_cmd" \
             gtimeout "${fetch_timeout}s" \
-            git -c credential.interactive=never fetch --all --prune --quiet >/dev/null 2>&1 || \
+            git -c credential.interactive=never fetch "${fetch_target[@]}" --prune --no-tags --quiet >/dev/null 2>&1 || \
             >&2 echo "[specify] Warning: git fetch skipped/failed (timeout or network issue); using local branch/spec data"
     else
         GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="$ssh_cmd" \
-            git -c credential.interactive=never fetch --all --prune --quiet >/dev/null 2>&1 || \
+            git -c credential.interactive=never fetch "${fetch_target[@]}" --prune --no-tags --quiet >/dev/null 2>&1 || \
             >&2 echo "[specify] Warning: git fetch failed; using local branch/spec data"
     fi
 }
