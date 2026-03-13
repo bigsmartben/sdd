@@ -156,6 +156,6 @@ echo "  3. To discard changes: git checkout pyproject.toml CHANGELOG.md && git t
 echo "  4. To restore from backup: cp $BACKUP_DIR/* ."
 echo ""
 echo -e "${BLUE}To run the actual release:${NC}"
-echo "  Go to: https://github.com/github/spec-kit/actions/workflows/release-trigger.yml"
+echo "  Go to: https://github.com/bigsmartben/sdd/actions/workflows/release-trigger.yml"
 echo "  Click 'Run workflow' and enter version: $VERSION"
 echo ""

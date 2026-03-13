@@ -1,6 +1,6 @@
 # Spec Kit Extensions
 
-Extension system for [Spec Kit](https://github.com/github/spec-kit) - add new functionality without bloating the core framework.
+Extension system for [Spec Kit](https://github.com/bigsmartben/sdd) - add new functionality without bloating the core framework.
 
 ## Extension Catalogs
 
@@ -16,6 +16,7 @@ Spec Kit provides two catalog files with different purposes:
 - **Customization**: Copy entries from the community catalog into your org catalog, or add your own extensions directly
 
 **Example override:**
+
 ```bash
 # Override the default upstream catalog with your organization's catalog
 export SPECKIT_CATALOG_URL="https://your-org.com/spec-kit/catalog.json"
@@ -84,7 +85,6 @@ The following community-contributed extensions are available in [`catalog.commun
 | V-Model Extension Pack | Enforces V-Model paired generation of development specs and test specs with full traceability | [spec-kit-v-model](https://github.com/leocamello/spec-kit-v-model) |
 | Verify Extension | Post-implementation quality gate that validates implemented code against specification artifacts | [spec-kit-verify](https://github.com/ismaelJimenez/spec-kit-verify) |
 
-
 ## Adding Your Extension
 
 ### Submission Process
@@ -112,6 +112,7 @@ Before submitting, ensure:
 - ✅ All commands working as documented
 
 ## Installing Extensions
+
 Once extensions are available (either in your catalog or via direct URL), install them:
 
 ```bash

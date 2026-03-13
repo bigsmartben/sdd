@@ -3,16 +3,18 @@
 
 ## Preamble
 
-This constitution defines the long-lived governance rules for this project.
-It exists to keep decisions consistent across specification, planning, task decomposition, and implementation.
+This constitution defines the long-lived rules and boundaries for this project.
+It exists to keep decisions consistent across specification, planning,
+task decomposition, and implementation.
 
 All principles in this constitution MUST:
 
 - be grounded in real project scenarios, risks, or boundary decisions;
-- be specific enough to verify during review and execution;
+- be specific enough to guide downstream decisions and reviews;
 - define clear constraints, not aspirational slogans only.
 
-If a governance rule is required but not yet fully defined, it MUST be recorded explicitly as `TODO(<TOPIC>): <reason>` rather than implied or silently omitted.
+If a required rule is not yet fully defined, it MUST be recorded explicitly as
+`TODO(<TOPIC>): <reason>` rather than implied or silently omitted.
 
 ## Core Principles
 
@@ -22,7 +24,6 @@ If a governance rule is required but not yet fully defined, it MUST be recorded 
 > - **Rule**: what is required or prohibited
 > - **Scope**: where it applies
 > - **Rationale**: why it exists
-> - **Verification**: how compliance is checked
 > - **Exceptions**: when deviation is allowed and how it must be documented
 
 ### [PRINCIPLE_1_NAME]
@@ -33,7 +34,6 @@ Suggested writing pattern:
 - Rule: ...
 - Scope: ...
 - Rationale: ...
-- Verification: ...
 - Exceptions: ...
 -->
 
@@ -45,7 +45,6 @@ Suggested writing pattern:
 - Rule: ...
 - Scope: ...
 - Rationale: ...
-- Verification: ...
 - Exceptions: ...
 -->
 
@@ -57,7 +56,6 @@ Suggested writing pattern:
 - Rule: ...
 - Scope: ...
 - Rationale: ...
-- Verification: ...
 - Exceptions: ...
 -->
 
@@ -69,7 +67,6 @@ Suggested writing pattern:
 - Rule: ...
 - Scope: ...
 - Rationale: ...
-- Verification: ...
 - Exceptions: ...
 -->
 
@@ -81,7 +78,6 @@ Suggested writing pattern:
 - Rule: ...
 - Scope: ...
 - Rationale: ...
-- Verification: ...
 - Exceptions: ...
 -->
 
@@ -144,23 +140,22 @@ These rules should focus on compatibility, simplicity, and controlled evolution.
 - If a heavyweight design approach is used, document why a simpler approach is insufficient.
 -->
 
-## Compliance & Review Gates
+## Compliance & Review Expectations
 
-This section defines how constitution compliance is evaluated in downstream work.
+This section defines lightweight expectations for constitution checks in downstream work.
 
-Each gate SHOULD be expressed in terms of:
+Each expectation SHOULD state:
 
-- **Gate**: what must be true
-- **Severity**: `ERROR`, `WARN`, or equivalent project-defined level
-- **Evidence**: what artifact, test, review note, or trace is used to verify compliance
-- **Disposition**: whether work is blocked, allowed with justification, or advisory only
+- **Expectation**: what should be checked
+- **Where Checked**: which artifact or stage should perform the check
+- **Handling**: what to do when the expectation is not met
 
 [SECTION_3_CONTENT]
 <!-- Example:
-- Missing constitution-mandated test evidence = ERROR
-- Unjustified breaking interface change = ERROR
-- Terminology drift across spec/plan/tasks = WARN or ERROR
-- Undocumented exception to a core principle = ERROR
+- Missing constitution-required content in spec/plan/tasks -> revise before continuing
+- Unjustified breaking interface change -> add rationale and migration notes
+- Terminology drift across spec/plan/tasks -> align terms in the next edit cycle
+- Undocumented exception to a core principle -> document exception and decision owner
 -->
 
 ## Governance
