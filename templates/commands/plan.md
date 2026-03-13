@@ -232,16 +232,16 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Use contracts terminology and semantics consistently across downstream artifacts
 
 10. **Data-model reference rule**:
-   - Use `data-model.md` as canonical source for global object semantics, invariants, relationships, and lifecycle definitions
-   - Interface detailed design may refine/project these semantics for one bound operation, but must not redefine or contradict them
-   - Prefer explicit anchors (entity names, invariant IDs, transition IDs) over free-text paraphrase when available
+    - Use `data-model.md` as canonical source for global object semantics, invariants, relationships, and lifecycle definitions
+    - Interface detailed design may refine/project these semantics for one bound operation, but must not redefine or contradict them
+    - Prefer explicit anchors (entity names, invariant IDs, transition IDs) over free-text paraphrase when available
 
 11. **Test-matrix reference rule**:
-   - Use `test-matrix.md` as the planning-stage source for verification scenarios and anchors when those scenarios materially inform implementation or validation
-   - `test-matrix.md` may refine scenario coverage from spec/UIF for verification purposes, but must not redefine requirement semantics from `spec.md`
-   - Treat Stage 2 global UIF refinement as key case-design input and carry forward only the paths that matter to the bound operation
-   - Keep references lightweight and design-serving; do not build audit ledgers in interface detail docs
-   - Interface detailed design should consume test-matrix paths as validation-path input, then reference them concisely where useful
+    - Use `test-matrix.md` as the planning-stage source for verification scenarios and anchors when those scenarios materially inform implementation or validation
+    - `test-matrix.md` may refine scenario coverage from spec/UIF for verification purposes, but must not redefine requirement semantics from `spec.md`
+    - Treat Stage 2 global UIF refinement as key case-design input and carry forward only the paths that matter to the bound operation
+    - Keep references lightweight and design-serving; do not build audit ledgers in interface detail docs
+    - Interface detailed design should consume test-matrix paths as validation-path input, then reference them concisely where useful
 
 **Output**: interface detailed design artifact(s)
 
