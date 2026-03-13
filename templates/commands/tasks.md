@@ -2,11 +2,11 @@
 description: Generate an executable, dependency-ordered tasks.md organized by GLOBAL and IFxx delivery units.
 handoffs: 
   - label: Analyze For Consistency
-    agent: speckit.analyze
+    agent: sdd.analyze
     prompt: Run a project analysis for consistency
     send: true
   - label: Implement Project
-    agent: speckit.implement
+    agent: sdd.implement
     prompt: Start the implementation in phases
     send: true
 scripts:
@@ -75,7 +75,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Load spec.md and extract requirement/user-story references for task mapping (not as primary task grouping)
    - Load contracts/ as the canonical interface semantics source for implementation and verification task targets
    - If interface-details/ exists: map `IFxx -> operationId -> detail doc path`
-   - If interface operations exist in contracts but required interface detail docs are missing, stop and ask for upstream completion first (do not backfill Stage 3 in `/speckit.tasks`)
+   - If interface operations exist in contracts but required interface detail docs are missing, stop and ask for upstream completion first (do not backfill Stage 3 in `/sdd.tasks`)
    - If test-matrix.md exists: map verification refs (`CaseID` / `TM-*` / `TC-*`) to interfaces or global behaviors
    - Apply reference precedence when multiple artifacts mention similar scenarios:
      - requirement semantics from `spec.md`
@@ -206,7 +206,7 @@ Every task MUST strictly follow this format:
 
 ### Runtime Adaptation Compatibility Rules
 
-- tasks.md is primarily an execution orchestration artifact, but must support bounded runtime adaptation during `/speckit.implement mode: adaptive`.
+- tasks.md is primarily an execution orchestration artifact, but must support bounded runtime adaptation during `/sdd.implement mode: adaptive`.
 - Generation rules:
   - Keep Task DAG dependency-safe and minimally sufficient (avoid speculative over-constraint).
   - Keep `[Pre:T###,...]` consistent with DAG while recognizing it is an inline mirror.

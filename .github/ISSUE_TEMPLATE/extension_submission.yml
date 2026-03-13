@@ -232,7 +232,7 @@ body:
         specify extension add --from https://github.com/your-org/spec-kit-your-extension/archive/refs/tags/v1.0.0.zip
         
         # Use a command
-        /speckit.your-extension.command-name arg1 arg2
+        /sdd.your-extension.command-name arg1 arg2
         ```
     validations:
       required: true

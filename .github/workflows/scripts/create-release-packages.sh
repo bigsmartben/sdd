@@ -93,11 +93,11 @@ generate_commands() {
     case $ext in
       toml)
         body=$(printf '%s\n' "$body" | sed 's/\\/\\\\/g')
-        { echo "description = \"$description\""; echo; echo "prompt = \"\"\""; echo "$body"; echo "\"\"\""; } > "$output_dir/speckit.$name.$ext" ;;
+        { echo "description = \"$description\""; echo; echo "prompt = \"\"\""; echo "$body"; echo "\"\"\""; } > "$output_dir/sdd.$name.$ext" ;;
       md)
-        echo "$body" > "$output_dir/speckit.$name.$ext" ;;
+        echo "$body" > "$output_dir/sdd.$name.$ext" ;;
       agent.md)
-        echo "$body" > "$output_dir/speckit.$name.$ext" ;;
+        echo "$body" > "$output_dir/sdd.$name.$ext" ;;
     esac
   done
 }
@@ -107,7 +107,7 @@ generate_copilot_prompts() {
   mkdir -p "$prompts_dir"
 
   # Generate a .prompt.md file for each .agent.md file
-  for agent_file in "$agents_dir"/speckit.*.agent.md; do
+  for agent_file in "$agents_dir"/sdd.*.agent.md; do
     [[ -f "$agent_file" ]] || continue
 
     local basename=$(basename "$agent_file" .agent.md)
@@ -123,7 +123,7 @@ EOF
 
 # Create Kimi Code skills in .kimi/skills/<name>/SKILL.md format.
 # Kimi CLI discovers skills as directories containing a SKILL.md file,
-# invoked with /skill:<name> (e.g. /skill:speckit.specify).
+# invoked with /skill:<name> (e.g. /skill:sdd.specify).
 create_kimi_skills() {
   local skills_dir="$1"
   local script_variant="$2"
@@ -132,7 +132,7 @@ create_kimi_skills() {
     [[ -f "$template" ]] || continue
     local name
     name=$(basename "$template" .md)
-    local skill_name="speckit.${name}"
+    local skill_name="sdd.${name}"
     local skill_dir="${skills_dir}/${skill_name}"
     mkdir -p "$skill_dir"
 
@@ -292,8 +292,8 @@ build_variant() {
       mkdir -p "$base_dir/.kimi/skills"
       create_kimi_skills "$base_dir/.kimi/skills" "$script" ;;
     generic)
-      mkdir -p "$base_dir/.speckit/commands"
-      generate_commands generic md "\$ARGUMENTS" "$base_dir/.speckit/commands" "$script" ;;
+      mkdir -p "$base_dir/.sdd/commands"
+      generate_commands generic md "\$ARGUMENTS" "$base_dir/.sdd/commands" "$script" ;;
   esac
   ( cd "$base_dir" && zip -r "../spec-kit-template-${agent}-${script}-${NEW_VERSION}.zip" . )
   echo "Created $GENRELEASES_DIR/spec-kit-template-${agent}-${script}-${NEW_VERSION}.zip"

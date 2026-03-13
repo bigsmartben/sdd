@@ -356,7 +356,7 @@ Command content with {SCRIPT} and $ARGUMENTS placeholders.
 ```markdown
 ---
 description: "Command description"
-mode: speckit.command-name
+mode: sdd.command-name
 ---
 
 Command content with {SCRIPT} and $ARGUMENTS placeholders.

@@ -2,11 +2,11 @@
 description: Execute the implementation planning workflow using the plan template to generate design artifacts.
 handoffs: 
   - label: Create Tasks
-    agent: speckit.tasks
+    agent: sdd.tasks
     prompt: Break the plan into tasks
     send: true
   - label: Create Checklist
-    agent: speckit.checklist
+    agent: sdd.checklist
     prompt: Create a checklist for the following domain...
 scripts:
   sh: scripts/bash/setup-plan.sh --json
@@ -126,7 +126,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Each interface detail doc MUST project only the interface-relevant subset of `data-model.md`; avoid restating the full global model
    - Carry forward interface-relevant main/exception interaction paths from `test-matrix.md` into interface-level detailed behavior
    - Keep detailed design consistent with contracts and data model
-   - Treat `interface-details/` as the per-interface detailed design projection consumed by downstream `/speckit.tasks` and `/speckit.implement`
+   - Treat `interface-details/` as the per-interface detailed design projection consumed by downstream `/sdd.tasks` and `/sdd.implement`
    - Downstream artifacts must reference contracts; do not redefine contract semantics in detailed design
    - For each interface detail artifact, identify which normal and exception paths from `test-matrix.md` are realized by the bound operation and reflect them in behavior/sequence design
 

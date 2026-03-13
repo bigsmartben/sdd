@@ -65,7 +65,7 @@ Description of what this command does.
 
 ```bash
 # In Claude Code
-> /speckit.my-extension.example
+> /sdd.my-extension.example
 ```
 
 **Prerequisites**:
@@ -114,13 +114,13 @@ export SPECKIT_MY_EXTENSION_CONNECTION_API_KEY="custom-key"
 
 ```bash
 # Step 1: Create specification
-> /speckit.spec
+> /sdd.spec
 
 # Step 2: Generate tasks
-> /speckit.tasks
+> /sdd.tasks
 
 # Step 3: Use extension
-> /speckit.my-extension.example
+> /sdd.my-extension.example
 ```
 
 ## Troubleshooting

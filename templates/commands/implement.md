@@ -25,7 +25,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ### Long-Running Execution Visibility (Anti-Stall UX)
 
-- `/speckit.implement` is often long-running. To avoid "no output / maybe stuck" confusion, the agent MUST emit visible progress signals throughout execution.
+- `/sdd.implement` is often long-running. To avoid "no output / maybe stuck" confusion, the agent MUST emit visible progress signals throughout execution.
 - Required visibility behaviors (minimal and implementation-agnostic):
   - Emit an initial `Execution Start Banner` before heavy work begins.
   - Emit progress on each task transition (`Task Start` / `Task Complete`).
@@ -200,7 +200,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - In `adaptive` mode, summarize adaptations and their dependency impact in final output
    - Report final status with summary of completed work, blocked items, and remediation follow-ups
 
-Note: This command assumes a complete, DAG-usable tasks breakdown exists in tasks.md. If required sections are missing, DAG is invalid, or task rows are incomplete, suggest running `/speckit.tasks` first to regenerate the task list.
+Note: This command assumes a complete, DAG-usable tasks breakdown exists in tasks.md. If required sections are missing, DAG is invalid, or task rows are incomplete, suggest running `/sdd.tasks` first to regenerate the task list.
 
 ### Progress Output Examples (Non-Normative)
 

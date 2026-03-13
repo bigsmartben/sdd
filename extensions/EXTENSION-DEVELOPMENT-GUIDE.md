@@ -34,14 +34,14 @@ requires:
       required: true
       version: ">=1.0.0"
   commands:                             # Optional: Core commands needed
-    - "speckit.tasks"
+    - "sdd.tasks"
 
 provides:
   commands:
-    - name: "speckit.my-ext.hello"      # Must follow pattern: speckit.{ext-id}.{cmd}
+    - name: "sdd.my-ext.hello"      # Must follow pattern: sdd.{ext-id}.{cmd}
       file: "commands/hello.md"
       description: "Say hello"
-      aliases: ["speckit.hello"]        # Optional aliases
+      aliases: ["sdd.hello"]        # Optional aliases
 
   config:                               # Optional: Config files
     - name: "my-ext-config.yml"
@@ -51,7 +51,7 @@ provides:
 
 hooks:                                  # Optional: Integration hooks
   after_tasks:
-    command: "speckit.my-ext.hello"
+    command: "sdd.my-ext.hello"
     optional: true
     prompt: "Run hello command?"
 
@@ -126,10 +126,10 @@ If using Claude:
 
 ```bash
 claude
-> /speckit.my-ext.hello world
+> /sdd.my-ext.hello world
 ```
 
-The command will be available in `.claude/commands/speckit.my-ext.hello.md`.
+The command will be available in `.claude/commands/sdd.my-ext.hello.md`.
 
 ---
 
@@ -183,7 +183,7 @@ What the extension provides.
 
 **Command object**:
 
-- `name`: Command name (must match `speckit.{ext-id}.{command}`)
+- `name`: Command name (must match `sdd.{ext-id}.{command}`)
 - `file`: Path to command file (relative to extension root)
 - `description`: Command description (optional)
 - `aliases`: Alternative command names (optional, array)
@@ -196,8 +196,8 @@ Integration hooks for automatic execution.
 
 Available hook points:
 
-- `after_tasks`: After `/speckit.tasks` completes
-- `after_implement`: After `/speckit.implement` completes (future)
+- `after_tasks`: After `/sdd.tasks` completes
+- `after_implement`: After `/sdd.implement` completes (future)
 
 Hook object:
 
@@ -410,8 +410,8 @@ The following `.gitignore` features are **not applicable** in this context:
 ### Command Name
 
 - **Pattern**: `^speckit\.[a-z0-9-]+\.[a-z0-9-]+$`
-- **Valid**: `speckit.my-ext.hello`, `speckit.tool.cmd`
-- **Invalid**: `my-ext.hello` (missing prefix), `speckit.hello` (no extension namespace)
+- **Valid**: `sdd.my-ext.hello`, `sdd.tool.cmd`
+- **Invalid**: `my-ext.hello` (missing prefix), `sdd.hello` (no extension namespace)
 
 ### Command File Path
 
@@ -442,7 +442,7 @@ The following `.gitignore` features are **not applicable** in this context:
 5. **Check command registration**:
 
    ```bash
-   ls .claude/commands/speckit.my-ext.*
+   ls .claude/commands/sdd.my-ext.*
    ```
 
 6. **Remove extension**:
@@ -588,7 +588,7 @@ requires:
   speckit_version: ">=0.1.0"
 provides:
   commands:
-    - name: "speckit.minimal.hello"
+    - name: "sdd.minimal.hello"
       file: "commands/hello.md"
 ```
 
@@ -645,7 +645,7 @@ Extension that runs automatically:
 # extension.yml
 hooks:
   after_tasks:
-    command: "speckit.auto.analyze"
+    command: "sdd.auto.analyze"
     optional: false  # Always run
     description: "Analyze tasks after generation"
 ```

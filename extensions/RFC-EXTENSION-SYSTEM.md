@@ -72,7 +72,7 @@ Introduce an extension system to Spec Kit that allows modular integration with e
 
 - Standard directory structure (`.specify/extensions/{name}/`)
 - Declarative manifest (`extension.yml`)
-- Predictable command naming (`speckit.{extension}.{command}`)
+- Predictable command naming (`sdd.{extension}.{command}`)
 
 ### 2. Fail-Safe Defaults
 
@@ -140,9 +140,9 @@ project/
 │  └──────────────────────────────────────────────────┘   │
 │  ┌──────────────────────────────────────────────────┐   │
 │  │  Core Commands                                   │   │
-│  │  - /speckit.specify                              │   │
-│  │  - /speckit.tasks                                │   │
-│  │  - /speckit.implement                            │   │
+│  │  - /sdd.specify                              │   │
+│  │  - /sdd.tasks                                │   │
+│  │  - /sdd.implement                            │   │
 │  └─────────┬────────────────────────────────────────┘   │
 └────────────┼────────────────────────────────────────────┘
              │ Hook Points (after_tasks, after_implement)
@@ -151,12 +151,12 @@ project/
 │                    Extensions                           │
 │  ┌──────────────────────────────────────────────────┐   │
 │  │  Jira Extension                                  │   │
-│  │  - /speckit.jira.specstoissues                   │   │
-│  │  - /speckit.jira.discover-fields                 │   │
+│  │  - /sdd.jira.specstoissues                   │   │
+│  │  - /sdd.jira.discover-fields                 │   │
 │  └──────────────────────────────────────────────────┘   │
 │  ┌──────────────────────────────────────────────────┐   │
 │  │  Linear Extension                                │   │
-│  │  - /speckit.linear.sync                          │   │
+│  │  - /sdd.linear.sync                          │   │
 │  └──────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────┘
              │ Calls external tools
@@ -209,7 +209,7 @@ requires:
 
   # Core spec-kit commands this extension depends on
   commands:
-    - "speckit.tasks"             # Extension needs tasks command
+    - "sdd.tasks"             # Extension needs tasks command
 
   # Core scripts required
   scripts:
@@ -219,16 +219,16 @@ requires:
 provides:
   # Commands added to AI agent
   commands:
-    - name: "speckit.jira.specstoissues"
+    - name: "sdd.jira.specstoissues"
       file: "commands/specstoissues.md"
       description: "Create Jira hierarchy from spec and tasks"
-      aliases: ["speckit.specstoissues"]  # Alternate names
+      aliases: ["sdd.specstoissues"]  # Alternate names
 
-    - name: "speckit.jira.discover-fields"
+    - name: "sdd.jira.discover-fields"
       file: "commands/discover-fields.md"
       description: "Discover Jira custom fields for configuration"
 
-    - name: "speckit.jira.sync-status"
+    - name: "sdd.jira.sync-status"
       file: "commands/sync-status.md"
       description: "Sync task completion status to Jira"
 
@@ -272,16 +272,16 @@ config_schema:
 
 # Integration hooks (OPTIONAL)
 hooks:
-  # Hook fired after /speckit.tasks completes
+  # Hook fired after /sdd.tasks completes
   after_tasks:
-    command: "speckit.jira.specstoissues"
+    command: "sdd.jira.specstoissues"
     optional: true
     prompt: "Create Jira issues from tasks?"
     description: "Automatically create Jira hierarchy after task generation"
 
-  # Hook fired after /speckit.implement completes
+  # Hook fired after /sdd.implement completes
   after_implement:
-    command: "speckit.jira.sync-status"
+    command: "sdd.jira.sync-status"
     optional: true
     prompt: "Sync completion status to Jira?"
 
@@ -382,12 +382,12 @@ vim .specify/extensions/jira/jira-config.yml
 
 ```bash
 claude
-> /speckit.jira.specstoissues
+> /sdd.jira.specstoissues
 ```
 
 **Command resolution:**
 
-1. AI agent finds command in `.claude/commands/speckit.jira.specstoissues.md`
+1. AI agent finds command in `.claude/commands/sdd.jira.specstoissues.md`
 2. Command file references extension scripts/config
 3. Extension executes with full context
 
@@ -457,7 +457,7 @@ $ARGUMENTS
 
 #### Claude Code Registration
 
-**Output**: `.claude/commands/speckit.jira.specstoissues.md`
+**Output**: `.claude/commands/sdd.jira.specstoissues.md`
 
 ```markdown
 ---
@@ -488,11 +488,11 @@ $ARGUMENTS
 
 #### Gemini CLI Registration
 
-**Output**: `.gemini/commands/speckit.jira.specstoissues.toml`
+**Output**: `.gemini/commands/sdd.jira.specstoissues.toml`
 
 ```toml
 [command]
-name = "speckit.jira.specstoissues"
+name = "sdd.jira.specstoissues"
 description = "Create Jira hierarchy from spec and tasks"
 
 [command.tools]
@@ -712,7 +712,7 @@ except jsonschema.ValidationError as e:
 ```yaml
 hooks:
   after_tasks:
-    command: "speckit.jira.specstoissues"
+    command: "sdd.jira.specstoissues"
     optional: true
     prompt: "Create Jira issues from tasks?"
     description: "Automatically create Jira hierarchy"
@@ -739,14 +739,14 @@ settings:
 hooks:
   after_tasks:
     - extension: jira
-      command: speckit.jira.specstoissues
+      command: sdd.jira.specstoissues
       enabled: true
       optional: true
       prompt: "Create Jira issues from tasks?"
 
   after_implement:
     - extension: jira
-      command: speckit.jira.sync-status
+      command: sdd.jira.sync-status
       enabled: true
       optional: true
       prompt: "Sync completion status to Jira?"
@@ -804,7 +804,7 @@ fi
 
 **AI Agent Handling:**
 
-The AI agent sees `EXECUTE_COMMAND: speckit.jira.specstoissues` in output and automatically invokes that command.
+The AI agent sees `EXECUTE_COMMAND: sdd.jira.specstoissues` in output and automatically invokes that command.
 
 **Alternative**: Direct call in agent context (if agent supports it):
 
@@ -833,7 +833,7 @@ Extensions can specify **conditions** for hooks:
 ```yaml
 hooks:
   after_tasks:
-    command: "speckit.jira.specstoissues"
+    command: "sdd.jira.specstoissues"
     optional: true
     condition: "config.project.key is set and config.enabled == true"
 ```
@@ -864,7 +864,7 @@ Spec Kit uses two catalog files with different purposes:
 
 #### User Catalog (`catalog.json`)
 
-**URL**: `https://raw.githubusercontent.com/github/spec-kit/main/extensions/catalog.json`
+**URL**: `https://raw.githubusercontent.com/bigsmartben/sdd/main/extensions/catalog.json`
 
 - **Purpose**: Organization's curated catalog of approved extensions
 - **Default State**: Empty by design - users populate with extensions they trust
@@ -873,7 +873,7 @@ Spec Kit uses two catalog files with different purposes:
 
 #### Community Reference Catalog (`catalog.community.json`)
 
-**URL**: `https://raw.githubusercontent.com/github/spec-kit/main/extensions/catalog.community.json`
+**URL**: `https://raw.githubusercontent.com/bigsmartben/sdd/main/extensions/catalog.community.json`
 
 - **Purpose**: Reference catalog of available community-contributed extensions
 - **Verification**: Community extensions may have `verified: false` initially
@@ -988,7 +988,7 @@ This means `specify extension search` surfaces community extensions out of the b
 ```yaml
 catalogs:
   - name: "default"
-    url: "https://raw.githubusercontent.com/github/spec-kit/main/extensions/catalog.json"
+    url: "https://raw.githubusercontent.com/bigsmartben/sdd/main/extensions/catalog.json"
     priority: 1          # Highest — only approved entries can be installed
     install_allowed: true
     description: "Built-in catalog of installable extensions"
@@ -1000,7 +1000,7 @@ catalogs:
     description: "Internal company extensions"
 
   - name: "community"
-    url: "https://raw.githubusercontent.com/github/spec-kit/main/extensions/catalog.community.json"
+    url: "https://raw.githubusercontent.com/bigsmartben/sdd/main/extensions/catalog.community.json"
     priority: 3          # Lowest — discovery only, not installable
     install_allowed: false
     description: "Community-contributed extensions (discovery only)"
@@ -1020,7 +1020,7 @@ specify extension catalog add --name "internal" --install-allowed \
 
 # Add a discovery-only catalog
 specify extension catalog add --name "community" \
-  https://raw.githubusercontent.com/github/spec-kit/main/extensions/catalog.community.json
+  https://raw.githubusercontent.com/bigsmartben/sdd/main/extensions/catalog.community.json
 
 # Remove a catalog
 specify extension catalog remove internal
@@ -1151,9 +1151,9 @@ Requirements:
 
 Provides:
   Commands:
-    • speckit.jira.specstoissues - Create Jira hierarchy from spec and tasks
-    • speckit.jira.discover-fields - Discover Jira custom fields
-    • speckit.jira.sync-status - Sync task completion status
+    • sdd.jira.specstoissues - Create Jira hierarchy from spec and tasks
+    • sdd.jira.discover-fields - Discover Jira custom fields
+    • sdd.jira.sync-status - Sync task completion status
 
   Hooks:
     • after_tasks - Prompt to create Jira issues
@@ -1189,8 +1189,8 @@ Extension installed successfully!
 
 Next steps:
   1. Configure: vim .specify/extensions/jira/jira-config.yml
-  2. Discover fields: /speckit.jira.discover-fields
-  3. Use commands: /speckit.jira.specstoissues
+  2. Discover fields: /sdd.jira.discover-fields
+  3. Use commands: /sdd.jira.specstoissues
 ```
 
 **Options:**
@@ -1350,18 +1350,18 @@ def check_compatibility(extension_manifest: dict) -> bool:
 ```yaml
 provides:
   commands:
-    - name: "speckit.jira.old-command"
+    - name: "sdd.jira.old-command"
       file: "commands/old-command.md"
       deprecated: true
-      deprecated_message: "Use speckit.jira.new-command instead"
+      deprecated_message: "Use sdd.jira.new-command instead"
       removal_version: "2.0.0"
 ```
 
 **At runtime, show warning:**
 
 ```text
-⚠️  Warning: /speckit.jira.old-command is deprecated
-   Use /speckit.jira.new-command instead
+⚠️  Warning: /sdd.jira.old-command is deprecated
+   Use /sdd.jira.new-command instead
    This command will be removed in v2.0.0
 ```
 
@@ -1442,7 +1442,7 @@ CLI verifies signature before extraction.
 
 **Strategy**:
 
-1. **Core commands unchanged**: `/speckit.tasks`, `/speckit.implement`, etc. remain in core
+1. **Core commands unchanged**: `/sdd.tasks`, `/sdd.implement`, etc. remain in core
 
 2. **Optional extensions**: Users opt-in to extensions
 
@@ -1480,11 +1480,11 @@ CLI verifies signature before extraction.
 
 ```bash
 # Old (core command)
-/speckit.taskstoissues
+/sdd.taskstoissues
 
 # New (extension command)
 specify extension add github-projects
-/speckit.github.taskstoissues
+/sdd.github.taskstoissues
 ```
 
 **Compatibility shim** (if needed):
@@ -1493,9 +1493,9 @@ specify extension add github-projects
 # extension.yml
 provides:
   commands:
-    - name: "speckit.github.taskstoissues"
+    - name: "sdd.github.taskstoissues"
       file: "commands/taskstoissues.md"
-      aliases: ["speckit.taskstoissues"]  # Backward compatibility
+      aliases: ["sdd.taskstoissues"]  # Backward compatibility
 ```
 
 AI agent registers both names, so old scripts work.
@@ -1626,7 +1626,7 @@ AI agent registers both names, so old scripts work.
 
 **Options**:
 
-- A) Prefixed: `/speckit.jira.specstoissues` (explicit, avoids conflicts)
+- A) Prefixed: `/sdd.jira.specstoissues` (explicit, avoids conflicts)
 - B) Short alias: `/jira.specstoissues` (shorter, less verbose)
 - C) Both: Register both names, prefer prefixed in docs
 

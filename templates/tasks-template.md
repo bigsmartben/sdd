@@ -162,7 +162,7 @@ Rules:
 
 ## 8) Implementation Consumption
 
-- `/speckit.implement` MUST consume `tasks.md` directly.
+- `/sdd.implement` MUST consume `tasks.md` directly.
 - Required consumable sections:
   - `Upstream Inputs (Execution References)`
   - `Execution Ordering Model` (`Task DAG`)

@@ -43,15 +43,15 @@ requires:
 provides:
   commands:
     # CUSTOMIZE: Define your commands
-    # Pattern: speckit.{extension-id}.{command-name}
-    - name: "speckit.my-extension.example"
+    # Pattern: sdd.{extension-id}.{command-name}
+    - name: "sdd.my-extension.example"
       file: "commands/example.md"
       description: "Example command that demonstrates functionality"
       # Optional: Add aliases for shorter command names
-      aliases: ["speckit.example"]
+      aliases: ["sdd.example"]
 
     # ADD MORE COMMANDS: Copy this block for each command
-    # - name: "speckit.my-extension.another-command"
+    # - name: "sdd.my-extension.another-command"
     #   file: "commands/another-command.md"
     #   description: "Another command"
 
@@ -65,9 +65,9 @@ provides:
 # CUSTOMIZE: Define hooks (optional)
 # Remove if no hooks needed
 hooks:
-  # Hook that runs after /speckit.tasks
+  # Hook that runs after /sdd.tasks
   after_tasks:
-    command: "speckit.my-extension.example"
+    command: "sdd.my-extension.example"
     optional: true # User will be prompted
     prompt: "Run example command?"
     description: "Demonstrates hook functionality"
@@ -75,7 +75,7 @@ hooks:
 
   # ADD MORE HOOKS: Copy this block for other events
   # after_implement:
-  #   command: "speckit.my-extension.another"
+  #   command: "sdd.my-extension.another"
   #   optional: false  # Auto-execute without prompting
   #   description: "Runs automatically after implementation"
 
