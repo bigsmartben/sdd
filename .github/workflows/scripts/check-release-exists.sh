@@ -11,11 +11,17 @@ if [[ $# -ne 1 ]]; then
 fi
 
 VERSION="$1"
+REPO="${GITHUB_REPOSITORY:-}"
 
-if gh release view "$VERSION" >/dev/null 2>&1; then
+if [[ -z "$REPO" ]]; then
+  echo "Error: GITHUB_REPOSITORY is not set" >&2
+  exit 1
+fi
+
+if gh release view "$VERSION" --repo "$REPO" >/dev/null 2>&1; then
   echo "exists=true" >> $GITHUB_OUTPUT
-  echo "Release $VERSION already exists, skipping..."
+  echo "Release $VERSION already exists in $REPO, skipping..."
 else
   echo "exists=false" >> $GITHUB_OUTPUT
-  echo "Release $VERSION does not exist, proceeding..."
+  echo "Release $VERSION does not exist in $REPO, proceeding..."
 fi
