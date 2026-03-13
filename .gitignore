@@ -22,6 +22,9 @@ wheels/
 003*
 .clinerules
 .history
+.github/
+specs/
+.ven311/
 
 # Virtual environments
 venv/

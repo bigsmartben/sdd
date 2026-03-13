@@ -133,12 +133,42 @@ get_highest_from_branches() {
     echo "$highest"
 }
 
+# Best-effort remote sync that avoids interactive/network hangs.
+# Behavior controls:
+# - SPECIFY_SKIP_FETCH=1      -> skip remote fetch entirely
+# - SPECIFY_FETCH_TIMEOUT=<s> -> timeout seconds (default: 8)
+safe_fetch_remote_branches() {
+    if [ "${SPECIFY_SKIP_FETCH:-0}" = "1" ]; then
+        >&2 echo "[specify] Warning: skipping remote fetch because SPECIFY_SKIP_FETCH=1"
+        return 0
+    fi
+
+    local fetch_timeout="${SPECIFY_FETCH_TIMEOUT:-8}"
+    local ssh_cmd="${GIT_SSH_COMMAND:-ssh -o BatchMode=yes -o ConnectTimeout=5}"
+
+    if command -v timeout >/dev/null 2>&1; then
+        GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="$ssh_cmd" \
+            timeout "${fetch_timeout}s" \
+            git -c credential.interactive=never fetch --all --prune --quiet >/dev/null 2>&1 || \
+            >&2 echo "[specify] Warning: git fetch skipped/failed (timeout or network issue); using local branch/spec data"
+    elif command -v gtimeout >/dev/null 2>&1; then
+        GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="$ssh_cmd" \
+            gtimeout "${fetch_timeout}s" \
+            git -c credential.interactive=never fetch --all --prune --quiet >/dev/null 2>&1 || \
+            >&2 echo "[specify] Warning: git fetch skipped/failed (timeout or network issue); using local branch/spec data"
+    else
+        GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="$ssh_cmd" \
+            git -c credential.interactive=never fetch --all --prune --quiet >/dev/null 2>&1 || \
+            >&2 echo "[specify] Warning: git fetch failed; using local branch/spec data"
+    fi
+}
+
 # Function to check existing branches (local and remote) and return next available number
 check_existing_branches() {
     local specs_dir="$1"
 
-    # Fetch all remotes to get latest branch info (suppress errors if no remotes)
-    git fetch --all --prune 2>/dev/null || true
+    # Fetch all remotes to get latest branch info in a non-blocking way
+    safe_fetch_remote_branches
 
     # Get highest number from ALL branches (not just matching short name)
     local highest_branch=$(get_highest_from_branches)

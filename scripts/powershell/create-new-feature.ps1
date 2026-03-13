@@ -110,11 +110,37 @@ function Get-NextBranchNumber {
         [string]$SpecsDir
     )
 
-    # Fetch all remotes to get latest branch info (suppress errors if no remotes)
-    try {
-        git fetch --all --prune 2>$null | Out-Null
-    } catch {
-        # Ignore fetch errors
+    # Best-effort remote sync that avoids interactive/network hangs.
+    # Behavior controls:
+    # - SPECIFY_SKIP_FETCH=1      -> skip remote fetch entirely
+    # - SPECIFY_FETCH_TIMEOUT=<s> -> timeout seconds (default: 8)
+    $skipFetch = $env:SPECIFY_SKIP_FETCH
+    if ($skipFetch -eq '1') {
+        Write-Warning "[specify] Skipping remote fetch because SPECIFY_SKIP_FETCH=1"
+    } else {
+        $fetchTimeout = 8
+        if ($env:SPECIFY_FETCH_TIMEOUT -and ($env:SPECIFY_FETCH_TIMEOUT -as [int])) {
+            $fetchTimeout = [int]$env:SPECIFY_FETCH_TIMEOUT
+        }
+
+        # Prefer a non-interactive SSH command unless user already set one.
+        if (-not $env:GIT_SSH_COMMAND) {
+            $env:GIT_SSH_COMMAND = 'ssh -o BatchMode=yes -o ConnectTimeout=5'
+        }
+
+        try {
+            # Make fetch non-interactive and bounded by timeout.
+            $fetchArgs = @('-c', 'credential.interactive=never', 'fetch', '--all', '--prune', '--quiet')
+            $proc = Start-Process -FilePath 'git' -ArgumentList $fetchArgs -NoNewWindow -PassThru
+            if (-not $proc.WaitForExit($fetchTimeout * 1000)) {
+                try { $proc.Kill() } catch {}
+                Write-Warning "[specify] git fetch timed out; using local branch/spec data"
+            } elseif ($proc.ExitCode -ne 0) {
+                Write-Warning "[specify] git fetch failed; using local branch/spec data"
+            }
+        } catch {
+            Write-Warning "[specify] git fetch skipped/failed; using local branch/spec data"
+        }
     }
 
     # Get highest number from ALL branches (not just matching short name)
