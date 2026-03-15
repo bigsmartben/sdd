@@ -1,10 +1,10 @@
 <!--
 Sync Impact Report
-- Version change: N/A → 1.0.0
+- Version change: 1.0.0 → 1.1.0
 - Modified principles:
-  - N/A (initial adoption)
+  - N/A
 - Added sections:
-  - Initial constitution fully instantiated from template
+  - Repo-Anchor Evidence Protocol
 - Removed sections:
   - None
 - Templates requiring updates:
@@ -130,6 +130,13 @@ Include only project-critical concepts here, for example:
 - **Verification Anchor**: stable reference used to prove behavior coverage,
   including scenario IDs, CaseID, TM/TC IDs, or equivalent identifiers.
 
+### Repo-Anchor Evidence Protocol
+
+- **Rule**: Repo semantic anchors come from source code plus `.specify/memory/constitution.md` only.
+- **Whitelist (hard rule)**: `source-code files / source-code symbols + .specify/memory/constitution.md`.
+- **Blacklist (hard rule)**: `README.md`, `docs/**`, `specs/**`, historical examples, demo documents, and generated artifacts MUST NOT be used as repo semantic evidence.
+- **Boundary**: Blacklist items may be read as supporting context or background clues when explicitly needed, but they MUST NOT be promoted into repo semantic anchors.
+
 ## State Machine Applicability Gate
 
 This section defines when a feature MUST include a full business lifecycle state machine,
@@ -211,4 +218,4 @@ Amendments MUST be explicit, reviewed, and reflected in downstream guidance wher
 - Exception governance: temporary exceptions MUST include owner, rationale,
   scope, and expiration or review date.
 
-**Version**: 1.0.0 | **Ratified**: 2026-03-13 | **Last Amended**: 2026-03-13
+**Version**: 1.1.0 | **Ratified**: 2026-03-13 | **Last Amended**: 2026-03-15

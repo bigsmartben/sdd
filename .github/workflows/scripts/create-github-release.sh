@@ -13,54 +13,23 @@ fi
 VERSION="$1"
 VERSION_NO_V=${VERSION#v}
 
+shopt -s nullglob
+TEMPLATE_ZIPS=(.genreleases/spec-kit-template-*-${VERSION}.zip)
+PYTHON_DIST=(dist/*.whl dist/*.tar.gz)
+shopt -u nullglob
+
+if [[ ${#TEMPLATE_ZIPS[@]} -eq 0 ]]; then
+  echo "No template archives found for ${VERSION} under .genreleases/" >&2
+  exit 1
+fi
+
+if [[ ${#PYTHON_DIST[@]} -eq 0 ]]; then
+  echo "No Python distribution artifacts found under dist/" >&2
+  exit 1
+fi
+
 gh release create "$VERSION" \
-  .genreleases/spec-kit-template-copilot-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-copilot-ps-"$VERSION".zip \
-  .genreleases/spec-kit-template-claude-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-claude-ps-"$VERSION".zip \
-  .genreleases/spec-kit-template-gemini-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-gemini-ps-"$VERSION".zip \
-  .genreleases/spec-kit-template-cursor-agent-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-cursor-agent-ps-"$VERSION".zip \
-  .genreleases/spec-kit-template-cline-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-cline-ps-"$VERSION".zip \
-  .genreleases/spec-kit-template-opencode-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-opencode-ps-"$VERSION".zip \
-  .genreleases/spec-kit-template-qwen-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-qwen-ps-"$VERSION".zip \
-  .genreleases/spec-kit-template-windsurf-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-windsurf-ps-"$VERSION".zip \
-  .genreleases/spec-kit-template-codex-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-codex-ps-"$VERSION".zip \
-  .genreleases/spec-kit-template-kilocode-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-kilocode-ps-"$VERSION".zip \
-  .genreleases/spec-kit-template-auggie-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-auggie-ps-"$VERSION".zip \
-  .genreleases/spec-kit-template-roo-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-roo-ps-"$VERSION".zip \
-  .genreleases/spec-kit-template-codebuddy-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-codebuddy-ps-"$VERSION".zip \
-  .genreleases/spec-kit-template-qodercli-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-qodercli-ps-"$VERSION".zip \
-  .genreleases/spec-kit-template-amp-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-amp-ps-"$VERSION".zip \
-  .genreleases/spec-kit-template-shai-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-shai-ps-"$VERSION".zip \
-  .genreleases/spec-kit-template-tabnine-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-tabnine-ps-"$VERSION".zip \
-  .genreleases/spec-kit-template-kiro-cli-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-kiro-cli-ps-"$VERSION".zip \
-  .genreleases/spec-kit-template-agy-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-agy-ps-"$VERSION".zip \
-  .genreleases/spec-kit-template-bob-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-bob-ps-"$VERSION".zip \
-  .genreleases/spec-kit-template-vibe-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-vibe-ps-"$VERSION".zip \
-  .genreleases/spec-kit-template-kimi-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-kimi-ps-"$VERSION".zip \
-  .genreleases/spec-kit-template-generic-sh-"$VERSION".zip \
-  .genreleases/spec-kit-template-generic-ps-"$VERSION".zip \
-  dist/*.whl \
-  dist/*.tar.gz \
+  "${TEMPLATE_ZIPS[@]}" \
+  "${PYTHON_DIST[@]}" \
   --title "Spec Kit Templates - $VERSION_NO_V" \
   --notes-file release_notes.md

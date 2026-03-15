@@ -2,7 +2,9 @@
 set -euo pipefail
 
 # generate-release-notes.sh
-# Generate release notes from git history
+# Generate release notes from git history.
+# NOTE: Output quality depends on commit subject quality (`git log --pretty=%s`).
+# Prefer clear, user-facing commit messages (e.g., Conventional Commits) before release.
 # Usage: generate-release-notes.sh <new_version> <last_tag>
 
 if [[ $# -ne 2 ]]; then
@@ -29,6 +31,8 @@ fi
 # Create release notes
 cat > release_notes.md << EOF
 This is the latest set of releases that you can use with your agent of choice. We recommend using the Specify CLI to scaffold your projects, however you can download these independently and manage them yourself.
+
+> Note: Changelog lines are generated from commit subjects. Rewrite unclear commit messages before cutting a release.
 
 ## Changelog
 

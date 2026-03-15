@@ -1,6 +1,8 @@
 """Consistency checks for agent configuration across runtime and packaging scripts."""
 
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 from specify_cli import AGENT_CONFIG, AI_ASSISTANT_ALIASES, AI_ASSISTANT_HELP
@@ -8,6 +10,17 @@ from specify_cli.extensions import CommandRegistrar
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+HELPER_SCRIPT = REPO_ROOT / ".github" / "workflows" / "scripts" / "list-agent-config-keys.py"
+
+
+def _agent_keys_from_helper() -> list[str]:
+    result = subprocess.run(
+        [sys.executable, str(HELPER_SCRIPT)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
 
 
 class TestAgentConfigConsistency:
@@ -36,26 +49,19 @@ class TestAgentConfigConsistency:
         assert cfg["codex"]["dir"] == ".codex/prompts"
 
     def test_release_agent_lists_include_kiro_cli_and_exclude_q(self):
-        """Bash and PowerShell release scripts should agree on agent key set for Kiro."""
+        """Release packaging should source agent keys from AGENT_CONFIG helper output."""
         sh_text = (REPO_ROOT / ".github" / "workflows" / "scripts" / "create-release-packages.sh").read_text(encoding="utf-8")
         ps_text = (REPO_ROOT / ".github" / "workflows" / "scripts" / "create-release-packages.ps1").read_text(encoding="utf-8")
+        helper_agents = _agent_keys_from_helper()
 
-        sh_match = re.search(r"ALL_AGENTS=\(([^)]*)\)", sh_text)
-        assert sh_match is not None
-        sh_agents = sh_match.group(1).split()
+        assert "list-agent-config-keys.py" in sh_text
+        assert "list-agent-config-keys.py" in ps_text
+        assert helper_agents == list(AGENT_CONFIG.keys())
 
-        ps_match = re.search(r"\$AllAgents = @\(([^)]*)\)", ps_text)
-        assert ps_match is not None
-        ps_agents = re.findall(r"'([^']+)'", ps_match.group(1))
-
-        assert "kiro-cli" in sh_agents
-        assert "kiro-cli" in ps_agents
-        assert "shai" in sh_agents
-        assert "shai" in ps_agents
-        assert "agy" in sh_agents
-        assert "agy" in ps_agents
-        assert "q" not in sh_agents
-        assert "q" not in ps_agents
+        assert "kiro-cli" in helper_agents
+        assert "shai" in helper_agents
+        assert "agy" in helper_agents
+        assert "q" not in helper_agents
 
     def test_release_ps_switch_has_shai_and_agy_generation(self):
         """PowerShell release builder must generate files for shai and agy agents."""
@@ -80,7 +86,7 @@ class TestAgentConfigConsistency:
         assert "KIRO_SKIP_KIRO_INSTALLER_VERIFY" not in post_create_text
 
     def test_release_output_targets_kiro_prompt_dir(self):
-        """Packaging and release scripts should no longer emit amazonq artifacts."""
+        """Packaging scripts should target Kiro prompt dir and GitHub release should collect template archives by glob."""
         sh_text = (REPO_ROOT / ".github" / "workflows" / "scripts" / "create-release-packages.sh").read_text(encoding="utf-8")
         ps_text = (REPO_ROOT / ".github" / "workflows" / "scripts" / "create-release-packages.ps1").read_text(encoding="utf-8")
         gh_release_text = (REPO_ROOT / ".github" / "workflows" / "scripts" / "create-github-release.sh").read_text(encoding="utf-8")
@@ -90,10 +96,8 @@ class TestAgentConfigConsistency:
         assert ".amazonq/prompts" not in sh_text
         assert ".amazonq/prompts" not in ps_text
 
-        assert "spec-kit-template-kiro-cli-sh-" in gh_release_text
-        assert "spec-kit-template-kiro-cli-ps-" in gh_release_text
-        assert "spec-kit-template-q-sh-" not in gh_release_text
-        assert "spec-kit-template-q-ps-" not in gh_release_text
+        assert "spec-kit-template-*-${VERSION}.zip" in gh_release_text
+        assert "spec-kit-template-q-" not in gh_release_text
 
     def test_agent_context_scripts_use_kiro_cli(self):
         """Agent context scripts should advertise kiro-cli and not legacy q agent key."""
@@ -127,20 +131,9 @@ class TestAgentConfigConsistency:
         assert cfg["extension"] == ".toml"
 
     def test_release_agent_lists_include_tabnine(self):
-        """Bash and PowerShell release scripts should include tabnine in agent lists."""
-        sh_text = (REPO_ROOT / ".github" / "workflows" / "scripts" / "create-release-packages.sh").read_text(encoding="utf-8")
-        ps_text = (REPO_ROOT / ".github" / "workflows" / "scripts" / "create-release-packages.ps1").read_text(encoding="utf-8")
-
-        sh_match = re.search(r"ALL_AGENTS=\(([^)]*)\)", sh_text)
-        assert sh_match is not None
-        sh_agents = sh_match.group(1).split()
-
-        ps_match = re.search(r"\$AllAgents = @\(([^)]*)\)", ps_text)
-        assert ps_match is not None
-        ps_agents = re.findall(r"'([^']+)'", ps_match.group(1))
-
-        assert "tabnine" in sh_agents
-        assert "tabnine" in ps_agents
+        """Release packaging should include tabnine via AGENT_CONFIG helper keys."""
+        helper_agents = _agent_keys_from_helper()
+        assert "tabnine" in helper_agents
 
     def test_release_scripts_generate_tabnine_toml_commands(self):
         """Release scripts should generate TOML commands for tabnine in .tabnine/agent/commands."""
@@ -152,11 +145,10 @@ class TestAgentConfigConsistency:
         assert re.search(r"'tabnine'\s*\{.*?\.tabnine/agent/commands", ps_text, re.S) is not None
 
     def test_github_release_includes_tabnine_packages(self):
-        """GitHub release script should include tabnine template packages."""
+        """GitHub release script should upload all template packages using glob expansion."""
         gh_release_text = (REPO_ROOT / ".github" / "workflows" / "scripts" / "create-github-release.sh").read_text(encoding="utf-8")
 
-        assert "spec-kit-template-tabnine-sh-" in gh_release_text
-        assert "spec-kit-template-tabnine-ps-" in gh_release_text
+        assert "spec-kit-template-*-${VERSION}.zip" in gh_release_text
 
     def test_agent_context_scripts_include_tabnine(self):
         """Agent context scripts should support tabnine agent type."""
@@ -188,7 +180,7 @@ class TestAgentConfigConsistency:
         assert cfg["cline"]["dir"] == ".clinerules/workflows"
 
     def test_release_scripts_include_cline(self):
-        """Release scripts should include cline in agent list and output assets."""
+        """Release scripts should include cline in packaging outputs and template glob upload."""
         sh_text = (REPO_ROOT / ".github" / "workflows" / "scripts" / "create-release-packages.sh").read_text(encoding="utf-8")
         ps_text = (REPO_ROOT / ".github" / "workflows" / "scripts" / "create-release-packages.ps1").read_text(encoding="utf-8")
         gh_release_text = (REPO_ROOT / ".github" / "workflows" / "scripts" / "create-github-release.sh").read_text(encoding="utf-8")
@@ -197,8 +189,7 @@ class TestAgentConfigConsistency:
         assert "cline" in ps_text
         assert ".clinerules/workflows" in sh_text
         assert ".clinerules/workflows" in ps_text
-        assert "spec-kit-template-cline-sh-" in gh_release_text
-        assert "spec-kit-template-cline-ps-" in gh_release_text
+        assert "spec-kit-template-*-${VERSION}.zip" in gh_release_text
 
     def test_agent_context_scripts_include_cline(self):
         """Agent context scripts should support cline agent type."""
@@ -233,20 +224,10 @@ class TestAgentConfigConsistency:
         assert kimi_cfg["extension"] == "/SKILL.md"
 
     def test_kimi_in_release_agent_lists(self):
-        """Bash and PowerShell release scripts should include kimi in agent lists."""
-        sh_text = (REPO_ROOT / ".github" / "workflows" / "scripts" / "create-release-packages.sh").read_text(encoding="utf-8")
-        ps_text = (REPO_ROOT / ".github" / "workflows" / "scripts" / "create-release-packages.ps1").read_text(encoding="utf-8")
+        """Release packaging should include kimi via AGENT_CONFIG helper keys."""
+        helper_agents = _agent_keys_from_helper()
 
-        sh_match = re.search(r"ALL_AGENTS=\(([^)]*)\)", sh_text)
-        assert sh_match is not None
-        sh_agents = sh_match.group(1).split()
-
-        ps_match = re.search(r"\$AllAgents = @\(([^)]*)\)", ps_text)
-        assert ps_match is not None
-        ps_agents = re.findall(r"'([^']+)'", ps_match.group(1))
-
-        assert "kimi" in sh_agents
-        assert "kimi" in ps_agents
+        assert "kimi" in helper_agents
 
     def test_kimi_in_powershell_validate_set(self):
         """PowerShell update-agent-context script should include 'kimi' in ValidateSet."""
@@ -259,12 +240,27 @@ class TestAgentConfigConsistency:
         assert "kimi" in validate_set_values
 
     def test_kimi_in_github_release_output(self):
-        """GitHub release script should include kimi template packages."""
+        """GitHub release script should upload template packages via template glob."""
         gh_release_text = (REPO_ROOT / ".github" / "workflows" / "scripts" / "create-github-release.sh").read_text(encoding="utf-8")
 
-        assert "spec-kit-template-kimi-sh-" in gh_release_text
-        assert "spec-kit-template-kimi-ps-" in gh_release_text
+        assert "spec-kit-template-*-${VERSION}.zip" in gh_release_text
 
     def test_ai_help_includes_kimi(self):
         """CLI help text for --ai should include kimi."""
         assert "kimi" in AI_ASSISTANT_HELP
+
+    def test_generate_release_notes_warns_about_commit_subject_quality(self):
+        """Release notes generator should document commit-subject quality dependency."""
+        notes_text = (REPO_ROOT / ".github" / "workflows" / "scripts" / "generate-release-notes.sh").read_text(encoding="utf-8")
+
+        assert "Output quality depends on commit subject quality" in notes_text
+        assert "Conventional Commits" in notes_text
+        assert "Changelog lines are generated from commit subjects" in notes_text
+
+    def test_simulate_release_documents_mutating_behavior(self):
+        """simulate-release should clearly warn that it mutates local files and is not read-only."""
+        simulate_text = (REPO_ROOT / ".github" / "workflows" / "scripts" / "simulate-release.sh").read_text(encoding="utf-8")
+
+        assert "intentionally modifies local files" in simulate_text
+        assert "Do not include it in read-only preflight checks" in simulate_text
+        assert "LOCAL FILES WERE MODIFIED AS PART OF THIS SIMULATION" in simulate_text

@@ -1,5 +1,10 @@
 ---
-description: Perform a non-destructive cross-artifact consistency and quality analysis across spec.md, plan.md, and tasks.md after task generation.
+description: Perform the centralized pre-implementation semantic audit and gate decision across spec.md, plan.md, and tasks.md.
+handoffs:
+  - label: Proceed to Implementation
+    agent: sdd.implement
+    prompt: Proceed with implementation only after analyze findings are resolved or explicitly accepted
+    send: true
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks
   ps: scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks
@@ -15,203 +20,188 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Goal
 
-Run the dedicated pre-implementation audit across the three core artifacts (`spec.md`, `plan.md`, `tasks.md`) after `/sdd.tasks`. Identify inconsistencies, ambiguities, uncovered MUST requirements, execution gaps, and unnecessary traceability payload before `/sdd.implement`.
+Run the unified audit entry before `/sdd.implement`: combine planning lint output with semantic analysis, then produce one compact report and one Gate Decision.
+
+`/sdd.analyze` is the centralized audit entry and single concentrated audit step before `/sdd.implement`.
+
+`/sdd.analyze` owns this centralized audit and summary authority. `/sdd.implement` should remain limited to hard execution gates only.
+
+Mechanical output structure is governed by `templates/lint-report-template.md`; semantic output remains in this command's semantic report section.
+
+## Constitution Authority
+
+`.specify/memory/constitution.md` is non-negotiable in this scope. Any MUST-level conflict is CRITICAL and must be remediated in `spec.md`, `plan.md`, or `tasks.md` (or by a separate constitution update command outside `/sdd.analyze`).
+
+## Artifact Authority
+
+**Artifact Authority**
+
+Authoritative artifacts: `spec.md`, `plan.md`, `tasks.md`, `.specify/memory/constitution.md`, and supporting planning artifacts (`research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, `interface-details/`).
+
+`/sdd.analyze` owns comprehensive implementation-readiness analysis and audit responsibilities.
+CRITICAL/HIGH findings MUST cite the authoritative source artifact(s).
+Treat task-local summaries or inline mirrors as derived views only.
+Derived views (summaries, mirrors, projection notes, caches) are secondary evidence only.
+Misuse of `README.md`, `docs/**`, `specs/**`, demos, or generated artifacts as repo semantic anchors must be reported as `repo-anchor misuse`.
 
 ## Operating Constraints
 
-**STRICTLY READ-ONLY**: Do **not** modify any files. Output a structured audit report. Offer an optional remediation plan (user must explicitly approve before any follow-up editing commands would be invoked manually).
-
-**Constitution Authority**: The project constitution (`/memory/constitution.md`) is **non-negotiable** within this analysis scope. Constitution conflicts are automatically CRITICAL and require adjustment of the spec, plan, or tasks—not dilution, reinterpretation, or silent ignoring of the principle. If a principle itself needs to change, that must occur in a separate, explicit constitution update outside `/sdd.analyze`.
-
-**Artifact Authority**: Summaries, projection notes, inline references, caches, and other derived views are secondary evidence only. CRITICAL/HIGH findings MUST cite the authoritative source artifact(s) that establish the contradiction or gap.
+- **Read-only**: do not modify files.
+- Produce a compact report with findings, metrics, and next actions.
+- Keep implementation-boundary reminder minimal: `/sdd.implement` enforces hard run gates; this command owns comprehensive audit synthesis.
 
 ## Execution Steps
 
-### 1. Initialize Analysis Context
+### 1) Initialize Context
 
-Run `{SCRIPT}` once from repo root and parse JSON for FEATURE_DIR and AVAILABLE_DOCS. Derive absolute paths:
+Run `{SCRIPT}` once from repo root and parse JSON for `FEATURE_DIR` and `AVAILABLE_DOCS`. Derive absolute paths:
 
-- SPEC = FEATURE_DIR/spec.md
-- PLAN = FEATURE_DIR/plan.md
-- TASKS = FEATURE_DIR/tasks.md
+- `SPEC = FEATURE_DIR/spec.md`
+- `PLAN = FEATURE_DIR/plan.md`
+- `TASKS = FEATURE_DIR/tasks.md`
+- `CONSTITUTION = .specify/memory/constitution.md`
 
-Abort with an error message if any required file is missing (instruct the user to run missing prerequisite command).
-For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
+Abort with clear prerequisite error if required artifacts are missing.
 
-### 2. Load Artifacts (Progressive Disclosure)
+### 2) Run Planning Lint
 
-Load only the minimal necessary context from each artifact:
+Attempt planning lint before semantic passes.
 
-**From spec.md:**
+- Bash: `scripts/bash/run-planning-lint.sh --feature-dir <abs-path> --rules <abs-path> --json`
+- PowerShell: `scripts/powershell/run-planning-lint.ps1 -FeatureDir <abs-path> -Rules <abs-path> -Json`
+- Rules catalog path: `rules/planning-lint-rules.tsv`
 
-- Overview/Context
-- Functional Requirements
-- Non-Functional Requirements
-- User Stories
-- Edge Cases (if present)
+Expected lint payload fields:
 
-**From plan.md:**
+- `feature_dir`
+- `rules_total`
+- `rules_evaluated`
+- `findings_total`
+- `findings_by_severity`
+- `findings[]` with: `rule_id`, `severity`, `source`, `file`, `line`, `message`, `remediation`
 
-- Architecture/stack choices
-- Contract / data-model / verification design references when present
-- Phases
-- Technical constraints
+If lint is unavailable or execution fails:
 
-**From tasks.md:**
+- Continue semantic audit.
+- Explicitly mark lint as unavailable in the report.
+- Emit zero `Mechanical Findings` with explanatory note (not silent omission).
 
-- Task IDs
-- Execution scopes (`GLOBAL`, `IF-###`)
-- `Task DAG`
-- Descriptions and completion anchors
-- Referenced requirement / verification refs when present
-- Referenced file paths
-- Treat task-local summaries or inline mirrors as derived views only when they disagree with authoritative upstream artifacts
+### 3) Load Minimal Artifact Context
 
-**From supporting planning artifacts (load only when needed for Stage 3 consistency checks):**
+Load only sections needed for semantic conclusions:
 
-- `contracts/` for canonical interface semantics
-- `data-model.md` for global object / invariant / transition semantics
-- `test-matrix.md` for main/exception path anchors
-- `interface-details/` for per-operation behavior text, sequence diagrams, and UML class diagrams
+- From `spec.md`: overview/context, functional & non-functional requirements, user stories, edge cases when present.
+- From `plan.md`: architecture/stack choices, constraints, stage outputs, planning references.
+- From `tasks.md`: task IDs, scopes (`GLOBAL`, `IF-*`), DAG/dependencies, descriptions, referenced files/anchors.
+- From supporting planning artifacts (only when needed):
+  - `contracts/` for interface semantics
+  - `data-model.md` for domain objects/invariants/lifecycle anchors
+  - `test-matrix.md` for path anchors
+  - `interface-details/` for operation behavior, sequence, UML details
+- From constitution: MUST/SHOULD principles required for validation.
 
-**From constitution:**
+### 4) Build Semantic Models
 
-- Load `/memory/constitution.md` for principle validation
+Construct internal models (no raw artifact dump):
 
-### 3. Build Semantic Models
+- requirement inventory (functional + non-functional, stable keys)
+- user action / acceptance inventory
+- task-to-requirement coverage mapping
+- constitution principle map
 
-Create internal representations (do not include raw artifacts in output):
+### 5) Semantic Detection Passes
 
-- **Requirements inventory**: Each functional + non-functional requirement with a stable key (derive slug based on imperative phrase; e.g., "User can upload file" → `user-can-upload-file`)
-- **User story/action inventory**: Discrete user actions with acceptance criteria
-- **Task coverage mapping**: Map each task to one or more requirements or stories (inference by keyword / explicit reference patterns like IDs or key phrases)
-- **Constitution rule set**: Extract principle names and MUST/SHOULD normative statements
+Focus on high-signal semantic issues and aggregate overflow beyond 50 findings.
 
-### 4. Detection Passes (Token-Efficient Analysis)
+- duplication and contradiction in requirements/intent
+- ambiguity and unresolved placeholders with execution impact
+- constitution MUST violations
+- requirement/task coverage gaps
+- cross-artifact terminology or meaning drift
+- cross-artifact contradiction detection
+- execution-order or dependency contradictions that create implementation blockers
+- semantic conflicts between `spec.md`, `plan.md`, `tasks.md`, and required supporting artifacts
+- domain semantic coverage vs interface-local technical traceability sufficiency
 
-Focus on high-signal findings. Limit to 50 findings total; aggregate remainder in overflow summary.
+Mandatory explicit semantic checks (do not skip even when lint is available):
 
-#### A. Duplication Detection
+- boundary anchor legality and tuple authority:
+  - flag any tuple using `BA-*` as normative `Boundary Anchor`
+  - flag tuple rows in normative/main validation paths when `Repo Anchor = TODO(REPO_ANCHOR)`
+- contract/interface DTO drift:
+  - flag contract or interface `Request`/`Success`/`Failure` fields that drift from anchored facade/RPC method signatures or anchored request/response DTO structure
+  - drift includes renaming anchored fields, flattening anchored nesting, or splitting into fields absent from anchored DTOs
+- runtime correctness (from Stage 4 interface details):
+  - treat this pass as the single post-generation runtime correctness gate; do not require pre-filled check tables in Stage 4 docs
+  - flag behavior-path closure gaps where `Behavior Paths` outcomes/failures are not fully covered by `Sequence Ref` steps
+  - flag sequence failure steps that do not match contract `Failure Output` semantics
+  - flag sequence state-transition steps that are not mapped to valid lifecycle transitions/invariants
+  - flag contract-visible sequence messages that are not mapped to callable boundary/collaborator operations with UML ownership
+- lifecycle anchor drift (high priority):
+  - flag `data-model.md` lifecycle stable states that drift from anchored enum/state field/mapper status values
+  - flag lifecycle states promoted from UX phase/page step/flow node
+- state-machine applicability compliance (constitution-driven):
+  - evaluate lifecycle modeling outputs against constitution applicability thresholds for Full FSM vs Lightweight State Model
+  - when Full FSM is used below threshold, require explicit planning justification evidence (for example in plan complexity tracking); flag as finding when absent
 
-- Identify near-duplicate requirements
-- Mark lower-quality phrasing for consolidation
+Mechanical checks delegated to planning lint (for example format-level tuple lint and diagram syntax issues) should be consumed from lint output instead of duplicating long rule prose here.
 
-#### B. Ambiguity Detection
+### 6) Produce Compact Analysis Report
 
-- Flag vague adjectives (fast, scalable, secure, intuitive, robust) lacking measurable criteria
-- Flag unresolved placeholders (TODO, TKTK, ???, `<placeholder>`, etc.)
-
-#### C. Underspecification
-
-- Requirements with verbs but missing object or measurable outcome
-- User stories missing acceptance criteria alignment
-- Tasks referencing files or components not defined in spec/plan
-
-#### D. Constitution Alignment
-
-- Any requirement or plan element conflicting with a MUST principle
-- Missing mandated sections or quality gates from constitution
-
-#### E. Coverage Gaps
-
-- Requirements with zero associated tasks
-- Tasks with no mapped requirement/story
-- Non-functional requirements not reflected in tasks (e.g., performance, security)
-
-#### F. Inconsistency
-
-- Terminology drift (same concept named differently across files)
-- Data entities referenced in plan but absent in spec (or vice versa)
-- Task ordering contradictions (e.g., integration tasks before foundational setup tasks without dependency note)
-- Conflicting requirements (e.g., one requires Next.js while other specifies Vue)
-
-#### G. Audit Hygiene
-
-- Unnecessary traceability payload embedded in design/execution artifacts
-- Repeated audit requirements that should be handled in `/sdd.analyze`, not in plan or implement instructions
-- Optional references presented as blocking requirements without execution need
-
-#### H. Diagram Drift
-
-- `data-model.md` missing the required spec-wide UML class diagram or using the wrong notation
-- `data-model.md` UML omitting spec-wide core classes, stable repo symbols, or material second-party references later depended on by contracts / interface-details / tasks
-- Invented participant / class / method symbols in `interface-details/` despite available repository anchors
-- Sequence diagrams missing required exception / guard-failure branches from `Behavior Paths` when they affect contract-visible behavior
-- UML diagrams containing only layered placeholders or classes with no operation-relevant members / constraints
-- Diagram content contradicting `contracts/`, `data-model.md`, or `test-matrix.md`
-- Interface detail prose and diagrams disagreeing on method names, participants, or responsibilities
-
-### 5. Severity Assignment
-
-Use this heuristic to prioritize findings and separate blocking issues from optional cleanliness work:
-
-- **Blocking**: Missing execution-critical inputs, contract contradictions, constitution MUST violations, or uncovered MUST requirements that block baseline functionality
-- **Non-Blocking**: Naming drift, missing optional references, over-verbose traceability sections, or minor wording/structure issues
-- **CRITICAL**: Violates constitution MUST, contract contradiction, spec-wide data-model UML missing for a feature that requires it, diagram contradiction that changes contract-visible behavior, missing execution-critical input, or uncovered MUST requirement blocking baseline functionality
-- **HIGH**: Duplicate or conflicting requirement, ambiguous security/performance attribute, untestable acceptance criterion, missing required Stage 3 exception/guard branch, or task model contradiction that can derail implementation
-- **MEDIUM**: Terminology drift, missing non-functional task coverage, underspecified edge case, placeholder Stage 3 diagrams, or over-verbose traceability payload
-- **LOW**: Style/wording improvements, optional reference cleanup, minor redundancy not affecting execution order
-
-### 6. Produce Compact Analysis Report
-
-Output a Markdown report (no file writes) with the following structure:
+Output Markdown (no file writes) with this structure:
 
 ## Specification Analysis Report
 
-| ID | Category | Impact | Severity | Location(s) | Summary | Recommendation |
-|----|----------|--------|----------|-------------|---------|----------------|
-| A1 | Duplication | Non-Blocking | HIGH | spec.md:L120-134 | Two similar requirements ... | Merge phrasing; keep clearer version |
+### Summary
 
-(Add one row per finding; generate stable IDs prefixed by category initial.)
+- lint status: `available` or `unavailable`
+- totals: requirements, tasks, coverage %, lint findings, semantic findings, blocking findings
 
-**Coverage Summary Table:**
+### Mechanical Findings
 
-| Requirement Key | Has Task? | Task IDs | Notes |
-|-----------------|-----------|----------|-------|
+Rows derived from lint output only, projected using `templates/lint-report-template.md` section semantics.
 
-**Constitution Alignment Issues:** (if any)
+| ID | Source | Rule | Severity | Location | Summary | Remediation |
+|----|--------|------|----------|----------|---------|-------------|
 
-**Unmapped Tasks:** (if any)
+- `Source` must be `lint` for all rows in this section.
 
-**Metrics:**
+### Semantic Findings
+
+Rows derived from semantic audit passes.
+
+| ID | Source | Category | Severity | Location(s) | Summary | Recommendation |
+|----|--------|----------|----------|-------------|---------|----------------|
+
+- `Source` must be `semantic` for all rows in this section.
+
+### Metrics
 
 - Total Requirements
 - Total Tasks
-- Coverage % (requirements with >=1 task)
-- Ambiguity Count
-- Duplication Count
+- Coverage % (requirements with >=1 mapped task)
+- Mechanical Findings Count
+- Mechanical Findings by Severity
+- Semantic Findings Count
 - Critical Issues Count
 
-### 7. Provide Next Actions
+### Gate Decision (Required)
 
-At end of report, output a concise Next Actions block:
+Assemble and output one decision:
 
-- If CRITICAL issues exist: Recommend resolving before `/sdd.implement`
-- If only LOW/MEDIUM: User may proceed, but provide improvement suggestions
-- Provide explicit command suggestions: e.g., "Run `/sdd.specify` with refinement", "Run `/sdd.plan` to adjust architecture", "Manually edit `tasks.md` to add coverage for 'performance-metrics'"
-- Frame this command as the dedicated audit pass before implementation, not as a generic extra validation step
+- `PASS`: no remaining blocking findings.
+- `FAIL`: at least one blocking finding remains.
 
-### 8. Offer Remediation
+When `FAIL`, provide blocker list with evidence and remediation owner command (`/sdd.specify`, `/sdd.plan`, or `/sdd.tasks`).
+Treat the following as blocking by default: normative use of `BA-*`, normative tuple rows with unresolved `TODO(REPO_ANCHOR)`, contract/interface field drift from anchored DTOs/signatures, runtime correctness gaps in Stage 4 interface details, and lifecycle stable-state drift from anchored enum/state sources.
 
-Ask the user: "Would you like me to suggest concrete remediation edits for the top N issues?" (Do NOT apply them automatically.)
+### 7) Next Actions
 
-## Operating Principles
+Provide concise actions aligned to gate result:
 
-### Context Efficiency
-
-- **Minimal high-signal tokens**: Focus on actionable findings, not exhaustive documentation
-- **Progressive disclosure**: Load artifacts incrementally; don't dump all content into analysis
-- **Token-efficient output**: Limit findings table to 50 rows; summarize overflow
-- **Deterministic results**: Rerunning without changes should produce consistent IDs and counts
-
-### Analysis Guidelines
-
-- **NEVER modify files** (this is read-only analysis)
-- **NEVER hallucinate missing sections** (if absent, report them accurately)
-- **Prioritize constitution violations** (these are always CRITICAL)
-- **Treat this command as the single concentrated audit step** for cross-artifact drift and duplicated governance overhead
-- **Use examples over exhaustive rules** (cite specific instances, not generic patterns)
-- **Report zero issues gracefully** (emit success report with coverage statistics)
+- `FAIL`: resolve blockers before `/sdd.implement`.
+- `PASS`: proceed, with optional follow-up improvements for non-blocking findings.
+- Keep command suggestions explicit and short (`/sdd.specify`, `/sdd.plan`, `/sdd.tasks`).
 
 ## Context
 

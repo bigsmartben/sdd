@@ -21,7 +21,7 @@ Use this section to establish the overall shape of the model before filling in d
 - Shared domain elements and vocabulary reused across operations
 - Backbone ownership/composition/projection/derivation/dependency relationships
 - Cross-operation invariants in normative rule form (`INV-###`)
-- Aggregate/entity lifecycle anchors needed for global semantic consistency
+- Aggregate/entity lifecycle anchors needed for global semantic consistency, sourced from anchored enum/state symbols
 - Core UML classes/interfaces with globally stable fields and labeled relationships
 
 ### This file does not define
@@ -33,13 +33,13 @@ Use this section to establish the overall shape of the model before filling in d
 
 ## Domain Inventory
 
-List only elements that carry shared planning semantics. Prefer existing repository symbols as anchors when available. Capture only globally stable fields here.
+List only elements that carry shared planning semantics. Prefer existing source-code symbols as repo anchors when available. Capture only globally stable fields here.
 
-| Domain Element | Kind | Repository Anchor | Global Responsibility | Globally Stable Fields Only |
-|----------------|------|-------------------|-----------------------|-----------------------------|
-| `[OrderAggregate]` | `Aggregate` | ``src/domain/order.py::OrderAggregate`` | [Backbone responsibility shared across operations] | `[id, customerId, status, version]` |
-| `[PaymentPolicy]` | `Domain Service / Policy` | ``src/domain/payment_policy.py::PaymentPolicy`` | [Global policy responsibility] | `[policyId, policyVersion, decisionType]` |
-| `[OrderSnapshotView]` | `Projection / View` | `[No anchor yet - planned in specs/[###-feature]/]` | [Shared read-model responsibility] | `[orderId, state, updatedAt]` |
+| Domain Element | Kind | Repo Anchor Status (`anchored`\|`todo`) | Repo Anchor | Upstream Ref(s) | Global Responsibility | Globally Stable Fields Only |
+|----------------|------|-----------------------------------------|-------------|-----------------|-----------------------|-----------------------------|
+| `[OrderAggregate]` | `Aggregate` | `anchored` | ``src/domain/order.py::OrderAggregate`` | `[spec.md#FR-001]` | [Backbone responsibility shared across operations] | `[id, customerId, status, version]` |
+| `[PaymentPolicy]` | `Domain Service / Policy` | `anchored` | ``src/domain/payment_policy.py::PaymentPolicy`` | `[research.md#R-001]` | [Global policy responsibility] | `[policyId, policyVersion, decisionType]` |
+| `[OrderSnapshotView]` | `Projection / View` | `todo` | `TODO(REPO_ANCHOR)` | `[spec.md#FR-004]` | [Shared read-model responsibility] | `[orderId, state, updatedAt]` |
 
 ## Backbone Structure
 
@@ -58,6 +58,16 @@ Expand the model by describing only globally significant responsibilities and li
 - **Association**: `[AggregateB]` references `[AggregateA]` by `[stableIdentifier]` only (no deep embedding).
 - **Boundary rule**: [What can/cannot cross this group boundary at backbone level].
 
+## Anchor Gating Rules
+
+- `Repo Anchor Status` is determined only by source-code repo anchors; `spec.md`, `research.md`, and other planning artifacts stay in `Upstream Ref(s)` and MUST NOT be counted as repo anchors.
+- `Globally Stable Fields` MUST reference `anchored` items only.
+- `INV-*` rules MUST NOT depend on `todo` items.
+- `Lifecycle` stable states MUST NOT be defined from `todo` items.
+- Stable lifecycle states MUST come from anchored enum/state fields or anchored mapper status values.
+- UI phases (page steps, flow nodes, confirmation stages) are not aggregate lifecycle states and MUST NOT be promoted into lifecycle anchors.
+- Items with missing anchors MUST remain non-normative and be recorded only in `Boundary Notes`, `Model Closure`, or `Assumptions / Open Questions`.
+
 ## Shared Invariants
 
 Write normative rules with stable identifiers and references. Prefer rules that downstream contracts and interface details can reuse directly.
@@ -67,23 +77,28 @@ Write normative rules with stable identifiers and references. Prefer rules that 
 - **Rule**: [Normative statement using MUST / MUST NOT / MAY]
 - **Applies To**: `[Element(s) / Relationship(s)]`
 - **Rationale**: [Why this is globally required]
-- **Source Anchors**: `[spec.md#...], [research.md#...], [repo symbol if applicable]`
+- **Upstream Ref(s)**: `[spec.md#...], [research.md#...]`
+- **Repo Anchor(s)**: `[repo symbol if applicable]` or `TODO(REPO_ANCHOR)`
 
 ### INV-002: [Short invariant title]
 
 - **Rule**: [Normative statement]
 - **Applies To**: `[Element(s) / Relationship(s)]`
 - **Rationale**: [Global semantic reason]
-- **Source Anchors**: `[spec/research/repository anchors]`
+- **Upstream Ref(s)**: `[spec.md#...], [research.md#...]`
+- **Repo Anchor(s)**: `[repo symbol if applicable]` or `TODO(REPO_ANCHOR)`
 
 ## Lifecycle Anchors
 
 Describe each globally shared lifecycle as its own section. Include only states and transitions that must remain stable across planning outputs.
+Before writing a lifecycle section, read anchored enum definitions, anchored status/state fields, and anchored mapper status values.
+Stable states MUST come from those anchored symbols; UI phases/page steps/flow nodes are not aggregate lifecycle states.
 
 ### Lifecycle: [Aggregate / Entity Name]
 
-- **State field**: `[status | phase | lifecycleState]`
-- **Stable states**: `[Draft, Active, Suspended, Closed]`
+- **Repo Anchor(s)**: [`path/to/file.ext:EnumOrStateField`] or `TODO(REPO_ANCHOR)`
+- **State field**: `[anchored status/state field name]`
+- **Stable states**: `[must match anchored enum/status vocabulary]`
 - **Allowed transitions**:
   - `[Draft -> Active]` on [event/condition]
   - `[Active -> Suspended]` on [event/condition]
@@ -93,8 +108,9 @@ Describe each globally shared lifecycle as its own section. Include only states 
 
 ### Lifecycle: [Second Aggregate / Entity Name]
 
-- **State field**: `[stateField]`
-- **Stable states**: `[StateA, StateB, StateC]`
+- **Repo Anchor(s)**: [`path/to/file.ext:EnumOrStateField`] or `TODO(REPO_ANCHOR)`
+- **State field**: `[anchored status/state field name]`
+- **Stable states**: `[must match anchored enum/status vocabulary]`
 - **Allowed transitions**:
   - `[StateA -> StateB]` on [event/condition]
 - **Forbidden transitions**:
@@ -133,6 +149,10 @@ classDiagram
     AggregateA ..> PolicyA : depends-on
 ```
 
+## Assumptions / Open Questions
+
+- [Capture unresolved semantic items here using `TODO(REPO_ANCHOR)` and mark as `forward-looking`; do not treat them as globally stable semantics]
+
 ## Model Closure
 
 Use this final section to confirm that the backbone model is coherent, complete, and ready for downstream reuse.
@@ -140,4 +160,4 @@ Use this final section to confirm that the backbone model is coherent, complete,
 - Ensure the model covers the shared elements, stable fields, labeled relationships, invariants, and lifecycle anchors required by `spec.md` and `research.md`.
 - Ensure the content remains backbone-only and does not expand into full DTO inventories, endpoint-by-endpoint contracts, implementation layers, persistence schema design, or interface-level sequence behavior.
 - Ensure terminology, invariants, and lifecycle definitions are consistent with downstream `contract-template.md` and `interface-detail-template.md` expectations without duplicating their scope.
-- If anything is still uncertain, record the gap as a source anchor or explicit assumption rather than leaving backbone semantics ambiguous.
+- If anything is still uncertain, record the gap as `TODO(REPO_ANCHOR)` in `Assumptions / Open Questions` or `Boundary Notes` rather than leaving backbone semantics ambiguous.

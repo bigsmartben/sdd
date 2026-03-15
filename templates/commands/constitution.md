@@ -1,5 +1,5 @@
 ---
-description: Create or update the project constitution from interactive or provided principle inputs, ensuring all dependent templates stay in sync.
+description: Create or update the project constitution from interactive or provided principle inputs, maintaining project-level fact sources and syncing dependent templates.
 handoffs: 
   - label: Build Specification
     agent: sdd.specify
@@ -34,6 +34,7 @@ Follow this execution flow:
      - MAJOR: Backward incompatible governance/principle removals or redefinitions.
      - MINOR: New principle/section added or materially expanded guidance.
      - PATCH: Clarifications, wording, typo fixes, non-semantic refinements.
+     - Adding or materially expanding generation/validation/execution ownership boundaries is always `MINOR`.
    - If version bump type ambiguous, propose reasoning before finalizing.
 
 3. Draft the updated constitution content:
@@ -42,8 +43,10 @@ Follow this execution flow:
    - Ensure each Principle section: succinct name line, paragraph (or bullet list) capturing non‑negotiable rules, explicit rationale if not obvious.
    - Ensure Governance section lists amendment procedure, versioning policy, and compliance review expectations.
 
-4. Consistency propagation checklist (convert prior checklist into active validations):
-   - Treat `.specify/memory/constitution.md` as the authoritative project-level rule source. Any summaries, extracted rule lists, or downstream restatements of constitution content are derived views only and MUST be refreshed when the constitution meaning changes.
+4. Fact-source propagation checklist:
+   - Treat `.specify/memory/constitution.md` as the authoritative project-level rule source.
+   - Treat `.specify/memory/constitution.md` as the authoritative project-level fact source. Any summaries, extracted rule lists, or downstream restatements of constitution content are derived views only and MUST be refreshed when constitution facts change.
+   - Constitution content MUST stay at long-lived rule/terminology/ownership-boundary level; do not embed mechanical lint catalog details (rule IDs, regex patterns, script flags, payload schemas).
    - Read `.specify/templates/plan-template.md` and ensure any "Constitution Check" or rules align with updated principles.
    - Read the planning-stage templates in `.specify/templates/` (`research-template.md`, `data-model-template.md`, `test-matrix-template.md`, `contract-template.md`, and `interface-detail-template.md`) and ensure they reflect the updated principles and stage boundaries.
    - Read `.specify/templates/spec-template.md` for scope/requirements alignment—update if constitution adds/removes mandatory sections or constraints.
@@ -59,18 +62,23 @@ Follow this execution flow:
    - Templates requiring updates (✅ updated / ⚠ pending) with file paths
    - Follow-up TODOs if any placeholders intentionally deferred.
 
-6. Validation before final output:
+6. Final quality check before output (constitution-local only):
    - No remaining unexplained bracket tokens.
    - Version line matches report.
    - Dates ISO format YYYY-MM-DD.
    - Principles are declarative, testable, and free of vague language ("should" → replace with MUST/SHOULD rationale where appropriate).
+   - Constitution text does not include lint-catalog implementation details (rule IDs, regexes, script parameters, or execution payload shapes).
+   - Do not duplicate one normative rule into competing expansions across multiple command templates; keep one constitution-level rule and downstream references aligned to that single authority.
+   - Do not introduce cross-artifact PASS/FAIL gates here; centralized consistency gating belongs to `/sdd.analyze`.
 
 7. Write the completed constitution back to `.specify/memory/constitution.md` (overwrite).
 
 8. Output a final summary to the user with:
    - New version and bump rationale.
+   - Fact source changes (for example repository-first definitions or ownership-boundary baseline updates).
    - Any files flagged for manual follow-up.
    - Suggested commit message (e.g., `docs: amend constitution to vX.Y.Z (principle additions + governance update)`).
+   - No cross-artifact PASS/FAIL gate decision in this command.
 
 Formatting & Style Requirements:
 
