@@ -22,9 +22,11 @@ wheels/
 003*
 .clinerules
 .history
-.github/
+.github/agents/
+.github/prompts/
 specs/
 .ven311/
+.venv311/
 .dev311/
 demos/
 demo-cline/

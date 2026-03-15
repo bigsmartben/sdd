@@ -1038,7 +1038,7 @@ When the same extension `id` appears in multiple catalogs, the higher-priority (
 
 Extensions from discovery-only catalogs are shown in `specify extension search` results but cannot be installed directly:
 
-```
+```text
 ⚠  'linear' is available in the 'community' catalog but installation is not allowed from that catalog.
 
 To enable installation, add 'linear' to an approved catalog (install_allowed: true) in .specify/extension-catalogs.yml.
@@ -1058,11 +1058,13 @@ specify extension add jira     # Installs from custom catalog
 ```
 
 **Requirements:**
+
 - URL must use HTTPS (HTTP only allowed for localhost testing)
 - Catalog must follow the standard catalog.json schema
 - Must be publicly accessible or accessible within your network
 
 **Example for testing:**
+
 ```bash
 # Test with localhost during development
 export SPECKIT_CATALOG_URL="http://localhost:8000/catalog.json"

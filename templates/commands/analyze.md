@@ -58,7 +58,7 @@ Load only the minimal necessary context from each artifact:
 **From tasks.md:**
 
 - Task IDs
-- Execution scopes (`GLOBAL`, `IFxx`)
+- Execution scopes (`GLOBAL`, `IF-###`)
 - `Task DAG`
 - Descriptions and completion anchors
 - Referenced requirement / verification refs when present

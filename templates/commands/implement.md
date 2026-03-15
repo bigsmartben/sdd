@@ -117,7 +117,7 @@ You **MUST** consider the user input before proceeding (if not empty).
      - `Upstream Inputs (Execution References)`
      - `Execution Ordering Model` (especially `Task DAG`)
      - `Shared Foundation`
-     - `Interface Delivery Units (IFxx)`
+     - `Interface Delivery Units`
      - `Cross-Interface Finalization`
    - **REQUIRED**: Treat `Task DAG` as the baseline dependency authority for runtime scheduling
    - **REQUIRED**: In `strict` mode, follow `Task DAG` exactly as written.
@@ -131,9 +131,8 @@ You **MUST** consider the user input before proceeding (if not empty).
      - `interface-details/` for per-interface behavior and sequencing details
      - `data-model.md` for entity and lifecycle context
      - `contracts/` for interface semantics and contract checks
-     - `test-matrix.md` for task-defined verification anchors
+     - `test-matrix.md` for feature verification anchors referenced by tasks
      - `research.md` for implementation constraints and decisions
-     - `quickstart.md` for integration scenarios or validation notes
 
 4. Generate an execution strategy summary before modifying code:
    - Produce a short `Execution Strategy Summary` that states:
@@ -154,7 +153,7 @@ You **MUST** consider the user input before proceeding (if not empty).
      ```
 
 5. Parse tasks.md structure and extract:
-   - **Execution scopes**: `GLOBAL` and `IFxx` units
+   - **Execution scopes**: `GLOBAL` and `IF-###` units
    - **Task DAG**: adjacency list and topological execution layers
    - **Task metadata**: `TaskID`, `Type`, `Scope`, `Role` (when present), `Pre`, description, file paths or command targets, completion anchors (when present)
    - **Reference metadata** (when present): `operationId`, requirement refs, verification refs
@@ -162,7 +161,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 6. Execute implementation following the task plan:
    - **DAG-first execution**: Schedule tasks strictly by `Task DAG` dependency satisfaction
-   - **Scope-aware flow**: Execute `GLOBAL` foundation tasks and `IFxx` unit tasks according to DAG, not section order alone
+   - **Scope-aware flow**: Execute `GLOBAL` foundation tasks and `IF-###` unit tasks according to DAG, not section order alone
    - **Parallel eligibility**: Tasks in the same DAG-ready layer may execute in parallel only when they have no shared file-path conflicts
    - **Verify-before-Interface preference**: Prefer running `Type:Verify` tasks before corresponding `Type:Interface` tasks when DAG allows
    - **Validation checkpoints**: Verify completion anchors and dependency closure before advancing to downstream DAG layers
@@ -175,7 +174,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 7. Implementation execution rules:
    - **GLOBAL foundation first when required by DAG**: Complete shared infra/bootstrap/config prerequisites before dependent IF tasks
-   - **Interface-unit delivery**: For each `IFxx`, execute verify + implementation work using task `Role` when present, or the task description when `Role` is omitted
+   - **Interface-unit delivery**: For each `IF-###`, execute verify + implementation work using task `Role` when present, or the task description when `Role` is omitted
    - **Cross-cutting/finalization last when DAG-scheduled**: Run docs/final validation/cross-interface tasks after prerequisite IF/GLOBAL tasks complete
 
 8. Progress tracking and error handling:
@@ -192,7 +191,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 9. Completion validation:
    - Verify all reachable required DAG tasks are completed or explicitly waived by user
    - Verify `Task DAG` dependency closure (no completed task missing required predecessors)
-   - Verify each interface unit (`IFxx`) reaches the task-defined completion anchors that exist for that unit
+   - Verify each interface unit (`IF-###`) reaches the task-defined completion anchors that exist for that unit
    - Verify task-defined validation commands, tests, or contract checks passed for completed work
    - Confirm tasks.md checkboxes accurately reflect execution results
    - In `adaptive` mode, summarize adaptations and their dependency impact in final output

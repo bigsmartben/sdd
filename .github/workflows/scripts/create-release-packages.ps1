@@ -4,46 +4,21 @@
 <#
 .SYNOPSIS
     Build Spec Kit template release archives for each supported AI assistant and script type.
-
-.DESCRIPTION
-    create-release-packages.ps1 (workflow-local)
-    Build Spec Kit template release archives for each supported AI assistant and script type.
-
-.PARAMETER Version
-    Version string with leading 'v' (e.g., v0.2.0)
-
-.PARAMETER Agents
-    Comma or space separated subset of agents to build (default: all)
-    Valid agents: claude, gemini, copilot, cursor-agent, cline, qwen, opencode, windsurf, codex, kilocode, auggie, roo, codebuddy, amp, kiro-cli, bob, qodercli, shai, tabnine, agy, vibe, kimi, generic
-
-.PARAMETER Scripts
-    Comma or space separated subset of script types to build (default: both)
-    Valid scripts: sh, ps
-
-.EXAMPLE
-    .\create-release-packages.ps1 -Version v0.2.0
-
-.EXAMPLE
-    .\create-release-packages.ps1 -Version v0.2.0 -Agents claude,copilot -Scripts sh
-
-.EXAMPLE
-    .\create-release-packages.ps1 -Version v0.2.0 -Agents claude -Scripts ps
 #>
 
 param(
-    [Parameter(Mandatory=$true, Position=0)]
+    [Parameter(Mandatory = $true, Position = 0)]
     [string]$Version,
 
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false)]
     [string]$Agents = "",
 
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false)]
     [string]$Scripts = ""
 )
 
 $ErrorActionPreference = "Stop"
 
-# Validate version format
 if ($Version -notmatch '^v\d+\.\d+\.\d+$') {
     Write-Error "Version must look like v0.0.0"
     exit 1
@@ -51,7 +26,6 @@ if ($Version -notmatch '^v\d+\.\d+\.\d+$') {
 
 Write-Host "Building release packages for $Version"
 
-# Create and use .genreleases directory for all build artifacts
 $GenReleasesDir = ".genreleases"
 if (Test-Path $GenReleasesDir) {
     Remove-Item -Path $GenReleasesDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -64,7 +38,7 @@ function Rewrite-Paths {
     $Content = $Content -replace '(/?)\bmemory/', '.specify/memory/'
     $Content = $Content -replace '(/?)\bscripts/', '.specify/scripts/'
     $Content = $Content -replace '(/?)\btemplates/', '.specify/templates/'
-    return $Content
+    return $Content -replace '\.specify\.specify/', '.specify/'
 }
 
 function Generate-Commands {
@@ -77,47 +51,38 @@ function Generate-Commands {
     )
 
     New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
-
     $templates = Get-ChildItem -Path "templates/commands/*.md" -File -ErrorAction SilentlyContinue
 
     foreach ($template in $templates) {
         $name = [System.IO.Path]::GetFileNameWithoutExtension($template.Name)
-
-        # Read file content and normalize line endings
         $fileContent = (Get-Content -Path $template.FullName -Raw) -replace "`r`n", "`n"
 
-        # Extract description from YAML frontmatter
         $description = ""
         if ($fileContent -match '(?m)^description:\s*(.+)$') {
             $description = $matches[1]
         }
 
-        # Extract script command from YAML frontmatter
         $scriptCommand = ""
         if ($fileContent -match "(?m)^\s*${ScriptVariant}:\s*(.+)$") {
             $scriptCommand = $matches[1]
         }
-
         if ([string]::IsNullOrEmpty($scriptCommand)) {
-            Write-Warning "No script command found for $ScriptVariant in $($template.Name)"
+            if ($fileContent.Contains('{SCRIPT}')) {
+                Write-Warning "No script command found for $ScriptVariant in $($template.Name)"
+            }
             $scriptCommand = "(Missing script command for $ScriptVariant)"
         }
 
-        # Extract agent_script command from YAML frontmatter if present
         $agentScriptCommand = ""
-        if ($fileContent -match "(?ms)agent_scripts:.*?^\s*${ScriptVariant}:\s*(.+?)$") {
+        if ($fileContent -match "(?ms)^agent_scripts:`n.*?^\s*${ScriptVariant}:\s*(.+?)$") {
             $agentScriptCommand = $matches[1].Trim()
         }
 
-        # Replace {SCRIPT} placeholder with the script command
-        $body = $fileContent -replace '\{SCRIPT\}', $scriptCommand
-
-        # Replace {AGENT_SCRIPT} placeholder with the agent script command if found
+        $body = $fileContent.Replace('{SCRIPT}', $scriptCommand)
         if (-not [string]::IsNullOrEmpty($agentScriptCommand)) {
-            $body = $body -replace '\{AGENT_SCRIPT\}', $agentScriptCommand
+            $body = $body.Replace('{AGENT_SCRIPT}', $agentScriptCommand)
         }
 
-        # Remove the scripts: and agent_scripts: sections from frontmatter
         $lines = $body -split "`n"
         $outputLines = @()
         $inFrontmatter = $false
@@ -128,11 +93,7 @@ function Generate-Commands {
             if ($line -match '^---$') {
                 $outputLines += $line
                 $dashCount++
-                if ($dashCount -eq 1) {
-                    $inFrontmatter = $true
-                } else {
-                    $inFrontmatter = $false
-                }
+                $inFrontmatter = ($dashCount -eq 1)
                 continue
             }
 
@@ -153,27 +114,19 @@ function Generate-Commands {
         }
 
         $body = $outputLines -join "`n"
-
-        # Apply other substitutions
-        $body = $body -replace '\{ARGS\}', $ArgFormat
-        $body = $body -replace '__AGENT__', $Agent
+        $body = $body.Replace('{ARGS}', $ArgFormat)
+        $body = $body.Replace('__AGENT__', $Agent)
         $body = Rewrite-Paths -Content $body
 
-        # Generate output file based on extension
         $outputFile = Join-Path $OutputDir "sdd.$name.$Extension"
-
         switch ($Extension) {
             'toml' {
-                $body = $body -replace '\\', '\\'
                 $output = "description = `"$description`"`n`nprompt = `"`"`"`n$body`n`"`"`""
                 Set-Content -Path $outputFile -Value $output -NoNewline
             }
-            'md' {
-                Set-Content -Path $outputFile -Value $body -NoNewline
-            }
-            'agent.md' {
-                Set-Content -Path $outputFile -Value $body -NoNewline
-            }
+            'md' { Set-Content -Path $outputFile -Value $body -NoNewline }
+            'agent.md' { Set-Content -Path $outputFile -Value $body -NoNewline }
+            default { throw "Unsupported extension '$Extension'." }
         }
     }
 }
@@ -185,25 +138,20 @@ function Generate-CopilotPrompts {
     )
 
     New-Item -ItemType Directory -Path $PromptsDir -Force | Out-Null
-
     $agentFiles = Get-ChildItem -Path "$AgentsDir/sdd.*.agent.md" -File -ErrorAction SilentlyContinue
 
     foreach ($agentFile in $agentFiles) {
         $basename = $agentFile.Name -replace '\.agent\.md$', ''
         $promptFile = Join-Path $PromptsDir "$basename.prompt.md"
-
         $content = @"
 ---
 agent: $basename
 ---
 "@
-        Set-Content -Path $promptFile -Value $content
+        Set-Content -Path $promptFile -Value $content -NoNewline
     }
 }
 
-# Create Kimi Code skills in .kimi/skills/<name>/SKILL.md format.
-# Kimi CLI discovers skills as directories containing a SKILL.md file,
-# invoked with /skill:<name> (e.g. /skill:sdd.specify).
 function New-KimiSkills {
     param(
         [string]$SkillsDir,
@@ -216,32 +164,30 @@ function New-KimiSkills {
         $name = [System.IO.Path]::GetFileNameWithoutExtension($template.Name)
         $skillName = "sdd.$name"
         $skillDir = Join-Path $SkillsDir $skillName
-        New-Item -ItemType Directory -Force -Path $skillDir | Out-Null
+        New-Item -ItemType Directory -Path $skillDir -Force | Out-Null
 
         $fileContent = (Get-Content -Path $template.FullName -Raw) -replace "`r`n", "`n"
 
-        # Extract description
         $description = "Spec Kit: $name workflow"
         if ($fileContent -match '(?m)^description:\s*(.+)$') {
             $description = $matches[1]
         }
 
-        # Extract script command
         $scriptCommand = "(Missing script command for $ScriptVariant)"
         if ($fileContent -match "(?m)^\s*${ScriptVariant}:\s*(.+)$") {
             $scriptCommand = $matches[1]
+        } elseif ($fileContent.Contains('{SCRIPT}')) {
+            Write-Warning "No script command found for $ScriptVariant in $($template.Name)"
         }
 
-        # Extract agent_script command from frontmatter if present
         $agentScriptCommand = ""
-        if ($fileContent -match "(?ms)agent_scripts:.*?^\s*${ScriptVariant}:\s*(.+?)$") {
+        if ($fileContent -match "(?ms)^agent_scripts:`n.*?^\s*${ScriptVariant}:\s*(.+?)$") {
             $agentScriptCommand = $matches[1].Trim()
         }
 
-        # Replace {SCRIPT}, strip scripts sections, rewrite paths
-        $body = $fileContent -replace '\{SCRIPT\}', $scriptCommand
+        $body = $fileContent.Replace('{SCRIPT}', $scriptCommand)
         if (-not [string]::IsNullOrEmpty($agentScriptCommand)) {
-            $body = $body -replace '\{AGENT_SCRIPT\}', $agentScriptCommand
+            $body = $body.Replace('{AGENT_SCRIPT}', $agentScriptCommand)
         }
 
         $lines = $body -split "`n"
@@ -266,11 +212,10 @@ function New-KimiSkills {
         }
 
         $body = $outputLines -join "`n"
-        $body = $body -replace '\{ARGS\}', '$ARGUMENTS'
-        $body = $body -replace '__AGENT__', 'kimi'
+        $body = $body.Replace('{ARGS}', '$ARGUMENTS')
+        $body = $body.Replace('__AGENT__', 'kimi')
         $body = Rewrite-Paths -Content $body
 
-        # Strip existing frontmatter, keep only body
         $templateBody = ""
         $fmCount = 0
         $inBody = $false
@@ -298,17 +243,13 @@ function Build-Variant {
     Write-Host "Building $Agent ($Script) package..."
     New-Item -ItemType Directory -Path $baseDir -Force | Out-Null
 
-    # Copy base structure but filter scripts by variant
     $specDir = Join-Path $baseDir ".specify"
     New-Item -ItemType Directory -Path $specDir -Force | Out-Null
 
-    # Copy memory directory
     if (Test-Path "memory") {
         Copy-Item -Path "memory" -Destination $specDir -Recurse -Force
-        Write-Host "Copied memory -> .specify"
     }
 
-    # Only copy the relevant script variant directory
     if (Test-Path "scripts") {
         $scriptsDestDir = Join-Path $specDir "scripts"
         New-Item -ItemType Directory -Path $scriptsDestDir -Force | Out-Null
@@ -317,13 +258,11 @@ function Build-Variant {
             'sh' {
                 if (Test-Path "scripts/bash") {
                     Copy-Item -Path "scripts/bash" -Destination $scriptsDestDir -Recurse -Force
-                    Write-Host "Copied scripts/bash -> .specify/scripts"
                 }
             }
             'ps' {
                 if (Test-Path "scripts/powershell") {
                     Copy-Item -Path "scripts/powershell" -Destination $scriptsDestDir -Recurse -Force
-                    Write-Host "Copied scripts/powershell -> .specify/scripts"
                 }
             }
         }
@@ -333,7 +272,6 @@ function Build-Variant {
         }
     }
 
-    # Copy templates (excluding commands directory and vscode-settings.json)
     if (Test-Path "templates") {
         $templatesDestDir = Join-Path $specDir "templates"
         New-Item -ItemType Directory -Path $templatesDestDir -Force | Out-Null
@@ -343,14 +281,12 @@ function Build-Variant {
         } | ForEach-Object {
             $relativePath = $_.FullName.Substring((Resolve-Path "templates").Path.Length + 1)
             $destFile = Join-Path $templatesDestDir $relativePath
-            $destFileDir = Split-Path $destFile -Parent
-            New-Item -ItemType Directory -Path $destFileDir -Force | Out-Null
+            $destDir = Split-Path $destFile -Parent
+            New-Item -ItemType Directory -Path $destDir -Force | Out-Null
             Copy-Item -Path $_.FullName -Destination $destFile -Force
         }
-        Write-Host "Copied templates -> .specify/templates"
     }
 
-    # Generate agent-specific command files
     switch ($Agent) {
         'claude' {
             $cmdDir = Join-Path $baseDir ".claude/commands"
@@ -366,10 +302,7 @@ function Build-Variant {
         'copilot' {
             $agentsDir = Join-Path $baseDir ".github/agents"
             Generate-Commands -Agent 'copilot' -Extension 'agent.md' -ArgFormat '$ARGUMENTS' -OutputDir $agentsDir -ScriptVariant $Script
-
-            $promptsDir = Join-Path $baseDir ".github/prompts"
-            Generate-CopilotPrompts -AgentsDir $agentsDir -PromptsDir $promptsDir
-
+            Generate-CopilotPrompts -AgentsDir $agentsDir -PromptsDir (Join-Path $baseDir ".github/prompts")
             $vscodeDir = Join-Path $baseDir ".vscode"
             New-Item -ItemType Directory -Path $vscodeDir -Force | Out-Null
             if (Test-Path "templates/vscode-settings.json") {
@@ -404,11 +337,11 @@ function Build-Variant {
             Generate-Commands -Agent 'codex' -Extension 'md' -ArgFormat '$ARGUMENTS' -OutputDir $cmdDir -ScriptVariant $Script
         }
         'kilocode' {
-            $cmdDir = Join-Path $baseDir ".kilocode/workflows"
+            $cmdDir = Join-Path $baseDir ".kilocode/rules"
             Generate-Commands -Agent 'kilocode' -Extension 'md' -ArgFormat '$ARGUMENTS' -OutputDir $cmdDir -ScriptVariant $Script
         }
         'auggie' {
-            $cmdDir = Join-Path $baseDir ".augment/commands"
+            $cmdDir = Join-Path $baseDir ".augment/rules"
             Generate-Commands -Agent 'auggie' -Extension 'md' -ArgFormat '$ARGUMENTS' -OutputDir $cmdDir -ScriptVariant $Script
         }
         'roo' {
@@ -443,7 +376,9 @@ function Build-Variant {
             $cmdDir = Join-Path $baseDir ".tabnine/agent/commands"
             Generate-Commands -Agent 'tabnine' -Extension 'toml' -ArgFormat '{{args}}' -OutputDir $cmdDir -ScriptVariant $Script
             $tabnineTemplate = Join-Path 'agent_templates' 'tabnine/TABNINE.md'
-            if (Test-Path $tabnineTemplate) { Copy-Item $tabnineTemplate (Join-Path $baseDir 'TABNINE.md') }
+            if (Test-Path $tabnineTemplate) {
+                Copy-Item -Path $tabnineTemplate -Destination (Join-Path $baseDir "TABNINE.md")
+            }
         }
         'agy' {
             $cmdDir = Join-Path $baseDir ".agent/workflows"
@@ -455,7 +390,7 @@ function Build-Variant {
         }
         'kimi' {
             $skillsDir = Join-Path $baseDir ".kimi/skills"
-            New-Item -ItemType Directory -Force -Path $skillsDir | Out-Null
+            New-Item -ItemType Directory -Path $skillsDir -Force | Out-Null
             New-KimiSkills -SkillsDir $skillsDir -ScriptVariant $Script
         }
         'generic' {
@@ -467,14 +402,12 @@ function Build-Variant {
         }
     }
 
-    # Create zip archive
     $zipFile = Join-Path $GenReleasesDir "spec-kit-template-${Agent}-${Script}-${Version}.zip"
     Compress-Archive -Path "$baseDir/*" -DestinationPath $zipFile -Force
     Write-Host "Created $zipFile"
 }
 
-# Define all agents and scripts
-$AllAgents = @('claude', 'gemini', 'copilot', 'cursor-agent', 'cline', 'qwen', 'opencode', 'windsurf', 'codex', 'kilocode', 'auggie', 'roo', 'codebuddy', 'amp', 'kiro-cli', 'bob', 'qodercli', 'shai', 'tabnine', 'agy', 'vibe', 'kimi', 'generic')
+$AllAgents = @('claude', 'gemini', 'copilot', 'cursor-agent', 'cline', 'qwen', 'opencode', 'windsurf', 'codex', 'kilocode', 'auggie', 'roo', 'codebuddy', 'amp', 'shai', 'tabnine', 'kiro-cli', 'agy', 'bob', 'vibe', 'qodercli', 'kimi', 'generic')
 $AllScripts = @('sh', 'ps')
 
 function Normalize-List {
@@ -484,8 +417,7 @@ function Normalize-List {
         return @()
     }
 
-    $items = $Input -split '[,\s]+' | Where-Object { $_ } | Select-Object -Unique
-    return $items
+    return ($Input -split '[,\s]+' | Where-Object { $_ } | Select-Object -Unique)
 }
 
 function Validate-Subset {
@@ -505,7 +437,6 @@ function Validate-Subset {
     return $ok
 }
 
-# Determine agent list
 if (-not [string]::IsNullOrEmpty($Agents)) {
     $AgentList = Normalize-List -Input $Agents
     if (-not (Validate-Subset -Type 'agent' -Allowed $AllAgents -Items $AgentList)) {
@@ -515,7 +446,6 @@ if (-not [string]::IsNullOrEmpty($Agents)) {
     $AgentList = $AllAgents
 }
 
-# Determine script list
 if (-not [string]::IsNullOrEmpty($Scripts)) {
     $ScriptList = Normalize-List -Input $Scripts
     if (-not (Validate-Subset -Type 'script' -Allowed $AllScripts -Items $ScriptList)) {
@@ -528,7 +458,6 @@ if (-not [string]::IsNullOrEmpty($Scripts)) {
 Write-Host "Agents: $($AgentList -join ', ')"
 Write-Host "Scripts: $($ScriptList -join ', ')"
 
-# Build all variants
 foreach ($agent in $AgentList) {
     foreach ($script in $ScriptList) {
         Build-Variant -Agent $agent -Script $script

@@ -108,7 +108,7 @@ if ($RequireTasks -and -not (Test-Path $paths.TASKS -PathType Leaf)) {
 # Build list of available documents
 $docs = @()
 
-# Always check these optional docs
+# Check planning support docs when present
 if (Test-Path $paths.RESEARCH) { $docs += 'research.md' }
 if (Test-Path $paths.DATA_MODEL) { $docs += 'data-model.md' }
 
@@ -121,7 +121,6 @@ if (Test-Path $paths.TEST_MATRIX) { $docs += 'test-matrix.md' }
 if ((Test-Path $paths.INTERFACE_DETAILS_DIR) -and (Get-ChildItem -Path $paths.INTERFACE_DETAILS_DIR -ErrorAction SilentlyContinue | Select-Object -First 1)) {
     $docs += 'interface-details/'
 }
-if (Test-Path $paths.QUICKSTART) { $docs += 'quickstart.md' }
 
 # Include tasks.md if requested and it exists
 if ($IncludeTasks -and (Test-Path $paths.TASKS)) { 
@@ -146,7 +145,6 @@ if ($Json) {
     Test-DirHasFiles -Path $paths.CONTRACTS_DIR -Description 'contracts/' | Out-Null
     Test-FileExists -Path $paths.TEST_MATRIX -Description 'test-matrix.md' | Out-Null
     Test-DirHasFiles -Path $paths.INTERFACE_DETAILS_DIR -Description 'interface-details/' | Out-Null
-    Test-FileExists -Path $paths.QUICKSTART -Description 'quickstart.md' | Out-Null
     
     if ($IncludeTasks) {
         Test-FileExists -Path $paths.TASKS -Description 'tasks.md' | Out-Null

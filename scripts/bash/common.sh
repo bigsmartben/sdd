@@ -147,7 +147,6 @@ TASKS='$feature_dir/tasks.md'
 RESEARCH='$feature_dir/research.md'
 DATA_MODEL='$feature_dir/data-model.md'
 TEST_MATRIX='$feature_dir/test-matrix.md'
-QUICKSTART='$feature_dir/quickstart.md'
 CONTRACTS_DIR='$feature_dir/contracts'
 INTERFACE_DETAILS_DIR='$feature_dir/interface-details'
 EOF
