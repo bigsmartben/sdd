@@ -110,6 +110,7 @@ This section defines when a feature MUST include a full business lifecycle state
 and when a lightweight model is sufficient.
 
 Boundary note:
+
 - This constitution section defines long-lived applicability policy only.
 - Generation-time implementation of this policy belongs to `/sdd.plan`.
 - Cross-artifact compliance audit and gate decisions belong to `/sdd.analyze`.

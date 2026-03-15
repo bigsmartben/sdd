@@ -116,20 +116,20 @@ Use placeholder names below as structure-only anchors, not implementation recomm
 
 ```mermaid
 classDiagram
-    class "<AnchoredBoundarySymbol>" as AnchoredBoundarySymbol {
+    class AnchoredBoundarySymbol["<AnchoredBoundarySymbol>"] {
         +[entryOperation](input)
     }
 
-    class "<AnchoredCoreCollaborator>" as AnchoredCoreCollaborator {
+    class AnchoredCoreCollaborator["<AnchoredCoreCollaborator>"] {
         +[execute](input): output
     }
 
-    class "<AnchoredOptionalCollaboratorA>" as AnchoredOptionalCollaboratorA {
+    class AnchoredOptionalCollaboratorA["<AnchoredOptionalCollaboratorA>"] {
         <<optional>>
         +[evaluate](input): decision
     }
 
-    class "<AnchoredOptionalCollaboratorB>" as AnchoredOptionalCollaboratorB {
+    class AnchoredOptionalCollaboratorB["<AnchoredOptionalCollaboratorB>"] {
         <<optional>>
         +[anchoredState]: [State]
         +[apply](change)

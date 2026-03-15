@@ -37,18 +37,23 @@ Workflow order is fixed and non-negotiable:
 ## Stage Template Bindings
 
 ## Stage 0: Research
+
 - Template: `templates/research-template.md`
 
 ## Stage 1: Data Model
+
 - Template: `templates/data-model-template.md`
 
 ## Stage 2: Feature Verification Design
+
 - Template: `templates/test-matrix-template.md`
 
 ## Stage 3: Contracts
+
 - Template: `templates/contract-template.md`
 
 ## Stage 4: Interface Detailed Design
+
 - Template: `templates/interface-detail-template.md`
 
 Stage I/O boundaries:

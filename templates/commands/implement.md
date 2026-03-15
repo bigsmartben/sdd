@@ -70,6 +70,7 @@ Use this protocol whenever the Outline asks to execute extension hooks for a pha
 ## Responsibility Boundary (Scope Guard)
 
 Terminology note (compatibility, non-normative):
+
 - In this command, **Hard Gates** means the existing "hard pre-execution gates" set (same semantics, alias only).
 - This alias is for cross-command readability and does not change ownership, checks, or blocking behavior.
 

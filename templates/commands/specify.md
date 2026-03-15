@@ -76,7 +76,7 @@ Given that feature description, do this:
 - `spec.md` becomes the authoritative feature-semantics artifact only after the current refinement/validation cycle is written successfully.
 - If clarification answers, validation rewrites, or scope edits change feature meaning, discard stale derived notes and re-derive from the current `spec.md` content before handoff.
 
-4. Follow this execution flow:
+1. Follow this execution flow:
 
     1. Parse user description from Input
        If empty: ERROR "No feature description provided"
@@ -119,10 +119,10 @@ Given that feature description, do this:
     12. Add Assumptions/Open Questions only when needed
     13. Return: SUCCESS (spec ready for planning)
 
-5. Write the specification to SPEC_FILE using the template structure, replacing placeholders with concrete details derived from the feature description (arguments) while preserving section order and headings.
+2. Write the specification to SPEC_FILE using the template structure, replacing placeholders with concrete details derived from the feature description (arguments) while preserving section order and headings.
    - Ensure all concrete names come from user input or reasonable neutral defaults (not from unrelated example projects).
 
-6. **Specification Quality Self-Validation**: After writing the initial spec, validate it in-command against quality criteria (do **not** create checklist artifacts in this command):
+3. **Specification Quality Self-Validation**: After writing the initial spec, validate it in-command against quality criteria (do **not** create checklist artifacts in this command):
 
    a0. **Run an Anti-Solidification Pass (mandatory before validation)**:
       - Build a term set from current user input (`$ARGUMENTS`) plus neutral template vocabulary.
@@ -192,7 +192,7 @@ Given that feature description, do this:
         8. Update the spec by replacing each [NEEDS CLARIFICATION] marker with the user's selected or provided answer
         9. Re-run validation after all clarifications are resolved
 
-7. Report completion with branch name, spec file path, and readiness for the next phase (run `/sdd.clarify` first, then `/sdd.plan`; if user explicitly skips clarification, warn about increased downstream rework risk and then proceed). If checklist-style validation output is needed, direct users to run `/sdd.checklist` as a separate vertical command.
+4. Report completion with branch name, spec file path, and readiness for the next phase (run `/sdd.clarify` first, then `/sdd.plan`; if user explicitly skips clarification, warn about increased downstream rework risk and then proceed). If checklist-style validation output is needed, direct users to run `/sdd.checklist` as a separate vertical command.
 
 **NOTE:** The script creates and checks out the new branch and initializes the spec file before writing.
 
