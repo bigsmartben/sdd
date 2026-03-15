@@ -6,7 +6,7 @@ set -euo pipefail
 # Usage: .github/workflows/scripts/create-release-packages.sh <version>
 #   Version argument should include leading 'v'.
 #   Optionally set AGENTS and/or SCRIPTS env vars to limit what gets built.
-#     AGENTS  : space or comma separated subset of: claude gemini copilot cursor-agent cline qwen opencode windsurf codex kilocode auggie roo codebuddy amp shai tabnine kiro-cli agy bob vibe qodercli kimi generic (default: all)
+#     AGENTS  : space or comma separated subset of AGENT_CONFIG keys from src/specify_cli/__init__.py (default: all)
 #     SCRIPTS : space or comma separated subset of: sh ps (default: both)
 
 if [[ $# -ne 1 ]]; then
@@ -21,6 +21,9 @@ if [[ ! $NEW_VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 fi
 
 echo "Building release packages for $NEW_VERSION"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+AGENT_KEYS_SCRIPT="$SCRIPT_DIR/list-agent-config-keys.py"
 
 GENRELEASES_DIR=".genreleases"
 mkdir -p "$GENRELEASES_DIR"
@@ -329,7 +332,40 @@ build_variant() {
   echo "Created $GENRELEASES_DIR/spec-kit-template-${agent}-${script}-${NEW_VERSION}.zip"
 }
 
-ALL_AGENTS=(claude gemini copilot cursor-agent cline qwen opencode windsurf codex kilocode auggie roo codebuddy amp shai tabnine kiro-cli agy bob vibe qodercli kimi generic)
+# Compatibility seed list for tooling/tests that parse ALL_AGENTS directly.
+# Runtime agent selection is still refreshed from AGENT_CONFIG via load_all_agents().
+ALL_AGENTS=(copilot claude gemini cursor-agent cline qwen opencode codex windsurf kilocode auggie codebuddy qodercli roo kiro-cli amp shai tabnine agy bob vibe kimi generic)
+
+load_all_agents() {
+  local seeded_agents=("${ALL_AGENTS[@]}")
+  local helper_output
+
+  if [[ ! -f "$AGENT_KEYS_SCRIPT" ]]; then
+    echo "Warning: agent key helper not found; using seeded ALL_AGENTS list" >&2
+    ALL_AGENTS=("${seeded_agents[@]}")
+    return
+  fi
+
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "Warning: python3 unavailable; using seeded ALL_AGENTS list" >&2
+    ALL_AGENTS=("${seeded_agents[@]}")
+    return
+  fi
+
+  if ! helper_output=$(python3 "$AGENT_KEYS_SCRIPT" 2>/dev/null); then
+    echo "Warning: failed to load AGENT_CONFIG keys; using seeded ALL_AGENTS list" >&2
+    ALL_AGENTS=("${seeded_agents[@]}")
+    return
+  fi
+
+  mapfile -t ALL_AGENTS < <(printf '%s\n' "$helper_output")
+  if [[ ${#ALL_AGENTS[@]} -eq 0 ]]; then
+    echo "Warning: AGENT_CONFIG key list is empty; using seeded ALL_AGENTS list" >&2
+    ALL_AGENTS=("${seeded_agents[@]}")
+  fi
+}
+
+load_all_agents
 ALL_SCRIPTS=(sh ps)
 
 norm_list() {

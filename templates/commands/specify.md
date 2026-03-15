@@ -1,13 +1,13 @@
 ---
 description: Create or update the feature specification from a natural language feature description.
-handoffs: 
-  - label: Build Technical Plan
-    agent: sdd.plan
-    prompt: Create a plan for the spec. I am building with...
+handoffs:
   - label: Clarify Spec Requirements
     agent: sdd.clarify
     prompt: Clarify specification requirements
     send: true
+  - label: Build Technical Plan
+    agent: sdd.plan
+    prompt: Create a plan for the spec. I am building with...
 scripts:
   sh: scripts/bash/create-new-feature.sh "{ARGS}"
   ps: scripts/powershell/create-new-feature.ps1 "{ARGS}"
@@ -88,7 +88,7 @@ Given that feature description, do this:
          - The choice significantly impacts feature scope or user experience
          - Multiple reasonable interpretations exist with different implications
          - No reasonable default exists
-       - **LIMIT: Maximum 3 [NEEDS CLARIFICATION] markers total**
+       - **LIMIT: Maximum 5 [NEEDS CLARIFICATION] markers total**
        - Prioritize clarifications by impact: scope > security/privacy > user experience > technical details
        - Never use example-domain placeholders from prior analysis as if they were user requirements
     4. Build Global Context and boundaries
@@ -159,8 +159,8 @@ Given that feature description, do this:
 
       - **If [NEEDS CLARIFICATION] markers remain**:
         1. Extract all [NEEDS CLARIFICATION: ...] markers from the spec
-        2. **LIMIT CHECK**: If more than 3 markers exist, keep only the 3 most critical (by scope/security/UX impact) and make informed guesses for the rest
-        3. For each clarification needed (max 3), present options to user in this format:
+        2. **LIMIT CHECK**: If more than 5 markers exist, keep only the 5 most critical (by scope/security/UX impact) and make informed guesses for the rest
+        3. For each clarification needed (max 5), present options to user in this format:
 
            ```markdown
            ## Question [N]: [Topic]
@@ -186,13 +186,13 @@ Given that feature description, do this:
            - Each cell should have spaces around content: `| Content |` not `|Content|`
            - Header separator must have at least 3 dashes: `|--------|`
            - Test that the table renders correctly in markdown preview
-        5. Number questions sequentially (Q1, Q2, Q3 - max 3 total)
+        5. Number questions sequentially (Q1...Q5 - max 5 total)
         6. Present all questions together before waiting for responses
         7. Wait for user to respond with their choices for all questions (e.g., "Q1: A, Q2: Custom - [details], Q3: B")
         8. Update the spec by replacing each [NEEDS CLARIFICATION] marker with the user's selected or provided answer
         9. Re-run validation after all clarifications are resolved
 
-7. Report completion with branch name, spec file path, and readiness for the next phase (`/sdd.clarify` or `/sdd.plan`). If checklist-style validation output is needed, direct users to run `/sdd.checklist` as a separate vertical command.
+7. Report completion with branch name, spec file path, and readiness for the next phase (run `/sdd.clarify` first, then `/sdd.plan`; if user explicitly skips clarification, warn about increased downstream rework risk and then proceed). If checklist-style validation output is needed, direct users to run `/sdd.checklist` as a separate vertical command.
 
 **NOTE:** The script creates and checks out the new branch and initializes the spec file before writing.
 
@@ -232,7 +232,7 @@ When creating this spec from a user prompt:
 
 1. **Make informed guesses**: Use context, industry standards, and common patterns to fill gaps
 2. **Document assumptions**: Record reasonable defaults in the Assumptions section
-3. **Limit clarifications**: Maximum 3 [NEEDS CLARIFICATION] markers - use only for critical decisions that:
+3. **Limit clarifications**: Maximum 5 [NEEDS CLARIFICATION] markers - use only for critical decisions that:
    - Significantly impact feature scope or user experience
    - Have multiple reasonable interpretations with different implications
    - Lack any reasonable default

@@ -98,11 +98,11 @@ Once a feature specification exists, this command creates a comprehensive implem
 After a plan is created, this command analyzes the plan and related design documents to generate an executable task list:
 
 1. **Inputs**: Reads `plan.md`, `spec.md`, `data-model.md`, `test-matrix.md`, `contracts/`, `interface-details/`, and `research.md`
-2. **Task Derivation**: Converts contracts, entities, and verification scenarios into executable tasks organized by `GLOBAL` and `IF-###`
+2. **Task Derivation**: Converts approved planning artifacts into executable tasks organized by `GLOBAL` and `IF-###`, where each `IF-###` unit is an IF-scoped execution work package rather than a second design pass
 3. **Dependency Modeling**: Builds a `Task DAG` that becomes the runtime ordering authority
 4. **Output**: Writes `tasks.md` in the feature directory, ready for execution by a Task agent
 
-Before implementation, `/sdd.analyze` can be used as the dedicated audit pass to detect drift, contradictions, uncovered MUST requirements, and unnecessary traceability overhead across `spec.md`, `plan.md`, and `tasks.md`.
+Before implementation, `/sdd.analyze` can be used as the dedicated audit pass to detect drift, contradictions, uncovered MUST requirements, repo-anchor misuse, and unnecessary audit/traceability overhead across `spec.md`, `plan.md`, and `tasks.md`.
 
 ### Example: Building a Chat Feature
 
@@ -277,7 +277,7 @@ The templates transform the LLM from a creative writer into a disciplined specif
 
 ## The Constitutional Foundation: Enforcing Architectural Discipline
 
-At the heart of SDD lies a constitution—a set of immutable principles that govern how specifications become code. The constitution (`memory/constitution.md`) acts as the architectural DNA of the system, ensuring that every generated implementation maintains consistency, simplicity, and quality.
+At the heart of SDD lies a constitution—a set of immutable principles that govern how specifications become code. The constitution (`.specify/memory/constitution.md`) acts as the architectural DNA of the system, ensuring that every generated implementation maintains consistency, simplicity, and quality.
 
 ### The Nine Articles of Development
 

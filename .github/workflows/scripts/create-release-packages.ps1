@@ -26,6 +26,9 @@ if ($Version -notmatch '^v\d+\.\d+\.\d+$') {
 
 Write-Host "Building release packages for $Version"
 
+$ScriptRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+$AgentKeysScript = Join-Path $ScriptRoot "list-agent-config-keys.py"
+
 $GenReleasesDir = ".genreleases"
 if (Test-Path $GenReleasesDir) {
     Remove-Item -Path $GenReleasesDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -407,7 +410,33 @@ function Build-Variant {
     Write-Host "Created $zipFile"
 }
 
-$AllAgents = @('claude', 'gemini', 'copilot', 'cursor-agent', 'cline', 'qwen', 'opencode', 'windsurf', 'codex', 'kilocode', 'auggie', 'roo', 'codebuddy', 'amp', 'shai', 'tabnine', 'kiro-cli', 'agy', 'bob', 'vibe', 'qodercli', 'kimi', 'generic')
+function Get-AllAgents {
+    if (-not (Test-Path $AgentKeysScript)) {
+        throw "Agent key helper not found: $AgentKeysScript"
+    }
+
+    $pythonCmd = Get-Command python3 -ErrorAction SilentlyContinue
+    if (-not $pythonCmd) {
+        $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
+    }
+    if (-not $pythonCmd) {
+        throw "python3 or python is required to load AGENT_CONFIG keys"
+    }
+
+    $agentKeys = & $pythonCmd.Source $AgentKeysScript
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to load AGENT_CONFIG keys from $AgentKeysScript"
+    }
+
+    $agentKeys = @($agentKeys | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    if ($agentKeys.Count -eq 0) {
+        throw "No agents discovered from AGENT_CONFIG"
+    }
+
+    return $agentKeys
+}
+
+$AllAgents = Get-AllAgents
 $AllScripts = @('sh', 'ps')
 
 function Normalize-List {

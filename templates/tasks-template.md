@@ -4,15 +4,18 @@ description: "Interface-delivery-oriented execution orchestration template for f
 
 # Tasks: [FEATURE NAME]
 
-**Input**: Upstream design artifacts from `/specs/[###-feature-name]/`  
-**Outputs**: `tasks.md` (this document)
+**Input**: Upstream design artifacts from `/specs/[###-feature-name]/`
+**Outputs**: `tasks.md` (this document), `tasks.manifest.json` (machine-readable sidecar projection)
 
 ## 1) Document Purpose
 
 - This document is the executable delivery orchestration source for implementation.
 - `tasks.md` organizes work primarily by shared foundation and interface delivery units keyed by `IF Scope` (`IF-###`).
+- Interface delivery units are IF-scoped execution work packages derived from approved planning artifacts.
 - `tasks.md` MUST define clear task units and explicit execution dependencies.
 - `tasks.md` MUST NOT duplicate interface/data-model/test semantics from upstream documents.
+- `tasks.md` consumes approved planning artifacts and MUST NOT redesign research, data model, contract, or interface-detail semantics.
+- Comprehensive cross-artifact auditing (consistency/coverage/ambiguity/drift/traceability hygiene) is owned by `/sdd.analyze`, not this task-orchestration artifact.
 
 Boundary ownership:
 
@@ -33,6 +36,7 @@ Reference precedence:
 Stage boundary guard:
 
 - `tasks.md` consumes Stage 4 outputs; it does not generate or backfill missing interface design artifacts.
+- `tasks.md` uses `GLOBAL` and `Interface Delivery Units` as execution packages only, not as replacement design sections.
 
 ## 2) Upstream Inputs (Execution References)
 
@@ -110,6 +114,8 @@ Rules:
 
 ## 6) Interface Delivery Units
 
+Interface delivery units are IF-scoped execution work packages. Keep them execution-oriented and reference-driven.
+
 ```markdown
 ## Interface IF-### — [name]
 
@@ -130,6 +136,7 @@ Recommended delivery loop:
 Rules:
 
 - Organize implementation primarily by interface delivery units keyed by `IF Scope`.
+- Treat each interface delivery unit as an execution work package derived from approved planning artifacts, not a second design pass.
 - Each IF unit SHOULD form a verification-implementation-completion loop (document exceptions).
 - Keep IF sections reference-oriented; do not copy upstream design prose.
 - Use `CaseID/TM/TC` as completion anchors only when they help prove delivery.
@@ -145,11 +152,15 @@ Rules:
 
 ## 8) Implementation Consumption
 
-- `/sdd.implement` MUST consume `tasks.md` directly.
-- Required consumable sections:
+- `/sdd.implement` MUST prefer `tasks.manifest.json` for runtime scheduling metadata.
+- If `tasks.manifest.json` is missing or invalid, `/sdd.implement` falls back to parsing `tasks.md`.
+- `tasks.md` remains the human-review and execution-orchestration authority.
+- `tasks.manifest.json` is a machine-readable projection only and MUST NOT introduce new semantics.
+- Required consumable sections in `tasks.md` (authoritative fallback + human review):
   - `Upstream Inputs (Execution References)`
   - `Execution Ordering Model` (`Task DAG`)
   - `Shared Foundation`
   - `Interface Delivery Units`
   - `Cross-Interface Finalization`
+- These sections are execution packages, not replacement design documents.
 - Runtime progress statuses belong to implementation runtime, not generation metadata.

@@ -7,6 +7,25 @@ Recent changes to the Specify CLI and templates are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.9] - 2026-03-16
+
+### Changed
+
+- chore: bump `pyproject.toml` version to `2.0.9` and publish aligned changelog entry for this patch release
+
+## [2.0.8] - 2026-03-15
+
+### Added
+
+- Add a `tasks.manifest.json` sidecar mechanism in the `/sdd.tasks` stage so downstream stages can consume a stable task-manifest projection without re-parsing markdown-only views
+- Add regression coverage for manifest-first task loading, fallback behavior, and single-run scheduling-graph construction flow; key suites pass for this release cut
+
+### Changed
+
+- Make `/sdd.implement` prefer `tasks.manifest.json` as the primary source, with explicit fallback to legacy/derived task views when manifest loading fails
+- Constrain `/sdd.implement` execution to construct the task scheduling graph once per run and reuse it across task dispatch within that invocation
+- Synchronize artifact authority relationship guidance across command templates/docs so authority vs derived-view responsibilities remain consistent after the manifest-first flow update
+
 ## [2.0.7] - 2026-03-15
 
 ### Changed

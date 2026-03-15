@@ -30,7 +30,7 @@ This document is the planning-stage summary only. Detailed authoring structure f
 
 ## Constitution Check
 
-[Summarize constitution-aligned constraints and their planning impact]
+[Summarize constitution-aligned constraints and their planning impact only. Do not record audit metrics, coverage percentages, traceability/accounting tables, or `TODO(REPO_ANCHOR)` inventories here.]
 
 ## Stage 0 Research
 
@@ -38,7 +38,7 @@ This document is the planning-stage summary only. Detailed authoring structure f
 
 - `spec.md`
 - user input
-- repository evidence
+- targeted source-code reads
 - constitution
 
 ### Outputs
@@ -55,7 +55,7 @@ This document is the planning-stage summary only. Detailed authoring structure f
 
 ### Downstream Projection
 
-[3-7 bullets only: projected conclusions, canonical terms, stable IDs, hard constraints, and unresolved blockers needed by later stages]
+[3-7 bullets only: downstream-essential conclusions, canonical terms, stable IDs, hard constraints, and unresolved blockers needed by later stages. Do not use this section for audit tracking, coverage statistics, or traceability ledgers.]
 
 ## Stage 1 Data Model
 
@@ -78,7 +78,7 @@ This document is the planning-stage summary only. Detailed authoring structure f
 
 ### Downstream Projection
 
-[3-7 bullets only: projected conclusions, canonical terms, stable IDs, invariants, lifecycle anchors, and blockers needed by later stages]
+[3-7 bullets only: downstream-essential conclusions, canonical terms, stable IDs, invariants, lifecycle anchors, and blockers needed by later stages. Do not use this section for audit tracking, coverage statistics, or traceability ledgers.]
 
 ## Stage 2 Feature Verification Design
 
@@ -102,7 +102,7 @@ This document is the planning-stage summary only. Detailed authoring structure f
 
 ### Downstream Projection
 
-[3-7 bullets only: projected conclusions, stable tuple keys, scenario anchors, path coverage decisions, and blockers needed by later stages]
+[3-7 bullets only: downstream-essential conclusions, stable tuple keys, scenario anchors, path coverage decisions, and blockers needed by later stages. Do not use this section for audit tracking, coverage statistics, or traceability ledgers.]
 
 ## Stage 3 Contracts
 
@@ -127,7 +127,7 @@ This document is the planning-stage summary only. Detailed authoring structure f
 
 ### Downstream Projection
 
-[3-7 bullets only: projected conclusions, stable contract bindings, visible semantics, and blockers needed by later stages]
+[3-7 bullets only: downstream-essential conclusions, stable contract bindings, visible semantics, and blockers needed by later stages. Do not use this section for audit tracking, coverage statistics, or traceability ledgers.]
 
 ## Stage 4 Interface Detailed Design
 
@@ -152,7 +152,7 @@ This document is the planning-stage summary only. Detailed authoring structure f
 
 ### Downstream Projection
 
-[3-7 bullets only: projected conclusions, task-relevant anchors, operation bindings, and unresolved blockers for downstream consumers]
+[3-7 bullets only: downstream-essential conclusions, task-relevant anchors, operation bindings, and unresolved blockers for downstream consumers. Do not use this section for audit tracking, coverage statistics, or traceability ledgers.]
 
 ## Project Structure
 

@@ -4,30 +4,42 @@
 **Scope**: [operation, endpoint, event, command, or external boundary]
 **IF Scope (Required)**: [IF-### or N/A]
 **Operation ID (Required)**: [operationId or N/A]
-**Boundary Anchor (Required)**: [HTTP method+path \| event topic \| RPC method \| CLI command \| N/A]
+**Boundary Anchor (Required)**: [HTTP `METHOD /path` \| `event.topic` \| `Facade.method` \| `cli command` \| `N/A`]
 
 This template is format-agnostic. The final artifact may be represented as Markdown, JSON, YAML, or another contract-friendly syntax, but it MUST preserve the semantics captured below.
-This artifact should provide the minimum stable binding from `spec.md` intent and plan artifacts into interface-level detailed design.
+This artifact should provide the minimum stable binding from approved planning artifacts into interface-level detailed design.
+
+## Boundary Anchor Rules (Normative)
+
+- Allowed normative boundary-anchor forms are exactly: HTTP `METHOD /path`, event topic `event.topic`, RPC/Façade method `Facade.method`, CLI `command`, or explicit `N/A`.
+- `BA-*` labels are not valid normative boundary anchors. If used, treat them as local shorthand notes only and never as authoritative binding keys.
+- `Repo Anchor` MUST default to an existing source-code symbol for the binding tuple. If unresolved, set `Repo Anchor` to `TODO(REPO_ANCHOR)` and treat that tuple as non-normative forward-looking only.
 
 ## Contract Binding
 
 - External boundary: [HTTP / event / RPC / CLI / other]
 - Operation or interaction name: [name]
 - Operation ID: [operationId or N/A]
-- Boundary anchor: [same value as header field above]
+- Boundary anchor: [same value as header field above; must follow one allowed normative form]
 - IF scope: [same value as header field above; must be explicit `N/A` when not interface-scoped]
+- Repo Anchor: [existing source-code symbol proving this binding] or `TODO(REPO_ANCHOR)` when unresolved
 - Visible consumer / caller: [actor or system]
 - Detailed design handoff target: `[interface-details/<operationId>.md]` or [N/A]
 
-## Traceability Anchors (Minimal Binding)
+## Minimal Binding References
 
-Use stable IDs and short references only. Do not reproduce full spec prose or expand into a full traceability matrix.
+Use stable IDs and short references only. Keep this section focused on the minimum downstream binding required for interface design and execution; do not expand it into a traceability ledger.
 
-| Operation ID | Boundary Anchor | Operation / Interaction | UC Ref | FR Ref(s) | UIF / Scenario Ref | TM Ref(s) | IF Scope | Data Model Ref(s) |
-|--------------|-----------------|-------------------------|--------|-----------|--------------------|-----------|----------|-------------------|
-| [operationId or N/A] | [HTTP method+path / event topic / RPC method / CLI command / N/A] | [name] | [UC-###] | [FR-###, FR-###] | [UIF-### / Scenario] | [TM-### / TC-###] | [IF-### or N/A] | [Entity / INV / Lifecycle anchor ref] |
+| Operation ID | Boundary Anchor | Operation / Interaction | IF Scope | Repo Anchor | Upstream Ref(s) | Data Model Ref(s) | Detail Target |
+|--------------|-----------------|-------------------------|----------|-------------|-----------------|-------------------|---------------|
+| [operationId or N/A] | [HTTP `METHOD /path` / `event.topic` / `Facade.method` / `cli command` / `N/A`] | [name] | [IF-### or N/A] | [`path/to/file.ext:Symbol` or `TODO(REPO_ANCHOR)`] | [UC/FR/UIF/TM/TC refs needed downstream] | [Entity / INV / Lifecycle anchor ref] | `[interface-details/<operationId>.md]` or [N/A] |
 
 ## External I/O Summary
+
+Keep this to minimum external I/O only. `minimum` does not permit abstracting away from an existing repo-backed interface surface.
+Before filling this section, read the anchored facade/RPC method signature and anchored request/response DTO.
+Request / Success Output / Failure Output MUST align with the anchored signature and DTO structure (including field names, nesting, and anchored status vocabulary).
+Do not flatten, rename, split, or otherwise reshape anchored external I/O for readability.
 
 | Aspect | Definition |
 |--------|------------|
@@ -65,4 +77,10 @@ Use stable IDs and short references only. Do not reproduce full spec prose or ex
 ## Boundary Notes
 
 - Keep this artifact at the minimum external I/O boundary only.
+- `Minimum` does not justify re-modeling or abstracting away from an existing repo-backed interface surface.
 - Do not expand into internal projections, persistence mappings, sequence diagrams, or UML class design here.
+- Do not turn this artifact into an audit, traceability, or coverage-report ledger.
+- Use an existing source-code symbol whenever available for `Repo Anchor`; use `TODO(REPO_ANCHOR)` only when unresolved.
+- Rows/fields or tuples that remain `TODO(REPO_ANCHOR)` are forward-looking notes only and MUST NOT be treated as normative contract commitments.
+- A contract with unresolved repo anchors is not a fully anchored external-interface commitment.
+- If anchored DTOs exist, contract field semantics may add business meaning but MUST NOT rename anchored fields, flatten anchored nesting, or introduce split fields absent from the anchored DTO.

@@ -116,7 +116,7 @@ Use the **`/sdd.specify`** command to describe what you want to build. Focus on 
 
 ### 4. Create a technical implementation plan
 
-Use the **`/sdd.plan`** command to provide your tech stack and architecture choices.
+Use the **`/sdd.plan`** command to generate design-stage implementation artifacts from your tech stack and architecture choices.
 
 ```bash
 /sdd.plan The application uses Vite with minimal number of libraries. Use vanilla HTML, CSS, and JavaScript as much as possible. Images are not uploaded anywhere and metadata is stored in a local SQLite database.
@@ -124,7 +124,7 @@ Use the **`/sdd.plan`** command to provide your tech stack and architecture choi
 
 ### 5. Break down into tasks
 
-Use **`/sdd.tasks`** to create an actionable task list from your implementation plan.
+Use **`/sdd.tasks`** to convert approved planning artifacts into executable orchestration (`Task DAG`, `GLOBAL`, `IF-###`) without performing a unified semantic audit.
 
 ```bash
 /sdd.tasks
@@ -132,7 +132,7 @@ Use **`/sdd.tasks`** to create an actionable task list from your implementation 
 
 ### 6. Execute implementation
 
-Use **`/sdd.implement`** to execute all tasks and build your feature according to the plan.
+Use **`/sdd.implement`** to execute tasks with runtime hard gates and build your feature according to the plan (`/sdd.analyze` first is advisory, not blocking).
 
 ```bash
 /sdd.implement
@@ -299,9 +299,9 @@ Essential commands for the Spec-Driven Development workflow:
 | ----------------------- | ------------------------------------------------------------------------ |
 | `/sdd.constitution` | Create or update project governing principles and development guidelines |
 | `/sdd.specify`      | Define what you want to build (requirements and user stories)            |
-| `/sdd.plan`         | Create technical implementation plans with your chosen tech stack        |
-| `/sdd.tasks`        | Generate actionable task lists for implementation                        |
-| `/sdd.implement`    | Execute all tasks to build the feature according to the plan             |
+| `/sdd.plan`         | Generate design-stage implementation artifacts from your chosen tech stack |
+| `/sdd.tasks`        | Produce executable orchestration from approved planning artifacts (no unified semantic audit) |
+| `/sdd.implement`    | Execute tasks with runtime hard gates (`/sdd.analyze`-first is advisory, not blocking) |
 
 #### Optional Commands
 
@@ -310,7 +310,7 @@ Additional commands for enhanced quality and validation:
 | Command              | Description                                                                                                                          |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `/sdd.clarify`   | Clarify underspecified areas (recommended before `/sdd.plan`; formerly `/quizme`) |
-| `/sdd.analyze`   | Dedicated cross-artifact audit for traceability, drift, contradictions, and boundary violations across `spec.md`, `plan.md`, and `tasks.md` (optional vertical quality gate, typically after `/sdd.tasks`) |
+| `/sdd.analyze`   | Lint-backed unified audit entrypoint: combines mechanical lint checks with cross-artifact semantic findings (traceability, drift, contradictions, and boundary violations) across `spec.md`, `plan.md`, and `tasks.md` |
 | `/sdd.checklist` | Generate standalone checklist artifacts in `checklists/*.md` as a vertical validation pass (does not backfill or redefine main-flow artifacts) |
 
 ### Environment Variables
@@ -616,14 +616,14 @@ That's way too untargeted research. The research needs to help you solve a speci
 
 ### **STEP 5:** Optional vertical quality gates (`/sdd.analyze`, `/sdd.checklist`)
 
-With the plan in place, proceed to `/sdd.tasks` as the main flow. Avoid ad hoc audit prompts here. When you need a dedicated pre-implementation audit pass, run `/sdd.analyze` after `/sdd.tasks` so it can review `spec.md`, `plan.md`, and `tasks.md` together for drift, contradictions, traceability issues, uncovered MUST requirements, and boundary violations.
+With the plan in place, proceed to `/sdd.tasks` as the main flow. Avoid ad hoc audit prompts here. When you need a dedicated pre-implementation audit pass, run `/sdd.analyze` after `/sdd.tasks` as the unified audit entrypoint: it combines lint-backed mechanical checks with cross-artifact semantic findings across `spec.md`, `plan.md`, and `tasks.md` (drift, contradictions, repo-anchor misuse, audit payload leakage, uncovered MUST requirements, and boundary violations).
 
 If you want checklist-style validation, run `/sdd.checklist` as a separate standalone vertical pass rather than folding checklist burden back into the main-flow artifacts.
 
 You can also ask Claude Code (if you have the [GitHub CLI](https://docs.github.com/en/github-cli/github-cli) installed) to go ahead and create a pull request from your current branch to `main` with a detailed description, to make sure that the effort is properly tracked.
 
 > [!NOTE]
-> If you suspect over-engineered decisions or cross-artifact drift before implementation, use `/sdd.analyze` as the dedicated audit step and then adjust the upstream artifacts it flags. Ensure that Claude Code follows the [constitution](base/memory/constitution.md) as the foundational piece that it must adhere to when refining the plan.
+> If you suspect over-engineered decisions or cross-artifact drift before implementation, use `/sdd.analyze` as the dedicated audit step and then adjust the upstream artifacts it flags. Ensure that Claude Code follows the [constitution](.specify/memory/constitution.md) as the foundational piece that it must adhere to when refining the plan. Repo semantic anchors come from source code plus `.specify/memory/constitution.md`; helper docs and prior generated artifacts are not repo anchors.
 
 ### **STEP 6:** Generate task breakdown with /sdd.tasks
 
@@ -635,13 +635,15 @@ With the implementation plan ready (and any optional vertical checks complete), 
 
 This step creates a `tasks.md` file in your feature specification directory that contains:
 
-- **Execution scopes** - Shared foundation work is separated from interface delivery units (`GLOBAL` + `IF-###`)
+- **Execution scopes** - Shared foundation work is separated from interface delivery units (`GLOBAL` + `IF-###`), where each `IF-###` unit is an IF-scoped execution work package
 - **Task DAG dependency model** - `Task DAG` is the execution authority for ordering and safe parallelism
 - **File path specifications** - Each task includes the exact file paths where implementation should occur
 - **Verification-first delivery loops** - Verify, implement, and completion tasks are grouped around each interface unit
 - **Completion anchors** - Tasks carry deterministic pass signals such as contract checks, build/test commands, or case anchors
 
-Run `/sdd.analyze` after `/sdd.tasks` when you want the dedicated pre-implementation audit pass for traceability, drift, contradictions, boundary violations, uncovered MUST requirements, and other cross-artifact issues.
+`/sdd.tasks` consumes approved planning artifacts and turns them into execution orchestration. It does not reopen research, data-model, contract, or interface-detail design, and it does not perform the unified cross-artifact semantic audit.
+
+Run `/sdd.analyze` after `/sdd.tasks` when you want the dedicated pre-implementation audit pass for repo-anchor misuse, audit payload leakage, drift, contradictions, boundary violations, uncovered MUST requirements, and other cross-artifact issues.
 
 The generated tasks.md provides a clear roadmap for the `/sdd.implement` command, ensuring systematic implementation that maintains code quality without turning the task artifact itself into an audit ledger.
 
@@ -653,11 +655,13 @@ Once ready, use the `/sdd.implement` command to execute your implementation plan
 /sdd.implement
 ```
 
+The `/sdd.implement` command is execution plus runtime hard gates. It is not the unified semantic audit step; running `/sdd.analyze` beforehand is advisory and non-blocking.
+
 The `/sdd.implement` command will:
 
 - Validate that all prerequisites are in place (constitution, spec, plan, and tasks)
 - Parse the execution plan from `tasks.md`
-- Execute tasks according to `Task DAG`, `GLOBAL`, and `IF-###` delivery units
+- Execute tasks according to `Task DAG`, `GLOBAL`, and `IF-###` execution work packages
 - Follow the TDD approach defined in your task plan
 - Provide progress updates, honor strict/adaptive execution mode, and stop for upstream repair when runtime drift exceeds safe local adaptation
 

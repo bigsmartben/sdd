@@ -2,7 +2,9 @@
 set -euo pipefail
 
 # simulate-release.sh
-# Simulate the release process locally without pushing to GitHub
+# Simulate the release process locally without pushing to GitHub.
+# WARNING: This script intentionally modifies local files (e.g., pyproject.toml, CHANGELOG.md)
+# and creates a local tag for dry-run validation. Do not include it in read-only preflight checks.
 # Usage: simulate-release.sh [version]
 #   If version is omitted, auto-increments patch version
 
@@ -148,6 +150,7 @@ echo "  Tag: $TAG"
 echo "  Backup: $BACKUP_DIR"
 echo ""
 echo -e "${YELLOW}⚠️  SIMULATION ONLY - NO CHANGES PUSHED${NC}"
+echo -e "${YELLOW}⚠️  LOCAL FILES WERE MODIFIED AS PART OF THIS SIMULATION${NC}"
 echo ""
 echo -e "${BLUE}Next steps:${NC}"
 echo "  1. Review the changes above"
