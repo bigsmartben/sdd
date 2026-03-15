@@ -89,16 +89,16 @@ Once a feature specification exists, this command creates a comprehensive implem
 
 1. **Specification Analysis**: Reads and understands the feature requirements, user stories, and acceptance criteria
 2. **Constitutional Compliance**: Ensures alignment with project constitution and architectural principles
-3. **Technical Translation**: Converts business requirements into technical architecture and implementation details
-4. **Detailed Documentation**: Generates supporting documents for data models, API contracts, and test scenarios
-5. **Quickstart Validation**: Produces a quickstart guide capturing key validation scenarios
+3. **Technical Translation**: Converts business requirements into technical architecture and stage-scoped planning artifacts
+4. **Feature Verification Design**: Generates `test-matrix.md` to cover feature-level main, branch, normal, exception, and degraded paths from spec `UC/UIF`
+5. **Contracts and Interface Design**: Produces minimum-I/O contracts and per-operation detailed design artifacts
 
 ### The `/sdd.tasks` Command
 
 After a plan is created, this command analyzes the plan and related design documents to generate an executable task list:
 
-1. **Inputs**: Reads `plan.md` (required) and, when present, `data-model.md`, `contracts/`, `test-matrix.md`, `interface-details/`, and `research.md`
-2. **Task Derivation**: Converts contracts, entities, and verification scenarios into executable tasks organized by `GLOBAL` and `IFxx`
+1. **Inputs**: Reads `plan.md`, `spec.md`, `data-model.md`, `test-matrix.md`, `contracts/`, `interface-details/`, and `research.md`
+2. **Task Derivation**: Converts contracts, entities, and verification scenarios into executable tasks organized by `GLOBAL` and `IF-###`
 3. **Dependency Modeling**: Builds a `Task DAG` that becomes the runtime ordering authority
 4. **Output**: Writes `tasks.md` in the feature directory, ready for execution by a Task agent
 
@@ -139,11 +139,10 @@ Total: ~12 hours of documentation work
 # This automatically creates:
 # - specs/003-chat-system/plan.md
 # - specs/003-chat-system/research.md (WebSocket library comparisons)
-# - specs/003-chat-system/data-model.md (Message and User schemas)
-# - specs/003-chat-system/contracts/ (WebSocket events, REST endpoints)
-# - specs/003-chat-system/test-matrix.md (Verification paths and key scenarios)
+# - specs/003-chat-system/data-model.md (Global model backbone)
+# - specs/003-chat-system/test-matrix.md (Feature verification paths and key scenarios)
+# - specs/003-chat-system/contracts/ (Minimum external I/O contracts)
 # - specs/003-chat-system/interface-details/ (Per-operation implementation design projections)
-# - specs/003-chat-system/quickstart.md (Key validation scenarios)
 # - specs/003-chat-system/tasks.md (Task list derived from the plan)
 ```
 
@@ -151,9 +150,9 @@ In 15 minutes, you have:
 
 - A complete feature specification with user stories and acceptance criteria
 - A detailed implementation plan with technology choices and rationale
-- API contracts and data models ready for code generation
-- Comprehensive test scenarios for both automated and manual testing
-- Interface-level design artifacts and a dedicated audit step before implementation
+- A global data model, feature verification design, and minimum-I/O contracts
+- Interface-level design artifacts and verification scenarios ready for task generation
+- A dedicated audit step before implementation
 - All documents properly versioned in a feature branch
 
 ### The Power of Structured Automation

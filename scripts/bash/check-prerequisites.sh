@@ -122,7 +122,7 @@ fi
 # Build list of available documents
 docs=()
 
-# Always check these optional docs
+# Check planning support docs when present
 [[ -f "$RESEARCH" ]] && docs+=("research.md")
 [[ -f "$DATA_MODEL" ]] && docs+=("data-model.md")
 
@@ -135,7 +135,6 @@ fi
 if [[ -d "$INTERFACE_DETAILS_DIR" ]] && [[ -n "$(ls -A "$INTERFACE_DETAILS_DIR" 2>/dev/null)" ]]; then
     docs+=("interface-details/")
 fi
-[[ -f "$QUICKSTART" ]] && docs+=("quickstart.md")
 
 # Include tasks.md if requested and it exists
 if $INCLUDE_TASKS && [[ -f "$TASKS" ]]; then
@@ -164,7 +163,6 @@ else
     check_dir "$CONTRACTS_DIR" "contracts/"
     check_file "$TEST_MATRIX" "test-matrix.md"
     check_dir "$INTERFACE_DETAILS_DIR" "interface-details/"
-    check_file "$QUICKSTART" "quickstart.md"
     
     if $INCLUDE_TASKS; then
         check_file "$TASKS" "tasks.md"

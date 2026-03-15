@@ -309,9 +309,9 @@ Additional commands for enhanced quality and validation:
 
 | Command              | Description                                                                                                                          |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `/sdd.clarify`   | Clarify underspecified areas (recommended before `/sdd.plan`; formerly `/quizme`)                                                |
-| `/sdd.analyze`   | Dedicated cross-artifact audit across `spec.md`, `plan.md`, and `tasks.md` (run after `/sdd.tasks`, before `/sdd.implement`) |
-| `/sdd.checklist` | Generate custom quality checklists that validate requirements completeness, clarity, and consistency (like "unit tests for English") |
+| `/sdd.clarify`   | Clarify underspecified areas (recommended before `/sdd.plan`; formerly `/quizme`) |
+| `/sdd.analyze`   | Dedicated cross-artifact audit for traceability, drift, contradictions, and boundary violations across `spec.md`, `plan.md`, and `tasks.md` (optional vertical quality gate, typically after `/sdd.tasks`) |
+| `/sdd.checklist` | Generate standalone checklist artifacts in `checklists/*.md` as a vertical validation pass (does not backfill or redefine main-flow artifacts) |
 
 ### Environment Variables
 
@@ -498,8 +498,13 @@ At this stage, your project folder contents should resemble the following:
     │  └── 001-create-taskify
     │      └── spec.md
     └── templates
+        ├── contract-template.md
+        ├── data-model-template.md
+        ├── interface-detail-template.md
         ├── plan-template.md
+        ├── research-template.md
         ├── spec-template.md
+        ├── test-matrix-template.md
         └── tasks-template.md
 ```
 
@@ -524,10 +529,10 @@ tasks for each one randomly distributed into different states of completion. Mak
 one task in each stage of completion.
 ```
 
-You should also ask Claude Code to validate the **Review & Acceptance Checklist**, checking off the things that are validated/pass the requirements, and leave the ones that are not unchecked. The following prompt can be used:
+If you want checklist-style validation at this point, run `/sdd.checklist` as a separate vertical pass:
 
 ```text
-Read the review and acceptance checklist, and check off each item in the checklist if the feature spec meets the criteria. Leave it empty if it does not.
+/sdd.checklist
 ```
 
 It's important to use the interaction with Claude Code as an opportunity to clarify and ask questions around the specification - **do not treat its first attempt as final**.
@@ -557,24 +562,30 @@ The output of this step will include a number of implementation detail documents
 │  └── update-claude-md.sh
 ├── specs
 │  └── 001-create-taskify
+│      ├── data-model.md
+│      ├── test-matrix.md
 │      ├── contracts
 │      │  ├── api-spec.json
 │      │  └── signalr-spec.md
-│      ├── data-model.md
 │      ├── interface-details
 │      │  ├── create-project.md
 │      │  └── create-task.md
 │      ├── plan.md
-│      ├── quickstart.md
 │      ├── research.md
-│      ├── test-matrix.md
 │      └── spec.md
 └── templates
+    ├── contract-template.md
+    ├── data-model-template.md
     ├── CLAUDE-template.md
+    ├── interface-detail-template.md
     ├── plan-template.md
+    ├── research-template.md
     ├── spec-template.md
+    ├── test-matrix-template.md
     └── tasks-template.md
 ```
+
+`/sdd.plan` uses `plan-template.md` for `plan.md`, and the planning templates in `templates/` as the structure sources for the stage artifacts it generates.
 
 Check the `research.md` document to ensure that the right tech stack is used, based on your instructions. You can ask Claude Code to refine it if any of the components stand out, or even have it check the locally-installed version of the platform/framework you want to use (e.g., .NET).
 
@@ -603,28 +614,20 @@ That's way too untargeted research. The research needs to help you solve a speci
 > [!NOTE]
 > Claude Code might be over-eager and add components that you did not ask for. Ask it to clarify the rationale and the source of the change.
 
-### **STEP 5:** Have Claude Code validate the plan
+### **STEP 5:** Optional vertical quality gates (`/sdd.analyze`, `/sdd.checklist`)
 
-With the plan in place, you should have Claude Code run through it to make sure that there are no missing pieces. You can use a prompt like this:
+With the plan in place, proceed to `/sdd.tasks` as the main flow. Avoid ad hoc audit prompts here. When you need a dedicated pre-implementation audit pass, run `/sdd.analyze` after `/sdd.tasks` so it can review `spec.md`, `plan.md`, and `tasks.md` together for drift, contradictions, traceability issues, uncovered MUST requirements, and boundary violations.
 
-```text
-Now I want you to go and audit the implementation plan and the implementation detail files.
-Read through it with an eye on determining whether or not there is a sequence of tasks that you need
-to be doing that are obvious from reading this. Because I don't know if there's enough here. For example,
-when I look at the core implementation, it would be useful to reference the appropriate places in the implementation
-details where it can find the information as it walks through each step in the core implementation or in the refinement.
-```
-
-This helps refine the implementation plan and helps you avoid potential blind spots that Claude Code missed in its planning cycle. Once the initial refinement pass is complete, ask Claude Code to go through the checklist once more before you can get to the implementation.
+If you want checklist-style validation, run `/sdd.checklist` as a separate standalone vertical pass rather than folding checklist burden back into the main-flow artifacts.
 
 You can also ask Claude Code (if you have the [GitHub CLI](https://docs.github.com/en/github-cli/github-cli) installed) to go ahead and create a pull request from your current branch to `main` with a detailed description, to make sure that the effort is properly tracked.
 
 > [!NOTE]
-> Before you have the agent implement it, it's also worth prompting Claude Code to cross-check the details to see if there are any over-engineered pieces (remember - it can be over-eager). If over-engineered components or decisions exist, you can ask Claude Code to resolve them. Ensure that Claude Code follows the [constitution](base/memory/constitution.md) as the foundational piece that it must adhere to when establishing the plan.
+> If you suspect over-engineered decisions or cross-artifact drift before implementation, use `/sdd.analyze` as the dedicated audit step and then adjust the upstream artifacts it flags. Ensure that Claude Code follows the [constitution](base/memory/constitution.md) as the foundational piece that it must adhere to when refining the plan.
 
 ### **STEP 6:** Generate task breakdown with /sdd.tasks
 
-With the implementation plan validated, you can now break down the plan into specific, actionable tasks that can be executed in the correct order. Use the `/sdd.tasks` command to automatically generate a detailed task breakdown from your implementation plan:
+With the implementation plan ready (and any optional vertical checks complete), you can now break down the plan into specific, actionable tasks that can be executed in the correct order. Use the `/sdd.tasks` command to automatically generate a detailed task breakdown from your implementation plan:
 
 ```text
 /sdd.tasks
@@ -632,13 +635,13 @@ With the implementation plan validated, you can now break down the plan into spe
 
 This step creates a `tasks.md` file in your feature specification directory that contains:
 
-- **Execution scopes** - Shared foundation work is separated from interface delivery units (`GLOBAL` + `IFxx`)
+- **Execution scopes** - Shared foundation work is separated from interface delivery units (`GLOBAL` + `IF-###`)
 - **Task DAG dependency model** - `Task DAG` is the execution authority for ordering and safe parallelism
 - **File path specifications** - Each task includes the exact file paths where implementation should occur
 - **Verification-first delivery loops** - Verify, implement, and completion tasks are grouped around each interface unit
 - **Completion anchors** - Tasks carry deterministic pass signals such as contract checks, build/test commands, or case anchors
 
-Run `/sdd.analyze` after `/sdd.tasks` when you want the dedicated pre-implementation audit pass for drift, contradictions, uncovered MUST requirements, and other cross-artifact issues.
+Run `/sdd.analyze` after `/sdd.tasks` when you want the dedicated pre-implementation audit pass for traceability, drift, contradictions, boundary violations, uncovered MUST requirements, and other cross-artifact issues.
 
 The generated tasks.md provides a clear roadmap for the `/sdd.implement` command, ensuring systematic implementation that maintains code quality without turning the task artifact itself into an audit ledger.
 
@@ -654,7 +657,7 @@ The `/sdd.implement` command will:
 
 - Validate that all prerequisites are in place (constitution, spec, plan, and tasks)
 - Parse the execution plan from `tasks.md`
-- Execute tasks according to `Task DAG`, `GLOBAL`, and `IFxx` delivery units
+- Execute tasks according to `Task DAG`, `GLOBAL`, and `IF-###` delivery units
 - Follow the TDD approach defined in your task plan
 - Provide progress updates, honor strict/adaptive execution mode, and stop for upstream repair when runtime drift exceeds safe local adaptation
 

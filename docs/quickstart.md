@@ -5,7 +5,7 @@ This guide will help you get started with Spec-Driven Development using Spec Kit
 > [!NOTE]
 > All automation scripts now provide both Bash (`.sh`) and PowerShell (`.ps1`) variants. The `specify` CLI auto-selects based on OS unless you pass `--script sh|ps`.
 
-## The 6-Step Process
+## The 6-Step Core Process
 
 > [!TIP]
 > **Context Awareness**: Spec Kit commands automatically detect the active feature based on your current Git branch (e.g., `001-feature-name`). To switch between different specifications, simply switch Git branches.
@@ -69,7 +69,7 @@ uvx --from git+https://github.com/bigsmartben/sdd.git specify init <PROJECT_NAME
 /sdd.tasks
 ```
 
-Optionally, run the dedicated audit pass with `/sdd.analyze` before implementation:
+Optional vertical quality gate: run the dedicated audit pass with `/sdd.analyze` before implementation when needed (traceability, drift, contradictions, and boundary violations):
 
 ```markdown
 /sdd.analyze
@@ -122,9 +122,9 @@ You can continue to refine the spec with more details using `/sdd.clarify`:
 /sdd.clarify When you first launch Taskify, it's going to give you a list of the five users to pick from. There will be no password required. When you click on a user, you go into the main view, which displays the list of projects. When you click on a project, you open the Kanban board for that project. You're going to see the columns. You'll be able to drag and drop cards back and forth between different columns. You will see any cards that are assigned to you, the currently logged in user, in a different color from all the other ones, so you can quickly see yours. You can edit any comments that you make, but you can't edit comments that other people made. You can delete any comments that you made, but you can't delete comments anybody else made.
 ```
 
-### Step 4: Validate the Spec
+### Optional Gate A: Validate the Spec with `/sdd.checklist`
 
-Validate the specification checklist using the `/sdd.checklist` command:
+Run the standalone checklist pass with the `/sdd.checklist` command when needed (vertical output in `checklists/*.md`, not a main-flow artifact):
 
 ```bash
 /sdd.checklist
@@ -146,15 +146,15 @@ Generate an actionable task list using the `/sdd.tasks` command:
 /sdd.tasks
 ```
 
-### Step 7: Validate and Implement
+### Optional Gate B + Implement
 
-Have your AI agent run the dedicated cross-artifact audit using `/sdd.analyze`:
+Before implementation, run the dedicated cross-artifact audit with `/sdd.analyze` when needed (traceability, drift, contradictions, and boundary violations):
 
 ```bash
 /sdd.analyze
 ```
 
-Finally, implement the solution:
+Then implement the solution:
 
 ```bash
 /sdd.implement

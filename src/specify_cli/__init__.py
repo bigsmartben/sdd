@@ -1145,8 +1145,8 @@ DEFAULT_SKILLS_DIR = ".agents/skills"
 # Enhanced descriptions for each SDD command skill
 SKILL_DESCRIPTIONS = {
     "specify": "Create or update feature specifications from natural language descriptions. Use when starting new features or refining requirements. Generates spec.md with user stories, functional requirements, and acceptance criteria following spec-driven development methodology.",
-    "plan": "Generate technical implementation plans from feature specifications. Use after creating a spec to define architecture, tech stack, and implementation phases. Creates plan.md with detailed technical design.",
-    "tasks": "Break down implementation plans into actionable task lists. Use after planning to create a structured task breakdown organized by GLOBAL and IFxx scopes with a Task DAG for dependency-safe execution.",
+    "plan": "Generate implementation plans from feature specifications. Use after creating a spec to produce research, a global data model, feature verification design, minimum-I/O contracts, and interface-level detailed design.",
+    "tasks": "Break down implementation plans into actionable task lists. Use after planning to create a structured task breakdown organized by GLOBAL and IF-### scopes with a Task DAG for dependency-safe execution.",
     "implement": "Execute all tasks from the task breakdown to build the feature. Use after task generation to run the planned solution from tasks.md, validate execution closure, and follow TDD where applicable.",
     "analyze": "Run the dedicated cross-artifact audit across spec.md, plan.md, and tasks.md. Use after task generation to surface drift, contradictions, uncovered MUST requirements, and other pre-implementation issues.",
     "clarify": "Structured clarification workflow for underspecified requirements. Use before planning to resolve ambiguities through coverage-based questioning. Records answers in spec clarifications section.",

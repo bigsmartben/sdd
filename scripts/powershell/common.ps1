@@ -92,11 +92,46 @@ function Get-FeatureDir {
     Join-Path $RepoRoot "specs/$Branch"
 }
 
+function Find-FeatureDirByPrefix {
+    param(
+        [string]$RepoRoot,
+        [string]$BranchName
+    )
+
+    $specsDir = Join-Path $RepoRoot 'specs'
+
+    if ($BranchName -notmatch '^(\d{3})-') {
+        return (Join-Path $specsDir $BranchName)
+    }
+
+    $prefix = $matches[1]
+    $matchingDirs = @()
+
+    if (Test-Path $specsDir) {
+        $matchingDirs = @(
+            Get-ChildItem -Path $specsDir -Directory -Filter "$prefix-*" |
+                ForEach-Object { $_.Name }
+        )
+    }
+
+    if ($matchingDirs.Count -eq 0) {
+        return (Join-Path $specsDir $BranchName)
+    }
+
+    if ($matchingDirs.Count -eq 1) {
+        return (Join-Path $specsDir $matchingDirs[0])
+    }
+
+    [Console]::Error.WriteLine("ERROR: Multiple spec directories found with prefix '$prefix': $($matchingDirs -join ' ')")
+    [Console]::Error.WriteLine('Please ensure only one spec directory exists per numeric prefix.')
+    return (Join-Path $specsDir $BranchName)
+}
+
 function Get-FeaturePathsEnv {
     $repoRoot = Get-RepoRoot
     $currentBranch = Get-CurrentBranch
     $hasGit = Test-HasGit
-    $featureDir = Get-FeatureDir -RepoRoot $repoRoot -Branch $currentBranch
+    $featureDir = Find-FeatureDirByPrefix -RepoRoot $repoRoot -BranchName $currentBranch
     
     [PSCustomObject]@{
         REPO_ROOT     = $repoRoot
@@ -109,7 +144,6 @@ function Get-FeaturePathsEnv {
         RESEARCH      = Join-Path $featureDir 'research.md'
         DATA_MODEL    = Join-Path $featureDir 'data-model.md'
         TEST_MATRIX   = Join-Path $featureDir 'test-matrix.md'
-        QUICKSTART    = Join-Path $featureDir 'quickstart.md'
         CONTRACTS_DIR = Join-Path $featureDir 'contracts'
         INTERFACE_DETAILS_DIR = Join-Path $featureDir 'interface-details'
     }

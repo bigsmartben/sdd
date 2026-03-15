@@ -7,6 +7,24 @@ Recent changes to the Specify CLI and templates are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.6] - 2026-03-15
+
+### Added
+
+- Add dedicated planning-stage templates for `research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, and `interface-details/`, and align `/sdd.plan` plus downstream docs/tests to use them as the authoritative artifact structure sources
+
+### Changed
+
+- Refactor `/sdd.plan` and `plan-template.md` around stage-local context loading, downstream projection notes, and per-operation sequential contract/interface-detail generation
+- Standardize interface delivery scope references from `IFxx` to `IF-###` across `/sdd.tasks`, `/sdd.implement`, `/sdd.analyze`, templates, and documentation
+- Keep `/sdd.specify` quality validation in-command and move checklist generation guidance to the standalone `/sdd.checklist` vertical flow
+- Snapshot non-command planning templates into release packages under `.specify/templates` and rewrite template path references during package generation on Bash and PowerShell
+
+### Fixed
+
+- Exclude local virtualenv, cache, dist, and generated release directories from Hatch builds so Python release artifacts do not accidentally bundle workspace byproducts
+- Bring PowerShell feature-directory resolution in line with Bash by resolving active spec directories from the branch prefix when available
+
 ## [2.0.5] - 2026-03-13
 
 ### Changed

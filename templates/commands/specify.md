@@ -116,9 +116,9 @@ Given that feature description, do this:
 5. Write the specification to SPEC_FILE using the template structure, replacing placeholders with concrete details derived from the feature description (arguments) while preserving section order and headings.
    - Ensure all concrete names come from user input or reasonable neutral defaults (not from unrelated example projects).
 
-6. **Specification Quality Validation**: After writing the initial spec, validate it against quality criteria:
+6. **Specification Quality Self-Validation**: After writing the initial spec, validate it in-command against quality criteria (do **not** create checklist artifacts in this command):
 
-   a0. **Run an Anti-Solidification Pass (mandatory before checklist validation)**:
+   a0. **Run an Anti-Solidification Pass (mandatory before validation)**:
       - Build a term set from current user input (`$ARGUMENTS`) plus neutral template vocabulary.
       - Scan the generated spec for domain/project/entity terms that are not supported by:
         1) user input,
@@ -127,60 +127,29 @@ Given that feature description, do this:
       - If unsupported terms are found, replace with neutral wording or terms derived from user input.
       - Do not keep legacy/example project terms from prior conversations.
 
-   a. **Create Spec Quality Checklist**: Generate a checklist file at `FEATURE_DIR/checklists/requirements.md` using the checklist template structure with these validation items:
+   a. **Run Validation Check**: Review the spec against these criteria:
+      - No implementation details (languages, frameworks, APIs)
+      - Focused on user value and business needs
+      - Written for non-technical stakeholders
+      - All mandatory sections completed
+      - No unsupported domain terms leaked from prior analysis/examples
+      - No [NEEDS CLARIFICATION] markers remain
+      - Requirements are testable and unambiguous
+      - Success criteria are measurable and technology-agnostic
+      - All acceptance scenarios and edge cases are defined
+      - Scope is clearly bounded; dependencies and assumptions identified
+      - All functional requirements have clear acceptance criteria
+      - User scenarios cover primary flows
 
-      ```markdown
-      # Specification Quality Checklist: [FEATURE NAME]
-      
-      **Purpose**: Validate specification completeness and quality before proceeding to planning
-      **Created**: [DATE]
-      **Feature**: [Link to spec.md]
-      
-      ## Content Quality
-      
-      - [ ] No implementation details (languages, frameworks, APIs)
-      - [ ] Focused on user value and business needs
-      - [ ] Written for non-technical stakeholders
-      - [ ] All mandatory sections completed
-      - [ ] No unsupported domain terms leaked from prior analysis/examples
-      
-      ## Requirement Completeness
-      
-      - [ ] No [NEEDS CLARIFICATION] markers remain
-      - [ ] Requirements are testable and unambiguous
-      - [ ] Success criteria are measurable
-      - [ ] Success criteria are technology-agnostic (no implementation details)
-      - [ ] All acceptance scenarios are defined
-      - [ ] Edge cases are identified
-      - [ ] Scope is clearly bounded
-      - [ ] Dependencies and assumptions identified
-      
-      ## Feature Readiness
-      
-      - [ ] All functional requirements have clear acceptance criteria
-      - [ ] User scenarios cover primary flows
-      - [ ] Feature meets measurable outcomes defined in Success Criteria
-      - [ ] No implementation details leak into specification
-      
-      ## Notes
-      
-      - Items marked incomplete require spec updates before `/sdd.clarify` or `/sdd.plan`
-      ```
+   b. **Handle Validation Results**:
 
-   b. **Run Validation Check**: Review the spec against each checklist item:
-      - For each item, determine if it passes or fails
-      - Document specific issues found (quote relevant spec sections)
-      - Validation MUST fail if unsupported domain terms are present
-
-   c. **Handle Validation Results**:
-
-      - **If all items pass**: Mark checklist complete and proceed to step 6
+      - **If all items pass**: proceed to step 7.
 
       - **If items fail (excluding [NEEDS CLARIFICATION])**:
         1. List the failing items and specific issues
         2. Update the spec to address each issue
         3. Re-run validation until all items pass (max 3 iterations)
-        4. If still failing after 3 iterations, document remaining issues in checklist notes and warn user
+        4. If still failing after 3 iterations, document remaining issues in the completion report and warn user
 
       - **If [NEEDS CLARIFICATION] markers remain**:
         1. Extract all [NEEDS CLARIFICATION: ...] markers from the spec
@@ -217,9 +186,7 @@ Given that feature description, do this:
         8. Update the spec by replacing each [NEEDS CLARIFICATION] marker with the user's selected or provided answer
         9. Re-run validation after all clarifications are resolved
 
-   d. **Update Checklist**: After each validation iteration, update the checklist file with current pass/fail status
-
-7. Report completion with branch name, spec file path, checklist results, and readiness for the next phase (`/sdd.clarify` or `/sdd.plan`).
+7. Report completion with branch name, spec file path, and readiness for the next phase (`/sdd.clarify` or `/sdd.plan`). If checklist-style validation output is needed, direct users to run `/sdd.checklist` as a separate vertical command.
 
 **NOTE:** The script creates and checks out the new branch and initializes the spec file before writing.
 
