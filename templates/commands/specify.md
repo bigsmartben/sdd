@@ -70,6 +70,12 @@ Given that feature description, do this:
 
 3. Load `templates/spec-template.md` to understand required sections.
 
+**Authority and derivation rules**:
+
+- Any extracted actor lists, term sets, requirement drafts, or working summaries used during `/sdd.specify` are derived working views only.
+- `spec.md` becomes the authoritative feature-semantics artifact only after the current refinement/validation cycle is written successfully.
+- If clarification answers, validation rewrites, or scope edits change feature meaning, discard stale derived notes and re-derive from the current `spec.md` content before handoff.
+
 4. Follow this execution flow:
 
     1. Parse user description from Input

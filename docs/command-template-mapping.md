@@ -16,8 +16,28 @@ This document replaces the prior refactor baseline document.
 - Templates define artifact shape, section structure, and writing constraints.
 - One command may consume multiple templates.
 - Main-flow artifacts must not absorb audit, traceability, or checklist responsibilities.
+- Authoritative artifacts own semantics; summaries, projection notes, inline mappings, caches, and other derived views are disposable navigation aids only.
+- When a derived view conflicts with or lags behind its source artifact, commands must return to the authoritative source slice before producing downstream output.
 - Responsibilities must not expand across stage boundaries.
 - Prompts should stay concise and effective; remove material that biases downstream work.
+
+## Authority Model
+
+| Artifact / View | Primary Role | Authority Level |
+| --- | --- | --- |
+| `memory/constitution.md` | Project-wide principles, terminology boundaries, governance rules | Authoritative |
+| `spec.md` | Feature business semantics and user-visible requirements | Authoritative |
+| `research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, `interface-details/` | Planning-stage design semantics within their defined scopes | Authoritative within scope |
+| `plan.md` | Planning summary and downstream projection ledger | Derived view |
+| `tasks.md` | Execution mapping and DAG scheduling authority | Authoritative for execution order; derived for upstream semantics |
+| internal extraction tables / tuple maps / caches / summaries | Context reduction and navigation | Derived view |
+
+Authority rules:
+
+- Derived views may speed retrieval or navigation, but they MUST NOT redefine upstream semantics.
+- `Task DAG` remains the execution authority inside `tasks.md`; task prose and inline predecessor mirrors do not outrank it.
+- `plan.md` does not supersede the stage artifacts it summarizes.
+- `tasks.md` does not supersede `spec.md`, `contracts/`, `data-model.md`, or `test-matrix.md` for semantics.
 
 ## Mapping Overview
 

@@ -7,7 +7,7 @@
 
 [Brief summary of the feature, technical direction, and planning intent]
 
-This document is the planning-stage summary only. Detailed authoring structure for `research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, and `interface-details/` lives in the sibling planning templates under `templates/`. Use this file to compress stage outcomes into short downstream projection notes so later stages can reuse stable anchors without replaying full artifact bodies.
+This document is the planning-stage summary only. Detailed authoring structure for `research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, and `interface-details/` lives in the sibling planning templates under `templates/`. Use this file to compress stage outcomes into short downstream projection notes so later stages can reuse stable anchors without replaying full artifact bodies. `plan.md` is a derived planning view and MUST NOT supersede the stage artifacts it summarizes.
 
 ## Workflow Loop
 

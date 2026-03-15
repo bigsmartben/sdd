@@ -23,6 +23,8 @@ Run the dedicated pre-implementation audit across the three core artifacts (`spe
 
 **Constitution Authority**: The project constitution (`/memory/constitution.md`) is **non-negotiable** within this analysis scope. Constitution conflicts are automatically CRITICAL and require adjustment of the spec, plan, or tasks—not dilution, reinterpretation, or silent ignoring of the principle. If a principle itself needs to change, that must occur in a separate, explicit constitution update outside `/sdd.analyze`.
 
+**Artifact Authority**: Summaries, projection notes, inline references, caches, and other derived views are secondary evidence only. CRITICAL/HIGH findings MUST cite the authoritative source artifact(s) that establish the contradiction or gap.
+
 ## Execution Steps
 
 ### 1. Initialize Analysis Context
@@ -63,6 +65,7 @@ Load only the minimal necessary context from each artifact:
 - Descriptions and completion anchors
 - Referenced requirement / verification refs when present
 - Referenced file paths
+- Treat task-local summaries or inline mirrors as derived views only when they disagree with authoritative upstream artifacts
 
 **From supporting planning artifacts (load only when needed for Stage 3 consistency checks):**
 

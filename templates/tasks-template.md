@@ -28,6 +28,7 @@ Reference precedence:
 - Global model semantics: `data-model.md`
 - Feature verification semantics: `test-matrix.md`
 - `tasks.md`: execution mapping only; must not redefine the above semantics
+- Inline task summaries, local execution notes, and other derived views must yield to the authoritative artifacts above when conflicts appear.
 
 Stage boundary guard:
 

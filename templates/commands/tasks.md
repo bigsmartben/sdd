@@ -84,6 +84,8 @@ You **MUST** consider the user input before proceeding (if not empty).
      - global model semantics from `data-model.md`
      - feature verification semantics from `test-matrix.md`
      - `tasks.md` only maps execution and must not redefine the above semantics
+   - Treat `plan.md` as a planning summary / structure guide, not as a replacement for canonical requirement, contract, model, or verification semantics owned by the authoritative upstream artifacts above.
+   - Any tuple indexes, execution maps, or working summaries created during `/sdd.tasks` are derived views only and MUST be rebuilt if they drift from the authoritative artifacts they summarize.
    - Load `research.md` only when implementation constraints or prior decisions materially affect task generation
    - Generate a lightweight execution mapping by keeping task-level refs inside IF/global task definitions
    - Generate **Task DAG** as adjacency list and use it as the baseline dependency source for execution order

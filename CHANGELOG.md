@@ -7,6 +7,20 @@ Recent changes to the Specify CLI and templates are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.7] - 2026-03-15
+
+### Changed
+
+- Introduce a cross-command authority model that keeps `constitution.md`, `spec.md`, and planning artifacts authoritative while treating `plan.md` projection notes, inline mappings, and runtime summaries as derived views that must re-source on drift
+- Refine `/sdd.plan` runtime scheduling guidance around bounded work queues and subtask-based context reduction without changing stage order, required outputs, or stage boundaries
+- Clarify in `/sdd.specify`, `/sdd.tasks`, `/sdd.implement`, and `/sdd.analyze` when downstream commands may rely on derived views versus when they must return to authoritative artifacts
+- Document the artifact authority / derived-view split in `docs/command-template-mapping.md`, `plan-template.md`, and `tasks-template.md`
+
+### Added
+
+- Add authority-protocol regression coverage for command templates and mapping docs
+- Add cross-agent release-packaging integration coverage that verifies the authority protocol is preserved in generated command artifacts across all packaged agents on the Bash release path, with a PowerShell equivalent test that runs when `pwsh` is available
+
 ## [2.0.6] - 2026-03-15
 
 ### Added

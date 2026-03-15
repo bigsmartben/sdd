@@ -44,12 +44,19 @@ def test_plan_command_uses_context_minimization_and_sequential_generation():
     assert "Bootstrap shared context only" in content
     assert "Do not preload stage templates or completed stage artifacts before they are needed." in content
     assert "Treat `plan.md` as the planning compression ledger" in content
+    assert "Build the runtime work queue before each stage" in content
+    assert "This runtime scheduling guidance is execution-only." in content
+    assert "Keep only three context tiers active" in content
+    assert "Turn each stage into one parent task with bounded subtasks: `Discover -> Generate -> Compress`." in content
+    assert "discard its detailed working set and carry forward only stable anchors" in content
     assert "read only that stage's template plus the minimum upstream artifacts required for that stage" in content
     assert "write a 3-7 bullet downstream projection note set" in content
     assert "Do not write retrospective recaps or generic stage summaries" in content
     assert "generate one contract artifact at a time" in content
     assert "generate one detail artifact at a time" in content
     assert "keep only the active tuple (`Operation ID`, `Boundary Anchor`, `IF Scope`) in working context" in content
+    assert "Parallelism inside `/sdd.plan`" not in content
+    assert "Prefer facade / boundary / stable symbol anchors before implementation-layer internals" not in content
 
 
 def test_plan_template_is_structure_only_for_new_workflow():

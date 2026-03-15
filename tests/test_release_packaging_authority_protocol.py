@@ -1,0 +1,147 @@
+from __future__ import annotations
+
+import os
+import re
+import shutil
+import subprocess
+from pathlib import Path
+
+import pytest
+
+from specify_cli.extensions import CommandRegistrar
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+REQUIRED_TOOLS = ("bash", "zip", "find", "sed", "awk")
+PACKAGED_COMMAND_DIR_OVERRIDES = {
+    "cursor-agent": ".cursor/commands",
+    "kilocode": ".kilocode/rules",
+    "auggie": ".augment/rules",
+    "agy": ".agent/workflows",
+    "vibe": ".vibe/prompts",
+    "generic": ".sdd/commands",
+}
+EXPECTED_MARKERS = [
+    "`spec.md` becomes the authoritative feature-semantics artifact",
+    "derived views only; they MUST NOT override upstream artifacts or downstream stage artifacts",
+    "planning summary / structure guide, not as a replacement for canonical requirement, contract, model, or verification semantics",
+    "CRITICAL/HIGH findings MUST cite the authoritative source artifact(s)",
+]
+
+
+requires_packaging_tools = pytest.mark.skipif(
+    any(shutil.which(tool) is None for tool in REQUIRED_TOOLS),
+    reason="release packaging tools are unavailable",
+)
+requires_pwsh = pytest.mark.skipif(
+    shutil.which("pwsh") is None,
+    reason="pwsh is unavailable",
+)
+
+
+def _copy_tree(rel_path: str, dest_root: Path) -> None:
+    src = REPO_ROOT / rel_path
+    if not src.exists():
+        return
+    dst = dest_root / rel_path
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(src, dst)
+
+
+def _release_agents(script_text: str) -> list[str]:
+    match = re.search(r"ALL_AGENTS=\(([^)]*)\)", script_text)
+    assert match is not None
+    return match.group(1).split()
+
+
+def _read_text_files(root: Path) -> str:
+    chunks: list[str] = []
+    for path in sorted(root.rglob("*")):
+        if not path.is_file():
+            continue
+        if path.suffix not in {".md", ".toml"} and path.name != "SKILL.md":
+            continue
+        chunks.append(path.read_text(encoding="utf-8"))
+    return "\n".join(chunks)
+
+
+def _packaged_command_dir(package_root: Path, agent: str) -> Path:
+    if agent in PACKAGED_COMMAND_DIR_OVERRIDES:
+        return package_root / PACKAGED_COMMAND_DIR_OVERRIDES[agent]
+    registrar_key = "cursor" if agent == "cursor-agent" else agent
+    return package_root / CommandRegistrar.AGENT_CONFIGS[registrar_key]["dir"]
+
+
+def _prepare_packaging_fixture(tmp_path: Path) -> None:
+    for rel in [
+        ".github/workflows/scripts",
+        "agent_templates",
+        "memory",
+        "scripts",
+        "templates",
+    ]:
+        _copy_tree(rel, tmp_path)
+
+def _assert_packaged_authority_markers(tmp_path: Path, agents: list[str], suffix: str) -> None:
+    for agent in agents:
+        package_root = tmp_path / ".genreleases" / f"sdd-{agent}-package-{suffix}"
+        command_dir = _packaged_command_dir(package_root, agent)
+        assert command_dir.exists(), f"missing command directory for {agent}: {command_dir}"
+        combined_text = _read_text_files(command_dir)
+        for marker in EXPECTED_MARKERS:
+            assert marker in combined_text, f"missing authority marker for {agent}: {marker}"
+
+
+@requires_packaging_tools
+def test_bash_release_packaging_carries_authority_protocol_into_all_agent_outputs(tmp_path: Path):
+    _prepare_packaging_fixture(tmp_path)
+
+    script_path = tmp_path / ".github" / "workflows" / "scripts" / "create-release-packages.sh"
+    script_text = script_path.read_text(encoding="utf-8")
+    agents = _release_agents(script_text)
+
+    env = os.environ.copy()
+    env["AGENTS"] = " ".join(agents)
+    env["SCRIPTS"] = "sh"
+
+    subprocess.run(
+        ["bash", str(script_path), "v0.0.9"],
+        cwd=tmp_path,
+        env=env,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    _assert_packaged_authority_markers(tmp_path, agents, "sh")
+
+
+@requires_packaging_tools
+@requires_pwsh
+def test_powershell_release_packaging_carries_authority_protocol_into_all_agent_outputs(tmp_path: Path):
+    _prepare_packaging_fixture(tmp_path)
+
+    script_path = tmp_path / ".github" / "workflows" / "scripts" / "create-release-packages.ps1"
+    script_text = script_path.read_text(encoding="utf-8")
+    match = re.search(r"\$AllAgents = @\(([^)]*)\)", script_text)
+    assert match is not None
+    agents = re.findall(r"'([^']+)'", match.group(1))
+
+    subprocess.run(
+        [
+            "pwsh",
+            "-File",
+            str(script_path),
+            "v0.0.9",
+            "-Agents",
+            " ".join(agents),
+            "-Scripts",
+            "sh",
+        ],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    _assert_packaged_authority_markers(tmp_path, agents, "sh")

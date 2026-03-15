@@ -43,6 +43,7 @@ Follow this execution flow:
    - Ensure Governance section lists amendment procedure, versioning policy, and compliance review expectations.
 
 4. Consistency propagation checklist (convert prior checklist into active validations):
+   - Treat `.specify/memory/constitution.md` as the authoritative project-level rule source. Any summaries, extracted rule lists, or downstream restatements of constitution content are derived views only and MUST be refreshed when the constitution meaning changes.
    - Read `.specify/templates/plan-template.md` and ensure any "Constitution Check" or rules align with updated principles.
    - Read the planning-stage templates in `.specify/templates/` (`research-template.md`, `data-model-template.md`, `test-matrix-template.md`, `contract-template.md`, and `interface-detail-template.md`) and ensure they reflect the updated principles and stage boundaries.
    - Read `.specify/templates/spec-template.md` for scope/requirements alignment—update if constitution adds/removes mandatory sections or constraints.

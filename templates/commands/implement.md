@@ -126,6 +126,7 @@ You **MUST** consider the user input before proceeding (if not empty).
      - Final completion anchors remain satisfiable
      - Runtime adaptation notes are reported in execution output
    - **REQUIRED**: Treat `[Pre:T###,...]` only as an inline dependency mirror (consistency check), not as dependency authority
+   - **REQUIRED**: Treat runtime batching notes, ready-task summaries, and local execution shortcuts as derived views only; they MUST NOT override `tasks.md` or authoritative upstream design artifacts.
    - **REQUIRED**: Read plan.md for tech stack, architecture, and file structure
    - Load supporting artifacts only when they are needed to execute a ready task or validate its completion anchor:
      - `interface-details/` for per-interface behavior and sequencing details
@@ -133,6 +134,7 @@ You **MUST** consider the user input before proceeding (if not empty).
      - `contracts/` for interface semantics and contract checks
      - `test-matrix.md` for feature verification anchors referenced by tasks
      - `research.md` for implementation constraints and decisions
+   - If a task summary, inline reference, or local execution note conflicts with an authoritative supporting artifact, use the authoritative artifact for semantics; if the conflict indicates upstream drift that cannot be safely resolved locally, stop and send the work back to upstream repair or `/sdd.analyze`.
 
 4. Generate an execution strategy summary before modifying code:
    - Produce a short `Execution Strategy Summary` that states:
