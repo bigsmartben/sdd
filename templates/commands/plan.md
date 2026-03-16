@@ -34,7 +34,45 @@ Workflow order is fixed and non-negotiable:
 4. Stage 3 -> `contracts/`
 5. Stage 4 -> `interface-details/`
 
+## Repository-First Projection Artifacts (Mandatory)
+
+`/sdd.plan` MUST consume the repository-first canonical baseline produced by `/sdd.constitution`.
+These artifacts are authoritative at the project level and live under `.specify/memory/repository-first/`:
+
+1. `.specify/memory/repository-first/technical-dependency-matrix.md`
+2. `.specify/memory/repository-first/domain-boundary-responsibilities.md`
+3. `.specify/memory/repository-first/module-invocation-spec.md`
+
+Repository-first consumption rules:
+
+- If any canonical artifact is missing, stale, or non-traceable, stop and route to `/sdd.constitution` before continuing planning generation.
+- Feature-local copies under `FEATURE_DIR` are derived views only and MUST NOT be treated as repository-first semantic authority.
+- `technical-dependency-matrix.md` contract:
+  - fields: `Dependency (G:A)`, `Type`, `Version`, `Scope`, `Version Source`, `Used By Modules`
+  - `Type` values: `2nd` / `3rd`
+  - `Version Source` values: `direct`, `dependencyManagement`, `module-dependencyManagement`, `unresolved`
+  - preserve version divergence and `unresolved` as governance signals
+- `domain-boundary-responsibilities.md` contract:
+  - fields: `Domain Boundary`, `Responsibilities`, `Core Entity Anchors` (`path::symbol`), `2nd-Party Collaboration Anchor`
+  - scope: domain-boundary level only; do not model dependency direction
+- `module-invocation-spec.md` contract:
+  - sections: `Allowed Direction`, `Forbidden Direction`, `Dependency Governance Rules`
+  - invocation governance MUST consume version-divergence and `unresolved` signals from the canonical dependency matrix
+
+Dependency-source baseline assumptions (produced by `/sdd.constitution` and consumed here):
+
+- Build-manifest auto-detection processes supported ecosystems in deterministic priority:
+  - Maven (`pom.xml`), Node (`package.json`), Python (`pyproject.toml` + requirements/lock hints), Go (`go.mod`)
+- Dependency key normalization:
+  - Maven: `group:artifact`
+  - Node/Python/Go: `ecosystem:package_or_module`
+
 ## Stage Template Bindings
+
+Template authority note:
+- In this repository, command template references use `templates/...` as source-of-truth.
+- In initialized project workspaces, the same files are materialized under `.specify/templates/...`.
+- For Stage 4, treat `.specify/templates/interface-detail-template.md` as the runtime template path in feature projects.
 
 ## Stage 0: Research
 
@@ -55,6 +93,12 @@ Workflow order is fixed and non-negotiable:
 ## Stage 4: Interface Detailed Design
 
 - Template: `templates/interface-detail-template.md`
+
+## Repository-First Baseline Templates (Reference)
+
+- `templates/technical-dependency-matrix-template.md`
+- `templates/domain-boundary-responsibilities-template.md`
+- `templates/module-invocation-spec-template.md`
 
 Stage I/O boundaries:
 
@@ -100,8 +144,11 @@ After each stage, write 3-7 concise downstream projection notes into `plan.md` a
 - In Stage 3, generate one contract artifact at a time.
 - In Stage 4, generate one detail artifact at a time.
 - For tuple-scoped generation, keep only the active tuple (`Operation ID`, `Boundary Anchor`, `IF Scope`) in working context.
-- For `/sdd.plan`, `repo anchor` means source-code files/symbols plus `.specify/memory/constitution.md` only.
-- `README.md`, `docs/**`, `specs/**`, historical examples, and generated artifacts are supporting inputs only.
+- For `/sdd.plan`, repo semantic evidence follows constitution `Repo-Anchor Evidence Protocol`: source anchors plus engineering assembly facts only.
+- Dependency-matrix conclusions MUST come from canonical repository-first baseline files, not feature-local regeneration.
+- Capability-boundary conclusions MUST read source anchors only.
+- `.specify/memory/constitution.md` is rule authority for this command and MUST NOT be treated as component-boundary evidence.
+- `README.md`, `docs/**`, `specs/**`, `tests/**`, `plans/**`, `templates/**`, historical examples, and generated artifacts are supporting inputs only.
 
 ## Generation Rules
 
@@ -116,8 +163,12 @@ After each stage, write 3-7 concise downstream projection notes into `plan.md` a
   - `plan.md` downstream projection notes and any temporary extraction tables or summaries are derived views only; they MUST NOT override upstream artifacts or downstream stage artifacts.
   - When temporary notes drift from current authoritative source artifacts, discard the stale derived view and reread the authoritative slice before continuing downstream generation.
 - Repo-anchor discipline:
-  - For `/sdd.plan`, semantic repo anchors are source code symbols/files plus `.specify/memory/constitution.md`.
-  - `spec.md`, planning artifacts, `README.md`, `docs/**`, `specs/**`, and generated outputs are supporting inputs only, and they MUST NOT be promoted into repo semantic anchors.
+  - For `/sdd.plan`, semantic repo evidence is restricted to source anchors and engineering assembly facts.
+  - Repository-first canonical baseline path is `.specify/memory/repository-first/`.
+  - `technical-dependency-matrix.md` facts in the canonical baseline come from build-manifest auto-detection (`pom.xml`, `package.json`, `pyproject.toml`, `go.mod` when present).
+  - `domain-boundary-responsibilities.md` facts in the canonical baseline come from source anchors only.
+  - `module-invocation-spec.md` in the canonical baseline comes from real module structure plus dependency-governance signals from the canonical dependency matrix.
+  - `spec.md`, planning artifacts, `README.md`, `docs/**`, `specs/**`, `tests/**`, `plans/**`, `templates/**`, and generated outputs are supporting inputs only, and they MUST NOT be promoted into repo semantic anchors.
 - Missing-anchor rule:
   - If semantic evidence lacks repo anchor, mark `TODO(REPO_ANCHOR)` as `forward-looking`.
   - Stop semantic promotion for that item in current stage.
@@ -168,6 +219,7 @@ After each stage, write 3-7 concise downstream projection notes into `plan.md` a
 Stop immediately when any of the following occurs:
 
 - Required stage input is missing or contradictory.
+- Canonical repository-first baseline files are missing or stale (`.specify/memory/repository-first/*.md`); route to `/sdd.constitution`.
 - Critical clarification or constraint remains unresolved.
 - Semantic item requires repo anchor but none is found (`TODO(REPO_ANCHOR)`).
 - `Boundary Anchor` uses non-normative form (including `BA-*`) as if it were authoritative.

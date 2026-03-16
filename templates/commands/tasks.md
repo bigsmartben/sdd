@@ -90,6 +90,14 @@ Terminology note (compatibility, non-normative):
    - Treat `plan.md` as a planning summary / structure guide, not as a replacement for canonical requirement, contract, model, or verification semantics.
    - Read `plan.md` and `spec.md` for bootstrap extraction only (tech stack, structure, constraints, requirement/story refs for execution mapping).
    - Convert approved planning artifacts into executable work packages plus a dependency-safe DAG; do not redesign upstream semantics in `/sdd.tasks`.
+   - Repository-first consumption discipline:
+     - Use canonical baseline files under `.specify/memory/repository-first/` only:
+       - `.specify/memory/repository-first/technical-dependency-matrix.md` for dependency-governance task projection
+       - `.specify/memory/repository-first/domain-boundary-responsibilities.md` for boundary ownership/collaboration task projection
+       - `.specify/memory/repository-first/module-invocation-spec.md` for invocation-direction and layering-governance task projection
+     - Feature-local copies are derived views only and MUST NOT replace canonical baseline semantics.
+     - Do not derive dependency matrix / boundary responsibilities / invocation governance semantics from `README.md`, `docs/**`, planning narratives, or generated summaries.
+     - If required canonical repository-first evidence is missing, stale, or non-traceable, stop task generation for affected scope and route repair to `/sdd.constitution` or `/sdd.analyze`.
    - Use the fixed loop `Discover -> Generate -> Compress` for every generation unit.
    - Between `Generate` and `Compress`, run **hard execution safety gates only** for the active unit: required anchor presence, prevention of promoting `TODO(REPO_ANCHOR)` into executable semantics, local mapping completeness, and dependency-safe schedulability.
    - **GLOBAL inventory and foundation unit**:
@@ -153,6 +161,7 @@ Additional generation constraints:
 - Treat interface delivery units as execution mapping only.
 - Each interface delivery unit SHOULD include at least one `Verify` task and one `Interface` task (document exceptions explicitly).
 - Tasks may refine operation-level mappings but MUST NOT rewrite approved global object semantics.
+- Repository-first projection artifacts in `.specify/memory/repository-first/` are complementary and MUST NOT replace one another (`technical-dependency-matrix.md` = dependency facts, `domain-boundary-responsibilities.md` = business boundary ownership, `module-invocation-spec.md` = invocation constraints).
 - Task execution targets MUST reference anchored tuples only. `TODO(REPO_ANCHOR)` items MUST NOT be converted into executable interface semantics, completion anchors, or implementation objectives.
 - Use deterministic refs (`operationId`, `CaseID`, `TM-*`, `TC-*`) only when they help execution or completion checking.
 - Keep Task DAG dependency-safe and minimally sufficient (avoid speculative over-constraint).

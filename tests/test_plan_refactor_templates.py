@@ -55,8 +55,12 @@ def test_plan_command_uses_context_minimization_and_sequential_generation():
     assert "generate one contract artifact at a time" in content
     assert "generate one detail artifact at a time" in content
     assert "keep only the active tuple (`Operation ID`, `Boundary Anchor`, `IF Scope`) in working context" in content
-    assert "repo anchor` means source-code files/symbols plus `.specify/memory/constitution.md` only" in content
-    assert "`README.md`, `docs/**`, `specs/**`, historical examples, and generated artifacts" in content
+    assert "source anchors plus engineering assembly facts only" in content
+    assert "`.specify/memory/constitution.md` is rule authority for this command" in content
+    assert "MUST NOT be treated as component-boundary evidence" in content
+    assert ".specify/memory/repository-first/" in content
+    assert "route to `/sdd.constitution`" in content
+    assert "`README.md`, `docs/**`, `specs/**`, `tests/**`, `plans/**`, `templates/**`, historical examples, and generated artifacts" in content
     assert "Parallelism inside `/sdd.plan`" not in content
     assert "Prefer facade / boundary / stable symbol anchors before implementation-layer internals" not in content
 
@@ -185,8 +189,12 @@ def test_downstream_templates_docs_and_scripts_match_refactor_baseline():
     assert "| `test-matrix.md` | feature verification anchors (`TM-*` / `TC-*`) | Yes |" in tasks_template
 
     mapping_doc = read("docs/command-template-mapping.md")
-    assert "`plan-template.md` plus `research-template.md`, `data-model-template.md`, `test-matrix-template.md`, `contract-template.md`, and `interface-detail-template.md`" in mapping_doc
+    assert "`/sdd.constitution` | Update constitution rules and refresh project-level repository-first baseline" in mapping_doc
+    assert "`plan-template.md` plus `research-template.md`, `data-model-template.md`, `test-matrix-template.md`, `contract-template.md`, `interface-detail-template.md`, and repository-first projection templates as structural contracts" in mapping_doc
     assert "`research-template.md` defines `research.md`." in mapping_doc
+    assert ".specify/memory/repository-first/technical-dependency-matrix.md" in mapping_doc
+    assert ".specify/memory/repository-first/domain-boundary-responsibilities.md" in mapping_doc
+    assert ".specify/memory/repository-first/module-invocation-spec.md" in mapping_doc
     assert "interface delivery units are IF-scoped work packages" in mapping_doc
 
     readme = read("README.md")
@@ -231,7 +239,7 @@ def test_repo_anchor_policy_excludes_helper_docs_across_templates():
     assert "docs/**" in plan
     assert "specs/**" in plan
     assert "Do not list `README.md`, `docs/**`, `specs/**`, or generated artifacts here." in research
-    assert "Misuse of `README.md`, `docs/**`, `specs/**`, demos, or generated artifacts as repo semantic anchors" in analyze
+    assert "Misuse of `README.md`, `docs/**`, `specs/**`, `tests/**`, `plans/**`, `templates/**`, demos, or generated artifacts as repo semantic anchors" in analyze
 
 
 def test_implement_command_prefers_manifest_has_fallback_and_single_parse_rule():
@@ -245,3 +253,52 @@ def test_implement_command_prefers_manifest_has_fallback_and_single_parse_rule()
     assert "Build the in-memory scheduling graph exactly once per run" in content
     assert "reuse that graph for scheduling/checkpoints/completion validation" in content
     assert "do not re-run full markdown parsing loops during the same `/sdd.implement` run" in content
+
+
+def test_repository_first_projection_templates_exist_and_include_required_structure():
+    expected_templates = {
+        "templates/technical-dependency-matrix-template.md": [
+            "# Technical Dependency Matrix: [PROJECT]",
+            "Canonical Path",
+            ".specify/memory/repository-first/technical-dependency-matrix.md",
+            "| Dependency (G:A) | Type | Version | Scope | Version Source | Used By Modules |",
+            "Maven: `pom.xml`",
+            "Node: `package.json`",
+            "Python: `pyproject.toml`",
+            "Go: `go.mod`",
+            "`Type` MUST be either `2nd` or `3rd`.",
+            "`Version Source` MUST be one of: `direct`, `dependencyManagement`, `module-dependencyManagement`, `unresolved`.",
+            "version divergence and `unresolved`",
+        ],
+        "templates/domain-boundary-responsibilities-template.md": [
+            "# Domain Boundary Responsibilities: [PROJECT]",
+            ".specify/memory/repository-first/domain-boundary-responsibilities.md",
+            "Source anchors only (`path::symbol`)",
+            "| Domain Boundary | Responsibilities | Core Entity Anchors (`path::symbol`) | 2nd-Party Collaboration Anchor |",
+            "MUST stay at domain-boundary granularity",
+        ],
+        "templates/module-invocation-spec-template.md": [
+            "# Module Invocation Spec: [PROJECT]",
+            ".specify/memory/repository-first/module-invocation-spec.md",
+            "## Allowed Direction",
+            "## Forbidden Direction",
+            "## Dependency Governance Rules",
+            "MUST consume version-divergence and `unresolved` signals",
+        ],
+    }
+
+    for rel_path, markers in expected_templates.items():
+        content = read(rel_path)
+        for marker in markers:
+            assert marker in content
+
+
+def test_plan_requires_canonical_repository_first_baseline_and_fail_fast():
+    plan = read("templates/commands/plan.md")
+
+    assert "MUST consume the repository-first canonical baseline produced by `/sdd.constitution`." in plan
+    assert ".specify/memory/repository-first/technical-dependency-matrix.md" in plan
+    assert ".specify/memory/repository-first/domain-boundary-responsibilities.md" in plan
+    assert ".specify/memory/repository-first/module-invocation-spec.md" in plan
+    assert "Feature-local copies under `FEATURE_DIR` are derived views only" in plan
+    assert "Build-manifest auto-detection" in plan

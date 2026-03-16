@@ -36,13 +36,13 @@ Mechanical output structure is governed by `templates/lint-report-template.md`; 
 
 **Artifact Authority**
 
-Authoritative artifacts: `spec.md`, `plan.md`, `tasks.md`, `.specify/memory/constitution.md`, and supporting planning artifacts (`research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, `interface-details/`).
+Authoritative artifacts: `spec.md`, `plan.md`, `tasks.md`, `.specify/memory/constitution.md`, supporting planning artifacts (`research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, `interface-details/`), and repository-first canonical baseline projections in `.specify/memory/repository-first/` (`technical-dependency-matrix.md`, `domain-boundary-responsibilities.md`, `module-invocation-spec.md`) when required by plan outputs.
 
 `/sdd.analyze` owns comprehensive implementation-readiness analysis and audit responsibilities.
 CRITICAL/HIGH findings MUST cite the authoritative source artifact(s).
 Treat task-local summaries or inline mirrors as derived views only.
 Derived views (summaries, mirrors, projection notes, caches) are secondary evidence only.
-Misuse of `README.md`, `docs/**`, `specs/**`, demos, or generated artifacts as repo semantic anchors must be reported as `repo-anchor misuse`.
+Misuse of `README.md`, `docs/**`, `specs/**`, `tests/**`, `plans/**`, `templates/**`, demos, or generated artifacts as repo semantic anchors must be reported as `repo-anchor misuse`.
 
 ## Operating Constraints
 
@@ -98,6 +98,11 @@ Load only sections needed for semantic conclusions:
   - `data-model.md` for domain objects/invariants/lifecycle anchors
   - `test-matrix.md` for path anchors
   - `interface-details/` for operation behavior, sequence, UML details
+- From repository-first canonical baseline (required when plan outputs depend on repository-first projections):
+  - `.specify/memory/repository-first/technical-dependency-matrix.md` for dependency evidence (`Dependency (G:A)`, `Version Source`, divergence/`unresolved` governance signals)
+  - `.specify/memory/repository-first/domain-boundary-responsibilities.md` for source-anchored capability boundaries (`Core Entity Anchors` as `path::symbol`)
+  - `.specify/memory/repository-first/module-invocation-spec.md` for invocation governance (`Allowed Direction`, `Forbidden Direction`, `Dependency Governance Rules`)
+  - if expected canonical files are missing/stale, stop and route remediation to `/sdd.constitution`
 - From constitution: MUST/SHOULD principles required for validation.
 
 ### 4) Build Semantic Models
@@ -143,6 +148,22 @@ Mandatory explicit semantic checks (do not skip even when lint is available):
 - state-machine applicability compliance (constitution-driven):
   - evaluate lifecycle modeling outputs against constitution applicability thresholds for Full FSM vs Lightweight State Model
   - when Full FSM is used below threshold, require explicit planning justification evidence (for example in plan complexity tracking); flag as finding when absent
+
+- repository-first projection evidence checks:
+  - dependency evidence check:
+    - flag canonical dependency-matrix rows not traceable to engineering assembly facts
+    - verify dependency extraction aligns with supported build-manifest auto-detection (`pom.xml`, `package.json`, `pyproject.toml` + requirements/lock hints, `go.mod`) when those files exist
+    - verify dependency key normalization (`group:artifact` for Maven, `ecosystem:package_or_module` for Node/Python/Go)
+    - flag missing/invalid `Version Source` values when dependency rows exist
+    - flag silent normalization when version divergence or `unresolved` evidence should be preserved
+  - boundary evidence check:
+    - flag `domain-boundary-responsibilities.md` boundaries lacking source-anchor evidence
+    - flag `Core Entity Anchors` values not in `path::symbol` form
+    - flag misuse where `2nd-Party Collaboration Anchor` is used as dependency-matrix substitute
+  - invocation governance check:
+    - flag `module-invocation-spec.md` missing any required section (`Allowed Direction`, `Forbidden Direction`, `Dependency Governance Rules`)
+    - flag invocation rules not aligned to real module layering
+    - flag dependency-governance rules that ignore divergence/`unresolved` signals from canonical `technical-dependency-matrix.md`
 
 Mechanical checks delegated to planning lint (for example format-level tuple lint and diagram syntax issues) should be consumed from lint output instead of duplicating long rule prose here.
 
@@ -193,7 +214,7 @@ Assemble and output one decision:
 - `FAIL`: at least one blocking finding remains.
 
 When `FAIL`, provide blocker list with evidence and remediation owner command (`/sdd.specify`, `/sdd.plan`, or `/sdd.tasks`).
-Treat the following as blocking by default: normative use of `BA-*`, normative tuple rows with unresolved `TODO(REPO_ANCHOR)`, contract/interface field drift from anchored DTOs/signatures, runtime correctness gaps in Stage 4 interface details, and lifecycle stable-state drift from anchored enum/state sources.
+Treat the following as blocking by default: normative use of `BA-*`, normative tuple rows with unresolved `TODO(REPO_ANCHOR)`, contract/interface field drift from anchored DTOs/signatures, runtime correctness gaps in Stage 4 interface details, lifecycle stable-state drift from anchored enum/state sources, missing/stale repository-first canonical baseline files, dependency-matrix evidence not traceable to engineering assembly facts, boundary responsibilities not traceable to source anchors, and invocation-governance rules that drift from real module layering or ignore divergence/`unresolved` dependency governance signals.
 
 ### 7) Next Actions
 
