@@ -38,6 +38,15 @@ Use `.specify/templates/interface-detail-template.md` as the structural source o
 - User-provided files MUST NOT replace or redefine the planning control-plane source.
 - If `FEATURE_DIR/plan.md` is missing or non-consumable, stop and report a blocker.
 
+## Path Constraints
+
+- Limit reads to resolved `FEATURE_DIR` plus the explicit files listed in `Allowed Inputs`.
+- Complete `BindingRowID` selection, matching contract-row resolution, and prerequisite validation from `FEATURE_DIR/plan.md` before reading `research.md`, `data-model.md`, `test-matrix.md`, the matching contract artifact, or any repo anchors.
+- Until the selected interface-detail row is resolved and the matching contract row is confirmed `done`, do not open repository files, generated artifacts, or run repository-wide discovery/search.
+- After selection, read only the selected row's bound planning inputs, the matching contract artifact, and the targeted symbols/files required for that `BindingRowID`.
+- Do not read other feature folders under `specs/`.
+- Do not scan the repository for alternate `plan.md` paths.
+
 ## Allowed Inputs
 
 Read only:

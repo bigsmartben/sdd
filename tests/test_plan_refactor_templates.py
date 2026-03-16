@@ -61,6 +61,8 @@ def test_plan_child_command_templates_exist_and_define_single_unit_scope():
             ".specify/templates/contract-template.md",
             "Read only `FEATURE_DIR/plan.md`",
             "matching `BindingRowID` row",
+            "## Path Constraints",
+            "Complete `BindingRowID` selection and prerequisite validation from `FEATURE_DIR/plan.md` before reading `spec.md`, `data-model.md`, `test-matrix.md`, or any repo anchors.",
             "User-provided non-`plan.md` file paths may be consumed only when they fall within this command's `Allowed Inputs` scope.",
             "## Handoff Decision",
             "If any `contract` rows remain `pending`, `Next Command = /sdd.plan.contract`",
@@ -72,6 +74,8 @@ def test_plan_child_command_templates_exist_and_define_single_unit_scope():
             ".specify/templates/interface-detail-template.md",
             "Read only `FEATURE_DIR/plan.md`",
             "matching contract row",
+            "## Path Constraints",
+            "Complete `BindingRowID` selection, matching contract-row resolution, and prerequisite validation from `FEATURE_DIR/plan.md` before reading `research.md`, `data-model.md`, `test-matrix.md`, the matching contract artifact, or any repo anchors.",
             "User-provided non-`plan.md` file paths may be consumed only when they fall within this command's `Allowed Inputs` scope.",
             "## Handoff Decision",
             "If any `interface-detail` rows remain `pending`, `Next Command = /sdd.plan.interface-detail`",
@@ -111,6 +115,17 @@ def test_plan_child_commands_require_feature_dir_plan_and_allow_scoped_non_plan_
         assert "Do not accept, infer, or override any alternate `plan.md` path from `$ARGUMENTS`, environment variables, or repository scanning." in content
         assert "User-provided non-`plan.md` file paths may be consumed only when they fall within this command's `Allowed Inputs` scope." in content
         assert "User-provided files MUST NOT replace or redefine the planning control-plane source." in content
+
+
+def test_plan_contract_and_interface_detail_defer_expensive_reads_until_selection():
+    contract = read("templates/commands/plan.contract.md")
+    interface_detail = read("templates/commands/plan.interface-detail.md")
+
+    assert "Complete `BindingRowID` selection and prerequisite validation from `FEATURE_DIR/plan.md` before reading `spec.md`, `data-model.md`, `test-matrix.md`, or any repo anchors." in contract
+    assert "Until the selected contract row is resolved and the `test-matrix` stage row is confirmed `done`, do not open repository files, generated artifacts, or run repository-wide discovery/search." in contract
+
+    assert "Complete `BindingRowID` selection, matching contract-row resolution, and prerequisite validation from `FEATURE_DIR/plan.md` before reading `research.md`, `data-model.md`, `test-matrix.md`, the matching contract artifact, or any repo anchors." in interface_detail
+    assert "Until the selected interface-detail row is resolved and the matching contract row is confirmed `done`, do not open repository files, generated artifacts, or run repository-wide discovery/search." in interface_detail
 
 
 def test_plan_template_is_control_plane_not_stage_summary():
