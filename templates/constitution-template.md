@@ -104,6 +104,43 @@ Include only project-critical concepts here, for example:
 - "Hard Execution Gate" means minimum run-blocking checks required for safe execution.
 -->
 
+### Repo-Anchor Evidence Protocol
+
+Constitution-level repository-first facts MUST define stable evidence classes, canonical baseline artifacts,
+and dependency derivation policy used by downstream commands.
+
+- Repository-first analysis is limited to three conclusions:
+  - technical dependency matrix facts
+  - domain/capability boundary responsibilities
+  - module invocation and layering governance
+- Evidence classes (hard rule):
+  - **Source anchors**: source-code files/symbols for entities, boundaries, and invocation paths
+  - **Engineering assembly facts**: build/module manifests for dependency and packaging conclusions
+- Canonical baseline location (hard rule):
+  - `.specify/memory/repository-first/technical-dependency-matrix.md`
+  - `.specify/memory/repository-first/domain-boundary-responsibilities.md`
+  - `.specify/memory/repository-first/module-invocation-spec.md`
+  - feature-local copies are derived views only and MUST NOT override canonical semantics
+- Technical dependency matrix derivation (hard rule):
+  - dependency evidence MUST come from build-manifest auto-detection with deterministic priority:
+    - Maven: `pom.xml`
+    - Node: `package.json` (workspace-aware)
+    - Python: `pyproject.toml` (plus `requirements*.txt` / lock hints when present)
+    - Go: `go.mod`
+  - normalize `Dependency (G:A)` as:
+    - Maven: `group:artifact`
+    - Node/Python/Go: `ecosystem:package_or_module`
+  - `Type` values MUST be `2nd` or `3rd`
+  - `Version Source` values MUST be `direct`, `dependencyManagement`, `module-dependencyManagement`, or `unresolved`
+  - version divergence and `unresolved` MUST be preserved as governance signals (no silent normalization)
+- Projection-boundary binding (hard rule):
+  - domain/capability boundary evidence MUST come from source anchors only
+  - invocation governance MUST consume dependency-governance signals from canonical dependency matrix
+- Supporting-input boundary (hard rule):
+  - planning artifacts, docs, tests, demos, and generated outputs are supporting context only and MUST NOT be promoted into repo semantic evidence
+- Separation (hard rule):
+  - `technical-dependency-matrix.md` (facts), `domain-boundary-responsibilities.md` (business boundary), and `module-invocation-spec.md` (execution constraints) are complementary and MUST NOT replace one another
+
 ## State Machine Applicability Gate
 
 This section defines when a feature MUST include a full business lifecycle state machine,
@@ -137,26 +174,6 @@ If the rule is not met, use a **Lightweight State Model** instead:
 
 If a Full FSM is used below threshold, downstream planning artifacts MUST record explicit
 justification for why lightweight is insufficient.
-
-## Project-Level Fact Sources
-
-This section defines project-level facts that downstream artifacts must reference as authoritative context.
-These are fact definitions only; cross-artifact consistency validation and gate decisions are handled in `/sdd.analyze`.
-
-### Repository-First Principle
-
-Project-level semantic facts MUST prioritize repository-backed evidence over derived summaries.
-Use constitutions facts to define what counts as authoritative and keep helper narratives as secondary context.
-This subsection records fact definitions and source priorities only; it does not define exception approval ownership.
-
-### Ownership Boundary Baseline
-
-Constitution-level workflow ownership facts MUST define which command category owns each rule type:
-
-- generation rules belong to generation commands/templates
-- validation rules belong to centralized audit commands/templates
-- hard execution gates belong to execution commands/templates
-- ownership facts here define long-lived boundaries only; do not embed command-step scripts or lint catalog details
 
 ## Constraints & Evolution Rules
 

@@ -12,12 +12,15 @@ def test_command_mapping_documents_authority_model():
     content = read("docs/command-template-mapping.md")
 
     assert "Authoritative artifacts own semantics" in content
-    assert "Repo semantic anchors come from source code plus `.specify/memory/constitution.md` only" in content
+    assert "Repo semantic evidence for `/sdd.plan` comes from source anchors plus engineering assembly facts" in content
+    assert "constitution is rule authority and MUST NOT be treated as component-boundary evidence" in content
+    assert "Repository-first projections are canonical only under `.specify/memory/repository-first/`" in content
     assert "When a derived view conflicts with or lags behind its source artifact" in content
     assert "## Authority Model" in content
+    assert "| `.specify/memory/repository-first/*` | Canonical repository-first dependency/boundary/invocation projections | Authoritative |" in content
     assert "`plan.md` | Planning summary and downstream projection ledger | Derived view |" in content
     assert "`tasks.md` | Execution mapping and DAG scheduling authority | Authoritative for execution order; derived for upstream semantics |" in content
-    assert "| `.specify/memory/constitution.md` | Project-wide principles, terminology boundaries, governance rules | Authoritative |" in content
+    assert "rule authority, not component-boundary evidence" in content
     assert "generation loop is `Discover -> Generate -> Compress`" in content
     assert "must not absorb comprehensive audit responsibilities" in content
     assert "owns comprehensive non-mainline audit responsibilities" in content
@@ -60,13 +63,15 @@ def test_tasks_implement_and_analyze_enforce_authority_protocol():
     assert "runtime batching notes, ready-task summaries, and local execution shortcuts as derived views only" in implement
     assert "use the authoritative artifact for semantics" in implement
     assert "Interface Delivery Units` (treated as IF-scoped execution work packages)" in implement
+    assert ".specify/memory/repository-first/technical-dependency-matrix.md" in implement
 
     assert "**Artifact Authority**" in analyze
     assert "owns comprehensive implementation-readiness analysis and audit responsibilities" in analyze
     assert "CRITICAL/HIGH findings MUST cite the authoritative source artifact(s)" in analyze
     assert "Treat task-local summaries or inline mirrors as derived views only" in analyze
     assert "repo-anchor misuse" in analyze
-    assert "Misuse of `README.md`, `docs/**`, `specs/**`, demos, or generated artifacts as repo semantic anchors" in analyze
+    assert ".specify/memory/repository-first/" in analyze
+    assert "Misuse of `README.md`, `docs/**`, `specs/**`, `tests/**`, `plans/**`, `templates/**`, demos, or generated artifacts as repo semantic anchors" in analyze
 
     assert "Treat `.specify/memory/constitution.md` as the authoritative project-level rule source." in constitution
 
@@ -74,11 +79,19 @@ def test_tasks_implement_and_analyze_enforce_authority_protocol():
 def test_constitution_declares_repo_anchor_whitelist_and_blacklist():
     constitution = read(".specify/memory/constitution.md")
 
-    assert "Repo semantic anchors come from source code plus `.specify/memory/constitution.md` only." in constitution
-    assert "source-code files / source-code symbols + .specify/memory/constitution.md" in constitution
-    assert "`README.md`, `docs/**`, `specs/**`, historical examples, demo documents, and generated artifacts MUST NOT be used as repo semantic evidence." in constitution
-    assert "supporting context or background clues" in constitution
-    assert "MUST NOT be promoted into repo semantic anchors." in constitution
+    assert "### Repo-Anchor Evidence Protocol" in constitution
+    assert "**Source anchors**: source-code files/symbols" in constitution
+    assert "**Engineering assembly facts**: build/module manifests" in constitution
+    assert "Repository-first projections are project-level authoritative artifacts located only at `.specify/memory/repository-first/`." in constitution
+    assert "Dependency evidence MUST come from build-manifest auto-detection with deterministic priority" in constitution
+    assert "Maven: `pom.xml`" in constitution
+    assert "Node: `package.json`" in constitution
+    assert "Python: `pyproject.toml`" in constitution
+    assert "Go: `go.mod`" in constitution
+    assert "`Version Source` values MUST be `direct`, `dependencyManagement`, `module-dependencyManagement`, or `unresolved`." in constitution
+    assert "Component/domain capability boundary evidence MUST come from source anchors" in constitution
+    assert "planning artifacts, docs, tests, demos, and generated outputs may be read as context only" in constitution
+    assert "MUST NOT be promoted into repo semantic evidence" in constitution
 
 
 

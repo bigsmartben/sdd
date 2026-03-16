@@ -16,7 +16,8 @@ This document replaces the prior refactor baseline document.
 - Templates define artifact shape, section structure, and writing constraints.
 - One command may consume multiple templates.
 - Main-flow artifacts must not absorb audit, traceability, or checklist responsibilities.
-- Repo semantic anchors come from source code plus `.specify/memory/constitution.md` only; helper docs and prior generated artifacts are not repo anchors.
+- Repo semantic evidence for `/sdd.plan` comes from source anchors plus engineering assembly facts; constitution is rule authority and MUST NOT be treated as component-boundary evidence.
+- Repository-first projections are canonical only under `.specify/memory/repository-first/`; feature-local copies are derived views only.
 - Authoritative artifacts own semantics; summaries, projection notes, inline mappings, caches, and other derived views are disposable navigation aids only.
 - When a derived view conflicts with or lags behind its source artifact, commands must return to the authoritative source slice before producing downstream output.
 - Responsibilities must not expand across stage boundaries.
@@ -26,7 +27,8 @@ This document replaces the prior refactor baseline document.
 
 | Artifact / View | Primary Role | Authority Level |
 | --- | --- | --- |
-| `.specify/memory/constitution.md` | Project-wide principles, terminology boundaries, governance rules | Authoritative |
+| `.specify/memory/constitution.md` | Project-wide principles, terminology boundaries, governance rules (rule authority, not component-boundary evidence) | Authoritative |
+| `.specify/memory/repository-first/*` | Canonical repository-first dependency/boundary/invocation projections | Authoritative |
 | `spec.md` | Feature business semantics and user-visible requirements | Authoritative |
 | `research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, `interface-details/` | Planning-stage design semantics within their defined scopes | Authoritative within scope |
 | `plan.md` | Planning summary and downstream projection ledger | Derived view |
@@ -46,8 +48,9 @@ Authority rules:
 
 | Command | Command Role | Template(s) | Primary Output(s) |
 | --- | --- | --- | --- |
+| `/sdd.constitution` | Update constitution rules and refresh project-level repository-first baseline | `constitution-template.md` plus repository-first projection templates | `.specify/memory/constitution.md`, `.specify/memory/repository-first/technical-dependency-matrix.md`, `.specify/memory/repository-first/domain-boundary-responsibilities.md`, `.specify/memory/repository-first/module-invocation-spec.md` |
 | `/sdd.specify` | Generate and refine business-facing specifications | `spec-template.md` | `spec.md` |
-| `/sdd.plan` | Orchestrate staged planning | `plan-template.md` plus `research-template.md`, `data-model-template.md`, `test-matrix-template.md`, `contract-template.md`, and `interface-detail-template.md` | `plan.md`, `research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, `interface-details/` |
+| `/sdd.plan` | Orchestrate staged planning | `plan-template.md` plus `research-template.md`, `data-model-template.md`, `test-matrix-template.md`, `contract-template.md`, `interface-detail-template.md`, and repository-first projection templates as structural contracts | `plan.md`, `research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, `interface-details/` |
 | `/sdd.tasks` | Convert approved planning artifacts into executable work mapping | `tasks-template.md` | `tasks.md`, `tasks.manifest.json` |
 | `/sdd.implement` | Execute tasks against the approved design set | N/A | Implementation progress and completion output |
 | `/sdd.checklist` | Generate vertical checklist output | `checklist-template.md` | `checklists/*.md` |
@@ -89,6 +92,7 @@ Gate rules:
   - `test-matrix.md`
   - `contracts/`
   - `interface-details/`
+  - feature-local derived copies may include `technical-dependency-matrix.md`, `domain-boundary-responsibilities.md`, and `module-invocation-spec.md` (canonical authority remains under `.specify/memory/repository-first/`)
 
 Planning rules:
 
@@ -98,6 +102,9 @@ Planning rules:
 - `plan.md` carries planning-stage summary and downstream projection only; it must not absorb audit, coverage-accounting, or traceability payload.
 - `data-model.md` is UML-first.
 - `interface-details` is centered on field semantics, sequence diagrams, and UML class diagrams.
+- `/sdd.constitution` owns creation/refresh of repository-first canonical projections in `.specify/memory/repository-first/`.
+- dependency-matrix canonical baseline is built from build-manifest auto-detection (`pom.xml`, `package.json`, `pyproject.toml` + requirements/lock hints, `go.mod`).
+- `/sdd.plan` MUST consume canonical repository-first projections and fail-fast to `/sdd.constitution` when they are missing/stale.
 
 ## Planning Artifact Traits
 

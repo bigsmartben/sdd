@@ -7,6 +7,10 @@
 **Contract Artifact (Required)**: `[contracts/<artifact>]`
 **Contract Binding Row (Required)**: [Operation ID + Boundary Anchor + IF Scope tuple from contract]
 
+Contract tuple enforcement:
+- `Operation ID`, `Boundary Anchor`, and `IF Scope` MUST match the Stage 3 contract binding row exactly (value and granularity).
+- `Boundary Anchor` MUST be a single normative anchor value. Do not use disjunctive wording such as `A or B`.
+
 Use one detail document per contract operation. Prefer the file name `<operationId>.md` whenever the operation has a stable identifier.
 Keep this document operation-local and minimal: include only contract-visible or state-transition-relevant fields, materially distinct behavior paths, and the smallest collaborator set needed to explain the operation.
 
@@ -26,6 +30,7 @@ Keep this document operation-local and minimal: include only contract-visible or
 - IF scope: [must match header and contract]
 - Participating components: [reuse anchored source-code symbols from facade method, service implementation, and manager when they exist; if no repo-backed symbol exists, use explicit forward-looking placeholders and `TODO(REPO_ANCHOR)`]
 - Layered placeholder ban: when anchored symbols exist, do not invent layered collaborator placeholders or names such as `*BoundaryAdapter`, `*Service`, `*Policy`, or `*Assembler`
+- Placeholder/token ban: do not use unresolved or pseudo-symbol tokens such as `AnchoredMapper`, `queryOrUpdate(...)`, or bare role labels like `Caller` as normative collaborators.
 
 ## Field Semantics
 
@@ -60,30 +65,30 @@ Include participants and interactions whenever they influence contract-visible o
 Do not expand into exhaustive two-party/three-party call enumeration that has no contract-visible impact.
 Use short step labels (for example `S1`, `S2`) so behavior paths can reference sequence segments.
 Prefer confirmed source-code symbols for participant names.
-Default to neutral anchored placeholders such as `<AnchoredCaller>`, `<AnchoredBoundary>`, `<AnchoredCoordinator>`, and optional `<AnchoredDependency>`.
 Only when repo anchors truly do not exist may placeholders remain forward-looking; in that case mark them non-anchored/non-normative and keep `TODO(REPO_ANCHOR)` explicit.
+Avoid pseudo-symbol placeholders that look callable but are not repo-anchored.
 When anchored symbols exist, do not invent layered collaborator placeholders or labels (including `*BoundaryAdapter`, `*Service`, `*Policy`, `*Assembler`) from planning terminology.
 Do not imply event publication paths unless a repo-backed anchor explicitly supports that path.
 
 ```mermaid
 sequenceDiagram
-    participant Caller as "<AnchoredCaller>"
-    participant Boundary as "<AnchoredBoundary>"
-    participant Coordinator as "<AnchoredCoordinator>"
-    participant Dependency as "<AnchoredDependency>"
+    participant Initiator as "<AnchoredInitiatorSymbol>"
+    participant Boundary as "<AnchoredBoundarySymbol>"
+    participant Coordinator as "<AnchoredCoordinatorSymbol>"
+    participant Dependency as "<AnchoredDependencySymbol>"
 
-    Caller->>Boundary: [operation request] (S1)
+    Initiator->>Boundary: [operation request] (S1)
     Boundary->>Coordinator: validate + execute (S2)
     alt auth/validation fails
         Coordinator-->>Boundary: rejection reason (S3)
-        Boundary-->>Caller: contract error response (S4)
+        Boundary-->>Initiator: contract error response (S4)
     else success
         opt optional repo-backed dependency interaction
             Coordinator->>Dependency: [anchored side effect] (S5)
             Dependency-->>Coordinator: [result/ack] (S6)
         end
         Coordinator-->>Boundary: success result (S7)
-        Boundary-->>Caller: success response (S8)
+        Boundary-->>Initiator: success response (S8)
     end
 ```
 
