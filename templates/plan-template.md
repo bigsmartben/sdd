@@ -32,7 +32,6 @@ Do not place stage prose, audit payload, or execution logs here.
 ### Repository-First Consumption Slice
 
 - Relevant dependency-governance facts: [short bullets]
-- Relevant domain-boundary anchors: [short bullets]
 - Relevant invocation-governance facts: [short bullets]
 
 ## Stage Queue

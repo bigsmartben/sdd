@@ -22,6 +22,7 @@ Supported rule kinds:
   - file_regex_forbidden
   - file_regex_required_any
   - component_symbols_exist
+  - anchor_status_allowed_values
 EOF
 }
 
@@ -87,6 +88,108 @@ normalize_regex_for_grep() {
 
     printf -v "$__out_regex_ref" '%s' "$regex"
     printf -v "$__out_case_insensitive_ref" '%s' "$case_insensitive"
+}
+
+contains_value() {
+    local needle="$1"
+    shift
+    local item
+
+    for item in "$@"; do
+        if [[ "$item" == "$needle" ]]; then
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+validate_anchor_status_fragment() {
+    local fragment="$1"
+    local __allowed_csv="$2"
+    local __out_error_ref="$3"
+
+    local fragment_no_backticks
+    local -a raw_tokens=()
+    local -a candidate_tokens=()
+    local -a invalid_tokens=()
+    local -a allowed_tokens_raw=()
+    local -a allowed_tokens=()
+    local token
+    local token_lower
+    local has_allowed=false
+    local has_candidate=false
+
+    IFS=',' read -r -a allowed_tokens_raw <<< "$__allowed_csv"
+    for token in "${allowed_tokens_raw[@]}"; do
+        token_lower="$(echo "$token" | tr '[:upper:]' '[:lower:]')"
+        token_lower="$(trim "$token_lower")"
+        [[ -n "$token_lower" ]] && allowed_tokens+=("$token_lower")
+    done
+
+    if grep -q '`' <<< "$fragment"; then
+        while IFS= read -r token; do
+            [[ -z "$token" ]] && continue
+            raw_tokens+=("$token")
+        done < <(grep -oE '`[^`]+`' <<< "$fragment" | sed 's/^`//;s/`$//' || true)
+    fi
+
+    if [[ ${#raw_tokens[@]} -eq 0 ]]; then
+        fragment_no_backticks="${fragment//\`/ }"
+        while IFS= read -r token; do
+            [[ -z "$token" ]] && continue
+            raw_tokens+=("$token")
+        done < <(grep -oE '[A-Za-z][A-Za-z_-]*' <<< "$fragment_no_backticks" || true)
+    fi
+
+    for token in "${raw_tokens[@]}"; do
+        token_lower="$(echo "$token" | tr '[:upper:]' '[:lower:]')"
+        token_lower="$(trim "$token_lower")"
+        [[ -z "$token_lower" ]] && continue
+
+        case "$token_lower" in
+            anchor|status|repo|boundary|implementation|entry|required|legacy|or|and)
+                continue
+                ;;
+        esac
+
+        has_candidate=true
+        candidate_tokens+=("$token_lower")
+    done
+
+    if [[ "$has_candidate" == false ]]; then
+        printf -v "$__out_error_ref" '%s' "Anchor Status field is present but no status token was detected."
+        return 1
+    fi
+
+    for token in "${candidate_tokens[@]}"; do
+        if contains_value "$token" "${allowed_tokens[@]}"; then
+            has_allowed=true
+        else
+            invalid_tokens+=("$token")
+        fi
+    done
+
+    if [[ ${#invalid_tokens[@]} -gt 0 ]]; then
+        printf -v "$__out_error_ref" '%s' "Invalid status token(s): $(IFS=','; echo "${invalid_tokens[*]}"). Allowed: $(
+            IFS=','
+            echo "${allowed_tokens[*]}"
+        )"
+        return 1
+    fi
+
+    if [[ ${#candidate_tokens[@]} -ne 1 ]]; then
+        printf -v "$__out_error_ref" '%s' "Anchor Status must contain exactly one status token. Found: $(IFS=','; echo "${candidate_tokens[*]}")."
+        return 1
+    fi
+
+    if [[ "$has_allowed" == false ]]; then
+        printf -v "$__out_error_ref" '%s' "No allowed status token found. Allowed: $(IFS=','; echo "${allowed_tokens[*]}")"
+        return 1
+    fi
+
+    printf -v "$__out_error_ref" '%s' ""
+    return 0
 }
 
 parse_args() {
@@ -308,8 +411,98 @@ while IFS=$'\t' read -r id enabled severity scope glob kind params message remed
             fi
             ;;
 
+        anchor_status_allowed_values)
+            allowed_csv="$(get_param "$params" "allowed")"
+            if [[ -z "$allowed_csv" ]]; then
+                add_finding "$id" "$severity" "$glob" 0 "Rule params missing required key: allowed" "Fix rules TSV params for this rule."
+                continue
+            fi
+
+            old_nocasematch="$(shopt -p nocasematch || true)"
+            shopt -s nocasematch
+            label_regex='^[[:space:]]*([-*][[:space:]]*)?(\*\*)?(Repo[ _-]*Anchor[ _-]*Status|Boundary[ _-]*Anchor[ _-]*Status|Implementation[ _-]*Entry[ _-]*Anchor[ _-]*Status|Anchor[ _-]*Status)([[:space:]]*\([^)]*\))?(\*\*)?[[:space:]]*:[[:space:]]*(.+)$'
+            table_header_regex='(Repo[ _-]*Anchor[ _-]*Status|Boundary[ _-]*Anchor[ _-]*Status|Implementation[ _-]*Entry[ _-]*Anchor[ _-]*Status|Anchor[ _-]*Status)'
+
+            for file_path in "${matched_files[@]}"; do
+                rel_file="${file_path#$FEATURE_DIR/}"
+                line_no=0
+                in_table=false
+                table_status_idx=-1
+
+                while IFS= read -r line || [[ -n "$line" ]]; do
+                    line_no=$((line_no + 1))
+
+                    if [[ "$line" =~ $label_regex ]]; then
+                        status_fragment="${BASH_REMATCH[6]-}"
+                        error_detail=""
+                        if ! validate_anchor_status_fragment "$status_fragment" "$allowed_csv" error_detail; then
+                            add_finding "$id" "$severity" "$rel_file" "$line_no" "$message $error_detail" "$remediation"
+                        fi
+                    fi
+
+                    if [[ "$line" =~ ^[[:space:]]*\|.*\|[[:space:]]*$ ]]; then
+                        line_trimmed="$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+                        content="${line_trimmed#|}"
+                        content="${content%|}"
+                        IFS='|' read -r -a raw_cells <<< "$content"
+                        cells=()
+                        for cell in "${raw_cells[@]}"; do
+                            cells+=("$(trim "$cell")")
+                        done
+
+                        if [[ "$in_table" == false ]]; then
+                            idx=0
+                            table_status_idx=-1
+                            for cell in "${cells[@]}"; do
+                                if [[ "$cell" =~ $table_header_regex ]]; then
+                                    table_status_idx=$idx
+                                    break
+                                fi
+                                idx=$((idx + 1))
+                            done
+                            if [[ $table_status_idx -ge 0 ]]; then
+                                in_table=true
+                            fi
+                            continue
+                        fi
+
+                        if [[ $table_status_idx -lt 0 ]]; then
+                            continue
+                        fi
+
+                        is_separator=true
+                        for cell in "${cells[@]}"; do
+                            if [[ ! "$cell" =~ ^:?-{3,}:?$ ]]; then
+                                is_separator=false
+                                break
+                            fi
+                        done
+                        if [[ "$is_separator" == true ]]; then
+                            continue
+                        fi
+
+                        if [[ $table_status_idx -ge ${#cells[@]} ]]; then
+                            add_finding "$id" "$severity" "$rel_file" "$line_no" "$message Anchor Status column is missing in this table row." "$remediation"
+                            continue
+                        fi
+
+                        status_cell="${cells[$table_status_idx]}"
+                        error_detail=""
+                        if ! validate_anchor_status_fragment "$status_cell" "$allowed_csv" error_detail; then
+                            add_finding "$id" "$severity" "$rel_file" "$line_no" "$message $error_detail" "$remediation"
+                        fi
+                        continue
+                    fi
+
+                    in_table=false
+                    table_status_idx=-1
+                done < "$file_path"
+            done
+            eval "$old_nocasematch"
+            ;;
+
         *)
-            add_finding "$id" "$severity" "$glob" 0 "Unsupported rule kind: $kind" "Use one of: file_regex_forbidden, file_regex_required_any, component_symbols_exist."
+            add_finding "$id" "$severity" "$glob" 0 "Unsupported rule kind: $kind" "Use one of: file_regex_forbidden, file_regex_required_any, component_symbols_exist, anchor_status_allowed_values."
             ;;
     esac
 

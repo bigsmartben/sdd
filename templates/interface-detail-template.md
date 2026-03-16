@@ -4,7 +4,9 @@
 **Operation ID (Required)**: [operationId]
 **IF Scope (Required)**: [IF-### or N/A]
 **Boundary Anchor (Required)**: [HTTP `METHOD /path` \| `event.topic` \| `Facade.method` \| `cli command` \| `N/A`]
+**Boundary Anchor Status (Required)**: [`existing` \| `extended` \| `new` \| `todo`]
 **Implementation Entry Anchor (Required)**: [repo-backed internal handoff entry such as `Controller.method` or `Facade.method`]
+**Implementation Entry Anchor Status (Required)**: [`existing` \| `extended` \| `new` \| `todo`]
 **Contract Artifact (Required)**: `[contracts/<artifact>]`
 **Contract Binding Row (Required)**: [Operation ID + Boundary Anchor + IF Scope tuple from contract]
 
@@ -12,7 +14,10 @@ Contract tuple enforcement:
 
 - `Operation ID`, `Boundary Anchor`, and `IF Scope` MUST match the Stage 3 contract binding row exactly (value and granularity).
 - `Boundary Anchor` MUST be a single normative anchor value. Do not use disjunctive wording such as `A or B`.
-- `Implementation Entry Anchor` is an interface-detail-only internal handoff anchor and MUST be repo-backed unless explicitly blocked with `TODO(REPO_ANCHOR)`.
+- Apply repo-anchor decision order `existing -> extended -> new -> todo` for both boundary/implementation entry statuses.
+- `extended` is valid only for same-entity field/state expansion.
+- `new` is normative only when explicit `path::symbol` target evidence is provided.
+- `Implementation Entry Anchor` is an interface-detail-only internal handoff anchor and MUST be repo-backed unless explicitly blocked with `TODO(REPO_ANCHOR)` (`Implementation Entry Anchor Status = todo`).
 - `Implementation Entry Anchor` may differ from `Boundary Anchor`, but it must be reachable from the contract-visible entry path.
 
 Use one detail document per contract operation. Prefer the file name `<operationId>.md` whenever the operation has a stable identifier.
@@ -31,8 +36,10 @@ Keep this document operation-local and minimal: include only contract-visible or
 - Consumer-visible interaction: [summary]
 - Operation ID: [operationId; must match header and contract]
 - Boundary anchor: [must match header and contract]
+- Boundary anchor status: [`existing` | `extended` | `new` | `todo`]
 - IF scope: [must match header and contract]
 - Implementation entry anchor: [repo-backed internal handoff entry; for HTTP entry typically `Controller.method`, for RPC/facade entry typically `Facade.method`]
+- Implementation entry anchor status: [`existing` | `extended` | `new` | `todo`]
 - Participating components: [reuse anchored source-code symbols from controller/facade, service implementation, manager, and other repo-backed collaborators that affect contract-visible output/failure]
 - Use anchored symbols when they exist; do not replace them with layered placeholders such as `*BoundaryAdapter`, `*Service`, `*Policy`, `*Assembler`, or pseudo-symbols such as `AnchoredMapper`, `queryOrUpdate(...)`, or bare role labels like `Caller`.
 
@@ -75,7 +82,7 @@ If both controller and facade exist for this operation, show both participants i
 If `Boundary Anchor` and `Implementation Entry Anchor` resolve to the same repo-backed symbol, reuse one participant instead of inventing a fake handoff hop.
 When `Boundary Anchor` and `Implementation Entry Anchor` differ, show both forward and return handoff messages explicitly; do not collapse the response directly from deeper collaborators back to the contract boundary.
 Prefer confirmed source-code symbols for participant names.
-Only when repo anchors truly do not exist may placeholders remain forward-looking; in that case mark them non-anchored/non-normative with explicit `TODO(REPO_ANCHOR)` and avoid pseudo-symbol or layered placeholder collaborators.
+Only when repo anchors truly do not exist may placeholders remain forward-looking; in that case set `Boundary Anchor Status = todo` and/or `Implementation Entry Anchor Status = todo`, keep explicit `TODO(REPO_ANCHOR)`, and avoid pseudo-symbol or layered placeholder collaborators.
 Do not imply event publication paths unless a repo-backed anchor explicitly supports that path.
 
 ```mermaid
@@ -191,9 +198,10 @@ classDiagram
 
 ## Runtime Correctness Check
 
-Use this as an optional operation-local traceability aid during drafting. Centralized blocking validation is owned by `/sdd.analyze`.
+Use this as a required operation-local traceability aid during drafting and handoff. Centralized blocking validation is owned by `/sdd.analyze`.
+All required rows in this section must be present; each row may remain `ok` or `gap` with explicit evidence.
 
-- If an item is unresolved, keep it explicit as `TODO(REPO_ANCHOR)` and non-normative.
+- If an item is unresolved, keep it explicit as `TODO(REPO_ANCHOR)`, set the associated `Boundary Anchor Status` and/or `Implementation Entry Anchor Status` to `todo`, and keep it non-normative.
 - `ok` means the mapping is complete and anchored; `gap` means further analysis is required before normative validation paths.
 
 | Runtime Check Item | Required Evidence | Anchor | Status |

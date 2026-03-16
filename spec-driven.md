@@ -85,13 +85,12 @@ This command transforms a simple feature description (the user-prompt) into a co
 
 ### The `/sdd.plan` Command
 
-Once a feature specification exists, `/sdd.plan <spec.md>` initializes the planning control plane. With `ALL`, it can also continue the planning queue autonomously until completion or the first blocker:
+Once a feature specification exists, `/sdd.plan <spec.md>` initializes the planning control plane:
 
 1. **Specification Analysis**: Reads and understands the feature requirements, user stories, and acceptance criteria from the explicit `spec.md` path
 2. **Constitutional Compliance**: Ensures alignment with project constitution and architectural principles
 3. **Control-Plane Initialization**: Writes `plan.md` with `Shared Context Snapshot`, `Stage Queue`, `Binding Projection Index`, and `Artifact Status`
 4. **Queue-Driven Planning**: The child commands `/sdd.plan.research <plan.md>`, `/sdd.plan.data-model <plan.md>`, `/sdd.plan.test-matrix <plan.md>`, `/sdd.plan.contract <plan.md>`, and `/sdd.plan.interface-detail <plan.md>` generate stage artifacts one queue unit at a time
-5. **Autonomous Mode**: `/sdd.plan <spec.md> ALL` preserves that same queue order and stops immediately on the first blocker or inconsistent routing state
 
 ### The `/sdd.tasks` Command
 
@@ -135,10 +134,7 @@ Total: ~12 hours of documentation work
 # Step 2: Initialize planning control plane (5 minutes)
 /sdd.plan specs/003-chat-system/spec.md WebSocket for real-time messaging, PostgreSQL for history, Redis for presence
 
-# Or run the full planning queue autonomously
-/sdd.plan specs/003-chat-system/spec.md ALL WebSocket for real-time messaging, PostgreSQL for history, Redis for presence
-
-# Step 2b: Manual queue mode when not using ALL
+# Step 2b: Execute the planning queue in order
 /sdd.plan.research specs/003-chat-system/plan.md
 /sdd.plan.data-model specs/003-chat-system/plan.md
 /sdd.plan.test-matrix specs/003-chat-system/plan.md

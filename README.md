@@ -116,7 +116,7 @@ Use the **`/sdd.specify`** command to describe what you want to build. Focus on 
 
 ### 4. Create a planning control plane
 
-Use the **`/sdd.plan`** command with an explicit `spec.md` path to create `plan.md` as the planning control plane. It captures Stage 0 shared context, the planning queue, and the binding projection ledger for later `sdd.plan.*` child commands. Add `ALL` after the path when you want the planning queue to run autonomously until completion or the first blocker.
+Use the **`/sdd.plan`** command with an explicit `spec.md` path to create `plan.md` as the planning control plane. It captures Stage 0 shared context, the planning queue, and the binding projection ledger for later `sdd.plan.*` child commands.
 
 ```bash
 /sdd.plan specs/001-photo-albums/spec.md The application uses Vite with minimal number of libraries. Use vanilla HTML, CSS, and JavaScript as much as possible. Images are not uploaded anywhere and metadata is stored in a local SQLite database.
@@ -312,7 +312,7 @@ Essential commands for the Spec-Driven Development workflow:
 | ----------------------- | ------------------------------------------------------------------------ |
 | `/sdd.constitution` | Create or update project governing principles and development guidelines |
 | `/sdd.specify`      | Define what you want to build (requirements and user stories)            |
-| `/sdd.plan <spec.md> [ALL]`         | Create `plan.md` as the planning control plane and Stage 0 shared context, or run the full planning queue with `ALL` |
+| `/sdd.plan <spec.md>`         | Create `plan.md` as the planning control plane and Stage 0 shared context |
 | `/sdd.plan.research <plan.md>` | Generate the queued `research.md` artifact |
 | `/sdd.plan.data-model <plan.md>` | Generate the queued `data-model.md` artifact |
 | `/sdd.plan.test-matrix <plan.md>` | Generate the queued `test-matrix.md` artifact and binding rows |
@@ -557,7 +557,7 @@ It's important to use the interaction with Claude Code as an opportunity to clar
 
 ### **STEP 4:** Initialize the planning control plane
 
-You can now be specific about the tech stack and other technical requirements. Use `/sdd.plan <spec.md>` with an explicit `spec.md` path, or add `ALL` to let planning continue autonomously until completion or the first blocker:
+You can now be specific about the tech stack and other technical requirements. Use `/sdd.plan <spec.md>` with an explicit `spec.md` path:
 
 ```text
 /sdd.plan specs/001-create-taskify/spec.md We are going to generate this using .NET Aspire, using Postgres as the database. The frontend should use

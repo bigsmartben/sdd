@@ -62,6 +62,14 @@ Use `.specify/templates/contract-template.md` only. If the runtime template is m
 - If the operation is consumer-called via RPC/facade, use the anchored `Facade.method` surface.
 - If both HTTP/controller and facade symbols exist, keep the actual consumer-visible first callable entry as normative `Boundary Anchor`; downstream internal handoff belongs in interface-detail.
 
+## Repo Anchor Decision Protocol (Mandatory)
+
+- Apply repo-anchor decision order `existing -> extended -> new -> todo`.
+- `extended` is valid only for same-entity field/state expansion.
+- `new` is normative only when explicit `path::symbol` target evidence is present.
+- If explicit target evidence is missing, set status to `todo` and keep the tuple forward-looking/non-normative.
+- Repo anchors in this stage are for naming/lifecycle correction and traceability only; do not invent business semantics from anchors.
+
 ## Allowed Inputs
 
 Read only:

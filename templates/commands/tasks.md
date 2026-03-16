@@ -123,10 +123,9 @@ Terminology note (compatibility, non-normative):
    - Repository-first consumption discipline:
      - Use canonical baseline files under `.specify/memory/repository-first/` only:
        - `.specify/memory/repository-first/technical-dependency-matrix.md` for dependency-governance task projection
-       - `.specify/memory/repository-first/domain-boundary-responsibilities.md` for boundary ownership/collaboration task projection
        - `.specify/memory/repository-first/module-invocation-spec.md` for invocation-direction and layering-governance task projection
      - Feature-local copies are derived views only and MUST NOT replace canonical baseline semantics.
-     - Do not derive dependency matrix / boundary responsibilities / invocation governance semantics from `README.md`, `docs/**`, planning narratives, or generated summaries.
+     - Do not derive dependency matrix or invocation governance semantics from `README.md`, `docs/**`, planning narratives, or generated summaries.
      - If required canonical repository-first evidence is missing, stale, or non-traceable, stop task generation for affected scope and route repair to `/sdd.constitution` or `/sdd.analyze`.
    - Use the fixed loop `Discover -> Generate -> Compress` for every generation unit.
    - Use deterministic mechanical mapping rules during `Generate`:
@@ -134,7 +133,7 @@ Terminology note (compatibility, non-normative):
      - one work package maps to exactly one target path cluster or one command target
      - one work package maps to exactly one primary completion anchor
      - do not merge multiple operations, unrelated file clusters, or distinct validation objectives into one task
-   - Between `Generate` and `Compress`, run **hard execution safety gates only** for the active unit: required anchor presence, prevention of promoting `TODO(REPO_ANCHOR)` into executable semantics, local mapping completeness, and dependency-safe schedulability.
+   - Between `Generate` and `Compress`, run **hard execution safety gates only** for the active unit: required anchor presence, prevention of promoting `TODO(REPO_ANCHOR)` or any `todo` anchor-status tuple (`Anchor Status`, `Boundary Anchor Status`, `Implementation Entry Anchor Status`) into executable semantics, local mapping completeness, and dependency-safe schedulability.
    - **GLOBAL inventory and foundation unit**:
       - Load `data-model.md` and capture shared global object baselines required by tasks.
       - Build a run-local `global-anchor-summary` from the minimum shared anchors and invariants needed for cross-interface prerequisites.
@@ -151,7 +150,7 @@ Terminology note (compatibility, non-normative):
       - Use `interface-details/` as the authoritative internal handoff design for execution targeting; extract `Implementation Entry Anchor` and repo-backed participating components when placing implementation tasks.
       - When `Boundary Anchor` and `Implementation Entry Anchor` differ, keep `Boundary Anchor` for verification/binding refs but anchor implementation tasks to the internal entry/collaborator path defined in `interface-details/`.
       - Do not target implementation work at the external boundary alone when the detail doc defines a narrower repo-backed internal handoff entry.
-      - Consume only repository-anchored contract/interface tuples as executable semantics; treat `TODO(REPO_ANCHOR)` as blocker/note only.
+      - Consume only repository-anchored contract/interface tuples as executable semantics; treat `TODO(REPO_ANCHOR)` or any tuple with `Anchor Status = todo`, `Boundary Anchor Status = todo`, or `Implementation Entry Anchor Status = todo` as blocker/note only.
       - Build work packages only from the active scope's matching contract/interface-detail/test tuples. If multiple operations share one `IF Scope`, keep them as separate work packages rather than one composite task.
       - When artifacts overlap, keep semantics authoritative in upstream artifacts (`spec.md`, `contracts/`, `data-model.md`, `test-matrix.md`); `tasks.md` maps execution only.
       - Generate one IF-scoped delivery unit at a time, then compress before loading the next.
@@ -218,8 +217,8 @@ Additional generation constraints:
 - Interface implementation tasks SHOULD target the repo-backed `Implementation Entry Anchor` or directly participating collaborators from `interface-details/`; verification tasks SHOULD keep contract/test anchors explicit.
 - If multiple operations share an `IF Scope`, keep them as separate work packages inside that IF unit; do not merge them into a synthetic combined task.
 - `GLOBAL` is limited to prerequisites shared by multiple IF units. Using `GLOBAL` as overflow for one-scope work is a hard error.
-- Repository-first projection artifacts in `.specify/memory/repository-first/` are complementary and MUST NOT replace one another (`.specify/memory/repository-first/technical-dependency-matrix.md` = dependency facts, `.specify/memory/repository-first/domain-boundary-responsibilities.md` = business boundary ownership, `.specify/memory/repository-first/module-invocation-spec.md` = invocation constraints).
-- Task execution targets MUST reference anchored tuples only. `TODO(REPO_ANCHOR)` items MUST NOT be converted into executable interface semantics, completion anchors, or implementation objectives.
+- Repository-first projection artifacts in `.specify/memory/repository-first/` are complementary and MUST NOT replace one another (`.specify/memory/repository-first/technical-dependency-matrix.md` = dependency facts, `.specify/memory/repository-first/module-invocation-spec.md` = invocation constraints).
+- Task execution targets MUST reference anchored tuples only. `TODO(REPO_ANCHOR)` items and tuples carrying `Anchor Status = todo`, `Boundary Anchor Status = todo`, or `Implementation Entry Anchor Status = todo` MUST NOT be converted into executable interface semantics, completion anchors, or implementation objectives.
 - Do not emit `blocked`, `todo`, placeholder, or compensating tasks to represent missing upstream design anchors.
 - Use deterministic refs (`operationId`, `CaseID`, `TM-*`, `TC-*`) only when they help execution or completion checking.
 - Keep Task DAG dependency-safe and minimally sufficient (avoid speculative over-constraint).

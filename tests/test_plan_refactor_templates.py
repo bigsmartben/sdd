@@ -8,7 +8,7 @@ def read(rel_path: str) -> str:
     return (REPO_ROOT / rel_path).read_text()
 
 
-def test_plan_command_requires_explicit_spec_path_and_documents_all_mode():
+def test_plan_command_requires_explicit_spec_path_without_all_mode():
     content = read("templates/commands/plan.md")
 
     assert "quickstart.md" not in content
@@ -18,8 +18,7 @@ def test_plan_command_requires_explicit_spec_path_and_documents_all_mode():
     assert "planning control plane" in content
     assert "does **not** generate downstream planning-stage artifacts directly" in content
     assert "The first positional token is mandatory and is `SPEC_FILE`" in content
-    assert "`/sdd.plan <path/to/spec.md> [ALL] [technical-context...]`" in content
-    assert "reserved uppercase literal `ALL`" in content
+    assert "`/sdd.plan <path/to/spec.md> [technical-context...]`" in content
     assert "Run `{SCRIPT} --spec-file <SPEC_FILE>` once" in content
     assert "agent: sdd.plan.research" in content
     assert "Binding Projection Index" in content
@@ -35,8 +34,8 @@ def test_static_handoff_prompts_reference_explicit_planning_paths():
     data_model = read("templates/commands/plan.data-model.md")
     test_matrix = read("templates/commands/plan.test-matrix.md")
 
-    assert "running /sdd.plan <path/to/spec.md> [ALL]" in specify
-    assert "running /sdd.plan <path/to/spec.md> [ALL]" in clarify
+    assert "running /sdd.plan <path/to/spec.md>" in specify
+    assert "running /sdd.plan <path/to/spec.md>" in clarify
     assert "running /sdd.plan.research <path/to/plan.md>" in plan
     assert "running /sdd.plan.data-model <path/to/plan.md>" in research
     assert "running /sdd.plan.test-matrix <path/to/plan.md>" in data_model
@@ -276,7 +275,7 @@ def test_downstream_docs_and_mapping_match_orchestrator_model():
     assert "implementation should stop unless the user explicitly waives the audit step" in spec_template
     assert "`/sdd.plan.contract <plan.md>` - Generate one queued contract artifact" in installation
     assert "Repeated planning commands use runtime `Handoff Decision` output derived from `plan.md` queue state." in installation
-    assert "Then run the planning queue one command at a time when you are not using `ALL`" in quickstart
+    assert "Then run the planning queue one command at a time:" in quickstart
     assert "use each command's runtime `Handoff Decision` output with the explicit `plan.md` path" in quickstart
     assert "For planning commands, pass explicit file paths" in upgrade
     assert "only for commands that still rely on active-feature discovery" in upgrade
@@ -326,7 +325,6 @@ def test_plan_requires_canonical_repository_first_baseline_and_fail_fast():
 
     assert "MUST consume the canonical repository-first baseline produced by `/sdd.constitution`" in plan
     assert ".specify/memory/repository-first/technical-dependency-matrix.md" in plan
-    assert ".specify/memory/repository-first/domain-boundary-responsibilities.md" in plan
     assert ".specify/memory/repository-first/module-invocation-spec.md" in plan
     assert "Fail fast and route to `/sdd.constitution`" in plan
 
@@ -379,12 +377,10 @@ def test_repository_first_references_avoid_bare_filenames_in_runtime_templates()
         "templates/commands/tasks.md",
         "templates/constitution-template.md",
         "templates/technical-dependency-matrix-template.md",
-        "templates/domain-boundary-responsibilities-template.md",
         "templates/module-invocation-spec-template.md",
     ]
     bare_markers = [
         "`technical-dependency-matrix.md`",
-        "`domain-boundary-responsibilities.md`",
         "`module-invocation-spec.md`",
     ]
 
@@ -392,6 +388,48 @@ def test_repository_first_references_avoid_bare_filenames_in_runtime_templates()
         content = read(rel_path)
         for marker in bare_markers:
             assert marker not in content
+
+
+def test_planning_templates_define_repo_anchor_status_protocol():
+    data_model_command = read("templates/commands/plan.data-model.md")
+    data_model_template = read("templates/data-model-template.md")
+    test_matrix_template = read("templates/test-matrix-template.md")
+    contract_template = read("templates/contract-template.md")
+    interface_detail_template = read("templates/interface-detail-template.md")
+    tasks = read("templates/commands/tasks.md")
+    analyze = read("templates/commands/analyze.md")
+
+    assert "spec.md` + `research.md` define model semantics; repo anchors are correction/traceability evidence only" in data_model_command
+    assert "existing -> extended -> new -> todo" in data_model_command
+    assert "Do not use repo anchors to invent business semantics" in data_model_command
+
+    assert "Anchor Status (`existing`\\|`extended`\\|`new`\\|`todo`)" in data_model_template
+    assert "Model semantics come from `spec.md` + `research.md`" in data_model_template
+    assert "For every anchor decision, apply strict order: `existing -> extended -> new -> todo`." in data_model_template
+    assert "`new` is normative only when explicit `path::symbol` target evidence is provided." in data_model_template
+    assert "`path/to/file.ext::EnumOrStateField`" in data_model_template
+
+    assert "Anchor Status" in test_matrix_template
+    assert "Apply repo-anchor decision order `existing -> extended -> new -> todo`." in test_matrix_template
+    assert "Main-path verification binding MUST use tuples with `Anchor Status = existing|extended|new`." in test_matrix_template
+    assert "`path/to/file.ext::Symbol`" in test_matrix_template
+
+    assert "**Anchor Status (Required)**" in contract_template
+    assert "Apply repo-anchor decision order `existing -> extended -> new -> todo`." in contract_template
+    assert "`new` is normative only when explicit `path::symbol` target evidence is provided." in contract_template
+    assert "`path/to/file.ext::Symbol`" in contract_template
+
+    assert "**Boundary Anchor Status (Required)**" in interface_detail_template
+    assert "**Implementation Entry Anchor Status (Required)**" in interface_detail_template
+    assert "Apply repo-anchor decision order `existing -> extended -> new -> todo`" in interface_detail_template
+    assert "set `Boundary Anchor Status = todo` and/or `Implementation Entry Anchor Status = todo`" in interface_detail_template
+
+    assert "prevention of promoting `TODO(REPO_ANCHOR)` or any `todo` anchor-status tuple" in tasks
+    assert "tuples carrying `Anchor Status = todo`, `Boundary Anchor Status = todo`, or `Implementation Entry Anchor Status = todo` MUST NOT be converted" in tasks
+
+    assert "repo-anchor decision protocol compliance" in analyze
+    assert "flag any repo anchor value (except `TODO(REPO_ANCHOR)` or explicit `N/A`) that is not in strict `path::symbol` format" in analyze
+    assert "flag any anchor-status value outside `existing`, `extended`, `new`, `todo`" in analyze
 
 
 def test_contract_and_interface_detail_templates_encode_entry_and_field_level_rules():
@@ -454,11 +492,21 @@ def test_binding_projection_and_validation_follow_client_entry_and_handoff_rules
     assert "PLN-ID-004" in lint_rules
     assert "PLN-ID-005" in lint_rules
     assert "PLN-ID-006" in lint_rules
+    assert "PLN-RA-002" in lint_rules
+    assert "PLN-RA-003" in lint_rules
+    assert "PLN-RA-004" in lint_rules
+    assert "PLN-RA-005" in lint_rules
+    assert "PLN-RA-006" in lint_rules
+    assert "PLN-RA-007" in lint_rules
+    assert "PLN-RA-008" in lint_rules
+    assert "anchor_status_allowed_values" in lint_rules
     assert "Implementation details are missing explicit Implementation Entry Anchor" not in lint_rules
     assert "Interface details are missing explicit Implementation Entry Anchor required by the interface-detail template." in lint_rules
     assert "Interface details are missing the Runtime Correctness Check section required for operation-local closure validation." in lint_rules
     assert "Interface details are missing the Boundary-to-entry reachability runtime check row." in lint_rules
     assert "Interface details are missing the Field-ownership closure runtime check row." in lint_rules
+    assert "Anchor Status uses values outside the allowed repo-anchor decision protocol vocabulary." in lint_rules
+    assert "Repo anchor target is not using strict path::symbol format." in lint_rules
 
 
 def test_frontmatter_docs_define_static_only_handoffs():

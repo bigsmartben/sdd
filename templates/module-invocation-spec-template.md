@@ -42,4 +42,3 @@ These rules MUST consume version-divergence and `unresolved` signals from `.spec
 ## Boundary Notes
 
 - This artifact defines invocation governance only; it does not replace dependency facts from `.specify/memory/repository-first/technical-dependency-matrix.md`.
-- This artifact does not redefine domain responsibilities from `.specify/memory/repository-first/domain-boundary-responsibilities.md`.

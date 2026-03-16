@@ -25,29 +25,22 @@ Parse `$ARGUMENTS` in this exact order before doing any planning work:
 1. The first positional token is mandatory and is `SPEC_FILE`
 2. `SPEC_FILE` MUST resolve from repo root to an existing file named `spec.md`
 3. `SPEC_FILE` MUST stay under `repo/specs/**`
-4. The optional second positional token may be the reserved uppercase literal `ALL`
-5. Any remaining text after removing `SPEC_FILE` and optional `ALL` is user planning context
+4. Any remaining text after removing `SPEC_FILE` is user planning context
 
 If the first positional token is missing or invalid, stop immediately and report the required invocation shape:
 
-`/sdd.plan <path/to/spec.md> [ALL] [technical-context...]`
+`/sdd.plan <path/to/spec.md> [technical-context...]`
 
 ## Goal
 
 `/sdd.plan` is the planning control-plane entrypoint.
 
-Default mode responsibilities are limited to:
+Responsibilities are limited to:
 
 1. Build the Stage 0 `Shared Context Snapshot` inside `plan.md`
 2. Initialize and refresh the planning queue, binding projection ledger, artifact status, and source-fingerprint tracking
 
-When the reserved `ALL` token is present, `/sdd.plan` becomes the autonomous planning runner:
-
-1. Initialize or refresh `plan.md` from `SPEC_FILE`
-2. Continue the planning queue in current handoff order
-3. Stop immediately on the first blocker or queue inconsistency
-
-Without `ALL`, `/sdd.plan` does **not** generate downstream planning-stage artifacts directly.
+`/sdd.plan` does **not** generate downstream planning-stage artifacts directly.
 
 ## Setup
 
@@ -61,8 +54,7 @@ Treat the resolved `IMPL_PLAN` as the canonical `PLAN_FILE` for all downstream p
 `/sdd.plan` MUST consume the canonical repository-first baseline produced by `/sdd.constitution`:
 
 1. `.specify/memory/repository-first/technical-dependency-matrix.md`
-2. `.specify/memory/repository-first/domain-boundary-responsibilities.md`
-3. `.specify/memory/repository-first/module-invocation-spec.md`
+2. `.specify/memory/repository-first/module-invocation-spec.md`
 
 Fail fast and route to `/sdd.constitution` if any canonical baseline artifact is missing, stale, or non-traceable.
 
@@ -172,10 +164,7 @@ They MUST consume queue state from the explicit `PLAN_FILE` only.
 
 ## Runtime Rules
 
-- Keep `/sdd.plan` orchestration-only when `ALL` is absent; do not generate downstream planning artifacts here.
-- In `ALL` mode, execute the existing planning queue autonomously in this order only: `research -> data-model -> test-matrix -> contract* -> interface-detail*`.
-- In `ALL` mode, after each writeback, recompute the next step from post-writeback `PLAN_FILE` queue state only.
-- In `ALL` mode, never skip pending rows, never reorder unit selection, and never continue past a blocker.
+- Keep `/sdd.plan` orchestration-only; do not generate downstream planning artifacts here.
 - Keep queue rows and binding rows minimal and deterministic.
 - Record source fingerprints from the direct authoritative inputs of each queue row.
 - Record output fingerprints after each row completes.
@@ -192,7 +181,6 @@ Stop immediately when any of the following occurs:
 - constitution-level constraints block downstream planning
 - required shared bootstrap anchors cannot be stabilized from authoritative inputs
 - `plan.md` cannot be initialized with the required control-plane sections
-- `ALL` mode encounters a blocked queue row or inconsistent post-writeback routing state
 
 ## Final Output
 
@@ -204,14 +192,5 @@ Always write or refresh `plan.md` first, then report:
 - initialized `Stage Queue`
 - initialized `Binding Projection Index` row count
 - initialized `Artifact Status` row count
-
-If `ALL` is absent, also report:
-
 - explicit next command: `/sdd.plan.research <absolute path to plan.md>`
 - explicit handoff order: `sdd.plan.research -> sdd.plan.data-model -> sdd.plan.test-matrix -> sdd.plan.contract -> sdd.plan.interface-detail`
-
-If `ALL` is present, also report:
-
-- autonomous mode status: `completed` or `blocked`
-- last completed stage or binding row
-- next required command with explicit file path when blocked

@@ -132,7 +132,7 @@ Include only project-critical concepts here, for example:
 
 ### Repo-Anchor Evidence Protocol
 
-- **Rule**: Repository-first analysis serves only three semantic conclusions: source-code directory, technical dependency matrix, and component/domain capability boundaries.
+- **Rule**: Repository-first analysis serves only two semantic conclusions: technical dependency matrix and invocation/layering governance.
 - **Evidence classes (hard rule)**:
   - **Source anchors**: source-code files/symbols used to prove ownership boundaries, entities, and invocation paths.
   - **Engineering assembly facts**: build/module manifests used to prove dependency declarations, module assembly, entry points, packaging boundaries, and source layout.
@@ -140,7 +140,6 @@ Include only project-critical concepts here, for example:
   - Repository-first projections are project-level authoritative artifacts located only at `.specify/memory/repository-first/`.
   - Canonical files are:
     - `.specify/memory/repository-first/technical-dependency-matrix.md`
-    - `.specify/memory/repository-first/domain-boundary-responsibilities.md`
     - `.specify/memory/repository-first/module-invocation-spec.md`
   - Feature-local copies are derived views only and MUST NOT override canonical baseline semantics.
 - **Technical dependency matrix derivation (hard rule)**:
@@ -155,11 +154,10 @@ Include only project-critical concepts here, for example:
   - `Type` values MUST be `2nd` or `3rd`.
   - `Version Source` values MUST be `direct`, `dependencyManagement`, `module-dependencyManagement`, or `unresolved`.
   - Version divergence and `unresolved` MUST be preserved as governance signals (no silent normalization).
-- **Boundary/invocation projection binding (hard rule)**:
-  - Component/domain capability boundary evidence MUST come from source anchors.
+- **Invocation projection binding (hard rule)**:
   - Invocation-governance rules MUST consume dependency-governance signals from canonical `technical-dependency-matrix.md`.
 - **Supporting-input boundary (hard rule)**: planning artifacts, docs, tests, demos, and generated outputs may be read as context only and MUST NOT be promoted into repo semantic evidence.
-- **Downstream artifact separation (hard rule)**: `technical-dependency-matrix.md` (facts), `domain-boundary-responsibilities.md` (business boundary), and `module-invocation-spec.md` (execution constraints) are complementary projections and MUST NOT replace one another.
+- **Downstream artifact separation (hard rule)**: `technical-dependency-matrix.md` (facts) and `module-invocation-spec.md` (execution constraints) are complementary projections and MUST NOT replace one another.
 
 ## State Machine Applicability Gate
 

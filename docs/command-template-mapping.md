@@ -28,7 +28,7 @@ This document replaces the prior refactor baseline document.
 | Artifact / View | Primary Role | Authority Level |
 | --- | --- | --- |
 | `.specify/memory/constitution.md` | Project-wide principles, terminology boundaries, governance rules (rule authority, not component-boundary evidence) | Authoritative |
-| `.specify/memory/repository-first/*` | Canonical repository-first dependency/boundary/invocation projections | Authoritative |
+| `.specify/memory/repository-first/*` | Canonical repository-first dependency/invocation projections | Authoritative |
 | `spec.md` | Feature business semantics and user-visible requirements | Authoritative |
 | `research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, `interface-details/` | Planning-stage design semantics within their defined scopes | Authoritative within scope |
 | `plan.md` | Planning control plane, binding projection ledger, queue/fingerprint state | Derived for planning semantics; authoritative for planning queue state |
@@ -50,9 +50,9 @@ Runtime template authority path for generation and output-structure commands is 
 
 | Command | Command Role | Template(s) | Primary Output(s) |
 | --- | --- | --- | --- |
-| `/sdd.constitution` | Update constitution rules and refresh project-level repository-first baseline | `.specify/templates/constitution-template.md` plus repository-first projection templates under `.specify/templates/` | `.specify/memory/constitution.md`, `.specify/memory/repository-first/technical-dependency-matrix.md`, `.specify/memory/repository-first/domain-boundary-responsibilities.md`, `.specify/memory/repository-first/module-invocation-spec.md` |
+| `/sdd.constitution` | Update constitution rules and refresh project-level repository-first baseline | `.specify/templates/constitution-template.md` plus repository-first projection templates under `.specify/templates/` | `.specify/memory/constitution.md`, `.specify/memory/repository-first/technical-dependency-matrix.md`, `.specify/memory/repository-first/module-invocation-spec.md` |
 | `/sdd.specify` | Generate and refine business-facing specifications | `.specify/templates/spec-template.md` | `spec.md` |
-| `/sdd.plan <spec.md> [ALL]` | Initialize the planning control plane and Stage 0 shared context, or run the full planning queue with `ALL` | `.specify/templates/plan-template.md` plus repository-first projection templates under `.specify/templates/` as input contracts | `plan.md` |
+| `/sdd.plan <spec.md>` | Initialize the planning control plane and Stage 0 shared context | `.specify/templates/plan-template.md` plus repository-first projection templates under `.specify/templates/` as input contracts | `plan.md` |
 | `/sdd.plan.research <plan.md>` | Generate the queued research artifact | `.specify/templates/research-template.md` | `research.md` |
 | `/sdd.plan.data-model <plan.md>` | Generate the queued backbone data model artifact | `.specify/templates/data-model-template.md` | `data-model.md` |
 | `/sdd.plan.test-matrix <plan.md>` | Generate the queued verification matrix and initialize binding rows | `.specify/templates/test-matrix-template.md` | `test-matrix.md`, `plan.md` binding rows |
@@ -97,8 +97,8 @@ Planning rules:
   - orchestration / queue state
   - binding projection keys
 - `plan.md` must not absorb audit payload, long stage summaries, or stage-body prose.
-- `/sdd.plan <spec.md>` requires an explicit `spec.md` path under `repo/specs/**`; `ALL` is an opt-in autonomous mode token reserved for `/sdd.plan` only.
-- `/sdd.plan` performs Stage 0 shared-context extraction inside `plan.md`; it does not directly generate `research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, or `interface-details/` unless `ALL` is explicitly requested.
+- `/sdd.plan <spec.md>` requires an explicit `spec.md` path under `repo/specs/**`.
+- `/sdd.plan` performs Stage 0 shared-context extraction inside `plan.md`; it does not directly generate `research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, or `interface-details/`.
 - child-stage selection must come from `plan.md` queue rows, not repository scanning.
 - command frontmatter `handoffs`, when present, are static advisory metadata only and may name at most one unconditional next command.
 - state-dependent planning routing must be emitted through a runtime `Handoff Decision` derived from `plan.md`, not encoded as branching frontmatter.

@@ -39,7 +39,12 @@ Use `.specify/templates/interface-detail-template.md` only. If the runtime templ
    - `Status = pending`
 4. Resolve the matching `BindingRowID` row in `Binding Projection Index`
 5. Require the matching contract row for the same `BindingRowID` to be `done`
-6. If no pending interface-detail row exists, stop and report that the queue is complete
+6. Open the matching contract artifact and verify the selected tuple is still normative for detailed-design handoff:
+   - `Boundary Anchor` is not a `BA-*` token
+   - `Repo Anchor` is not `TODO(REPO_ANCHOR)`
+   - `Anchor Status` (or legacy `Repo Anchor Status`) is one of `existing`, `extended`, `new`
+7. If tuple normativity fails, stop and report blocker with remediation target `/sdd.plan.contract <absolute path to plan.md>`
+8. If no pending interface-detail row exists, stop and report that the queue is complete
 
 ## Plan Control-Plane Input Path (Mandatory)
 
@@ -64,6 +69,14 @@ Use `.specify/templates/interface-detail-template.md` only. If the runtime templ
 - If both controller and facade exist, show both in sequence order and keep handoff explicit.
 - Explain internal responsibility flow through the smallest complete handoff set that still explains contract-visible outcomes.
 - Require UML field-level ownership for all contract-visible request/response fields and behavior-significant fields from `Field Semantics`.
+
+## Repo Anchor Decision Protocol (Mandatory)
+
+- Apply repo-anchor decision order `existing -> extended -> new -> todo`.
+- `extended` is valid only for same-entity field/state expansion.
+- `new` is normative only when explicit `path::symbol` target evidence is present.
+- If explicit target evidence is missing, set status to `todo` and keep the anchor forward-looking/non-normative.
+- Repo anchors in this stage are for naming/lifecycle correction and traceability only; do not invent business semantics from anchors.
 
 ## Allowed Inputs
 

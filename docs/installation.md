@@ -67,7 +67,7 @@ uvx --from git+https://github.com/bigsmartben/sdd.git specify init <project_name
 After initialization, you should see the following commands available in your AI agent:
 
 - `/sdd.specify` - Create specifications
-- `/sdd.plan <spec.md> [ALL]` - Initialize the planning control plane or run the full planning queue
+- `/sdd.plan <spec.md>` - Initialize the planning control plane
 - `/sdd.plan.research <plan.md>` - Generate the queued research artifact
 - `/sdd.plan.data-model <plan.md>` - Generate the queued data model artifact
 - `/sdd.plan.test-matrix <plan.md>` - Generate the queued test matrix artifact

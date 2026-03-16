@@ -138,13 +138,7 @@ Be specific about your tech stack and technical requirements:
 /sdd.plan specs/001-create-taskify/spec.md We are going to generate this using .NET Aspire, using Postgres as the database. The frontend should use Blazor server with drag-and-drop task boards, real-time updates. There should be a REST API created with a projects API, tasks API, and a notifications API.
 ```
 
-Or run the full planning queue autonomously:
-
-```bash
-/sdd.plan specs/001-create-taskify/spec.md ALL We are going to generate this using .NET Aspire, using Postgres as the database. The frontend should use Blazor server with drag-and-drop task boards, real-time updates. There should be a REST API created with a projects API, tasks API, and a notifications API.
-```
-
-Then run the planning queue one command at a time when you are not using `ALL`:
+Then run the planning queue one command at a time:
 
 ```bash
 /sdd.plan.research specs/001-create-taskify/plan.md

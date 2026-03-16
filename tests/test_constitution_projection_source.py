@@ -25,7 +25,6 @@ def test_constitution_template_defines_owner_boundaries_and_terms():
     assert "### Ownership Boundary Baseline" not in content
     assert "### Repo-Anchor Evidence Protocol" in content
     assert ".specify/memory/repository-first/technical-dependency-matrix.md" in content
-    assert ".specify/memory/repository-first/domain-boundary-responsibilities.md" in content
     assert ".specify/memory/repository-first/module-invocation-spec.md" in content
     assert "dependency evidence MUST come from build-manifest auto-detection with deterministic priority" in content
     assert "Maven: `pom.xml`" in content
@@ -89,7 +88,6 @@ def test_constitution_command_owns_repository_first_baseline_pipeline():
     assert "Repository-first global baseline pipeline (mandatory)" in content
     assert ".specify/memory/repository-first/" in content
     assert "technical-dependency-matrix.md" in content
-    assert "domain-boundary-responsibilities.md" in content
     assert "module-invocation-spec.md" in content
     assert "Detect build manifests from repo root using deterministic priority" in content
     assert "Maven: `pom.xml`" in content
@@ -100,6 +98,7 @@ def test_constitution_command_owns_repository_first_baseline_pipeline():
     assert "`created`" in content
     assert "`updated`" in content
     assert "`unchanged`" in content
+    assert "`deleted`" in content
 
 
 def test_constitution_command_defines_runtime_fast_path_and_bounded_reads():

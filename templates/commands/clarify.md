@@ -3,7 +3,7 @@ description: Identify underspecified areas in the current feature spec by asking
 handoffs: 
   - label: Build Technical Plan
     agent: sdd.plan
-    prompt: Create a plan by running /sdd.plan <path/to/spec.md> [ALL] with the explicit spec.md path resolved for this feature. I am building with...
+    prompt: Create a plan by running /sdd.plan <path/to/spec.md> with the explicit spec.md path resolved for this feature. I am building with...
 scripts:
    sh: scripts/bash/check-prerequisites.sh --json --paths-only
    ps: scripts/powershell/check-prerequisites.ps1 -Json -PathsOnly

@@ -1145,7 +1145,7 @@ DEFAULT_SKILLS_DIR = ".agents/skills"
 # Enhanced descriptions for each SDD command skill
 SKILL_DESCRIPTIONS = {
     "specify": "Create or update feature specifications from natural language descriptions. Use when starting new features or refining requirements. Generates spec.md with user stories, functional requirements, and acceptance criteria following spec-driven development methodology.",
-    "plan": "Initialize the planning control plane from an explicit spec.md path. Use `/sdd.plan <path/to/spec.md> [ALL] ...` after creating a spec to produce plan.md with Stage 0 shared context, queue state, and binding projection tracking for the /sdd.plan.* child commands.",
+    "plan": "Initialize the planning control plane from an explicit spec.md path. Use `/sdd.plan <path/to/spec.md> ...` after creating a spec to produce plan.md with Stage 0 shared context, queue state, and binding projection tracking for the /sdd.plan.* child commands.",
     "plan.research": "Generate the queued research.md artifact selected from an explicit plan.md path. Use `/sdd.plan.research <path/to/plan.md>` after /sdd.plan to resolve the first pending research unit and emit the next runtime handoff decision.",
     "plan.data-model": "Generate the queued data-model.md artifact selected from an explicit plan.md path. Use `/sdd.plan.data-model <path/to/plan.md>` after /sdd.plan.research to produce one backbone data model unit and emit the next runtime handoff decision.",
     "plan.test-matrix": "Generate the queued test-matrix.md artifact selected from an explicit plan.md path. Use `/sdd.plan.test-matrix <path/to/plan.md>` after /sdd.plan.data-model to seed binding rows and emit the next runtime handoff decision.",
@@ -1766,7 +1766,7 @@ def init(
 
     steps_lines.append(f"   2.1 [cyan]/{COMMAND_NAMESPACE}.constitution[/] - Establish project principles")
     steps_lines.append(f"   2.2 [cyan]/{COMMAND_NAMESPACE}.specify[/] - Create baseline specification")
-    steps_lines.append(f"   2.3 [cyan]/{COMMAND_NAMESPACE}.plan <spec.md> [ALL][/] - Initialize the planning control plane or run the full planning queue")
+    steps_lines.append(f"   2.3 [cyan]/{COMMAND_NAMESPACE}.plan <spec.md>[/] - Initialize the planning control plane")
     steps_lines.append(f"   2.4 [cyan]/{COMMAND_NAMESPACE}.plan.research <plan.md>[/] - Start the planning queue")
     steps_lines.append(f"   2.5 Follow runtime Handoff Decision through [cyan]/{COMMAND_NAMESPACE}.plan.data-model <plan.md>[/], [cyan]/{COMMAND_NAMESPACE}.plan.test-matrix <plan.md>[/], repeated [cyan]/{COMMAND_NAMESPACE}.plan.contract <plan.md>[/], and repeated [cyan]/{COMMAND_NAMESPACE}.plan.interface-detail <plan.md>[/]")
     steps_lines.append(f"   2.6 [cyan]/{COMMAND_NAMESPACE}.tasks[/] - Generate actionable tasks")

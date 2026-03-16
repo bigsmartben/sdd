@@ -33,6 +33,7 @@ If `PLAN_FILE` is missing or invalid, stop immediately and report the required i
 
 Generate exactly one `data-model.md` artifact by consuming the first pending `data-model` row from `PLAN_FILE`.
 This command is single-unit only and MUST NOT perform any other planning stage work.
+`spec.md` + `research.md` define model semantics; repo anchors are correction/traceability evidence only.
 Use `.specify/templates/data-model-template.md` only. If the runtime template is missing or unreadable, stop and report the blocker instead of inferring structure from mirrors or other `data-model.md` outputs.
 
 ## Selection Rules
@@ -54,9 +55,19 @@ Use `.specify/templates/data-model-template.md` only. If the runtime template is
 ## Path Constraints
 
 - Stay inside the resolved `FEATURE_DIR` plus the explicit files listed in `Allowed Inputs`.
+- Derive entity/relationship/invariant semantics from `FEATURE_SPEC` and `research.md` first.
+- Repo anchors are limited to naming correction, lifecycle vocabulary correction, and traceability.
 - Lifecycle anchors MUST come from symbols/files explicitly referenced by `Shared Context Snapshot` or by a concrete blocker in the selected row.
 - Finish row selection and prerequisite checks before broader repo reads; do not scan the repository for additional context, alternate `plan.md` paths, or other feature folders.
 - Do not use any existing `data-model.md` outside the current target artifact path as an input or style source.
+
+## Repo Anchor Decision Protocol (Mandatory)
+
+- Apply strict decision order for every repo-anchor choice: `existing -> extended -> new -> todo`.
+- `extended` is valid only for same-entity field/state expansion.
+- `new` is allowed in normative sections only when explicit `path::symbol` target evidence is provided.
+- If explicit `path::symbol` target evidence is missing, set status to `todo` and keep the item forward-looking/non-normative.
+- Do not use repo anchors to invent business semantics; they only correct naming/lifecycle terms and provide traceability.
 
 ## Allowed Inputs
 

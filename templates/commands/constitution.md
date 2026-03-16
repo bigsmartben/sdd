@@ -42,7 +42,7 @@ Follow this execution flow:
    - Build one run-local **change impact map** before broad reads:
      - `governance-only`: dates/version text/rationale clarifications with no downstream rule impact
      - `template-affecting`: principle/rule wording that changes downstream command or template behavior
-     - `repo-first-affecting`: repository-first evidence, dependency-governance, boundary, or invocation-rule changes
+     - `repo-first-affecting`: repository-first dependency/invocation evidence or governance-rule changes
    - Use this impact map to drive all follow-up reads/updates. Default to the smallest affected scope.
    - Apply a **bounded evidence budget** for this run:
      - Start with constitution file + only directly impacted files.
@@ -67,7 +67,7 @@ Follow this execution flow:
      - Planning control plane template: Read `.specify/templates/plan-template.md` and ensure any "Constitution Check" or rules align with updated principles.
      - Planning-stage templates: Read the planning-stage templates in `.specify/templates/` (`research-template.md`, `data-model-template.md`, `test-matrix-template.md`, `contract-template.md`, and `interface-detail-template.md`) and ensure they reflect the updated principles and stage boundaries.
      - Feature/task templates: Read `.specify/templates/spec-template.md` for scope/requirements alignment and `.specify/templates/tasks-template.md` for principle-driven task categorization changes (for example observability, versioning, testing discipline).
-     - Repository-first projection templates: Read `.specify/templates/technical-dependency-matrix-template.md`, `.specify/templates/domain-boundary-responsibilities-template.md`, and `.specify/templates/module-invocation-spec-template.md` and keep them aligned with constitution repository-first rules.
+     - Repository-first projection templates: Read `.specify/templates/technical-dependency-matrix-template.md` and `.specify/templates/module-invocation-spec-template.md` and keep them aligned with constitution repository-first rules.
      - Command templates: Read each command file in the active agent command directory (for example `.roo/commands/*.md`, `.claude/commands/*.md`, `.github/agents/*.agent.md`, `.gemini/commands/*.toml`); if `templates/commands/*.md` exists in this repository, review it as well. Verify no outdated references (agent-specific names like CLAUDE only) remain when generic guidance is required.
      - Runtime guidance docs: Read any runtime guidance docs (for example `README.md`, `docs/quickstart.md`, or agent-specific guidance files if present) and update references to principles changed.
    - Runtime efficiency protocol:
@@ -94,17 +94,18 @@ Follow this execution flow:
      - If no trigger is true, keep canonical baseline files as-is and mark each artifact `unchanged` without template re-render.
    - Use `.specify/memory/repository-first/` as the canonical output directory for repository-first projections:
      - `.specify/memory/repository-first/technical-dependency-matrix.md`
-     - `.specify/memory/repository-first/domain-boundary-responsibilities.md`
      - `.specify/memory/repository-first/module-invocation-spec.md`
    - Generate/refresh these files from their templates and constitution rules:
      - `.specify/templates/technical-dependency-matrix-template.md`
-     - `.specify/templates/domain-boundary-responsibilities-template.md`
      - `.specify/templates/module-invocation-spec-template.md`
+   - Legacy migration rule (mandatory):
+     - If a legacy third baseline file exists under `.specify/memory/repository-first/`, remove it and record artifact status as `deleted`.
    - Always resolve repository-first artifacts by canonical paths under `.specify/memory/repository-first/`; never read or stat bare projection filenames from repo root.
    - Apply diff-based rewrite behavior:
      - `created`: file did not exist and is created
      - `updated`: file existed and content changed
      - `unchanged`: file existed and content is identical (do not rewrite)
+     - `deleted`: legacy baseline file removed by migration
    - Dependency matrix generation policy:
      - Normalize `Dependency (G:A)` as:
        - Maven: `group:artifact`
@@ -122,7 +123,7 @@ Follow this execution flow:
    - Templates requiring updates (✅ updated / ⚠ pending) with file paths
    - Repository-first baseline status in `.specify/memory/repository-first/`:
      - Build-manifest detection outcome (ecosystems found / not found)
-     - Artifact status per file (`created` / `updated` / `unchanged`)
+     - Artifact status per file (`created` / `updated` / `unchanged` / `deleted`)
    - Keep report compact:
      - include changed paths explicitly
      - for unchanged families, prefer one-line grouped summaries over per-file prose
@@ -143,7 +144,7 @@ Follow this execution flow:
 
 9. Output a final summary to the user with:
    - New version and bump rationale.
-   - Net-new fact source changes only (for example repository-first definitions or ownership-boundary baseline updates); reference the Sync Impact Report instead of restating it.
+   - Net-new fact source changes only (for example repository-first dependency/invocation baseline updates); reference the Sync Impact Report instead of restating it.
    - Repository-first baseline update summary only when status changed (`created` / `updated`) or blockers remain.
    - Any files flagged for manual follow-up.
    - Suggested commit message (e.g., `docs: amend constitution to vX.Y.Z (principle additions + governance update)`).
