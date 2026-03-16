@@ -26,7 +26,7 @@ Run the unified audit entry before `/sdd.implement`: combine planning lint outpu
 
 `/sdd.analyze` owns this centralized audit and summary authority. `/sdd.implement` should remain limited to hard execution gates only.
 
-Mechanical output structure is governed by `templates/lint-report-template.md`; semantic output remains in this command's semantic report section.
+Mechanical output structure is governed by `.specify/templates/lint-report-template.md`; if that runtime template is missing or non-consumable, stop and report the blocker. Semantic output remains in this command's semantic report section.
 
 ## Constitution Authority
 
@@ -36,7 +36,9 @@ Mechanical output structure is governed by `templates/lint-report-template.md`; 
 
 **Artifact Authority**
 
-Authoritative artifacts: `spec.md`, `plan.md`, `tasks.md`, `.specify/memory/constitution.md`, supporting planning artifacts (`research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, `interface-details/`), and repository-first canonical baseline projections in `.specify/memory/repository-first/` (`technical-dependency-matrix.md`, `domain-boundary-responsibilities.md`, `module-invocation-spec.md`) when required by plan outputs.
+Authoritative artifacts: `spec.md`, `tasks.md`, `.specify/memory/constitution.md`, supporting planning artifacts (`research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, `interface-details/`), and repository-first canonical baseline projections in `.specify/memory/repository-first/` (`technical-dependency-matrix.md`, `domain-boundary-responsibilities.md`, `module-invocation-spec.md`) when required by plan outputs.
+
+`plan.md` is the planning control plane for queue state, binding-projection rows, and source/output fingerprints only. It is derived for planning semantics and MUST NOT supersede the stage artifacts it dispatches.
 
 `/sdd.analyze` owns comprehensive implementation-readiness analysis and audit responsibilities.
 CRITICAL/HIGH findings MUST cite the authoritative source artifact(s).
@@ -91,7 +93,7 @@ If lint is unavailable or execution fails:
 Load only sections needed for semantic conclusions:
 
 - From `spec.md`: overview/context, functional & non-functional requirements, user stories, edge cases when present.
-- From `plan.md`: architecture/stack choices, constraints, stage outputs, planning references.
+- From `plan.md`: `Shared Context Snapshot`, `Stage Queue`, `Binding Projection Index`, `Artifact Status`, and source/output fingerprints.
 - From `tasks.md`: task IDs, scopes (`GLOBAL`, `IF-*`), DAG/dependencies, descriptions, referenced files/anchors.
 - From supporting planning artifacts (only when needed):
   - `contracts/` for interface semantics
@@ -113,6 +115,7 @@ Construct internal models (no raw artifact dump):
 - user action / acceptance inventory
 - task-to-requirement coverage mapping
 - constitution principle map
+- planning queue / binding projection / fingerprint inventory
 
 ### 5) Semantic Detection Passes
 
@@ -127,6 +130,7 @@ Focus on high-signal semantic issues and aggregate overflow beyond 50 findings.
 - execution-order or dependency contradictions that create implementation blockers
 - semantic conflicts between `spec.md`, `plan.md`, `tasks.md`, and required supporting artifacts
 - domain semantic coverage vs interface-local technical traceability sufficiency
+- stale planning outputs where `plan.md` source fingerprints no longer match the current upstream artifact state
 
 Mandatory explicit semantic checks (do not skip even when lint is available):
 
@@ -165,6 +169,16 @@ Mandatory explicit semantic checks (do not skip even when lint is available):
     - flag invocation rules not aligned to real module layering
     - flag dependency-governance rules that ignore divergence/`unresolved` signals from canonical `technical-dependency-matrix.md`
 
+- planning control-plane stale checks:
+  - compare each `Stage Queue` row `Source Fingerprint` against the current direct upstream artifact set for that row
+  - compare each `Artifact Status` row `Source Fingerprint` against the current authoritative inputs for that `BindingRowID`
+  - flag rows where fingerprints drift as stale planning outputs
+  - route stale `research` rows to `/sdd.plan.research`
+  - route stale `data-model` rows to `/sdd.plan.data-model`
+  - route stale `test-matrix` rows or missing binding rows to `/sdd.plan.test-matrix`
+  - route stale `contract` rows to `/sdd.plan.contract`
+  - route stale `interface-detail` rows to `/sdd.plan.interface-detail`
+
 Mechanical checks delegated to planning lint (for example format-level tuple lint and diagram syntax issues) should be consumed from lint output instead of duplicating long rule prose here.
 
 ### 6) Produce Compact Analysis Report
@@ -180,7 +194,7 @@ Output Markdown (no file writes) with this structure:
 
 ### Mechanical Findings
 
-Rows derived from lint output only, projected using `templates/lint-report-template.md` section semantics.
+Rows derived from lint output only, projected using `.specify/templates/lint-report-template.md` section semantics.
 
 | ID | Source | Rule | Severity | Location | Summary | Remediation |
 |----|--------|------|----------|----------|---------|-------------|
@@ -214,7 +228,7 @@ Assemble and output one decision:
 - `FAIL`: at least one blocking finding remains.
 
 When `FAIL`, provide blocker list with evidence and remediation owner command (`/sdd.specify`, `/sdd.plan`, or `/sdd.tasks`).
-Treat the following as blocking by default: normative use of `BA-*`, normative tuple rows with unresolved `TODO(REPO_ANCHOR)`, contract/interface field drift from anchored DTOs/signatures, runtime correctness gaps in Stage 4 interface details, lifecycle stable-state drift from anchored enum/state sources, missing/stale repository-first canonical baseline files, dependency-matrix evidence not traceable to engineering assembly facts, boundary responsibilities not traceable to source anchors, and invocation-governance rules that drift from real module layering or ignore divergence/`unresolved` dependency governance signals.
+Treat the following as blocking by default: normative use of `BA-*`, normative tuple rows with unresolved `TODO(REPO_ANCHOR)`, contract/interface field drift from anchored DTOs/signatures, runtime correctness gaps in Stage 4 interface details, lifecycle stable-state drift from anchored enum/state sources, missing/stale repository-first canonical baseline files, dependency-matrix evidence not traceable to engineering assembly facts, boundary responsibilities not traceable to source anchors, invocation-governance rules that drift from real module layering or ignore divergence/`unresolved` dependency governance signals, and stale planning control-plane rows where `Source Fingerprint` no longer matches current authoritative inputs.
 
 ### 7) Next Actions
 
@@ -222,7 +236,7 @@ Provide concise actions aligned to gate result:
 
 - `FAIL`: resolve blockers before `/sdd.implement`.
 - `PASS`: proceed, with optional follow-up improvements for non-blocking findings.
-- Keep command suggestions explicit and short (`/sdd.specify`, `/sdd.plan`, `/sdd.tasks`).
+- Keep command suggestions explicit and short (`/sdd.specify`, `/sdd.plan.*`, `/sdd.tasks`).
 
 ## Context
 

@@ -148,9 +148,10 @@ validate_environment() {
     fi
     
     # Check if template exists (needed for new files)
-    if [[ ! -f "$TEMPLATE_FILE" ]]; then
-        log_warning "Template file not found at $TEMPLATE_FILE"
-        log_warning "Creating new agent files will fail"
+    if [[ ! -r "$TEMPLATE_FILE" ]]; then
+        log_error "Template file not found at $TEMPLATE_FILE"
+        log_info "Run specify init to scaffold .specify/templates, or add agent-file-template.md there."
+        exit 1
     fi
 }
 

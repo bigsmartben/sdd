@@ -464,7 +464,14 @@ Additional notes and tips.
 ```yaml
 description: string   # Required, brief command description
 tools: [string]       # Optional, MCP tools required
+handoffs:             # Optional, static handoff metadata only
+  - label: string
+    agent: string
+    prompt: string
+    send: boolean
 ```
+
+`handoffs` are advisory metadata only and may describe only unconditional next steps. State-dependent routing must be expressed in command output or body instructions, not as branching frontmatter.
 
 ### Special Variables
 

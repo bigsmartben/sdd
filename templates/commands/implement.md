@@ -77,6 +77,7 @@ Terminology note (compatibility, non-normative):
 - `/sdd.implement` owns task consumption and execution only.
 - Keep pre-execution gating minimal and execution-oriented: required artifact presence, runtime-source consumability, DAG dependency safety, and blocking missing inputs.
 - Comprehensive cross-artifact auditing remains owned by `/sdd.analyze`.
+- Analyze-first is a blocking reminder by default: if current task artifacts have no completed `/sdd.analyze` pass, stop and route the user to `/sdd.analyze` unless the user explicitly waives that audit step for this run.
 
 ## Outline
 
@@ -86,7 +87,7 @@ Terminology note (compatibility, non-normative):
 
 3. **Enforce hard pre-execution gates only**:
    - **Required artifact presence**: confirm `tasks.md` exists and prerequisite command output (`FEATURE_DIR`, `AVAILABLE_DOCS`) is available.
-   - **Analyze-first advisory (non-blocking)**: if there is no evidence this feature has completed `/sdd.analyze` for the current `tasks.md`, emit a recommendation to run `/sdd.analyze` before or alongside `/sdd.implement`, then continue when other hard gates pass.
+   - **Analyze-first blocking reminder**: if there is no evidence this feature has completed `/sdd.analyze` for the current `tasks.md`, stop and route the user to `/sdd.analyze` before continuing. Continue only if the user explicitly waives the audit step for this run.
    - **Manifest probe (preferred runtime source)**: check for `tasks.manifest.json` in the same directory as `tasks.md`.
    - **Manifest validation (when present)**: validate parseability and required task keys: `task_id`, `dependencies`, `if_scope`, `refs`, `target_paths`, `completion_anchors`, `conflict_hints`, `status`.
    - **Fallback trigger**: if manifest is missing or validation fails, switch to `tasks.md` parsing for this run and report the fallback reason.
@@ -98,7 +99,7 @@ Terminology note (compatibility, non-normative):
       - `Cross-Interface Finalization`
    - **DAG dependency safety**: confirm dependency data from the selected runtime source is parseable and dependency-safe for execution (no predecessor violations, no unresolved required predecessors, no obvious cycle/closure break).
    - **Blocking missing inputs**: if ready-to-run tasks reference required inputs/artifacts that are absent, treat as blocking and stop.
-   - **Blocking behavior**: if any hard gate fails (required artifacts missing, runtime source non-consumable, DAG invalid, or blocking inputs missing), stop and report the exact missing/invalid item; route task-structure/dependency repair to `/sdd.tasks` before retrying `/sdd.implement`. Route comprehensive semantic uncertainty to `/sdd.analyze`.
+   - **Blocking behavior**: if any hard gate fails (required artifacts missing, missing analyze pass without explicit waiver, runtime source non-consumable, DAG invalid, or blocking inputs missing), stop and report the exact missing/invalid item; route task-structure/dependency repair to `/sdd.tasks` before retrying `/sdd.implement`. Route comprehensive semantic uncertainty to `/sdd.analyze`.
 
 4. Load the execution context needed for the current run:
    - Prefer `tasks.manifest.json` as the runtime execution metadata source. If missing or invalid, fall back to parsing `tasks.md` and report the fallback reason.
@@ -191,4 +192,4 @@ Terminology note (compatibility, non-normative):
 
 9. Execute `after_implement` hooks using the Hook Dispatch Protocol.
 
-Note: This command assumes a complete, DAG-usable task breakdown exists. Preferred runtime input is `tasks.manifest.json` (when valid), with `tasks.md` as authoritative orchestration source and fallback parse target. If required sections are missing, DAG is invalid, manifest validation fails without safe fallback, or task rows are incomplete, suggest running `/sdd.tasks` first to regenerate task artifacts.
+Note: This command assumes a complete, DAG-usable task breakdown exists. Preferred runtime input is `tasks.manifest.json` (when valid), with `tasks.md` as authoritative orchestration source and fallback parse target. If required sections are missing, no current `/sdd.analyze` pass exists and the user does not explicitly waive it, DAG is invalid, manifest validation fails without safe fallback, or task rows are incomplete, suggest running `/sdd.tasks` or `/sdd.analyze` first before retrying `/sdd.implement`.
