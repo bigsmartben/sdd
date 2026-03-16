@@ -19,7 +19,7 @@ description: "Interface-delivery-oriented execution orchestration template for f
 
 Boundary ownership:
 
-- `plan.md`: implementation structure and stage outputs
+- `plan.md`: planning control plane, queue state, and artifact target paths
 - `interface-details/<operationId>.md`: per-interface detailed design projection
 - `data-model.md`: global object semantics and invariants
 - `test-matrix.md`: feature verification anchors (`TM-*` / `TC-*`)
@@ -156,6 +156,7 @@ Rules:
 - If `tasks.manifest.json` is missing or invalid, `/sdd.implement` falls back to parsing `tasks.md`.
 - `tasks.md` remains the human-review and execution-orchestration authority.
 - `tasks.manifest.json` is a machine-readable projection only and MUST NOT introduce new semantics.
+- `tasks.manifest.json` should be refreshed from the same run-local execution graph used to render `tasks.md`, so both outputs stay atomically aligned for a run.
 - Required consumable sections in `tasks.md` (authoritative fallback + human review):
   - `Upstream Inputs (Execution References)`
   - `Execution Ordering Model` (`Task DAG`)

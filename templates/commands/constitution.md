@@ -18,7 +18,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 You are updating the project constitution at `.specify/memory/constitution.md`. Treat the current file as the authoritative working constitution and amend it in-place based on user intent and governance rules.
 
-**Runtime template path rule**: If `.specify/memory/constitution.md` does not exist yet, initialize it from `.specify/templates/constitution-template.md` first. In the Spec Kit source repository, `templates/constitution-template.md` is the source mirror of that runtime template.
+**Runtime template path rule**: If `.specify/memory/constitution.md` does not exist yet, initialize it from `.specify/templates/constitution-template.md` first. If that runtime template is missing or non-consumable when initialization is required, stop and report the blocker. Do not substitute `templates/constitution-template.md` or any other template location. In the Spec Kit source repository, `templates/constitution-template.md` is the source mirror of that runtime template.
 
 Follow this execution flow:
 
@@ -47,18 +47,20 @@ Follow this execution flow:
    - Ensure each Principle section: succinct name line, paragraph (or bullet list) capturing non‑negotiable rules, explicit rationale if not obvious.
    - Ensure Governance section lists amendment procedure, versioning policy, and compliance review expectations.
 
-4. Fact-source propagation checklist:
+4. Fact-source propagation and redundancy control:
    - Treat `.specify/memory/constitution.md` as the authoritative project-level rule source.
    - Treat `.specify/memory/constitution.md` as the authoritative project-level fact source. Any summaries, extracted rule lists, or downstream restatements of constitution content are derived views only and MUST be refreshed when constitution facts change.
    - Constitution content MUST stay at long-lived rule/terminology/ownership-boundary level; do not embed mechanical lint catalog details (rule IDs, regex patterns, script flags, payload schemas).
    - Runtime template authority path is `.specify/templates/`; when editing Spec Kit source directly, use the `templates/` mirror for the same files.
-   - Read `.specify/templates/plan-template.md` and ensure any "Constitution Check" or rules align with updated principles.
-   - Read the planning-stage templates in `.specify/templates/` (`research-template.md`, `data-model-template.md`, `test-matrix-template.md`, `contract-template.md`, and `interface-detail-template.md`) and ensure they reflect the updated principles and stage boundaries.
-   - Read `.specify/templates/spec-template.md` for scope/requirements alignment—update if constitution adds/removes mandatory sections or constraints.
-   - Read `.specify/templates/tasks-template.md` and ensure task categorization reflects new or removed principle-driven task types (e.g., observability, versioning, testing discipline).
-   - Read repository-first projection templates (`.specify/templates/technical-dependency-matrix-template.md`, `.specify/templates/domain-boundary-responsibilities-template.md`, `.specify/templates/module-invocation-spec-template.md`) and keep them aligned with constitution repository-first rules.
-   - Read each command file in the active agent command directory (for example `.roo/commands/*.md`, `.claude/commands/*.md`, `.github/agents/*.agent.md`, `.gemini/commands/*.toml`); if `templates/commands/*.md` exists in this repository, review it as well. Verify no outdated references (agent-specific names like CLAUDE only) remain when generic guidance is required.
-   - Read any runtime guidance docs (e.g., `README.md`, `docs/quickstart.md`, or agent-specific guidance files if present). Update references to principles changed.
+   - Review and refresh impacted artifact families only; avoid mechanical full-repo rewrites of unchanged downstream files.
+   - Prefer targeted references over restating the same rule text across multiple downstream templates. When a downstream command or template only needs the constitution as authority, keep the downstream wording brief and aligned instead of cloning full rule prose.
+   - Required alignment families:
+     - Planning control plane template: Read `.specify/templates/plan-template.md` and ensure any "Constitution Check" or rules align with updated principles.
+     - Planning-stage templates: Read the planning-stage templates in `.specify/templates/` (`research-template.md`, `data-model-template.md`, `test-matrix-template.md`, `contract-template.md`, and `interface-detail-template.md`) and ensure they reflect the updated principles and stage boundaries.
+     - Feature/task templates: Read `.specify/templates/spec-template.md` for scope/requirements alignment and `.specify/templates/tasks-template.md` for principle-driven task categorization changes (for example observability, versioning, testing discipline).
+     - Repository-first projection templates: Read `.specify/templates/technical-dependency-matrix-template.md`, `.specify/templates/domain-boundary-responsibilities-template.md`, and `.specify/templates/module-invocation-spec-template.md` and keep them aligned with constitution repository-first rules.
+     - Command templates: Read each command file in the active agent command directory (for example `.roo/commands/*.md`, `.claude/commands/*.md`, `.github/agents/*.agent.md`, `.gemini/commands/*.toml`); if `templates/commands/*.md` exists in this repository, review it as well. Verify no outdated references (agent-specific names like CLAUDE only) remain when generic guidance is required.
+     - Runtime guidance docs: Read any runtime guidance docs (for example `README.md`, `docs/quickstart.md`, or agent-specific guidance files if present) and update references to principles changed.
 
 5. Repository-first global baseline pipeline (mandatory):
    - Detect build manifests from repo root using deterministic priority and process all supported ecosystems detected:
@@ -87,6 +89,7 @@ Follow this execution flow:
      - Preserve version divergence and `unresolved` as governance signals (no silent normalization).
 
 6. Produce a Sync Impact Report (prepend as an HTML comment at top of the constitution file after update):
+   - Keep this report delta-oriented; do not restate unchanged template inventories or canonical baseline details beyond status.
    - Version change: old → new
    - List of modified principles (old title → new title if renamed)
    - Added sections
@@ -104,6 +107,7 @@ Follow this execution flow:
    - Principles are declarative, testable, and free of vague language ("should" → replace with MUST/SHOULD rationale where appropriate).
    - Constitution text does not include lint-catalog implementation details (rule IDs, regexes, script parameters, or execution payload shapes).
    - Do not duplicate one normative rule into competing expansions across multiple command templates; keep one constitution-level rule and downstream references aligned to that single authority.
+   - Downstream alignment updates are minimal and delta-based; unchanged command/template text should not be rewritten just to restate existing authority.
    - Do not introduce cross-artifact PASS/FAIL gates here; centralized consistency gating belongs to `/sdd.analyze`.
    - Repository-first canonical directory and files exist or are explicitly reported with unresolved blockers.
 
@@ -111,8 +115,8 @@ Follow this execution flow:
 
 9. Output a final summary to the user with:
    - New version and bump rationale.
-   - Fact source changes (for example repository-first definitions or ownership-boundary baseline updates).
-   - Repository-first baseline update summary (`created` / `updated` / `unchanged` + detection outcome).
+   - Net-new fact source changes only (for example repository-first definitions or ownership-boundary baseline updates); reference the Sync Impact Report instead of restating it.
+   - Repository-first baseline update summary only when status changed (`created` / `updated`) or blockers remain.
    - Any files flagged for manual follow-up.
    - Suggested commit message (e.g., `docs: amend constitution to vX.Y.Z (principle additions + governance update)`).
    - No cross-artifact PASS/FAIL gate decision in this command.

@@ -29,12 +29,57 @@ GENRELEASES_DIR=".genreleases"
 mkdir -p "$GENRELEASES_DIR"
 rm -rf "$GENRELEASES_DIR"/* || true
 
+if [[ -d templates/commands ]]; then
+  TEMPLATE_COMMAND_COUNT=$(find templates/commands -maxdepth 1 -type f -name '*.md' | wc -l | tr -d ' ')
+else
+  TEMPLATE_COMMAND_COUNT=0
+fi
+
+if [[ "$TEMPLATE_COMMAND_COUNT" -eq 0 ]]; then
+  echo "Error: no command templates found under templates/commands" >&2
+  exit 1
+fi
+
 rewrite_paths() {
   sed -E \
     -e 's@(/?)memory/@.specify/memory/@g' \
     -e 's@(/?)scripts/@.specify/scripts/@g' \
     -e 's@(/?)templates/@.specify/templates/@g' \
     -e 's@\.specify\.specify/@.specify/@g'
+}
+
+validate_generated_command_files() {
+  local output_dir=$1 ext=$2 agent=$3
+  local generated_count
+  generated_count=$(find "$output_dir" -maxdepth 1 -type f -name "sdd.*.${ext}" | wc -l | tr -d ' ')
+
+  if [[ "$generated_count" -ne "$TEMPLATE_COMMAND_COUNT" ]]; then
+    echo "Error: generated command count mismatch for $agent ($ext). expected=$TEMPLATE_COMMAND_COUNT actual=$generated_count dir=$output_dir" >&2
+    exit 1
+  fi
+}
+
+validate_copilot_prompt_files() {
+  local agents_dir=$1 prompts_dir=$2
+  local agent_count prompt_count
+  agent_count=$(find "$agents_dir" -maxdepth 1 -type f -name 'sdd.*.agent.md' | wc -l | tr -d ' ')
+  prompt_count=$(find "$prompts_dir" -maxdepth 1 -type f -name 'sdd.*.prompt.md' | wc -l | tr -d ' ')
+
+  if [[ "$agent_count" -ne "$prompt_count" ]]; then
+    echo "Error: generated Copilot prompt count mismatch. expected=$agent_count actual=$prompt_count prompts_dir=$prompts_dir" >&2
+    exit 1
+  fi
+}
+
+validate_generated_kimi_skills() {
+  local skills_dir=$1
+  local skill_count
+  skill_count=$(find "$skills_dir" -mindepth 2 -maxdepth 2 -type f -name 'SKILL.md' | wc -l | tr -d ' ')
+
+  if [[ "$skill_count" -ne "$TEMPLATE_COMMAND_COUNT" ]]; then
+    echo "Error: generated Kimi skill count mismatch. expected=$TEMPLATE_COMMAND_COUNT actual=$skill_count dir=$skills_dir" >&2
+    exit 1
+  fi
 }
 
 generate_commands() {
@@ -104,6 +149,8 @@ generate_commands() {
         ;;
     esac
   done
+
+  validate_generated_command_files "$output_dir" "$ext" "$agent"
 }
 
 generate_copilot_prompts() {
@@ -123,6 +170,8 @@ agent: ${basename}
 ---
 EOF
   done
+
+  validate_copilot_prompt_files "$agents_dir" "$prompts_dir"
 }
 
 # Create Kimi Code skills in .kimi/skills/<name>/SKILL.md format.
@@ -188,6 +237,8 @@ create_kimi_skills() {
       printf '%s\n' "$template_body"
     } > "$skill_dir/SKILL.md"
   done
+
+  validate_generated_kimi_skills "$skills_dir"
 }
 
 build_variant() {

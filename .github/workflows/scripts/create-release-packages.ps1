@@ -35,6 +35,12 @@ if (Test-Path $GenReleasesDir) {
 }
 New-Item -ItemType Directory -Path $GenReleasesDir -Force | Out-Null
 
+$TemplateCommandCount = @(Get-ChildItem -Path "templates/commands/*.md" -File -ErrorAction SilentlyContinue).Count
+if ($TemplateCommandCount -eq 0) {
+    Write-Error "No command templates found under templates/commands"
+    exit 1
+}
+
 function Rewrite-Paths {
     param([string]$Content)
 
@@ -42,6 +48,48 @@ function Rewrite-Paths {
     $Content = $Content -replace '(/?)\bscripts/', '.specify/scripts/'
     $Content = $Content -replace '(/?)\btemplates/', '.specify/templates/'
     return $Content -replace '\.specify\.specify/', '.specify/'
+}
+
+function Validate-GeneratedCommandFiles {
+    param(
+        [string]$OutputDir,
+        [string]$Extension,
+        [string]$Agent
+    )
+
+    $pattern = "sdd.*.$Extension"
+    $generatedCount = @(Get-ChildItem -Path $OutputDir -Filter $pattern -File -ErrorAction SilentlyContinue).Count
+    if ($generatedCount -ne $TemplateCommandCount) {
+        throw "Generated command count mismatch for $Agent ($Extension). expected=$TemplateCommandCount actual=$generatedCount dir=$OutputDir"
+    }
+}
+
+function Validate-CopilotPromptFiles {
+    param(
+        [string]$AgentsDir,
+        [string]$PromptsDir
+    )
+
+    $agentCount = @(Get-ChildItem -Path $AgentsDir -Filter "sdd.*.agent.md" -File -ErrorAction SilentlyContinue).Count
+    $promptCount = @(Get-ChildItem -Path $PromptsDir -Filter "sdd.*.prompt.md" -File -ErrorAction SilentlyContinue).Count
+    if ($agentCount -ne $promptCount) {
+        throw "Generated Copilot prompt count mismatch. expected=$agentCount actual=$promptCount prompts_dir=$PromptsDir"
+    }
+}
+
+function Validate-GeneratedKimiSkills {
+    param(
+        [string]$SkillsDir
+    )
+
+    $skillCount = @(
+        Get-ChildItem -Path $SkillsDir -Recurse -File -Filter "SKILL.md" -ErrorAction SilentlyContinue |
+            Where-Object { $_.DirectoryName -match [regex]::Escape($SkillsDir) + '[\\/]sdd\.[^\\/]+' }
+    ).Count
+
+    if ($skillCount -ne $TemplateCommandCount) {
+        throw "Generated Kimi skill count mismatch. expected=$TemplateCommandCount actual=$skillCount dir=$SkillsDir"
+    }
 }
 
 function Generate-Commands {
@@ -132,6 +180,8 @@ function Generate-Commands {
             default { throw "Unsupported extension '$Extension'." }
         }
     }
+
+    Validate-GeneratedCommandFiles -OutputDir $OutputDir -Extension $Extension -Agent $Agent
 }
 
 function Generate-CopilotPrompts {
@@ -153,6 +203,8 @@ agent: $basename
 "@
         Set-Content -Path $promptFile -Value $content -NoNewline
     }
+
+    Validate-CopilotPromptFiles -AgentsDir $AgentsDir -PromptsDir $PromptsDir
 }
 
 function New-KimiSkills {
@@ -234,6 +286,8 @@ function New-KimiSkills {
         $skillContent = "---`nname: `"$skillName`"`ndescription: `"$description`"`n---`n`n$templateBody"
         Set-Content -Path (Join-Path $skillDir "SKILL.md") -Value $skillContent -NoNewline
     }
+
+    Validate-GeneratedKimiSkills -SkillsDir $SkillsDir
 }
 
 function Build-Variant {

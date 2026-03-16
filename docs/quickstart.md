@@ -69,7 +69,7 @@ uvx --from git+https://github.com/bigsmartben/sdd.git specify init <PROJECT_NAME
 /sdd.tasks
 ```
 
-Optional vertical quality gate: run the dedicated audit pass with `/sdd.analyze` before implementation when needed (traceability, drift, contradictions, and boundary violations):
+Default pre-implementation gate: run the dedicated audit pass with `/sdd.analyze` before `/sdd.implement` (traceability, drift, contradictions, and boundary violations):
 
 ```markdown
 /sdd.analyze
@@ -130,13 +130,25 @@ Run the standalone checklist pass with the `/sdd.checklist` command when needed 
 /sdd.checklist
 ```
 
-### Step 5: Generate Technical Plan with `/sdd.plan`
+### Step 5: Initialize the Planning Control Plane with `/sdd.plan`
 
 Be specific about your tech stack and technical requirements:
 
 ```bash
 /sdd.plan We are going to generate this using .NET Aspire, using Postgres as the database. The frontend should use Blazor server with drag-and-drop task boards, real-time updates. There should be a REST API created with a projects API, tasks API, and a notifications API.
 ```
+
+Then run the planning queue one command at a time:
+
+```bash
+/sdd.plan.research
+/sdd.plan.data-model
+/sdd.plan.test-matrix
+/sdd.plan.contract
+/sdd.plan.interface-detail
+```
+
+For repeated `/sdd.plan.contract` and `/sdd.plan.interface-detail` runs, use each command's runtime `Handoff Decision` output. `plan.md` queue state is the authority for the next step.
 
 ### Step 6: Define Tasks
 
@@ -146,9 +158,9 @@ Generate an actionable task list using the `/sdd.tasks` command:
 /sdd.tasks
 ```
 
-### Optional Gate B + Implement
+### Gate B + Implement
 
-Before implementation, run the dedicated cross-artifact audit with `/sdd.analyze` when needed (traceability, drift, contradictions, and boundary violations):
+Before implementation, run the dedicated cross-artifact audit with `/sdd.analyze` as the default gate (traceability, drift, contradictions, and boundary violations):
 
 ```bash
 /sdd.analyze

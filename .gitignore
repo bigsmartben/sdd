@@ -30,6 +30,8 @@ specs/
 .dev311/
 demos/
 demo-cline/
+.roo
+.roomodes
 
 # Virtual environments
 venv/

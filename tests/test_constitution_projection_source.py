@@ -50,6 +50,15 @@ def test_constitution_command_blocks_lint_detail_embedding_and_dual_authority_ex
     assert "Do not duplicate one normative rule into competing expansions across multiple command templates" in content
 
 
+def test_constitution_command_groups_alignment_work_and_avoids_redundant_restatements():
+    content = read("templates/commands/constitution.md")
+
+    assert "Review and refresh impacted artifact families only; avoid mechanical full-repo rewrites of unchanged downstream files." in content
+    assert "Prefer targeted references over restating the same rule text across multiple downstream templates." in content
+    assert "Keep this report delta-oriented; do not restate unchanged template inventories or canonical baseline details beyond status." in content
+    assert "reference the Sync Impact Report instead of restating it" in content
+
+
 def test_constitution_command_uses_active_agent_command_directory_guidance():
     content = read("templates/commands/constitution.md")
 
@@ -68,6 +77,8 @@ def test_constitution_command_uses_current_constitution_state_not_placeholder_pr
 
     assert "Treat the current file as the authoritative working constitution" in content
     assert ".specify/templates/constitution-template.md" in content
+    assert "stop and report the blocker" in content
+    assert "Do not substitute `templates/constitution-template.md` or any other template location." in content
     assert "do not force a template-token rewrite pass" in content
     assert "This file is a TEMPLATE containing placeholder tokens" not in content
 

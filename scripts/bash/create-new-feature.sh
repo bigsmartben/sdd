@@ -231,6 +231,12 @@ fi
 
 cd "$REPO_ROOT"
 
+TEMPLATE="$REPO_ROOT/.specify/templates/spec-template.md"
+if [[ ! -r "$TEMPLATE" ]]; then
+    echo "Error: Required runtime template not found or not readable at $TEMPLATE" >&2
+    exit 1
+fi
+
 SPECS_DIR="$REPO_ROOT/specs"
 mkdir -p "$SPECS_DIR"
 
@@ -346,9 +352,8 @@ fi
 FEATURE_DIR="$SPECS_DIR/$BRANCH_NAME"
 mkdir -p "$FEATURE_DIR"
 
-TEMPLATE="$REPO_ROOT/.specify/templates/spec-template.md"
 SPEC_FILE="$FEATURE_DIR/spec.md"
-if [ -f "$TEMPLATE" ]; then cp "$TEMPLATE" "$SPEC_FILE"; else touch "$SPEC_FILE"; fi
+cp "$TEMPLATE" "$SPEC_FILE"
 
 # Set the SPECIFY_FEATURE environment variable for the current session
 export SPECIFY_FEATURE="$BRANCH_NAME"

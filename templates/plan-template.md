@@ -1,180 +1,91 @@
-# Implementation Plan: [FEATURE]
+# Planning Control Plane: [FEATURE]
 
 **Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
 **Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
 
 ## Summary
 
-[Brief summary of the feature, technical direction, and planning intent]
+[Short summary of the feature and why the planning queue exists]
 
-This document is the planning-stage summary only. Detailed authoring structure for `research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, and `interface-details/` lives in the sibling planning templates under `templates/`. Use this file to compress stage outcomes into short downstream projection notes so later stages can reuse stable anchors without replaying full artifact bodies. `plan.md` is a derived planning view and MUST NOT supersede the stage artifacts it summarizes.
+`plan.md` is the planning control plane for this feature.
+It is authoritative for planning queue state, binding-projection rows, and source/output fingerprints only.
+It is derived for planning semantics and MUST NOT supersede `research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, or `interface-details/`.
 
-## Workflow Loop
+## Shared Context Snapshot
 
-- `Clarify`: [What needed clarification during planning]
-- `Generate`: [What was produced from clarified inputs]
-- `Boundary Check`: [How stage responsibilities were kept separate]
-- `Compress`: [What downstream projection conclusions, stable terms, IDs, constraints, and blockers were carried forward]
+Use this section for shared bootstrap facts only.
+Do not place stage prose, audit payload, or execution logs here.
 
-## Technical Context
+### Feature Identity
 
-**Language/Version**: [e.g., Python 3.11, Java 21, TypeScript 5.x or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, Spring Boot, React or NEEDS CLARIFICATION]  
-**Storage**: [e.g., PostgreSQL, files, N/A]  
-**Testing**: [e.g., pytest, JUnit, Vitest or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, browser, mobile or NEEDS CLARIFICATION]  
-**Project Type**: [e.g., web service, CLI, library, mobile app or NEEDS CLARIFICATION]  
-**Performance Goals**: [domain-specific goals or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific constraints or NEEDS CLARIFICATION]  
-**Scale/Scope**: [expected scale or NEEDS CLARIFICATION]
+- Feature: [name]
+- Scope anchor: [link or stable id]
+- Status: [planning-not-started / planning-in-progress / planning-complete]
 
-## Constitution Check
+### Stable Shared Inputs
 
-[Summarize constitution-aligned constraints and their planning impact only. Do not record audit metrics, coverage percentages, traceability/accounting tables, or `TODO(REPO_ANCHOR)` inventories here.]
+- Actors: [stable actor references only]
+- In Scope: [stable scope bullets only]
+- Out of Scope: [stable scope bullets only]
+- Shared blockers: [only blockers that affect multiple planning stages]
 
-## Stage 0 Research
+### Repository-First Consumption Slice
 
-### Inputs
+- Relevant dependency-governance facts: [short bullets]
+- Relevant domain-boundary anchors: [short bullets]
+- Relevant invocation-governance facts: [short bullets]
 
-- `spec.md`
-- user input
-- targeted source-code reads
-- constitution
+## Stage Queue
 
-### Outputs
+| Stage ID | Command | Required Inputs | Output Path | Status | Source Fingerprint | Output Fingerprint | Blocker |
+|----------|---------|-----------------|-------------|--------|--------------------|--------------------|---------|
+| research | `/sdd.plan.research` | `plan.md`, `spec.md`, constitution, targeted repo anchors | `research.md` | pending | [fingerprint] | [fingerprint] | [none] |
+| data-model | `/sdd.plan.data-model` | `plan.md`, `spec.md`, `research.md`, lifecycle repo anchors | `data-model.md` | pending | [fingerprint] | [fingerprint] | [none] |
+| test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md`, `research.md`, `data-model.md` | `test-matrix.md` | pending | [fingerprint] | [fingerprint] | [none] |
 
-- `research.md`
+Rules:
 
-### Focus
+- Queue order is fixed.
+- Child commands take the first matching `pending` row only.
+- Do not add prose summaries into this table.
 
-[Research scope, decisions, and downstream constraints]
+## Binding Projection Index
 
-### Boundary Notes
+Initialize empty until `test-matrix.md` creates stable rows.
+Project stable binding keys only; do not copy narrative scenario text.
 
-[How this stage stayed within research scope]
+| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | Boundary Anchor |
+|--------------|-------|--------|-------|------------------|-------|--------|--------------|-----------------|
+| [BindingRowID-001] | [UC-001] | [UIF-001] | [FR-001] | [IF-001] | [TM-001] | [TC-001, TC-002] | [operationId] | [METHOD /path or symbol] |
 
-### Downstream Projection
+Rules:
 
-[3-7 bullets only: downstream-essential conclusions, canonical terms, stable IDs, hard constraints, and unresolved blockers needed by later stages. Do not use this section for audit tracking, coverage statistics, or traceability ledgers.]
+- Each row must be uniquely identifiable.
+- `BindingRowID` is the plan-local identifier for one stable binding row projected from `test-matrix.md`.
+- `Binding Projection Index` is a projection ledger only.
+- If a stable key is not confirmed, keep it out of the index.
 
-## Stage 1 Data Model
+## Artifact Status
 
-### Inputs
+Track minimum planning artifacts derived from each `BindingRowID`.
 
-- `spec.md`
-- `research.md`
+| BindingRowID | Unit Type | Target Path | Status | Source Fingerprint | Output Fingerprint | Blocker |
+|--------------|-----------|-------------|--------|--------------------|--------------------|---------|
+| [BindingRowID-001] | contract | `contracts/[artifact].md` | pending | [fingerprint] | [fingerprint] | [none] |
+| [BindingRowID-001] | interface-detail | `interface-details/[operationId].md` | pending | [fingerprint] | [fingerprint] | [none] |
 
-### Outputs
+Rules:
 
-- `data-model.md`
+- `contract` and `interface-detail` are tracked independently.
+- One command run updates one row only.
+- Child commands may write only status, target path, blocker, and fingerprints.
 
-### Focus
+## Handoff Protocol
 
-[Backbone-only but concrete: identify shared domain elements with repository anchors, globally stable fields only, grouped ownership/composition/projection/derivation/dependency relationships, cross-operation shared invariants (`INV-###`), and aggregate/entity lifecycle anchors (state field, stable states, allowed/forbidden transitions)]
-
-### Boundary Notes
-
-[Stayed backbone-only while still concrete enough for downstream reuse: no full DTO inventories, no implementation layering, no persistence schema/table/index design, and no per-operation behavior/sequence details]
-
-### Downstream Projection
-
-[3-7 bullets only: downstream-essential conclusions, canonical terms, stable IDs, invariants, lifecycle anchors, and blockers needed by later stages. Do not use this section for audit tracking, coverage statistics, or traceability ledgers.]
-
-## Stage 2 Feature Verification Design
-
-### Inputs
-
-- `spec.md`
-- `research.md`
-- `data-model.md`
-
-### Outputs
-
-- `test-matrix.md`
-
-### Focus
-
-[Feature-level path coverage across main, branch, exception, and degraded paths]
-
-### Boundary Notes
-
-[How this stage stayed out of contract field design and interface internals]
-
-### Downstream Projection
-
-[3-7 bullets only: downstream-essential conclusions, stable tuple keys, scenario anchors, path coverage decisions, and blockers needed by later stages. Do not use this section for audit tracking, coverage statistics, or traceability ledgers.]
-
-## Stage 3 Contracts
-
-### Inputs
-
-- `spec.md`
-- `research.md`
-- `data-model.md`
-- `test-matrix.md`
-
-### Outputs
-
-- `contracts/`
-
-### Focus
-
-[Minimum external I/O, success/failure semantics, preconditions, postconditions, visible side effects]
-
-### Boundary Notes
-
-[How this stage stayed out of internal implementation detail]
-
-### Downstream Projection
-
-[3-7 bullets only: downstream-essential conclusions, stable contract bindings, visible semantics, and blockers needed by later stages. Do not use this section for audit tracking, coverage statistics, or traceability ledgers.]
-
-## Stage 4 Interface Detailed Design
-
-### Inputs
-
-- `contracts/`
-- `data-model.md`
-- `test-matrix.md`
-- `research.md`
-
-### Outputs
-
-- `interface-details/`
-
-### Focus
-
-[Per-operation detailed design with field semantics, sequence diagrams, UML class design, upstream references, and UML vocabulary that reuses/extends data-model terms]
-
-### Boundary Notes
-
-[How this stage preserved upstream artifact ownership]
-
-### Downstream Projection
-
-[3-7 bullets only: downstream-essential conclusions, task-relevant anchors, operation bindings, and unresolved blockers for downstream consumers. Do not use this section for audit tracking, coverage statistics, or traceability ledgers.]
-
-## Project Structure
-
-### Documentation (planning stage outputs)
-
-```text
-specs/[###-feature]/
-├── plan.md
-├── research.md
-├── data-model.md
-├── test-matrix.md
-├── contracts/
-└── interface-details/
-```
-
-### Source Code (repository root)
-
-```text
-[Replace with the real project structure relevant to this feature]
-```
-
-**Structure Decision**: [Describe the selected structure and why it fits this feature]
+- `/sdd.plan` initializes this file and starts the queue.
+- `/sdd.plan.research`, `/sdd.plan.data-model`, and `/sdd.plan.test-matrix` advance `Stage Queue`.
+- `/sdd.plan.contract` and `/sdd.plan.interface-detail` advance `Artifact Status` one row at a time.
+- `/sdd.tasks` starts only after all required stage and artifact rows are `done`.
 
 ## Complexity Tracking
 

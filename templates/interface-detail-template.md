@@ -8,6 +8,7 @@
 **Contract Binding Row (Required)**: [Operation ID + Boundary Anchor + IF Scope tuple from contract]
 
 Contract tuple enforcement:
+
 - `Operation ID`, `Boundary Anchor`, and `IF Scope` MUST match the Stage 3 contract binding row exactly (value and granularity).
 - `Boundary Anchor` MUST be a single normative anchor value. Do not use disjunctive wording such as `A or B`.
 
