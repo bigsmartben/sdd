@@ -8,7 +8,7 @@ def read(rel_path: str) -> str:
     return (REPO_ROOT / rel_path).read_text()
 
 
-def test_plan_command_is_now_orchestration_only():
+def test_plan_command_requires_explicit_spec_path_without_all_mode():
     content = read("templates/commands/plan.md")
 
     assert "quickstart.md" not in content
@@ -17,10 +17,44 @@ def test_plan_command_is_now_orchestration_only():
     assert "Stage 0 `Shared Context Snapshot`" in content
     assert "planning control plane" in content
     assert "does **not** generate downstream planning-stage artifacts directly" in content
+    assert "The first positional token is mandatory and is `SPEC_FILE`" in content
+    assert "`/sdd.plan <path/to/spec.md> [technical-context...]`" in content
+    assert "Run `{SCRIPT} --spec-file <SPEC_FILE>` once" in content
     assert "agent: sdd.plan.research" in content
     assert "Binding Projection Index" in content
     assert "Artifact Status" in content
     assert "Frontmatter `handoffs` are static advisory metadata only" in content
+
+
+def test_static_handoff_prompts_reference_explicit_planning_paths():
+    specify = read("templates/commands/specify.md")
+    clarify = read("templates/commands/clarify.md")
+    plan = read("templates/commands/plan.md")
+    research = read("templates/commands/plan.research.md")
+    data_model = read("templates/commands/plan.data-model.md")
+    test_matrix = read("templates/commands/plan.test-matrix.md")
+
+    assert "running /sdd.plan <path/to/spec.md>" in specify
+    assert "running /sdd.plan <path/to/spec.md>" in clarify
+    assert "running /sdd.plan.research <path/to/plan.md>" in plan
+    assert "running /sdd.plan.data-model <path/to/plan.md>" in research
+    assert "running /sdd.plan.test-matrix <path/to/plan.md>" in data_model
+    assert "running /sdd.plan.contract <path/to/plan.md>" in test_matrix
+
+
+def test_clarify_command_aligns_to_backbone_spec_template_sections():
+    clarify = read("templates/commands/clarify.md")
+
+    assert "current backbone-first spec template" in clarify
+    assert "`1.3 UI Data Dictionary (UDD)`" in clarify
+    assert "`2.1 Functional Requirements Index (FR Index)`" in clarify
+    assert "`3.2 UX — User Interaction Flow`" in clarify
+    assert "`3.4 UI — UI Element Definitions`" in clarify
+    assert "`3.5 Component-Data Dependency Overview`" in clarify
+    assert "`N.1 Success Criteria`" in clarify
+    assert "`N.2 Environment Edge Cases`" in clarify
+    assert "after `## Artifacts Overview & Navigation`" in clarify
+    assert "do not create a free-floating `Non-Functional` or `Quality Attributes` heading" in clarify
 
 
 def test_plan_child_command_templates_exist_and_define_single_unit_scope():
@@ -29,56 +63,73 @@ def test_plan_child_command_templates_exist_and_define_single_unit_scope():
             "first pending `research` row",
             "Generate exactly one `research.md` artifact",
             ".specify/templates/research-template.md",
-            "Read only `FEATURE_DIR/plan.md`",
-            "User-provided non-`plan.md` file paths may be consumed only when they fall within this command's `Allowed Inputs` scope.",
+            "Parse the first positional token from `$ARGUMENTS` as `PLAN_FILE`",
+            "Read only the resolved `IMPL_PLAN`",
+            "Use only the explicit `PLAN_FILE` resolved through `{SCRIPT}` as planning control plane.",
+            "they never redefine control-plane state.",
             "## Handoff Decision",
-            "`Next Command`: `/sdd.plan.data-model`",
+            "`Next Command`: `/sdd.plan.data-model <absolute path to plan.md>`",
             "`Selected Stage ID`: selected `research` stage row id",
         ],
         "templates/commands/plan.data-model.md": [
             "first pending `data-model` row",
             "Generate exactly one `data-model.md` artifact",
-            "Use `.specify/templates/data-model-template.md` as the structural source of truth",
-            "Read only `FEATURE_DIR/plan.md`",
-            "User-provided non-`plan.md` file paths may be consumed only when they fall within this command's `Allowed Inputs` scope.",
+            ".specify/templates/data-model-template.md",
+            "Parse the first positional token from `$ARGUMENTS` as `PLAN_FILE`",
+            "Read only the resolved `IMPL_PLAN`",
+            "Use only the explicit `PLAN_FILE` resolved through `{SCRIPT}` as planning control plane.",
+            "they never redefine control-plane state.",
             "## Handoff Decision",
-            "`Next Command`: `/sdd.plan.test-matrix`",
+            "`Next Command`: `/sdd.plan.test-matrix <absolute path to plan.md>`",
             "`Selected Stage ID`: selected `data-model` stage row id",
         ],
         "templates/commands/plan.test-matrix.md": [
             "first pending `test-matrix` row",
             ".specify/templates/test-matrix-template.md",
-            "Read only `FEATURE_DIR/plan.md`",
-            "User-provided non-`plan.md` file paths may be consumed only when they fall within this command's `Allowed Inputs` scope.",
+            "Parse the first positional token from `$ARGUMENTS` as `PLAN_FILE`",
+            "Read only the resolved `IMPL_PLAN`",
+            "Use only the explicit `PLAN_FILE` resolved through `{SCRIPT}` as planning control plane.",
+            "they never redefine control-plane state.",
             "Binding Projection Index",
             "Artifact Status",
             "## Handoff Decision",
-            "`Next Command`: `/sdd.plan.contract`",
+            "`Next Command`: `/sdd.plan.contract <absolute path to plan.md>`",
         ],
         "templates/commands/plan.contract.md": [
             "first pending `contract` row",
             "Generate exactly one minimum contract artifact",
             ".specify/templates/contract-template.md",
-            "Read only `FEATURE_DIR/plan.md`",
+            "Parse the first positional token from `$ARGUMENTS` as `PLAN_FILE`",
+            "Read only the resolved `IMPL_PLAN`",
             "matching `BindingRowID` row",
             "## Path Constraints",
-            "Complete `BindingRowID` selection and prerequisite validation from `FEATURE_DIR/plan.md` before reading `spec.md`, `data-model.md`, `test-matrix.md`, or any repo anchors.",
-            "User-provided non-`plan.md` file paths may be consumed only when they fall within this command's `Allowed Inputs` scope.",
+            "Complete `BindingRowID` selection and prerequisite validation from the explicit `PLAN_FILE` before reading `spec.md`, `data-model.md`, `test-matrix.md`, or any repo anchors.",
+            "## Boundary Anchor Selection (Client Entry First)",
+            "Select `Boundary Anchor` as the first consumer-callable entry",
+            "If the operation is consumer-called via HTTP, prefer `HTTP METHOD /path`",
+            "Use only the explicit `PLAN_FILE` resolved through `{SCRIPT}` as planning control plane.",
+            "they never redefine control-plane state.",
             "## Handoff Decision",
-            "If any `contract` rows remain `pending`, `Next Command = /sdd.plan.contract`",
+            "If any `contract` rows remain `pending`, `Next Command = /sdd.plan.contract <absolute path to plan.md>`",
             "`Ready/Blocked`",
         ],
         "templates/commands/plan.interface-detail.md": [
             "first pending `interface-detail` row",
             "Generate exactly one minimum interface-detail artifact",
             ".specify/templates/interface-detail-template.md",
-            "Read only `FEATURE_DIR/plan.md`",
+            "Parse the first positional token from `$ARGUMENTS` as `PLAN_FILE`",
+            "Read only the resolved `IMPL_PLAN`",
             "matching contract row",
             "## Path Constraints",
-            "Complete `BindingRowID` selection, matching contract-row resolution, and prerequisite validation from `FEATURE_DIR/plan.md` before reading `research.md`, `data-model.md`, `test-matrix.md`, the matching contract artifact, or any repo anchors.",
-            "User-provided non-`plan.md` file paths may be consumed only when they fall within this command's `Allowed Inputs` scope.",
+            "Complete `BindingRowID` selection, matching contract-row resolution, and prerequisite validation from the explicit `PLAN_FILE` before reading `research.md`, `data-model.md`, `test-matrix.md`, the matching contract artifact, or any repo anchors.",
+            "## Internal Handoff Design Requirements",
+            "Add and anchor `Implementation Entry Anchor`",
+            "Sequence design must start from client/consumer entry",
+            "Require UML field-level ownership for all contract-visible request/response fields",
+            "Use only the explicit `PLAN_FILE` resolved through `{SCRIPT}` as planning control plane.",
+            "they never redefine control-plane state.",
             "## Handoff Decision",
-            "If any `interface-detail` rows remain `pending`, `Next Command = /sdd.plan.interface-detail`",
+            "If any `interface-detail` rows remain `pending`, `Next Command = /sdd.plan.interface-detail <absolute path to plan.md>`",
             "`Next Command = /sdd.tasks`",
         ],
     }
@@ -99,7 +150,7 @@ def test_repeated_plan_commands_use_state_driven_handoff_not_static_frontmatter(
     assert "agent: sdd.tasks" not in interface_detail
 
 
-def test_plan_child_commands_require_feature_dir_plan_and_allow_scoped_non_plan_inputs_only():
+def test_plan_child_commands_require_explicit_plan_file_and_allow_scoped_non_plan_inputs_only():
     child_commands = [
         "templates/commands/plan.research.md",
         "templates/commands/plan.data-model.md",
@@ -110,22 +161,33 @@ def test_plan_child_commands_require_feature_dir_plan_and_allow_scoped_non_plan_
 
     for rel_path in child_commands:
         content = read(rel_path)
-        assert "Read only `FEATURE_DIR/plan.md`" in content
-        assert "The only allowed planning control-plane input path is `FEATURE_DIR/plan.md` resolved from `{SCRIPT}`." in content
-        assert "Do not accept, infer, or override any alternate `plan.md` path from `$ARGUMENTS`, environment variables, or repository scanning." in content
-        assert "User-provided non-`plan.md` file paths may be consumed only when they fall within this command's `Allowed Inputs` scope." in content
-        assert "User-provided files MUST NOT replace or redefine the planning control-plane source." in content
+        assert "Parse the first positional token from `$ARGUMENTS` as `PLAN_FILE`" in content
+        assert "Read only the resolved `IMPL_PLAN`" in content
+        assert "Use only the explicit `PLAN_FILE` resolved through `{SCRIPT}` as planning control plane." in content
+        assert "Ignore alternate `plan.md` paths from environment variables or repository discovery." in content
+        assert "they never redefine control-plane state." in content
 
 
 def test_plan_contract_and_interface_detail_defer_expensive_reads_until_selection():
     contract = read("templates/commands/plan.contract.md")
     interface_detail = read("templates/commands/plan.interface-detail.md")
 
-    assert "Complete `BindingRowID` selection and prerequisite validation from `FEATURE_DIR/plan.md` before reading `spec.md`, `data-model.md`, `test-matrix.md`, or any repo anchors." in contract
-    assert "Until the selected contract row is resolved and the `test-matrix` stage row is confirmed `done`, do not open repository files, generated artifacts, or run repository-wide discovery/search." in contract
+    assert "Complete `BindingRowID` selection and prerequisite validation from the explicit `PLAN_FILE` before reading `spec.md`, `data-model.md`, `test-matrix.md`, or any repo anchors." in contract
+    assert "Before that point, do not open repository files, generated artifacts, or run repository-wide discovery/search." in contract
 
-    assert "Complete `BindingRowID` selection, matching contract-row resolution, and prerequisite validation from `FEATURE_DIR/plan.md` before reading `research.md`, `data-model.md`, `test-matrix.md`, the matching contract artifact, or any repo anchors." in interface_detail
-    assert "Until the selected interface-detail row is resolved and the matching contract row is confirmed `done`, do not open repository files, generated artifacts, or run repository-wide discovery/search." in interface_detail
+    assert "Complete `BindingRowID` selection, matching contract-row resolution, and prerequisite validation from the explicit `PLAN_FILE` before reading `research.md`, `data-model.md`, `test-matrix.md`, the matching contract artifact, or any repo anchors." in interface_detail
+    assert "Before that point, do not open repository files, generated artifacts, or run repository-wide discovery/search." in interface_detail
+
+
+def test_plan_contract_and_interface_detail_describe_output_authority_as_post_generation():
+    contract = read("templates/commands/plan.contract.md")
+    interface_detail = read("templates/commands/plan.interface-detail.md")
+
+    assert "After generation, the selected artifact under `contracts/` becomes the authoritative source for interface semantics for that binding." in contract
+    assert "`contracts/` remains the authoritative source for interface semantics." not in contract
+
+    assert "After generation, the selected artifact under `interface-details/` becomes the authoritative source for operation-local design semantics for that binding." in interface_detail
+    assert "`interface-details/` remains the authoritative source for operation-local design semantics." not in interface_detail
 
 
 def test_plan_template_is_control_plane_not_stage_summary():
@@ -167,30 +229,42 @@ def test_analyze_command_checks_stale_plan_fingerprints():
     assert "route stale `interface-detail` rows to `/sdd.plan.interface-detail`" in content
 
 
+def test_analyze_command_reads_backbone_spec_sections_and_routes_constitution_repairs():
+    analyze = read("templates/commands/analyze.md")
+
+    assert "`1.3 UI Data Dictionary (UDD)`" in analyze
+    assert "`3.4 UI — UI Element Definitions`" in analyze
+    assert "`N.1 Success Criteria`" in analyze
+    assert "flag `Entity.field` references in FR/UIF/UI sections" in analyze
+    assert "remediation owner command (`/sdd.constitution`, `/sdd.specify`, `/sdd.plan.*`, or `/sdd.tasks`)" in analyze
+    assert "Keep command suggestions explicit and short (`/sdd.constitution`, `/sdd.specify`, `/sdd.plan.*`, `/sdd.tasks`)." in analyze
+
+
 def test_downstream_docs_and_mapping_match_orchestrator_model():
     mapping_doc = read("docs/command-template-mapping.md")
     readme = read("README.md")
     spec_template = read("templates/spec-template.md")
     installation = read("docs/installation.md")
     quickstart = read("docs/quickstart.md")
+    upgrade = read("docs/upgrade.md")
 
     assert "`plan.md` | Planning control plane, binding projection ledger, queue/fingerprint state | Derived for planning semantics; authoritative for planning queue state |" in mapping_doc
     assert "Runtime template authority path for generation and output-structure commands is `.specify/templates/`." in mapping_doc
-    assert "| `/sdd.plan.research` | Generate the queued research artifact | `.specify/templates/research-template.md` | `research.md` |" in mapping_doc
-    assert "| `/sdd.plan.contract` | Generate one queued contract artifact | `.specify/templates/contract-template.md` | one file in `contracts/` |" in mapping_doc
-    assert "The five `/sdd.plan.*` child commands (`/sdd.plan.research`, `/sdd.plan.data-model`, `/sdd.plan.test-matrix`, `/sdd.plan.contract`, `/sdd.plan.interface-detail`) must read planning queue/control-plane state from `FEATURE_DIR/plan.md` only." in mapping_doc
+    assert "| `/sdd.plan.research <plan.md>` | Generate the queued research artifact | `.specify/templates/research-template.md` | `research.md` |" in mapping_doc
+    assert "| `/sdd.plan.contract <plan.md>` | Generate one queued contract artifact | `.specify/templates/contract-template.md` | one file in `contracts/` |" in mapping_doc
+    assert "The five `/sdd.plan.*` child commands (`/sdd.plan.research`, `/sdd.plan.data-model`, `/sdd.plan.test-matrix`, `/sdd.plan.contract`, `/sdd.plan.interface-detail`) must read planning queue/control-plane state from the explicit `plan.md` path provided by the user." in mapping_doc
     assert "User-provided non-`plan.md` files may be consumed only if they are already permitted by the command's `Allowed Inputs`; they must not replace control-plane state." in mapping_doc
-    assert "repeated `/sdd.plan.contract`" in mapping_doc
-    assert "repeated `/sdd.plan.interface-detail`" in mapping_doc
+    assert "repeated `/sdd.plan.contract <plan.md>`" in mapping_doc
+    assert "repeated `/sdd.plan.interface-detail <plan.md>`" in mapping_doc
     assert "state-dependent planning routing must be emitted through a runtime `Handoff Decision`" in mapping_doc
     assert "repeated routing stays on `/sdd.plan.contract` until no pending contract rows remain" in mapping_doc
     assert "repeated routing stays on `/sdd.plan.interface-detail` until planning is complete" in mapping_doc
     assert "render both `tasks.md` and `tasks.manifest.json` from that shared graph" in mapping_doc
     assert "explicit user waiver" in mapping_doc
 
-    assert "Use the **`/sdd.plan`** command to create `plan.md` as the planning control plane." in readme
-    assert "`/sdd.plan.research`" in readme
-    assert "`/sdd.plan.interface-detail`" in readme
+    assert "with an explicit `spec.md` path to create `plan.md` as the planning control plane" in readme
+    assert "`/sdd.plan.research <plan.md>`" in readme
+    assert "`/sdd.plan.interface-detail <plan.md>`" in readme
     assert "All generation commands must read runtime templates from `.specify/templates/`." in readme
     assert "`plan.md` queue state is the sole authority for planning handoff decisions." in readme
     assert "Static command frontmatter `handoffs` are advisory metadata only." in readme
@@ -199,10 +273,13 @@ def test_downstream_docs_and_mapping_match_orchestrator_model():
     assert "planning control plane" in spec_template
     assert "Default pre-implementation audit" in spec_template
     assert "implementation should stop unless the user explicitly waives the audit step" in spec_template
-    assert "`/sdd.plan.contract` - Generate one queued contract artifact" in installation
+    assert "`/sdd.plan.contract <plan.md>` - Generate one queued contract artifact" in installation
     assert "Repeated planning commands use runtime `Handoff Decision` output derived from `plan.md` queue state." in installation
-    assert "Then run the planning queue one command at a time" in quickstart
-    assert "use each command's runtime `Handoff Decision` output" in quickstart
+    assert "Then run the planning queue one command at a time:" in quickstart
+    assert "use each command's runtime `Handoff Decision` output with the explicit `plan.md` path" in quickstart
+    assert "For planning commands, pass explicit file paths" in upgrade
+    assert "only for commands that still rely on active-feature discovery" in upgrade
+    assert "Planning commands now use explicit file paths instead." in upgrade
     assert "Default pre-implementation gate" in quickstart
 
 
@@ -231,7 +308,9 @@ def test_planning_stage_templates_still_exist_for_child_commands():
         "templates/interface-detail-template.md": [
             "# Interface Detail: [operationId]",
             "**Contract Binding Row (Required)**:",
+            "**Implementation Entry Anchor (Required)**:",
             "## Sequence Diagram",
+            "## UML Class Design",
         ],
     }
 
@@ -246,7 +325,6 @@ def test_plan_requires_canonical_repository_first_baseline_and_fail_fast():
 
     assert "MUST consume the canonical repository-first baseline produced by `/sdd.constitution`" in plan
     assert ".specify/memory/repository-first/technical-dependency-matrix.md" in plan
-    assert ".specify/memory/repository-first/domain-boundary-responsibilities.md" in plan
     assert ".specify/memory/repository-first/module-invocation-spec.md" in plan
     assert "Fail fast and route to `/sdd.constitution`" in plan
 
@@ -291,6 +369,144 @@ def test_generation_commands_require_runtime_template_authority_paths():
 
     for rel_path, marker in forbidden.items():
         assert marker not in read(rel_path)
+
+
+def test_repository_first_references_avoid_bare_filenames_in_runtime_templates():
+    files = [
+        "templates/commands/analyze.md",
+        "templates/commands/tasks.md",
+        "templates/constitution-template.md",
+        "templates/technical-dependency-matrix-template.md",
+        "templates/module-invocation-spec-template.md",
+    ]
+    bare_markers = [
+        "`technical-dependency-matrix.md`",
+        "`module-invocation-spec.md`",
+    ]
+
+    for rel_path in files:
+        content = read(rel_path)
+        for marker in bare_markers:
+            assert marker not in content
+
+
+def test_planning_templates_define_repo_anchor_status_protocol():
+    data_model_command = read("templates/commands/plan.data-model.md")
+    data_model_template = read("templates/data-model-template.md")
+    test_matrix_template = read("templates/test-matrix-template.md")
+    contract_template = read("templates/contract-template.md")
+    interface_detail_template = read("templates/interface-detail-template.md")
+    tasks = read("templates/commands/tasks.md")
+    analyze = read("templates/commands/analyze.md")
+
+    assert "spec.md` + `research.md` define model semantics; repo anchors are correction/traceability evidence only" in data_model_command
+    assert "existing -> extended -> new -> todo" in data_model_command
+    assert "Do not use repo anchors to invent business semantics" in data_model_command
+
+    assert "Anchor Status (`existing`\\|`extended`\\|`new`\\|`todo`)" in data_model_template
+    assert "Model semantics come from `spec.md` + `research.md`" in data_model_template
+    assert "For every anchor decision, apply strict order: `existing -> extended -> new -> todo`." in data_model_template
+    assert "`new` is normative only when explicit `path::symbol` target evidence is provided." in data_model_template
+    assert "`path/to/file.ext::EnumOrStateField`" in data_model_template
+
+    assert "Anchor Status" in test_matrix_template
+    assert "Apply repo-anchor decision order `existing -> extended -> new -> todo`." in test_matrix_template
+    assert "Main-path verification binding MUST use tuples with `Anchor Status = existing|extended|new`." in test_matrix_template
+    assert "`path/to/file.ext::Symbol`" in test_matrix_template
+
+    assert "**Anchor Status (Required)**" in contract_template
+    assert "Apply repo-anchor decision order `existing -> extended -> new -> todo`." in contract_template
+    assert "`new` is normative only when explicit `path::symbol` target evidence is provided." in contract_template
+    assert "`path/to/file.ext::Symbol`" in contract_template
+
+    assert "**Boundary Anchor Status (Required)**" in interface_detail_template
+    assert "**Implementation Entry Anchor Status (Required)**" in interface_detail_template
+    assert "Apply repo-anchor decision order `existing -> extended -> new -> todo`" in interface_detail_template
+    assert "set `Boundary Anchor Status = todo` and/or `Implementation Entry Anchor Status = todo`" in interface_detail_template
+
+    assert "prevention of promoting `TODO(REPO_ANCHOR)` or any `todo` anchor-status tuple" in tasks
+    assert "tuples carrying `Anchor Status = todo`, `Boundary Anchor Status = todo`, or `Implementation Entry Anchor Status = todo` MUST NOT be converted" in tasks
+
+    assert "repo-anchor decision protocol compliance" in analyze
+    assert "flag any repo anchor value (except `TODO(REPO_ANCHOR)` or explicit `N/A`) that is not in strict `path::symbol` format" in analyze
+    assert "flag any anchor-status value outside `existing`, `extended`, `new`, `todo`" in analyze
+
+
+def test_contract_and_interface_detail_templates_encode_entry_and_field_level_rules():
+    contract_template = read("templates/contract-template.md")
+    interface_detail_template = read("templates/interface-detail-template.md")
+    contract_command = read("templates/commands/plan.contract.md")
+    interface_detail_command = read("templates/commands/plan.interface-detail.md")
+
+    assert "first client-callable entry" in contract_template
+    assert "If clients call an HTTP route directly, prefer HTTP `METHOD /path` as `Boundary Anchor`" in contract_template
+    assert "Client entry rationale:" in contract_template
+
+    assert "**Implementation Entry Anchor (Required)**" in interface_detail_template
+    assert "client-entry signature surface (HTTP route/controller or facade/RPC method)" in interface_detail_template
+    assert "Use `Direction = input` / `output` only for contract-visible request/response fields" in interface_detail_template
+    assert "do not duplicate full request/response prose here" in interface_detail_template
+    assert "Sequence MUST start from consumer/client entry and reach `Implementation Entry Anchor` within the first two request hops." in interface_detail_template
+    assert "If both controller and facade exist for this operation, show both participants in order and keep their handoff explicit." in interface_detail_template
+    assert "If `Boundary Anchor` and `Implementation Entry Anchor` resolve to the same repo-backed symbol, reuse one participant instead of inventing a fake handoff hop." in interface_detail_template
+    assert "show both forward and return handoff messages explicitly" in interface_detail_template
+    assert 'participant Entry as "<ImplementationEntryAnchor>"' in interface_detail_template
+    assert "request/response DTOs and nested DTOs at field level for all contract-visible input/output fields" in interface_detail_template
+    assert "Boundary-to-entry reachability" in interface_detail_template
+    assert "Field-ownership closure" in interface_detail_template
+    assert 'class ContractBoundaryEntry["<ContractBoundaryEntry>"]' in interface_detail_template
+    assert 'class ImplementationEntry["<ImplementationEntryAnchor>"]' in interface_detail_template
+    assert 'class RequestDTO["<RequestDTO>"]' in interface_detail_template
+    assert 'class ResponseDTO["<ResponseDTO>"]' in interface_detail_template
+
+    assert "## Boundary Anchor Selection (Client Entry First)" in contract_command
+    assert "Select `Boundary Anchor` as the first consumer-callable entry" in contract_command
+
+    assert "## Internal Handoff Design Requirements" in interface_detail_command
+    assert "Add and anchor `Implementation Entry Anchor`" in interface_detail_command
+    assert "Keep contract restatement out: explain only behavior-significant field semantics" in interface_detail_command
+    assert "Require UML field-level ownership for all contract-visible request/response fields" in interface_detail_command
+
+
+def test_binding_projection_and_validation_follow_client_entry_and_handoff_rules():
+    test_matrix_template = read("templates/test-matrix-template.md")
+    plan_test_matrix = read("templates/commands/plan.test-matrix.md")
+    plan_template = read("templates/plan-template.md")
+    analyze = read("templates/commands/analyze.md")
+    lint_rules = read("rules/planning-lint-rules.tsv")
+
+    assert "first consumer-callable entry used for contract binding" in test_matrix_template
+    assert "`Implementation Entry Anchor` belongs only in `interface-details/`" in test_matrix_template
+
+    assert "Project `Boundary Anchor` as the client-facing contract binding key only" in plan_test_matrix
+    assert "Do not add `Implementation Entry Anchor` or other internal handoff fields to `Binding Projection Index`" in plan_test_matrix
+
+    assert "`Boundary Anchor` is the client-facing contract binding key projected from `test-matrix.md`" in plan_template
+    assert "Internal handoff anchors such as `Implementation Entry Anchor` belong in `interface-details/`, not `plan.md`." in plan_template
+
+    assert "flag interface-detail docs missing `Implementation Entry Anchor`" in analyze
+    assert "flag sequence designs that do not reach `Implementation Entry Anchor` within the first two request hops" in analyze
+    assert "flag UML ownership gaps where contract-visible request/response fields or behavior-significant `Field Semantics` fields do not have an explicit owning class/interface" in analyze
+
+    assert "PLN-ID-003" in lint_rules
+    assert "PLN-ID-004" in lint_rules
+    assert "PLN-ID-005" in lint_rules
+    assert "PLN-ID-006" in lint_rules
+    assert "PLN-RA-002" in lint_rules
+    assert "PLN-RA-003" in lint_rules
+    assert "PLN-RA-004" in lint_rules
+    assert "PLN-RA-005" in lint_rules
+    assert "PLN-RA-006" in lint_rules
+    assert "PLN-RA-007" in lint_rules
+    assert "PLN-RA-008" in lint_rules
+    assert "anchor_status_allowed_values" in lint_rules
+    assert "Implementation details are missing explicit Implementation Entry Anchor" not in lint_rules
+    assert "Interface details are missing explicit Implementation Entry Anchor required by the interface-detail template." in lint_rules
+    assert "Interface details are missing the Runtime Correctness Check section required for operation-local closure validation." in lint_rules
+    assert "Interface details are missing the Boundary-to-entry reachability runtime check row." in lint_rules
+    assert "Interface details are missing the Field-ownership closure runtime check row." in lint_rules
+    assert "Anchor Status uses values outside the allowed repo-anchor decision protocol vocabulary." in lint_rules
+    assert "Repo anchor target is not using strict path::symbol format." in lint_rules
 
 
 def test_frontmatter_docs_define_static_only_handoffs():

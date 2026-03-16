@@ -1,9 +1,9 @@
 ---
-description: Generate the pending data-model.md artifact selected from FEATURE_DIR/plan.md Stage Queue.
+description: Generate the pending data-model.md artifact selected from an explicit plan.md path.
 handoffs:
   - label: Continue Test Matrix Queue
     agent: sdd.plan.test-matrix
-    prompt: Continue the planning queue by generating the next pending test-matrix artifact from FEATURE_DIR/plan.md.
+    prompt: Continue the planning queue by running /sdd.plan.test-matrix <path/to/plan.md> with the same explicit plan.md path.
     send: true
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json
@@ -18,16 +18,28 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+## Argument Parsing
+
+1. Parse the first positional token from `$ARGUMENTS` as `PLAN_FILE`
+2. `PLAN_FILE` is mandatory and MUST resolve from repo root to an existing file named `plan.md`
+3. `PLAN_FILE` MUST stay under `repo/specs/**`
+4. Any remaining text after removing `PLAN_FILE` is optional scoped user context
+
+If `PLAN_FILE` is missing or invalid, stop immediately and report the required invocation:
+
+`/sdd.plan.data-model <path/to/plan.md> [context...]`
+
 ## Goal
 
-Generate exactly one `data-model.md` artifact by consuming the first pending `data-model` row from `FEATURE_DIR/plan.md`.
+Generate exactly one `data-model.md` artifact by consuming the first pending `data-model` row from `PLAN_FILE`.
 This command is single-unit only and MUST NOT perform any other planning stage work.
-Use `.specify/templates/data-model-template.md` as the structural source of truth for the generated artifact. If the runtime template is missing or non-consumable, stop and report the blocker. Do not substitute `templates/data-model-template.md`, any other template directory, or infer style/structure from other existing `data-model.md` files.
+`spec.md` + `research.md` define model semantics; repo anchors are correction/traceability evidence only.
+Use `.specify/templates/data-model-template.md` only. If the runtime template is missing or unreadable, stop and report the blocker instead of inferring structure from mirrors or other `data-model.md` outputs.
 
 ## Selection Rules
 
-1. Run `{SCRIPT}` once and resolve `FEATURE_DIR`
-2. Read only `FEATURE_DIR/plan.md`
+1. Run `{SCRIPT} --plan-file <PLAN_FILE>` once and resolve `FEATURE_DIR`, `FEATURE_SPEC`, and `IMPL_PLAN`
+2. Read only the resolved `IMPL_PLAN`
 3. Find the first `Stage Queue` row where:
    - `Stage ID = data-model`
    - `Status = pending`
@@ -36,34 +48,40 @@ Use `.specify/templates/data-model-template.md` as the structural source of trut
 
 ## Plan Control-Plane Input Path (Mandatory)
 
-- The only allowed planning control-plane input path is `FEATURE_DIR/plan.md` resolved from `{SCRIPT}`.
-- Do not accept, infer, or override any alternate `plan.md` path from `$ARGUMENTS`, environment variables, or repository scanning.
-- User-provided non-`plan.md` file paths may be consumed only when they fall within this command's `Allowed Inputs` scope.
-- User-provided files MUST NOT replace or redefine the planning control-plane source.
-- If `FEATURE_DIR/plan.md` is missing or non-consumable, stop and report a blocker.
+- Use only the explicit `PLAN_FILE` resolved through `{SCRIPT}` as planning control plane.
+- Ignore alternate `plan.md` paths from environment variables or repository discovery. Non-`plan.md` user files are allowed only when they are already listed in `Allowed Inputs`; they never redefine control-plane state.
+- If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 
 ## Path Constraints
 
-- Limit reads to resolved `FEATURE_DIR` plus the explicit files listed in `Allowed Inputs`.
-- Lifecycle anchors MUST be targeted symbols/files explicitly referenced by `Shared Context Snapshot` (or by a concrete blocker in the selected row).
-- Do not perform repository-wide discovery/search to find additional context.
-- Do not read other feature folders under `specs/`.
-- Do not scan the repository for alternate `plan.md` paths.
-- Do not use any existing `data-model.md` (outside the current target artifact path) as an input or style source.
+- Stay inside the resolved `FEATURE_DIR` plus the explicit files listed in `Allowed Inputs`.
+- Derive entity/relationship/invariant semantics from `FEATURE_SPEC` and `research.md` first.
+- Repo anchors are limited to naming correction, lifecycle vocabulary correction, and traceability.
+- Lifecycle anchors MUST come from symbols/files explicitly referenced by `Shared Context Snapshot` or by a concrete blocker in the selected row.
+- Finish row selection and prerequisite checks before broader repo reads; do not scan the repository for additional context, alternate `plan.md` paths, or other feature folders.
+- Do not use any existing `data-model.md` outside the current target artifact path as an input or style source.
+
+## Repo Anchor Decision Protocol (Mandatory)
+
+- Apply strict decision order for every repo-anchor choice: `existing -> extended -> new -> todo`.
+- `extended` is valid only for same-entity field/state expansion.
+- `new` is allowed in normative sections only when explicit `path::symbol` target evidence is provided.
+- If explicit `path::symbol` target evidence is missing, set status to `todo` and keep the item forward-looking/non-normative.
+- Do not use repo anchors to invent business semantics; they only correct naming/lifecycle terms and provide traceability.
 
 ## Allowed Inputs
 
 Read only:
 
 - `.specify/templates/data-model-template.md` for output structure
-- selected `Stage Queue` row from `FEATURE_DIR/plan.md` only
-- `Shared Context Snapshot` from `FEATURE_DIR/plan.md` only
-- `spec.md`
+- selected `Stage Queue` row from the explicit `PLAN_FILE` only
+- `Shared Context Snapshot` from the explicit `PLAN_FILE` only
+- resolved `FEATURE_SPEC`
 - `research.md`
 - targeted lifecycle repo anchors required for stable states and invariants
 
 `data-model.md` remains the authoritative output for backbone semantics.
-`FEATURE_DIR/plan.md` remains queue state plus binding projection state only.
+`PLAN_FILE` remains queue state plus binding projection state only.
 
 ## Required Writeback
 
@@ -79,7 +97,7 @@ After generating `data-model.md`, update the selected `Stage Queue` row only:
 
 Emit a `Handoff Decision` section in the runtime output with exactly these fields:
 
-- `Next Command`: `/sdd.plan.test-matrix`
+- `Next Command`: `/sdd.plan.test-matrix <absolute path to plan.md>`
 - `Decision Basis`: `Stage Queue` shows the selected `data-model` row is complete and the fixed next pending stage is `test-matrix`
 - `Selected Stage ID`: selected `data-model` stage row id
 - `Ready/Blocked`: `Ready` when the selected row is updated to `done`; otherwise `Blocked`
@@ -88,6 +106,7 @@ Emit a `Handoff Decision` section in the runtime output with exactly these field
 
 Report:
 
+- resolved `PLAN_FILE`
 - selected stage row id
 - `data-model.md` path
 - updated stage status

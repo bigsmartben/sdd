@@ -115,14 +115,12 @@ Terminology note (compatibility, non-normative):
       - `test-matrix.md` for feature verification anchors referenced by tasks
       - `research.md` for implementation constraints/decisions
       - `.specify/memory/repository-first/technical-dependency-matrix.md` for dependency-governance execution baseline
-      - `.specify/memory/repository-first/domain-boundary-responsibilities.md` for ownership/collaboration execution baseline
       - `.specify/memory/repository-first/module-invocation-spec.md` for invocation direction/layering execution baseline
    - Treat runtime batching notes, ready-task summaries, and local execution shortcuts as derived views only.
    - If local execution notes conflict with authoritative artifacts, use the authoritative artifact for semantics; if unresolved safely, stop and route upstream repair.
    - Treat `TODO(REPO_ANCHOR)` as forward-looking notes only; execute only repository-anchored semantics.
    - Repository-first execution discipline:
       - dependency changes MUST be validated against `.specify/memory/repository-first/technical-dependency-matrix.md`
-      - ownership/boundary changes MUST be validated against `.specify/memory/repository-first/domain-boundary-responsibilities.md`
       - invocation-direction/layering changes MUST be validated against `.specify/memory/repository-first/module-invocation-spec.md`
       - feature-local copies are derived views only and MUST NOT replace canonical baseline semantics
       - if required canonical repository-first evidence is missing/stale/non-traceable, stop affected execution scope and route repair to `/sdd.constitution` or `/sdd.analyze` (do not infer semantics from docs/plans/summaries in `/sdd.implement`)
@@ -169,7 +167,7 @@ Terminology note (compatibility, non-normative):
      - MUST keep original task IDs traceable (do not erase source task lineage)
      - MUST update task checkboxes and report adaptations in execution output
    - **No new normative semantics in implement**: Do not turn `TODO(REPO_ANCHOR)` into runtime semantics and do not create new external contracts, lifecycle stable states, or `INV-*` definitions during `/sdd.implement`; send unresolved semantic gaps upstream.
-   - **No repository-first backfill in implement**: do not reconstruct dependency matrix facts, boundary ownership semantics, or invocation governance rules inside `/sdd.implement`; consume upstream projections and route evidence gaps upstream.
+   - **No repository-first backfill in implement**: do not reconstruct dependency matrix facts or invocation governance rules inside `/sdd.implement`; consume upstream projections and route evidence gaps upstream.
    - **Progress signaling**: report task progress, heartbeat on quiet periods, and before/after status for long-running commands.
    - **Error handling**:
      - Halt execution if any required DAG predecessor task fails

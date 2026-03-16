@@ -8,7 +8,7 @@ get_repo_root() {
     else
         # Fall back to script location for non-git repos
         local script_dir="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-        (cd "$script_dir/../../.." && pwd)
+        (cd "$script_dir/../.." && pwd)
     fi
 }
 
@@ -83,6 +83,171 @@ check_feature_branch() {
 
 get_feature_dir() { echo "$1/specs/$2"; }
 
+is_path_within_dir() {
+    local path="$1"
+    local root="$2"
+
+    case "$path" in
+        "$root" | "$root"/*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+resolve_repo_relative_path() {
+    local repo_root="$1"
+    local input_path="$2"
+
+    if [[ -z "$input_path" ]]; then
+        return 1
+    fi
+
+    local candidate="$input_path"
+    if [[ "$candidate" != /* ]]; then
+        candidate="$repo_root/$candidate"
+    fi
+
+    local parent_dir
+    parent_dir="$(dirname "$candidate")"
+    if [[ ! -d "$parent_dir" ]]; then
+        return 1
+    fi
+
+    printf '%s/%s\n' "$(cd "$parent_dir" && pwd -P)" "$(basename "$candidate")"
+}
+
+resolve_feature_file_path() {
+    local repo_root="$1"
+    local raw_path="$2"
+    local expected_name="$3"
+    local label="$4"
+
+    local specs_root="$repo_root/specs"
+    if [[ ! -d "$specs_root" ]]; then
+        echo "ERROR: specs directory not found: $specs_root" >&2
+        return 1
+    fi
+
+    local resolved_path
+    resolved_path="$(resolve_repo_relative_path "$repo_root" "$raw_path")" || {
+        echo "ERROR: Unable to resolve $label path: $raw_path" >&2
+        return 1
+    }
+
+    local resolved_specs_root
+    resolved_specs_root="$(cd "$specs_root" && pwd -P)"
+
+    if ! is_path_within_dir "$resolved_path" "$resolved_specs_root"; then
+        echo "ERROR: $label must be located under $resolved_specs_root" >&2
+        return 1
+    fi
+
+    if [[ "$(basename "$resolved_path")" != "$expected_name" ]]; then
+        echo "ERROR: $label must point to a file named $expected_name: $resolved_path" >&2
+        return 1
+    fi
+
+    if [[ ! -f "$resolved_path" ]]; then
+        echo "ERROR: $label not found: $resolved_path" >&2
+        return 1
+    fi
+
+    echo "$resolved_path"
+}
+
+json_escape() {
+    local value="$1"
+    value="${value//\\/\\\\}"
+    value="${value//\"/\\\"}"
+    value="${value//$'\n'/\\n}"
+    value="${value//$'\r'/\\r}"
+    value="${value//$'\t'/\\t}"
+    value="${value//$'\f'/\\f}"
+    value="${value//$'\b'/\\b}"
+    printf '%s' "$value"
+}
+
+json_string() {
+    printf '"%s"' "$(json_escape "$1")"
+}
+
+json_array() {
+    local first=true
+    local item
+
+    printf '['
+    for item in "$@"; do
+        if [[ "$first" == "true" ]]; then
+            first=false
+        else
+            printf ','
+        fi
+        json_string "$item"
+    done
+    printf ']'
+}
+
+emit_feature_paths() {
+    local repo_root="$1"
+    local current_branch="$2"
+    local has_git_repo="$3"
+    local feature_dir="$4"
+    local feature_spec="$5"
+    local impl_plan="$6"
+
+    printf 'REPO_ROOT=%q\n' "$repo_root"
+    printf 'CURRENT_BRANCH=%q\n' "$current_branch"
+    printf 'HAS_GIT=%q\n' "$has_git_repo"
+    printf 'FEATURE_DIR=%q\n' "$feature_dir"
+    printf 'FEATURE_SPEC=%q\n' "$feature_spec"
+    printf 'IMPL_PLAN=%q\n' "$impl_plan"
+    printf 'TASKS=%q\n' "$feature_dir/tasks.md"
+    printf 'RESEARCH=%q\n' "$feature_dir/research.md"
+    printf 'DATA_MODEL=%q\n' "$feature_dir/data-model.md"
+    printf 'TEST_MATRIX=%q\n' "$feature_dir/test-matrix.md"
+    printf 'CONTRACTS_DIR=%q\n' "$feature_dir/contracts"
+    printf 'INTERFACE_DETAILS_DIR=%q\n' "$feature_dir/interface-details"
+}
+
+get_feature_paths_from_spec_file() {
+    local raw_spec_path="$1"
+    local repo_root
+    repo_root="$(get_repo_root)"
+    local current_branch
+    current_branch="$(get_current_branch)"
+    local has_git_repo="false"
+
+    if has_git; then
+        has_git_repo="true"
+    fi
+
+    local feature_spec
+    feature_spec="$(resolve_feature_file_path "$repo_root" "$raw_spec_path" "spec.md" "spec file")" || return 1
+    local feature_dir
+    feature_dir="$(dirname "$feature_spec")"
+
+    emit_feature_paths "$repo_root" "$current_branch" "$has_git_repo" "$feature_dir" "$feature_spec" "$feature_dir/plan.md"
+}
+
+get_feature_paths_from_plan_file() {
+    local raw_plan_path="$1"
+    local repo_root
+    repo_root="$(get_repo_root)"
+    local current_branch
+    current_branch="$(get_current_branch)"
+    local has_git_repo="false"
+
+    if has_git; then
+        has_git_repo="true"
+    fi
+
+    local impl_plan
+    impl_plan="$(resolve_feature_file_path "$repo_root" "$raw_plan_path" "plan.md" "plan file")" || return 1
+    local feature_dir
+    feature_dir="$(dirname "$impl_plan")"
+
+    emit_feature_paths "$repo_root" "$current_branch" "$has_git_repo" "$feature_dir" "$feature_dir/spec.md" "$impl_plan"
+}
+
 # Find feature directory by numeric prefix instead of exact branch match
 # This allows multiple branches to work on the same spec (e.g., 004-fix-bug, 004-add-feature)
 find_feature_dir_by_prefix() {
@@ -136,20 +301,7 @@ get_feature_paths() {
     # Use prefix-based lookup to support multiple branches per spec
     local feature_dir=$(find_feature_dir_by_prefix "$repo_root" "$current_branch")
 
-    cat <<EOF
-REPO_ROOT='$repo_root'
-CURRENT_BRANCH='$current_branch'
-HAS_GIT='$has_git_repo'
-FEATURE_DIR='$feature_dir'
-FEATURE_SPEC='$feature_dir/spec.md'
-IMPL_PLAN='$feature_dir/plan.md'
-TASKS='$feature_dir/tasks.md'
-RESEARCH='$feature_dir/research.md'
-DATA_MODEL='$feature_dir/data-model.md'
-TEST_MATRIX='$feature_dir/test-matrix.md'
-CONTRACTS_DIR='$feature_dir/contracts'
-INTERFACE_DETAILS_DIR='$feature_dir/interface-details'
-EOF
+    emit_feature_paths "$repo_root" "$current_branch" "$has_git_repo" "$feature_dir" "$feature_dir/spec.md" "$feature_dir/plan.md"
 }
 
 check_file() { [[ -f "$1" ]] && echo "  ✓ $2" || echo "  ✗ $2"; }

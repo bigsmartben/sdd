@@ -1,5 +1,5 @@
 ---
-description: Generate exactly one pending contract artifact selected from FEATURE_DIR/plan.md Artifact Status.
+description: Generate exactly one pending contract artifact selected from an explicit plan.md path.
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json
   ps: scripts/powershell/check-prerequisites.ps1 -Json
@@ -13,16 +13,27 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+## Argument Parsing
+
+1. Parse the first positional token from `$ARGUMENTS` as `PLAN_FILE`
+2. `PLAN_FILE` is mandatory and MUST resolve from repo root to an existing file named `plan.md`
+3. `PLAN_FILE` MUST stay under `repo/specs/**`
+4. Any remaining text after removing `PLAN_FILE` is optional scoped user context
+
+If `PLAN_FILE` is missing or invalid, stop immediately and report the required invocation:
+
+`/sdd.plan.contract <path/to/plan.md> [context...]`
+
 ## Goal
 
-Generate exactly one minimum contract artifact by consuming the first pending `contract` row from `FEATURE_DIR/plan.md` `Artifact Status`.
+Generate exactly one minimum contract artifact by consuming the first pending `contract` row from `PLAN_FILE` `Artifact Status`.
 This command MUST NOT generate multiple contract files in one run.
-Use `.specify/templates/contract-template.md` as the structural source of truth for the generated artifact. If the runtime template is missing or non-consumable, stop and report the blocker. Do not substitute `templates/contract-template.md`, any other template directory, or existing generated contract files.
+Use `.specify/templates/contract-template.md` only. If the runtime template is missing or unreadable, stop and report the blocker instead of inferring structure from mirrors or prior generated contracts.
 
 ## Selection Rules
 
-1. Run `{SCRIPT}` once and resolve `FEATURE_DIR`
-2. Read only `FEATURE_DIR/plan.md`
+1. Run `{SCRIPT} --plan-file <PLAN_FILE>` once and resolve `FEATURE_DIR`, `FEATURE_SPEC`, and `IMPL_PLAN`
+2. Read only the resolved `IMPL_PLAN`
 3. In `Artifact Status`, find the first row where:
    - `Unit Type = contract`
    - `Status = pending`
@@ -32,36 +43,48 @@ Use `.specify/templates/contract-template.md` as the structural source of truth 
 
 ## Plan Control-Plane Input Path (Mandatory)
 
-- The only allowed planning control-plane input path is `FEATURE_DIR/plan.md` resolved from `{SCRIPT}`.
-- Do not accept, infer, or override any alternate `plan.md` path from `$ARGUMENTS`, environment variables, or repository scanning.
-- User-provided non-`plan.md` file paths may be consumed only when they fall within this command's `Allowed Inputs` scope.
-- User-provided files MUST NOT replace or redefine the planning control-plane source.
-- If `FEATURE_DIR/plan.md` is missing or non-consumable, stop and report a blocker.
+- Use only the explicit `PLAN_FILE` resolved through `{SCRIPT}` as planning control plane.
+- Ignore alternate `plan.md` paths from environment variables or repository discovery. Non-`plan.md` user files are allowed only when they are already listed in `Allowed Inputs`; they never redefine control-plane state.
+- If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 
 ## Path Constraints
 
-- Limit reads to resolved `FEATURE_DIR` plus the explicit files listed in `Allowed Inputs`.
-- Complete `BindingRowID` selection and prerequisite validation from `FEATURE_DIR/plan.md` before reading `spec.md`, `data-model.md`, `test-matrix.md`, or any repo anchors.
-- Until the selected contract row is resolved and the `test-matrix` stage row is confirmed `done`, do not open repository files, generated artifacts, or run repository-wide discovery/search.
-- After selection, read only the selected row's bound planning inputs and the targeted symbols/files required for that `BindingRowID`.
-- Do not read other feature folders under `specs/`.
-- Do not scan the repository for alternate `plan.md` paths.
+- Stay inside the resolved `FEATURE_DIR` plus the explicit files listed in `Allowed Inputs`.
+- Complete `BindingRowID` selection and prerequisite validation from the explicit `PLAN_FILE` before reading `spec.md`, `data-model.md`, `test-matrix.md`, or any repo anchors.
+- Before that point, do not open repository files, generated artifacts, or run repository-wide discovery/search.
+- After selection, read only the selected row's planning inputs and the targeted symbols/files required for that `BindingRowID`.
+
+## Boundary Anchor Selection (Client Entry First)
+
+- Treat this contract as the UIF/client-facing entry artifact for the selected binding.
+- Select `Boundary Anchor` as the first consumer-callable entry, not an internal service/manager/mapper hop.
+- If the operation is consumer-called via HTTP, prefer `HTTP METHOD /path` and keep any controller symbol as repo anchor evidence.
+- If the operation is consumer-called via RPC/facade, use the anchored `Facade.method` surface.
+- If both HTTP/controller and facade symbols exist, keep the actual consumer-visible first callable entry as normative `Boundary Anchor`; downstream internal handoff belongs in interface-detail.
+
+## Repo Anchor Decision Protocol (Mandatory)
+
+- Apply repo-anchor decision order `existing -> extended -> new -> todo`.
+- `extended` is valid only for same-entity field/state expansion.
+- `new` is normative only when explicit `path::symbol` target evidence is present.
+- If explicit target evidence is missing, set status to `todo` and keep the tuple forward-looking/non-normative.
+- Repo anchors in this stage are for naming/lifecycle correction and traceability only; do not invent business semantics from anchors.
 
 ## Allowed Inputs
 
 Read only:
 
 - `.specify/templates/contract-template.md` for output structure
-- selected `Artifact Status` row from `FEATURE_DIR/plan.md` only
-- matching `BindingRowID` row from `Binding Projection Index` in `FEATURE_DIR/plan.md` only
-- `Shared Context Snapshot` from `FEATURE_DIR/plan.md` only
-- `spec.md`
+- selected `Artifact Status` row from the explicit `PLAN_FILE` only
+- matching `BindingRowID` row from `Binding Projection Index` in the explicit `PLAN_FILE` only
+- `Shared Context Snapshot` from the explicit `PLAN_FILE` only
+- resolved `FEATURE_SPEC`
 - `data-model.md`
 - `test-matrix.md`
-- targeted repo boundary symbols, façade methods, and DTO anchors required for the selected `BindingRowID`
+- targeted repo boundary symbols (route/controller and/or façade as applicable), plus DTO anchors required for the selected `BindingRowID`
 
-`contracts/` remains the authoritative source for interface semantics.
-`FEATURE_DIR/plan.md` is queue state plus stable binding keys only.
+After generation, the selected artifact under `contracts/` becomes the authoritative source for interface semantics for that binding.
+`PLAN_FILE` is queue state plus stable binding keys only.
 
 ## Required Writeback
 
@@ -74,7 +97,7 @@ Update only the selected contract row in `Artifact Status`:
 - `Blocker`
 
 Do not modify unrelated `BindingRowID` rows.
-Do not write contract semantics into `FEATURE_DIR/plan.md`.
+Do not write contract semantics into `PLAN_FILE`.
 
 ## Handoff Decision
 
@@ -85,10 +108,10 @@ Emit a `Handoff Decision` section in the runtime output with exactly these field
 - `Selected BindingRowID`: selected `BindingRowID`
 - `Ready/Blocked`
 
-Determine `Next Command` from `FEATURE_DIR/plan.md` state only after the selected contract row writeback:
+Determine `Next Command` from the explicit `PLAN_FILE` state only after the selected contract row writeback:
 
-- If any `contract` rows remain `pending`, `Next Command = /sdd.plan.contract`
-- Otherwise, if no `contract` rows remain `pending` and at least one `interface-detail` row is `pending`, `Next Command = /sdd.plan.interface-detail`
+- If any `contract` rows remain `pending`, `Next Command = /sdd.plan.contract <absolute path to plan.md>`
+- Otherwise, if no `contract` rows remain `pending` and at least one `interface-detail` row is `pending`, `Next Command = /sdd.plan.interface-detail <absolute path to plan.md>`
 - Otherwise, if queue state is inconsistent with either condition, keep `Next Command` empty and set `Ready/Blocked = Blocked`
 
 `Decision Basis` MUST cite the post-writeback `Artifact Status` state that produced the routing decision.
@@ -97,6 +120,7 @@ Determine `Next Command` from `FEATURE_DIR/plan.md` state only after the selecte
 
 Report:
 
+- resolved `PLAN_FILE`
 - selected `BindingRowID`
 - generated contract path
 - updated contract row status

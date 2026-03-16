@@ -36,7 +36,7 @@ Mechanical output structure is governed by `.specify/templates/lint-report-templ
 
 **Artifact Authority**
 
-Authoritative artifacts: `spec.md`, `tasks.md`, `.specify/memory/constitution.md`, supporting planning artifacts (`research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, `interface-details/`), and repository-first canonical baseline projections in `.specify/memory/repository-first/` (`technical-dependency-matrix.md`, `domain-boundary-responsibilities.md`, `module-invocation-spec.md`) when required by plan outputs.
+Authoritative artifacts: `spec.md`, `tasks.md`, `.specify/memory/constitution.md`, supporting planning artifacts (`research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, `interface-details/`), and repository-first canonical baseline projections `.specify/memory/repository-first/technical-dependency-matrix.md` and `.specify/memory/repository-first/module-invocation-spec.md` when required by plan outputs.
 
 `plan.md` is the planning control plane for queue state, binding-projection rows, and source/output fingerprints only. It is derived for planning semantics and MUST NOT supersede the stage artifacts it dispatches.
 
@@ -92,7 +92,7 @@ If lint is unavailable or execution fails:
 
 Load only sections needed for semantic conclusions:
 
-- From `spec.md`: overview/context, functional & non-functional requirements, user stories, edge cases when present.
+- From `spec.md`: `1.1 Actors`, `1.2 System Boundary`, `1.3 UI Data Dictionary (UDD)`, `2.1 Functional Requirements Index`, `2.2 Global UX Flow Overview`, per-UC `3.1 User Story & Acceptance Scenarios`, `3.2 UX — User Interaction Flow`, `3.3 Functional Requirements`, `3.4 UI — UI Element Definitions`, `3.5 Component-Data Dependency Overview`, `N.1 Success Criteria`, `N.2 Environment Edge Cases`, and `Assumptions / Open Questions` when present.
 - From `plan.md`: `Shared Context Snapshot`, `Stage Queue`, `Binding Projection Index`, `Artifact Status`, and source/output fingerprints.
 - From `tasks.md`: task IDs, scopes (`GLOBAL`, `IF-*`), DAG/dependencies, descriptions, referenced files/anchors.
 - From supporting planning artifacts (only when needed):
@@ -102,7 +102,6 @@ Load only sections needed for semantic conclusions:
   - `interface-details/` for operation behavior, sequence, UML details
 - From repository-first canonical baseline (required when plan outputs depend on repository-first projections):
   - `.specify/memory/repository-first/technical-dependency-matrix.md` for dependency evidence (`Dependency (G:A)`, `Version Source`, divergence/`unresolved` governance signals)
-  - `.specify/memory/repository-first/domain-boundary-responsibilities.md` for source-anchored capability boundaries (`Core Entity Anchors` as `path::symbol`)
   - `.specify/memory/repository-first/module-invocation-spec.md` for invocation governance (`Allowed Direction`, `Forbidden Direction`, `Dependency Governance Rules`)
   - if expected canonical files are missing/stale, stop and route remediation to `/sdd.constitution`
 - From constitution: MUST/SHOULD principles required for validation.
@@ -111,8 +110,8 @@ Load only sections needed for semantic conclusions:
 
 Construct internal models (no raw artifact dump):
 
-- requirement inventory (functional + non-functional, stable keys)
-- user action / acceptance inventory
+- requirement inventory (FR / SC / EC obligations plus stable user-visible data anchors)
+- user action / acceptance inventory (user stories, scenarios, UIF paths, UI-triggered behaviors)
 - task-to-requirement coverage mapping
 - constitution principle map
 - planning queue / binding projection / fingerprint inventory
@@ -134,18 +133,37 @@ Focus on high-signal semantic issues and aggregate overflow beyond 50 findings.
 
 Mandatory explicit semantic checks (do not skip even when lint is available):
 
+- spec backbone consistency:
+  - flag `Entity.field` references in FR/UIF/UI sections that are missing from `1.3 UI Data Dictionary (UDD)` or whose mandatory UDD columns are incomplete
+  - flag `FR`, `Scenario`, `UIF`, `SC`, or `EC` references that drift across `spec.md`, `test-matrix.md`, `contracts/`, `interface-details/`, or `tasks.md`
+  - flag UI element definitions or component-data dependency rows that introduce user-visible behavior, state, or data without anchored UDD / FR / scenario evidence
 - boundary anchor legality and tuple authority:
   - flag any tuple using `BA-*` as normative `Boundary Anchor`
-  - flag tuple rows in normative/main validation paths when `Repo Anchor = TODO(REPO_ANCHOR)`
+  - flag tuple rows in normative/main validation paths when `Repo Anchor = TODO(REPO_ANCHOR)`, `Anchor Status = todo`, `Boundary Anchor Status = todo`, or `Implementation Entry Anchor Status = todo`
+  - flag `test-matrix.md`, `plan.md`, `contracts/`, or `interface-details/` tuple drift where `Boundary Anchor` is not the first consumer-callable entry for the bound interaction
+- repo-anchor decision protocol compliance:
+  - flag missing required anchor-status fields for anchored tuples:
+    - `Anchor Status` in `data-model.md` and `test-matrix.md`
+    - `Anchor Status` (or legacy `Repo Anchor Status`) in `contracts/`
+    - `Boundary Anchor Status` and `Implementation Entry Anchor Status` in `interface-details/`
+  - flag any repo anchor value (except `TODO(REPO_ANCHOR)` or explicit `N/A`) that is not in strict `path::symbol` format
+  - flag any anchor-status value outside `existing`, `extended`, `new`, `todo`
+  - flag `extended` anchors that do not represent same-entity field/state expansion
+  - flag `new` anchors that do not provide explicit `path::symbol` target evidence
+  - flag cases where `extended`/`new` anchors are used to invent business semantics instead of naming/lifecycle correction and traceability
 - contract/interface DTO drift:
-  - flag contract or interface `Request`/`Success`/`Failure` fields that drift from anchored facade/RPC method signatures or anchored request/response DTO structure
+  - flag contract or interface `Request`/`Success`/`Failure` fields that drift from anchored client-entry signature surfaces or anchored request/response DTO structure
   - drift includes renaming anchored fields, flattening anchored nesting, or splitting into fields absent from anchored DTOs
 - runtime correctness (from Stage 4 interface details):
-  - treat this pass as the single post-generation runtime correctness gate; do not require pre-filled check tables in Stage 4 docs
+  - treat this pass as the single post-generation runtime correctness gate; require the Stage 4 `Runtime Correctness Check` section and required rows, while allowing per-row `ok`/`gap` status with explicit evidence
+  - flag interface-detail docs missing `Implementation Entry Anchor` or using `TODO(REPO_ANCHOR)` there without an explicit blocker path
+  - flag sequence designs that do not reach `Implementation Entry Anchor` within the first two request hops from the consumer/client entry
+  - flag cases where both contract boundary and implementation entry are repo-backed but the handoff is omitted, reversed, or implied by invented participants only
   - flag behavior-path closure gaps where `Behavior Paths` outcomes/failures are not fully covered by `Sequence Ref` steps
   - flag sequence failure steps that do not match contract `Failure Output` semantics
   - flag sequence state-transition steps that are not mapped to valid lifecycle transitions/invariants
   - flag contract-visible sequence messages that are not mapped to callable boundary/collaborator operations with UML ownership
+  - flag UML ownership gaps where contract-visible request/response fields or behavior-significant `Field Semantics` fields do not have an explicit owning class/interface
 - lifecycle anchor drift (high priority):
   - flag `data-model.md` lifecycle stable states that drift from anchored enum/state field/mapper status values
   - flag lifecycle states promoted from UX phase/page step/flow node
@@ -160,14 +178,10 @@ Mandatory explicit semantic checks (do not skip even when lint is available):
     - verify dependency key normalization (`group:artifact` for Maven, `ecosystem:package_or_module` for Node/Python/Go)
     - flag missing/invalid `Version Source` values when dependency rows exist
     - flag silent normalization when version divergence or `unresolved` evidence should be preserved
-  - boundary evidence check:
-    - flag `domain-boundary-responsibilities.md` boundaries lacking source-anchor evidence
-    - flag `Core Entity Anchors` values not in `path::symbol` form
-    - flag misuse where `2nd-Party Collaboration Anchor` is used as dependency-matrix substitute
   - invocation governance check:
-    - flag `module-invocation-spec.md` missing any required section (`Allowed Direction`, `Forbidden Direction`, `Dependency Governance Rules`)
+    - flag `.specify/memory/repository-first/module-invocation-spec.md` missing any required section (`Allowed Direction`, `Forbidden Direction`, `Dependency Governance Rules`)
     - flag invocation rules not aligned to real module layering
-    - flag dependency-governance rules that ignore divergence/`unresolved` signals from canonical `technical-dependency-matrix.md`
+    - flag dependency-governance rules that ignore divergence/`unresolved` signals from canonical `.specify/memory/repository-first/technical-dependency-matrix.md`
 
 - planning control-plane stale checks:
   - compare each `Stage Queue` row `Source Fingerprint` against the current direct upstream artifact set for that row
@@ -227,8 +241,8 @@ Assemble and output one decision:
 - `PASS`: no remaining blocking findings.
 - `FAIL`: at least one blocking finding remains.
 
-When `FAIL`, provide blocker list with evidence and remediation owner command (`/sdd.specify`, `/sdd.plan`, or `/sdd.tasks`).
-Treat the following as blocking by default: normative use of `BA-*`, normative tuple rows with unresolved `TODO(REPO_ANCHOR)`, contract/interface field drift from anchored DTOs/signatures, runtime correctness gaps in Stage 4 interface details, lifecycle stable-state drift from anchored enum/state sources, missing/stale repository-first canonical baseline files, dependency-matrix evidence not traceable to engineering assembly facts, boundary responsibilities not traceable to source anchors, invocation-governance rules that drift from real module layering or ignore divergence/`unresolved` dependency governance signals, and stale planning control-plane rows where `Source Fingerprint` no longer matches current authoritative inputs.
+When `FAIL`, provide blocker list with evidence and remediation owner command (`/sdd.constitution`, `/sdd.specify`, `/sdd.plan.*`, or `/sdd.tasks`).
+Treat the following as blocking by default: normative use of `BA-*`, normative tuple rows with unresolved `TODO(REPO_ANCHOR)`, `Anchor Status = todo`, `Boundary Anchor Status = todo`, or `Implementation Entry Anchor Status = todo`, repo-anchor decision protocol violations (missing/invalid required anchor-status fields, non-`path::symbol` repo-anchor values, invalid `extended/new` evidence), contract/interface field drift from anchored DTOs/signatures, runtime correctness gaps in Stage 4 interface details, lifecycle stable-state drift from anchored enum/state sources, missing/stale repository-first canonical baseline files, dependency-matrix evidence not traceable to engineering assembly facts, invocation-governance rules that drift from real module layering or ignore divergence/`unresolved` dependency governance signals, and stale planning control-plane rows where `Source Fingerprint` no longer matches current authoritative inputs.
 
 ### 7) Next Actions
 
@@ -236,7 +250,7 @@ Provide concise actions aligned to gate result:
 
 - `FAIL`: resolve blockers before `/sdd.implement`.
 - `PASS`: proceed, with optional follow-up improvements for non-blocking findings.
-- Keep command suggestions explicit and short (`/sdd.specify`, `/sdd.plan.*`, `/sdd.tasks`).
+- Keep command suggestions explicit and short (`/sdd.constitution`, `/sdd.specify`, `/sdd.plan.*`, `/sdd.tasks`).
 
 ## Context
 

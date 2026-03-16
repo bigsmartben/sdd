@@ -3,7 +3,7 @@ description: Identify underspecified areas in the current feature spec by asking
 handoffs: 
   - label: Build Technical Plan
     agent: sdd.plan
-    prompt: Create a plan for the spec. I am building with...
+    prompt: Create a plan by running /sdd.plan <path/to/spec.md> with the explicit spec.md path resolved for this feature. I am building with...
 scripts:
    sh: scripts/bash/check-prerequisites.sh --json --paths-only
    ps: scripts/powershell/check-prerequisites.ps1 -Json -PathsOnly
@@ -34,60 +34,45 @@ Execution steps:
    - If JSON parsing fails, abort and instruct user to re-run `/sdd.specify` or verify feature branch environment.
    - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
-2. Load the current spec file. Perform a structured ambiguity & coverage scan using this taxonomy. For each category, mark status: Clear / Partial / Missing. Produce an internal coverage map used for prioritization (do not output raw map unless no questions will be asked).
+2. Load the current spec file. Perform a structured ambiguity & coverage scan aligned to the current backbone-first spec template. For each area, mark status: Clear / Partial / Missing. Produce an internal coverage map used for prioritization (do not output raw map unless no questions will be asked).
 
-   Functional Scope & Behavior:
-   - Core user goals & success criteria
-   - Explicit out-of-scope declarations
-   - User roles / personas differentiation
+   Backbone & Boundaries:
+   - `1.1 Actors` responsibilities, permissions, and role distinctions
+   - `1.2 System Boundary` in-scope / out-of-scope clarity
+   - Canonical business terminology used across the spec
 
-   Domain & Data Model:
-   - Entities, attributes, relationships
-   - Identity & uniqueness rules
-   - Lifecycle/state transitions
-   - Data volume / scale assumptions
+   User-Visible Data Backbone:
+   - `1.3 UI Data Dictionary (UDD)` entity coverage
+   - Field completeness for each `Entity.field`: `Calculation / criteria`, `Boundaries & null/empty rules`, `Display rules`, and `Key Path`
+   - Identity, uniqueness, lifecycle, or relationship rules that materially affect user-visible behavior
 
-   Interaction & UX Flow:
-   - Critical user journeys / sequences
-   - Error/empty/loading states
-   - Accessibility or localization notes
+   UC / FR Backbone:
+   - `§ 2 UC Overview` completeness and priority clarity
+   - `2.1 Functional Requirements Index (FR Index)` coverage and linkage
+   - Per-UC `3.1 User Story & Acceptance Scenarios` and `3.3 Functional Requirements` consistency
 
-   Non-Functional Quality Attributes:
-   - Performance (latency, throughput targets)
-   - Scalability (horizontal/vertical, limits)
-   - Reliability & availability (uptime, recovery expectations)
-   - Observability (logging, metrics, tracing signals)
-   - Security & privacy (authN/Z, data protection, threat assumptions)
-   - Compliance / regulatory constraints (if any)
+   UX / UIF Backbone:
+   - `2.2 Global UX Flow Overview` for cross-UC backbone flow when needed
+   - Per-UC `3.2 UX — User Interaction Flow` preconditions, path inventory, interaction steps, exception paths, and postconditions
+   - User-visible failure, empty, retry, timeout, permission, or recovery behavior
 
-   Integration & External Dependencies:
-   - External services/APIs and failure modes
-   - Data import/export formats
-   - Protocol/versioning assumptions
+   UI Surface Definition:
+   - `3.4 UI — UI Element Definitions` page/view info, component copy, state rules, and triggered behavior
+   - `3.5 Component-Data Dependency Overview` mappings between components, `Entity.field`, and FR/scenario refs
 
-   Edge Cases & Failure Handling:
-   - Negative scenarios
-   - Rate limiting / throttling
-   - Conflict resolution (e.g., concurrent edits)
+   Outcome & Edge Signals:
+   - `N.1 Success Criteria` measurability and acceptance relevance
+   - `N.2 Environment Edge Cases` completeness
+   - Quality/security/privacy/compliance expectations only when they materially affect user-visible acceptance or validation
 
-   Constraints & Tradeoffs:
-   - Technical constraints (language, storage, hosting)
-   - Explicit tradeoffs or rejected alternatives
+   Dependencies, Constraints, and Open Questions:
+   - External integrations or dependencies only when they change visible behavior or acceptance
+   - Explicit business constraints or tradeoffs that materially shape the spec
+   - `Assumptions / Open Questions` only for truly blocking unresolved items
+   - TODO markers / ambiguous adjectives ("robust", "intuitive") lacking concrete meaning
 
-   Terminology & Consistency:
-   - Canonical glossary terms
-   - Avoided synonyms / deprecated terms
-
-   Completion Signals:
-   - Acceptance criteria testability
-   - Measurable Definition of Done style indicators
-
-   Misc / Placeholders:
-   - TODO markers / unresolved decisions
-   - Ambiguous adjectives ("robust", "intuitive") lacking quantification
-
-   For each category with Partial or Missing status, add a candidate question opportunity unless:
-   - Clarification would not materially change implementation or validation strategy
+   For each area with Partial or Missing status, add a candidate question opportunity unless:
+   - Clarification would not materially change spec meaning, downstream planning, or validation strategy
    - Information is better deferred to planning phase (note internally)
 
 3. Generate (internally) a prioritized queue of candidate clarification questions (maximum 5). Do NOT output them all at once. Apply these constraints:
@@ -95,7 +80,7 @@ Execution steps:
     - Each question must be answerable with EITHER:
        - A short multiple‑choice selection (2–5 distinct, mutually exclusive options), OR
        - A one-word / short‑phrase answer (explicitly constrain: "Answer in <=5 words").
-    - Only include questions whose answers materially impact architecture, data modeling, task decomposition, test design, UX behavior, operational readiness, or compliance validation.
+    - Only include questions whose answers materially impact spec semantics, downstream planning, test design, UX behavior, operational readiness, or compliance validation.
     - Ensure category coverage balance: attempt to cover the highest impact unresolved categories first; avoid asking two low-impact questions when a single high-impact area (e.g., security posture) is unresolved.
     - Exclude questions already answered, trivial stylistic preferences, or plan-level execution details (unless blocking correctness).
     - Favor clarifications that reduce downstream rework risk or prevent misaligned acceptance tests.
@@ -140,21 +125,26 @@ Execution steps:
 5. Integration after EACH accepted answer (incremental update approach):
     - Maintain in-memory representation of the spec (loaded once at start) plus the raw file contents.
     - For the first integrated answer in this session:
-       - Ensure a `## Clarifications` section exists (create it just after the highest-level contextual/overview section per the spec template if missing).
+       - Ensure a `## Clarifications` section exists (create it after `## Artifacts Overview & Navigation` when that section exists; otherwise insert it immediately before the first `## § 1` backbone section).
        - Under it, create (if not present) a `### Session YYYY-MM-DD` subheading for today.
     - Append a bullet line immediately after acceptance: `- Q: <question> → A: <final answer>`.
     - Then immediately apply the clarification to the most appropriate section(s):
-       - Functional ambiguity → Update or add a bullet in Functional Requirements.
-       - User interaction / actor distinction → Update User Stories or Actors subsection (if present) with clarified role, constraint, or scenario.
-       - Data shape / entities → Update the existing UI data dictionary / domain data sections (add fields, types, and relationship semantics inline) preserving ordering; note added constraints succinctly.
-       - Do not create a standalone `Relationships` heading just to record a clarification; express relationship semantics in the relevant entity/flow/rule section unless a current section already provides a better home.
-       - Non-functional constraint → Add/modify measurable criteria in Non-Functional / Quality Attributes section (convert vague adjective to metric or explicit target).
-       - Edge case / negative flow → Add a new bullet under Edge Cases / Error Handling (or create such subsection if template provides placeholder for it).
-       - Terminology conflict → Normalize term across spec; retain original only if necessary by adding `(formerly referred to as "X")` once.
+       - Actor or scope ambiguity → Update `1.1 Actors` or `1.2 System Boundary` with the clarified responsibility, permission, or in/out-of-scope statement.
+       - User-visible data clarification → Update `1.3 UI Data Dictionary (UDD)` inline; when adding or editing `Entity.field` rows, keep ordering stable and populate every mandatory column (`Calculation / criteria`, `Boundaries & null/empty rules`, `Display rules`, `Key Path`).
+       - UC / FR clarification → Update `§ 2 UC Overview`, `2.1 Functional Requirements Index`, and the relevant per-UC `3.3 Functional Requirements` block together when the clarification changes capability scope or traceability.
+       - Scenario / flow clarification → Update the relevant `3.1 User Story & Acceptance Scenarios`, `3.2 UX — User Interaction Flow`, or `2.2 Global UX Flow Overview`; keep `Scenario`, `Path`, `UIF`, `FR`, and `EC` references textually consistent.
+       - UI surface clarification → Update `3.4 UI — UI Element Definitions` and/or `3.5 Component-Data Dependency Overview`; do not add UI behavior that lacks a matching `Entity.field`, FR, or scenario anchor.
+       - Measurable outcome or quality constraint → Add or modify testable `SC-*` bullets in `N.1 Success Criteria`; do not create a free-floating `Non-Functional` or `Quality Attributes` heading.
+       - Edge case / failure handling → Update `N.2 Environment Edge Cases` and the most relevant per-UC exception/failure section; do not create a generic `Error Handling` heading unless one already exists in the current spec.
+       - Blocking unresolved item → Update `Assumptions / Open Questions` only when the item remains truly blocking at spec stage.
+       - Do not create a standalone `Relationships` heading just to record a clarification; express relationship semantics in the relevant UDD, flow, or rule section unless a current section already provides a better home.
+       - Terminology conflict → Normalize the term across Actors, UDD, UC/FR, UIF, UI, and Success/Edge sections; retain the original only once if needed as `(formerly referred to as "X")`.
     - If the clarification invalidates an earlier ambiguous statement, replace that statement instead of duplicating; leave no obsolete contradictory text.
     - Save the spec file AFTER each integration to minimize risk of context loss (atomic overwrite).
     - Preserve formatting: do not reorder unrelated sections; keep heading hierarchy intact.
     - Keep each inserted clarification minimal and testable (avoid narrative drift).
+    - Keep stage boundaries intact:
+      - do not add planning control-plane content, contract/interface-detail design, task orchestration, audit tables, or implementation choreography into `spec.md`
     - Keep terminology context-pure:
       - Do not inject legacy/example domain identifiers from prior conversations.
       - If a candidate term is not present in current spec/user input/assumptions, replace it with neutral wording or ask a bounded clarification.
@@ -163,8 +153,13 @@ Execution steps:
    - Clarifications session contains exactly one bullet per accepted answer (no duplicates).
    - Total asked (accepted) questions ≤ 5.
    - Updated sections contain no lingering vague placeholders the new answer was meant to resolve.
+   - Mandatory spec backbone headings remain intact; do not replace template sections with ad-hoc headings.
+   - Any updated `1.3 UI Data Dictionary` row still includes all mandatory completeness columns and explicit values.
+   - `UC`, `FR`, `Scenario`, `UIF`, `SC`, and `EC` references remain textually consistent after edits.
+   - `Assumptions / Open Questions` contains only truly blocking unresolved items.
    - No contradictory earlier statement remains (scan for now-invalid alternative choices removed).
    - Markdown structure valid; only allowed new headings: `## Clarifications`, `### Session YYYY-MM-DD`.
+   - No planning, audit, or implementation-stage detail was injected into `spec.md`.
    - Terminology consistency: same canonical term used across all updated sections.
    - Anti-solidification: no newly added term should be traceable only to prior analysis/examples.
 
@@ -174,7 +169,7 @@ Execution steps:
    - Number of questions asked & answered.
    - Path to updated spec.
    - Sections touched (list names).
-   - Coverage summary table listing each taxonomy category with Status: Resolved (was Partial/Missing and addressed), Deferred (exceeds question quota or better suited for planning), Clear (already sufficient), Outstanding (still Partial/Missing but low impact).
+   - Coverage summary table listing each template-aligned area (`Backbone & Boundaries`, `User-Visible Data Backbone`, `UC / FR Backbone`, `UX / UIF Backbone`, `UI Surface Definition`, `Outcome & Edge Signals`, `Dependencies, Constraints, and Open Questions`) with Status: Resolved (was Partial/Missing and addressed), Deferred (exceeds question quota or better suited for planning), Clear (already sufficient), Outstanding (still Partial/Missing but low impact).
    - If any Outstanding or Deferred remain, recommend whether to proceed to `/sdd.plan` or run `/sdd.clarify` again later post-plan.
    - Suggested next command.
 

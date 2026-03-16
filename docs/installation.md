@@ -67,15 +67,15 @@ uvx --from git+https://github.com/bigsmartben/sdd.git specify init <project_name
 After initialization, you should see the following commands available in your AI agent:
 
 - `/sdd.specify` - Create specifications
-- `/sdd.plan` - Initialize the planning control plane
-- `/sdd.plan.research` - Generate the queued research artifact
-- `/sdd.plan.data-model` - Generate the queued data model artifact
-- `/sdd.plan.test-matrix` - Generate the queued test matrix artifact
-- `/sdd.plan.contract` - Generate one queued contract artifact
-- `/sdd.plan.interface-detail` - Generate one queued interface-detail artifact
+- `/sdd.plan <spec.md>` - Initialize the planning control plane
+- `/sdd.plan.research <plan.md>` - Generate the queued research artifact
+- `/sdd.plan.data-model <plan.md>` - Generate the queued data model artifact
+- `/sdd.plan.test-matrix <plan.md>` - Generate the queued test matrix artifact
+- `/sdd.plan.contract <plan.md>` - Generate one queued contract artifact
+- `/sdd.plan.interface-detail <plan.md>` - Generate one queued interface-detail artifact
 - `/sdd.tasks` - Break down into actionable tasks
 
-Repeated planning commands use runtime `Handoff Decision` output derived from `plan.md` queue state. Static frontmatter handoffs are advisory only.
+Repeated planning commands use runtime `Handoff Decision` output derived from `plan.md` queue state. Static frontmatter handoffs are advisory only, and planning commands no longer infer their target feature from branch or `SPECIFY_FEATURE`.
 
 The `.specify/scripts` directory will contain both `.sh` and `.ps1` scripts.
 

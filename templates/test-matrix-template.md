@@ -14,29 +14,36 @@ Keep the matrix minimal-but-sufficient: merge pure permutations with identical o
 ## Stable Binding Keys (Required)
 
 - Keep `TM ID` and `TC ID` stable once referenced downstream.
-- For every scenario/case row, populate `Operation ID`, `Boundary Anchor`, `IF Scope`, and `Repo Anchor` (use explicit `N/A` when not interface-scoped).
+- For every scenario/case row, populate `Operation ID`, `Boundary Anchor`, `IF Scope`, `Repo Anchor`, and `Anchor Status` (use explicit `N/A` when not interface-scoped).
 - `Boundary Anchor` is normative only when it is one of: HTTP `METHOD /path`, `event.topic`, RPC/Façade method, CLI command, or explicit `N/A`.
+- `Boundary Anchor` MUST identify the first consumer-callable entry used for contract binding; do not project internal service/manager/mapper handoff symbols here.
+- If the consumer enters through HTTP, prefer `HTTP METHOD /path`; if the consumer enters through a stable RPC/Façade surface, use `Facade.method`.
 - `BA-*` labels are invalid as normative boundary anchors and may appear only as non-normative helper labels.
-- `Repo Anchor` must default to an existing source symbol; if unresolved, use `TODO(REPO_ANCHOR)` and treat the row as non-normative forward-looking only.
+- Apply repo-anchor decision order `existing -> extended -> new -> todo`.
+- `extended` is valid only for same-entity field/state expansion.
+- `new` is normative only when explicit `path::symbol` target evidence is provided.
+- If explicit target evidence is missing, set `Anchor Status = todo` and keep the row non-normative forward-looking only.
 - Keep `Operation ID` / `Boundary Anchor` / `IF Scope` values textually consistent with `contracts/` and `interface-details/`.
-- Main-path verification binding MUST use anchored tuples only. Rows with `TODO(REPO_ANCHOR)` MUST NOT enter primary verification path rows.
+- `Implementation Entry Anchor` belongs only in `interface-details/`; do not encode internal handoff entrypoints in TM/TC tuple keys.
+- Main-path verification binding MUST use tuples with `Anchor Status = existing|extended|new`. Rows with `Anchor Status = todo` MUST NOT enter primary verification path rows.
 
 ## Scenario Matrix
 
-| TM ID | Operation ID | Boundary Anchor | IF Scope | Repo Anchor | Path Type | Scenario | Preconditions | Expected Outcome | Related Ref |
-|-------|--------------|-----------------|----------|-------------|-----------|----------|---------------|------------------|-------------|
-| TM-001 | [operationId or N/A] | [HTTP `METHOD /path` \| `event.topic` \| `Facade.method` \| `cli command` \| `N/A`] | [IF-### or N/A] | [`path/to/file.ext:Symbol` or `TODO(REPO_ANCHOR)`] | Main | [Scenario] | [State or setup] | [Observable result] | [UC / UIF / FR] |
+| TM ID | Operation ID | Boundary Anchor | IF Scope | Repo Anchor | Anchor Status | Path Type | Scenario | Preconditions | Expected Outcome | Related Ref |
+|-------|--------------|-----------------|----------|-------------|---------------|-----------|----------|---------------|------------------|-------------|
+| TM-001 | [operationId or N/A] | [HTTP `METHOD /path` \| `event.topic` \| `Facade.method` \| `cli command` \| `N/A`] | [IF-### or N/A] | [`path/to/file.ext::Symbol` or `TODO(REPO_ANCHOR)`] | [`existing` \| `extended` \| `new` \| `todo`] | Main | [Scenario] | [State or setup] | [Observable result] | [UC / UIF / FR] |
 
 ## Verification Case Anchors
 
-| TC ID | TM ID | Operation ID | Boundary Anchor | IF Scope | Repo Anchor | Verification Goal | Observability / Signal |
-|-------|-------|--------------|-----------------|----------|-------------|-------------------|------------------------|
-| TC-001 | TM-001 | [operationId or N/A] | [same as scenario row or N/A] | [IF-### or N/A] | [same as scenario row] | [What this case proves] | [Assertion, signal, or check] |
+| TC ID | TM ID | Operation ID | Boundary Anchor | IF Scope | Repo Anchor | Anchor Status | Verification Goal | Observability / Signal |
+|-------|-------|--------------|-----------------|----------|-------------|---------------|-------------------|------------------------|
+| TC-001 | TM-001 | [operationId or N/A] | [same as scenario row or N/A] | [IF-### or N/A] | [same as scenario row] | [same as scenario row] | [What this case proves] | [Assertion, signal, or check] |
 
 ## Boundary Notes
 
 - Keep this artifact in the planning flow as feature-level test design only.
 - Prefer the smallest scenario/case set that still preserves meaningful path coverage and stable downstream bindings.
-- Bind TM/TC rows to anchored tuples for normative verification; keep rows with `TODO(REPO_ANCHOR)` out of the main validation path.
+- Bind TM/TC rows to tuples with `Anchor Status = existing|extended|new` for normative verification; keep rows with `Anchor Status = todo` out of the main validation path.
+- Treat `Boundary Anchor` as the client-facing contract entry only; keep internal implementation handoff anchors for Stage 4 interface detail.
 - Treat `BA-*` as non-normative shorthand only; never use it as a normative tuple key.
 - Do not redefine contract fields, interface internals, audit tables, or traceability ledgers here.

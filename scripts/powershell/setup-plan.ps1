@@ -4,6 +4,7 @@
 [CmdletBinding()]
 param(
     [switch]$Json,
+    [string]$SpecFile,
     [switch]$Help
 )
 
@@ -11,17 +12,23 @@ $ErrorActionPreference = 'Stop'
 
 # Show help if requested
 if ($Help) {
-    Write-Output "Usage: ./setup-plan.ps1 [-Json] [-Help]"
-    Write-Output "  -Json     Output results in JSON format"
-    Write-Output "  -Help     Show this help message"
+    Write-Output "Usage: ./setup-plan.ps1 -SpecFile <path/to/spec.md> [-Json] [-Help]"
+    Write-Output "  -SpecFile <path>  Explicit path to spec.md under repo/specs/**"
+    Write-Output "  -Json             Output results in JSON format"
+    Write-Output "  -Help             Show this help message"
     exit 0
 }
 
 # Load common functions
 . "$PSScriptRoot/common.ps1"
 
-# Get all paths and variables from common functions
-$paths = Get-FeaturePathsEnv
+if (-not $SpecFile) {
+    Write-Error "-SpecFile is required and must point to spec.md under repo/specs/**"
+    exit 1
+}
+
+# Get all paths and variables from explicit spec file
+$paths = Get-FeaturePathsFromSpecFile -SpecFile $SpecFile
 
 $template = Join-Path $paths.REPO_ROOT '.specify/templates/plan-template.md'
 if (-not (Test-Path $template -PathType Leaf)) {
@@ -29,8 +36,9 @@ if (-not (Test-Path $template -PathType Leaf)) {
     exit 1
 }
 
-# Check if we're on a proper feature branch (only for git repos)
-if (-not (Test-FeatureBranch -Branch $paths.CURRENT_BRANCH -HasGit $paths.HAS_GIT)) { 
+# Validate spec file before creating plan.md beside it.
+if (-not (Test-Path $paths.FEATURE_SPEC -PathType Leaf)) {
+    Write-Error "spec.md not found at $($paths.FEATURE_SPEC)"
     exit 1 
 }
 

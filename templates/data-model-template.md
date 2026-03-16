@@ -21,7 +21,7 @@ Use this section to establish the overall shape of the model before filling in d
 - Shared domain elements and vocabulary reused across operations
 - Backbone ownership/composition/projection/derivation/dependency relationships
 - Cross-operation invariants in normative rule form (`INV-###`)
-- Aggregate/entity lifecycle anchors needed for global semantic consistency, sourced from anchored enum/state symbols
+- Aggregate/entity lifecycle anchors needed for global semantic consistency, corrected and traced with repo anchors
 - Core UML classes/interfaces with globally stable fields and labeled relationships
 
 ### This file does not define
@@ -33,13 +33,15 @@ Use this section to establish the overall shape of the model before filling in d
 
 ## Domain Inventory
 
-List only elements that carry shared planning semantics. Prefer existing source-code symbols as repo anchors when available. Capture only globally stable fields here.
+List only elements that carry shared planning semantics. Capture only globally stable fields here.
+Derive semantics from `spec.md` + `research.md`; use repo anchors only for naming/lifecycle correction and traceability.
 
-| Domain Element | Kind | Repo Anchor Status (`anchored`\|`todo`) | Repo Anchor | Upstream Ref(s) | Global Responsibility | Globally Stable Fields Only |
-|----------------|------|-----------------------------------------|-------------|-----------------|-----------------------|-----------------------------|
-| `[OrderAggregate]` | `Aggregate` | `anchored` | ``src/domain/order.py::OrderAggregate`` | `[spec.md#FR-001]` | [Backbone responsibility shared across operations] | `[id, customerId, status, version]` |
-| `[PaymentPolicy]` | `Domain Service / Policy` | `anchored` | ``src/domain/payment_policy.py::PaymentPolicy`` | `[research.md#R-001]` | [Global policy responsibility] | `[policyId, policyVersion, decisionType]` |
-| `[OrderSnapshotView]` | `Projection / View` | `todo` | `TODO(REPO_ANCHOR)` | `[spec.md#FR-004]` | [Shared read-model responsibility] | `[orderId, state, updatedAt]` |
+| Domain Element | Kind | Anchor Status (`existing`\|`extended`\|`new`\|`todo`) | Repo Anchor | Upstream Ref(s) | Global Responsibility | Globally Stable Fields Only |
+|----------------|------|--------------------------------------------------------|-------------|-----------------|-----------------------|-----------------------------|
+| `[OrderAggregate]` | `Aggregate` | `existing` | ``src/domain/order.py::OrderAggregate`` | `[spec.md#FR-001]` | [Backbone responsibility shared across operations] | `[id, customerId, status, version]` |
+| `[OrderAggregate.statusHistory]` | `Aggregate Field` | `extended` | ``src/domain/order.py::OrderAggregate.statusHistory`` | `[research.md#R-001]` | [Same-entity lifecycle trace extension] | `[statusHistory]` |
+| `[OrderSnapshotView]` | `Projection / View` | `new` | ``src/projection/order_snapshot.py::OrderSnapshotView`` | `[spec.md#FR-004]` | [Shared read-model responsibility] | `[orderId, state, updatedAt]` |
+| `[PendingModelGap]` | `Projection / View` | `todo` | `TODO(REPO_ANCHOR)` | `[spec.md#FR-009]` | [Deferred anchor resolution] | `[deferredField]` |
 
 ## Backbone Structure
 
@@ -58,15 +60,16 @@ Expand the model by describing only globally significant responsibilities and li
 - **Association**: `[AggregateB]` references `[AggregateA]` by `[stableIdentifier]` only (no deep embedding).
 - **Boundary rule**: [What can/cannot cross this group boundary at backbone level].
 
-## Anchor Gating Rules
+## Repo Anchor Decision Protocol
 
-- `Repo Anchor Status` is determined only by source-code repo anchors; `spec.md`, `research.md`, and other planning artifacts stay in `Upstream Ref(s)` and MUST NOT be counted as repo anchors.
-- `Globally Stable Fields` MUST reference `anchored` items only.
-- `INV-*` rules MUST NOT depend on `todo` items.
-- `Lifecycle` stable states MUST NOT be defined from `todo` items.
-- Stable lifecycle states MUST come from anchored enum/state fields or anchored mapper status values.
+- Model semantics come from `spec.md` + `research.md`; repo anchors are correction/traceability evidence only.
+- For every anchor decision, apply strict order: `existing -> extended -> new -> todo`.
+- `extended` is valid only for same-entity field/state expansion.
+- `new` is normative only when explicit `path::symbol` target evidence is provided.
+- `todo` remains forward-looking and non-normative.
+- `INV-*` rules and lifecycle stable states MUST NOT depend on `todo` anchors.
+- Stable lifecycle states MUST align to repo-backed enum/state vocabulary when anchor status is `existing`, `extended`, or `new`.
 - UI phases (page steps, flow nodes, confirmation stages) are not aggregate lifecycle states and MUST NOT be promoted into lifecycle anchors.
-- Items with missing anchors MUST remain non-normative and be recorded only in `Boundary Notes`, `Model Closure`, or `Assumptions / Open Questions`.
 
 ## Shared Invariants
 
@@ -78,6 +81,7 @@ Write normative rules with stable identifiers and references. Prefer rules that 
 - **Applies To**: `[Element(s) / Relationship(s)]`
 - **Rationale**: [Why this is globally required]
 - **Upstream Ref(s)**: `[spec.md#...], [research.md#...]`
+- **Anchor Status**: `[existing | extended | new | todo]`
 - **Repo Anchor(s)**: `[repo symbol if applicable]` or `TODO(REPO_ANCHOR)`
 
 ### INV-002: [Short invariant title]
@@ -86,17 +90,20 @@ Write normative rules with stable identifiers and references. Prefer rules that 
 - **Applies To**: `[Element(s) / Relationship(s)]`
 - **Rationale**: [Global semantic reason]
 - **Upstream Ref(s)**: `[spec.md#...], [research.md#...]`
+- **Anchor Status**: `[existing | extended | new | todo]`
 - **Repo Anchor(s)**: `[repo symbol if applicable]` or `TODO(REPO_ANCHOR)`
 
 ## Lifecycle Anchors
 
 Describe each globally shared lifecycle as its own section. Include only states and transitions that must remain stable across planning outputs.
-Before writing a lifecycle section, read anchored enum definitions, anchored status/state fields, and anchored mapper status values.
-Stable states MUST come from those anchored symbols; UI phases/page steps/flow nodes are not aggregate lifecycle states.
+Before writing a lifecycle section, read repo-backed enum definitions, status/state fields, and mapper status values.
+Apply anchor decision order `existing -> extended -> new -> todo`.
+Stable states MUST come from anchors with status `existing`, `extended`, or `new`; UI phases/page steps/flow nodes are not aggregate lifecycle states.
 
 ### Lifecycle: [Aggregate / Entity Name]
 
-- **Repo Anchor(s)**: [`path/to/file.ext:EnumOrStateField`] or `TODO(REPO_ANCHOR)`
+- **Anchor Status**: [`existing` | `extended` | `new` | `todo`]
+- **Repo Anchor(s)**: [`path/to/file.ext::EnumOrStateField`] or `TODO(REPO_ANCHOR)`
 - **State field**: `[anchored status/state field name]`
 - **Stable states**: `[must match anchored enum/status vocabulary]`
 - **Allowed transitions**:
@@ -108,7 +115,8 @@ Stable states MUST come from those anchored symbols; UI phases/page steps/flow n
 
 ### Lifecycle: [Second Aggregate / Entity Name]
 
-- **Repo Anchor(s)**: [`path/to/file.ext:EnumOrStateField`] or `TODO(REPO_ANCHOR)`
+- **Anchor Status**: [`existing` | `extended` | `new` | `todo`]
+- **Repo Anchor(s)**: [`path/to/file.ext::EnumOrStateField`] or `TODO(REPO_ANCHOR)`
 - **State field**: `[anchored status/state field name]`
 - **Stable states**: `[must match anchored enum/status vocabulary]`
 - **Allowed transitions**:
@@ -160,4 +168,4 @@ Use this final section to confirm that the backbone model is coherent, complete,
 - Ensure the model covers the shared elements, stable fields, labeled relationships, invariants, and lifecycle anchors required by `spec.md` and `research.md`.
 - Ensure the content remains backbone-only and does not expand into full DTO inventories, endpoint-by-endpoint contracts, implementation layers, persistence schema design, or interface-level sequence behavior.
 - Ensure terminology, invariants, and lifecycle definitions are consistent with downstream `contract-template.md` and `interface-detail-template.md` expectations without duplicating their scope.
-- If anything is still uncertain, record the gap as `TODO(REPO_ANCHOR)` in `Assumptions / Open Questions` or `Boundary Notes` rather than leaving backbone semantics ambiguous.
+- If anything is still uncertain, set `Anchor Status = todo` and record the gap with `TODO(REPO_ANCHOR)` in `Assumptions / Open Questions` or `Boundary Notes` rather than leaving backbone semantics ambiguous.

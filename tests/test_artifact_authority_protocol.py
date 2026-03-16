@@ -16,7 +16,7 @@ def test_command_mapping_documents_authority_model():
     assert "Repository-first projections are canonical only under `.specify/memory/repository-first/`" in content
     assert "Runtime template authority path for generation and output-structure commands is `.specify/templates/`." in content
     assert "| `plan.md` | Planning control plane, binding projection ledger, queue/fingerprint state | Derived for planning semantics; authoritative for planning queue state |" in content
-    assert "| `/sdd.plan.test-matrix` | Generate the queued verification matrix and initialize binding rows | `.specify/templates/test-matrix-template.md` | `test-matrix.md`, `plan.md` binding rows |" in content
+    assert "| `/sdd.plan.test-matrix <plan.md>` | Generate the queued verification matrix and initialize binding rows | `.specify/templates/test-matrix-template.md` | `test-matrix.md`, `plan.md` binding rows |" in content
     assert "must stop when `plan.md` queue rows show incomplete planning stages or pending contract / interface-detail units" in content
     assert "owns final stale-planning detection" in content
 

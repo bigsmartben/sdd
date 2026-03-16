@@ -25,7 +25,6 @@ def test_constitution_template_defines_owner_boundaries_and_terms():
     assert "### Ownership Boundary Baseline" not in content
     assert "### Repo-Anchor Evidence Protocol" in content
     assert ".specify/memory/repository-first/technical-dependency-matrix.md" in content
-    assert ".specify/memory/repository-first/domain-boundary-responsibilities.md" in content
     assert ".specify/memory/repository-first/module-invocation-spec.md" in content
     assert "dependency evidence MUST come from build-manifest auto-detection with deterministic priority" in content
     assert "Maven: `pom.xml`" in content
@@ -89,13 +88,30 @@ def test_constitution_command_owns_repository_first_baseline_pipeline():
     assert "Repository-first global baseline pipeline (mandatory)" in content
     assert ".specify/memory/repository-first/" in content
     assert "technical-dependency-matrix.md" in content
-    assert "domain-boundary-responsibilities.md" in content
     assert "module-invocation-spec.md" in content
     assert "Detect build manifests from repo root using deterministic priority" in content
     assert "Maven: `pom.xml`" in content
     assert "Node: `package.json`" in content
     assert "Python: `pyproject.toml`" in content
     assert "Go: `go.mod`" in content
+    assert "never read or stat bare projection filenames from repo root" in content
     assert "`created`" in content
     assert "`updated`" in content
     assert "`unchanged`" in content
+    assert "`deleted`" in content
+
+
+def test_constitution_command_defines_runtime_fast_path_and_bounded_reads():
+    content = read("templates/commands/constitution.md")
+
+    assert "Build one run-local **change impact map** before broad reads" in content
+    assert "`governance-only`" in content
+    assert "`template-affecting`" in content
+    assert "`repo-first-affecting`" in content
+    assert "Resolve impacted families from the change impact map first, then read/update only those families." in content
+    assert "Do not run directory-wide or repository-wide exploratory scans" in content
+    assert "Repository-first fast path gate (evaluate before regeneration)" in content
+    assert "If no trigger is true, keep canonical baseline files as-is and mark each artifact `unchanged` without template re-render." in content
+    assert "Apply a **bounded evidence budget** for this run" in content
+    assert "Runtime guidance docs (`README.md`, `docs/quickstart.md`, agent docs) are **opt-in by trigger** only" in content
+    assert "Keep runtime output concise: no unchanged-file inventories" in content

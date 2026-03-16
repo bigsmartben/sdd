@@ -48,4 +48,4 @@ Record only material governance signals that downstream invocation governance mu
 ## Boundary Notes
 
 - This artifact is dependency-fact oriented; it does not define component/domain responsibilities.
-- This artifact does not define allowed/forbidden invocation directions; those rules belong in `module-invocation-spec.md`.
+- This artifact does not define allowed/forbidden invocation directions; those rules belong in `.specify/memory/repository-first/module-invocation-spec.md`.
