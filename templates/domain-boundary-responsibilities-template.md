@@ -23,4 +23,4 @@ This artifact MUST stay at domain-boundary granularity and MUST NOT model depend
 ## Boundary Notes
 
 - Do not infer responsibilities from path names alone.
-- Do not encode module invocation direction (`allowed`/`forbidden`) here; use `module-invocation-spec.md` for invocation governance.
+- Do not encode module invocation direction (`allowed`/`forbidden`) here; use `.specify/memory/repository-first/module-invocation-spec.md` for invocation governance.

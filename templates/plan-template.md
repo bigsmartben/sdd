@@ -63,6 +63,8 @@ Rules:
 - Each row must be uniquely identifiable.
 - `BindingRowID` is the plan-local identifier for one stable binding row projected from `test-matrix.md`.
 - `Binding Projection Index` is a projection ledger only.
+- `Boundary Anchor` is the client-facing contract binding key projected from `test-matrix.md`; it is not the internal implementation handoff anchor.
+- Internal handoff anchors such as `Implementation Entry Anchor` belong in `interface-details/`, not `plan.md`.
 - If a stable key is not confirmed, keep it out of the index.
 
 ## Artifact Status

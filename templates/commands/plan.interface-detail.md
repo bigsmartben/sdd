@@ -1,5 +1,5 @@
 ---
-description: Generate exactly one pending interface detail artifact selected from FEATURE_DIR/plan.md Artifact Status.
+description: Generate exactly one pending interface detail artifact selected from an explicit plan.md path.
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json
   ps: scripts/powershell/check-prerequisites.ps1 -Json
@@ -13,16 +13,27 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+## Argument Parsing
+
+1. Parse the first positional token from `$ARGUMENTS` as `PLAN_FILE`
+2. `PLAN_FILE` is mandatory and MUST resolve from repo root to an existing file named `plan.md`
+3. `PLAN_FILE` MUST stay under `repo/specs/**`
+4. Any remaining text after removing `PLAN_FILE` is optional scoped user context
+
+If `PLAN_FILE` is missing or invalid, stop immediately and report the required invocation:
+
+`/sdd.plan.interface-detail <path/to/plan.md> [context...]`
+
 ## Goal
 
-Generate exactly one minimum interface-detail artifact by consuming the first pending `interface-detail` row from `FEATURE_DIR/plan.md` `Artifact Status`.
+Generate exactly one minimum interface-detail artifact by consuming the first pending `interface-detail` row from `PLAN_FILE` `Artifact Status`.
 This command MUST NOT generate multiple interface-detail files in one run.
-Use `.specify/templates/interface-detail-template.md` as the structural source of truth for the generated artifact. If the runtime template is missing or non-consumable, stop and report the blocker. Do not substitute `templates/interface-detail-template.md`, any other template directory, or existing generated interface-detail files.
+Use `.specify/templates/interface-detail-template.md` only. If the runtime template is missing or unreadable, stop and report the blocker instead of inferring structure from mirrors or prior generated interface-detail files.
 
 ## Selection Rules
 
-1. Run `{SCRIPT}` once and resolve `FEATURE_DIR`
-2. Read only `FEATURE_DIR/plan.md`
+1. Run `{SCRIPT} --plan-file <PLAN_FILE>` once and resolve `FEATURE_DIR`, `FEATURE_SPEC`, and `IMPL_PLAN`
+2. Read only the resolved `IMPL_PLAN`
 3. In `Artifact Status`, find the first row where:
    - `Unit Type = interface-detail`
    - `Status = pending`
@@ -32,37 +43,44 @@ Use `.specify/templates/interface-detail-template.md` as the structural source o
 
 ## Plan Control-Plane Input Path (Mandatory)
 
-- The only allowed planning control-plane input path is `FEATURE_DIR/plan.md` resolved from `{SCRIPT}`.
-- Do not accept, infer, or override any alternate `plan.md` path from `$ARGUMENTS`, environment variables, or repository scanning.
-- User-provided non-`plan.md` file paths may be consumed only when they fall within this command's `Allowed Inputs` scope.
-- User-provided files MUST NOT replace or redefine the planning control-plane source.
-- If `FEATURE_DIR/plan.md` is missing or non-consumable, stop and report a blocker.
+- Use only the explicit `PLAN_FILE` resolved through `{SCRIPT}` as planning control plane.
+- Ignore alternate `plan.md` paths from environment variables or repository discovery. Non-`plan.md` user files are allowed only when they are already listed in `Allowed Inputs`; they never redefine control-plane state.
+- If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 
 ## Path Constraints
 
-- Limit reads to resolved `FEATURE_DIR` plus the explicit files listed in `Allowed Inputs`.
-- Complete `BindingRowID` selection, matching contract-row resolution, and prerequisite validation from `FEATURE_DIR/plan.md` before reading `research.md`, `data-model.md`, `test-matrix.md`, the matching contract artifact, or any repo anchors.
-- Until the selected interface-detail row is resolved and the matching contract row is confirmed `done`, do not open repository files, generated artifacts, or run repository-wide discovery/search.
-- After selection, read only the selected row's bound planning inputs, the matching contract artifact, and the targeted symbols/files required for that `BindingRowID`.
-- Do not read other feature folders under `specs/`.
-- Do not scan the repository for alternate `plan.md` paths.
+- Stay inside the resolved `FEATURE_DIR` plus the explicit files listed in `Allowed Inputs`.
+- Complete `BindingRowID` selection, matching contract-row resolution, and prerequisite validation from the explicit `PLAN_FILE` before reading `research.md`, `data-model.md`, `test-matrix.md`, the matching contract artifact, or any repo anchors.
+- Before that point, do not open repository files, generated artifacts, or run repository-wide discovery/search.
+- After selection, read only the selected row's planning inputs, the matching contract artifact, and the targeted symbols/files required for that `BindingRowID`.
+
+## Internal Handoff Design Requirements
+
+- Treat this artifact as the detailed-design handoff of the selected contract row, not a restatement of contract prose.
+- Keep `Operation ID` / `Boundary Anchor` / `IF Scope` aligned to the selected contract binding row.
+- Add and anchor `Implementation Entry Anchor` to the first internal handoff entry that realizes the selected contract boundary.
+- Keep contract restatement out: explain only behavior-significant field semantics, internal ownership/mapping, and failure propagation.
+- Sequence design must start from client/consumer entry and reach `Implementation Entry Anchor` within the first two request hops.
+- If both controller and facade exist, show both in sequence order and keep handoff explicit.
+- Explain internal responsibility flow through the smallest complete handoff set that still explains contract-visible outcomes.
+- Require UML field-level ownership for all contract-visible request/response fields and behavior-significant fields from `Field Semantics`.
 
 ## Allowed Inputs
 
 Read only:
 
 - `.specify/templates/interface-detail-template.md` for output structure
-- selected `Artifact Status` row from `FEATURE_DIR/plan.md` only
-- matching `BindingRowID` row from `Binding Projection Index` in `FEATURE_DIR/plan.md` only
-- `Shared Context Snapshot` from `FEATURE_DIR/plan.md` only
+- selected `Artifact Status` row from the explicit `PLAN_FILE` only
+- matching `BindingRowID` row from `Binding Projection Index` in the explicit `PLAN_FILE` only
+- `Shared Context Snapshot` from the explicit `PLAN_FILE` only
 - `research.md` when constraints materially affect this `BindingRowID`
 - `data-model.md`
 - `test-matrix.md`
 - matching contract artifact
-- targeted repo façade/DTO/collaborator anchors required for the selected `BindingRowID`
+- targeted repo boundary/entry/DTO/collaborator anchors required for the selected `BindingRowID` (for example route/controller, facade, service, manager, mapper/gateway)
 
-`interface-details/` remains the authoritative source for operation-local design semantics.
-`FEATURE_DIR/plan.md` remains queue state plus stable binding keys only.
+After generation, the selected artifact under `interface-details/` becomes the authoritative source for operation-local design semantics for that binding.
+`PLAN_FILE` remains queue state plus stable binding keys only.
 
 ## Required Writeback
 
@@ -75,7 +93,7 @@ Update only the selected interface-detail row in `Artifact Status`:
 - `Blocker`
 
 Do not modify unrelated `BindingRowID` rows.
-Do not write interface-detail prose into `FEATURE_DIR/plan.md`.
+Do not write interface-detail prose into `PLAN_FILE`.
 
 ## Handoff Decision
 
@@ -86,9 +104,9 @@ Emit a `Handoff Decision` section in the runtime output with exactly these field
 - `Selected BindingRowID`: selected `BindingRowID`
 - `Ready/Blocked`
 
-Determine `Next Command` from `FEATURE_DIR/plan.md` state only after the selected interface-detail row writeback:
+Determine `Next Command` from the explicit `PLAN_FILE` state only after the selected interface-detail row writeback:
 
-- If any `interface-detail` rows remain `pending`, `Next Command = /sdd.plan.interface-detail`
+- If any `interface-detail` rows remain `pending`, `Next Command = /sdd.plan.interface-detail <absolute path to plan.md>`
 - Otherwise, if all required planning rows are complete, `Next Command = /sdd.tasks`
 - Otherwise, if queue state is inconsistent with either condition, keep `Next Command` empty and set `Ready/Blocked = Blocked`
 
@@ -98,6 +116,7 @@ Determine `Next Command` from `FEATURE_DIR/plan.md` state only after the selecte
 
 Report:
 
+- resolved `PLAN_FILE`
 - selected `BindingRowID`
 - generated interface-detail path
 - updated interface-detail row status

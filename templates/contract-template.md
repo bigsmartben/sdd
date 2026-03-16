@@ -6,12 +6,16 @@
 **Operation ID (Required)**: [operationId or N/A]
 **Boundary Anchor (Required)**: [HTTP `METHOD /path` \| `event.topic` \| `Facade.method` \| `cli command` \| `N/A`]
 
-This template is format-agnostic. The final artifact may be represented as Markdown, JSON, YAML, or another contract-friendly syntax, but it MUST preserve the semantics captured below.
-This artifact should provide the minimum stable binding from approved planning artifacts into interface-level detailed design.
+Keep this artifact minimal and binding-stable. It is the external contract handoff into interface-level detailed design.
+For UIF-scoped operations, anchor the first consumer-callable boundary rather than internal implementation hops.
 
 ## Boundary Anchor Rules (Normative)
 
 - Allowed normative boundary-anchor forms are exactly: HTTP `METHOD /path`, event topic `event.topic`, RPC/Façade method `Facade.method`, CLI `command`, or explicit `N/A`.
+- `Boundary Anchor` MUST represent the first client-callable entry for this operation/interaction, not an internal service/manager/mapper hop.
+- If clients call an HTTP route directly, prefer HTTP `METHOD /path` as `Boundary Anchor`; do not skip to internal layers.
+- If clients call a stable RPC/Façade surface, use repo-backed `Facade.method` as `Boundary Anchor`.
+- If both controller/HTTP and façade exist, select the consumer-visible first callable entry as normative `Boundary Anchor`; model the remaining chain in interface detail.
 - `BA-*` labels are not valid normative boundary anchors. If used, treat them as local shorthand notes only and never as authoritative binding keys.
 - `Repo Anchor` MUST default to an existing source-code symbol for the binding tuple. If unresolved, set `Repo Anchor` to `TODO(REPO_ANCHOR)` and treat that tuple as non-normative forward-looking only.
 
@@ -25,6 +29,7 @@ This artifact should provide the minimum stable binding from approved planning a
 - Repo Anchor: [existing source-code symbol proving this binding] or `TODO(REPO_ANCHOR)` when unresolved
 - Visible consumer / caller: [actor or system]
 - Detailed design handoff target: `[interface-details/<operationId>.md]` or [N/A]
+- Client entry rationale: [why this `Boundary Anchor` is the first consumer-callable entry]
 
 ## Minimal Binding References
 
@@ -36,10 +41,9 @@ Use stable IDs and short references only. Keep this section focused on the minim
 
 ## External I/O Summary
 
-Keep this to minimum external I/O only. `minimum` does not permit abstracting away from an existing repo-backed interface surface.
-Before filling this section, read the anchored facade/RPC method signature and anchored request/response DTO.
-Request / Success Output / Failure Output MUST align with the anchored signature and DTO structure (including field names, nesting, and anchored status vocabulary).
-Do not flatten, rename, split, or otherwise reshape anchored external I/O for readability.
+Keep this to minimum external I/O only.
+Read the anchored client-entry signature surface (HTTP route/controller or façade/RPC method) and anchored request/response DTO first.
+Request / Success Output / Failure Output MUST align with that anchored signature and DTO structure, including field names, nesting, and status vocabulary. Do not flatten, rename, split, or otherwise reshape anchored external I/O.
 
 | Aspect | Definition |
 |--------|------------|
@@ -77,10 +81,9 @@ Do not flatten, rename, split, or otherwise reshape anchored external I/O for re
 ## Boundary Notes
 
 - Keep this artifact at the minimum external I/O boundary only.
-- `Minimum` does not justify re-modeling or abstracting away from an existing repo-backed interface surface.
+- For UIF-scoped operations, model the consumer-visible entry; do not substitute internal service/manager/mapper entrypoints as `Boundary Anchor`.
 - Do not expand into internal projections, persistence mappings, sequence diagrams, or UML class design here.
 - Do not turn this artifact into an audit, traceability, or coverage-report ledger.
 - Use an existing source-code symbol whenever available for `Repo Anchor`; use `TODO(REPO_ANCHOR)` only when unresolved.
-- Rows/fields or tuples that remain `TODO(REPO_ANCHOR)` are forward-looking notes only and MUST NOT be treated as normative contract commitments.
-- A contract with unresolved repo anchors is not a fully anchored external-interface commitment.
+- Rows/fields or tuples that remain `TODO(REPO_ANCHOR)` are forward-looking notes only; they are not normative contract commitments.
 - If anchored DTOs exist, contract field semantics may add business meaning but MUST NOT rename anchored fields, flatten anchored nesting, or introduce split fields absent from the anchored DTO.

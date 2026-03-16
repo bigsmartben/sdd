@@ -190,13 +190,13 @@ def run_sdd_flow(target_dir: Path, feature_description: str) -> int:
 
     if config.is_powershell:
         create_args = ["-Json", "-ShortName", short_name, feature_description]
-        setup_args = ["-Json"]
-        check_args = ["-Json"]
+        setup_args = ["-Json", "-SpecFile", ""]
+        check_args = ["-Json", "-PlanFile", ""]
         lint_args = ["-FeatureDir", "", "-Rules", "", "-Json"]
     else:
         create_args = ["--json", "--short-name", short_name, feature_description]
-        setup_args = ["--json"]
-        check_args = ["--json"]
+        setup_args = ["--json", "--spec-file", ""]
+        check_args = ["--json", "--plan-file", ""]
         lint_args = ["--feature-dir", "", "--rules", "", "--json"]
 
     try:
@@ -208,7 +208,12 @@ def run_sdd_flow(target_dir: Path, feature_description: str) -> int:
         if not isinstance(spec_file, str) or not spec_file.strip():
             raise FlowExecutionError("create-new-feature output missing SPEC_FILE", EXIT_INVALID_OUTPUT)
 
-        feature_dir = Path(spec_file).resolve().parent
+        spec_path = Path(spec_file).resolve()
+        feature_dir = spec_path.parent
+        plan_path = feature_dir / "plan.md"
+
+        setup_args[2] = str(spec_path)
+        check_args[2] = str(plan_path)
 
         setup_cmd = config.shell_prefix + [str(config.setup_plan_script), *setup_args]
         execute_step("2/4 setup-plan", setup_cmd, target_dir)

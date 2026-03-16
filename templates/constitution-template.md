@@ -139,7 +139,7 @@ and dependency derivation policy used by downstream commands.
 - Supporting-input boundary (hard rule):
   - planning artifacts, docs, tests, demos, and generated outputs are supporting context only and MUST NOT be promoted into repo semantic evidence
 - Separation (hard rule):
-  - `technical-dependency-matrix.md` (facts), `domain-boundary-responsibilities.md` (business boundary), and `module-invocation-spec.md` (execution constraints) are complementary and MUST NOT replace one another
+  - `.specify/memory/repository-first/technical-dependency-matrix.md` (facts), `.specify/memory/repository-first/domain-boundary-responsibilities.md` (business boundary), and `.specify/memory/repository-first/module-invocation-spec.md` (execution constraints) are complementary and MUST NOT replace one another
 
 ## State Machine Applicability Gate
 

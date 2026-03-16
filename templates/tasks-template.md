@@ -10,11 +10,13 @@ description: "Interface-delivery-oriented execution orchestration template for f
 ## 1) Document Purpose
 
 - This document is the executable delivery orchestration source for implementation.
+- This document projects completed `plan`-stage detailed design into execution decomposition only.
 - `tasks.md` organizes work primarily by shared foundation and interface delivery units keyed by `IF Scope` (`IF-###`).
 - Interface delivery units are IF-scoped execution work packages derived from approved planning artifacts.
 - `tasks.md` MUST define clear task units and explicit execution dependencies.
 - `tasks.md` MUST NOT duplicate interface/data-model/test semantics from upstream documents.
 - `tasks.md` consumes approved planning artifacts and MUST NOT redesign research, data model, contract, or interface-detail semantics.
+- `tasks.md` MUST NOT supplement missing design, verification semantics, target paths, completion anchors, or dependency meaning.
 - Comprehensive cross-artifact auditing (consistency/coverage/ambiguity/drift/traceability hygiene) is owned by `/sdd.analyze`, not this task-orchestration artifact.
 
 Boundary ownership:
@@ -36,6 +38,7 @@ Reference precedence:
 Stage boundary guard:
 
 - `tasks.md` consumes Stage 4 outputs; it does not generate or backfill missing interface design artifacts.
+- If required execution anchors are missing from `plan.md`, `contracts/`, `interface-details/`, or `test-matrix.md`, stop and repair upstream artifacts rather than writing compensating tasks.
 - `tasks.md` uses `GLOBAL` and `Interface Delivery Units` as execution packages only, not as replacement design sections.
 
 ## 2) Upstream Inputs (Execution References)
@@ -76,7 +79,7 @@ T003 -> T010
 
 ### 4.1 Task Line Format
 
-`- [ ] T### [Type:Research|Interface|Verify|Infra|Docs] [IF-###?] [Role:...] [Pre:T###,...] Description with file path or command target`
+`- [ ] T### [Type:Research|Interface|Verify|Infra|Docs] [IF-###?] [Role:...] [Pre:T###,...] Description with explicit file path or command target (Completion Anchor: [single primary pass signal])`
 
 ### 4.2 Task Type Canon
 
@@ -91,8 +94,12 @@ T003 -> T010
 - `IF-###`: interface delivery scope tag; optional only for global tasks.
 - `Role`: execution focus for downstream implementation when useful.
 - `Pre`: optional inline predecessors; DAG remains authority.
-- File paths or command targets define execution boundary and should be explicit.
-- Core `Interface` / `Verify` tasks SHOULD include completion anchors when they help prove completion.
+- Each task is one projected execution work package from completed plan-stage design.
+- Each task MUST map to exactly one execution target: one `operationId` or one shared prerequisite objective.
+- Each task MUST declare exactly one explicit target path cluster or one command target.
+- Each task MUST declare exactly one primary completion anchor; if no primary completion anchor can be projected, do not generate the task.
+- A task MUST NOT combine multiple operations, multiple unrelated file clusters, or multiple distinct validation objectives.
+- File paths or command targets define execution boundary, must be explicit, and must come from authoritative upstream artifacts rather than task-stage inference.
 
 Role guidance:
 
@@ -110,7 +117,9 @@ Purpose: shared prerequisites before interface-specific delivery.
 Rules:
 
 - Keep this section minimal and shared.
+- Only place prerequisites here when they are consumed by multiple IF units.
 - Do not place interface-specific implementation tasks here.
+- Treat use of `GLOBAL` as overflow for one-scope work as invalid task generation.
 
 ## 6) Interface Delivery Units
 
@@ -119,17 +128,18 @@ Interface delivery units are IF-scoped execution work packages. Keep them execut
 ```markdown
 ## Interface IF-### — [name]
 
-- Goal: [one-line delivery goal]
-- Contract: [operationId / method path]
-- Primary Refs: [refs that help execution or completion checks]
+- Goal: [one-line delivery goal; short execution-only reference]
+- Contract: [single operationId / boundary anchor]
+- Implementation Entry: [single repo-backed entry anchor from interface detail, or same as contract boundary]
+- Primary Refs: [short refs that help execution or completion checks]
 
 Recommended delivery loop:
 - establish verification target
 - implement interface behavior
 - confirm completion against contract/scenario refs
 
-- [ ] T### [Type:Verify] [IF-###] [Role:contract|smoke|manual-check] [Pre:T###,...] Validate [operationId] in [path]
-- [ ] T### [Type:Interface] [IF-###] [Role:handler|service|persistence|wiring] [Pre:T###,...] Implement [operationId] in [path] (Completion Anchor: [build|CaseID|acceptance-check])
+- [ ] T### [Type:Verify] [IF-###] [Role:contract|smoke|manual-check] [Pre:T###,...] Validate [operationId] in [path] (Completion Anchor: [TM|TC|contract check])
+- [ ] T### [Type:Interface] [IF-###] [Role:handler|service|persistence|wiring] [Pre:T###,...] Implement [operationId] via [Implementation Entry Anchor] in [path] (Completion Anchor: [build|CaseID|acceptance-check])
 - [ ] T### [Type:Verify] [IF-###] [Role:completion] [Pre:T###,...] Confirm [operationId] delivery in [path] (Completion Anchor: [CaseID|TM|contract pass])
 ```
 
@@ -138,7 +148,10 @@ Rules:
 - Organize implementation primarily by interface delivery units keyed by `IF Scope`.
 - Treat each interface delivery unit as an execution work package derived from approved planning artifacts, not a second design pass.
 - Each IF unit SHOULD form a verification-implementation-completion loop (document exceptions).
-- Keep IF sections reference-oriented; do not copy upstream design prose.
+- Keep IF sections reference-oriented; do not copy upstream design prose or add design explanation paragraphs.
+- Use `Contract` as the client-facing binding reference and `Implementation Entry` as the internal execution-target reference when they differ.
+- Keep `Goal`, `Contract`, `Implementation Entry`, and `Primary Refs` as short execution references only.
+- If multiple operations share an `IF Scope`, keep them as separate work packages inside the same IF unit; do not merge them into a composite task.
 - Use `CaseID/TM/TC` as completion anchors only when they help prove delivery.
 
 ## 7) Cross-Interface Finalization
@@ -148,6 +161,7 @@ Rules:
 Rules:
 
 - Use this section only for tasks that cannot be scoped to one IF unit.
+- Do not use this section for work that exists only because upstream design anchors are missing.
 - Do not use this section as overflow for interface-local tasks.
 
 ## 8) Implementation Consumption
@@ -157,6 +171,7 @@ Rules:
 - `tasks.md` remains the human-review and execution-orchestration authority.
 - `tasks.manifest.json` is a machine-readable projection only and MUST NOT introduce new semantics.
 - `tasks.manifest.json` should be refreshed from the same run-local execution graph used to render `tasks.md`, so both outputs stay atomically aligned for a run.
+- `tasks.manifest.json` task IDs and dependencies must stay aligned with the `tasks.md` lines rendered from the same execution graph.
 - Required consumable sections in `tasks.md` (authoritative fallback + human review):
   - `Upstream Inputs (Execution References)`
   - `Execution Ordering Model` (`Task DAG`)

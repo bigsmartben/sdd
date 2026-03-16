@@ -96,6 +96,23 @@ def test_constitution_command_owns_repository_first_baseline_pipeline():
     assert "Node: `package.json`" in content
     assert "Python: `pyproject.toml`" in content
     assert "Go: `go.mod`" in content
+    assert "never read or stat bare projection filenames from repo root" in content
     assert "`created`" in content
     assert "`updated`" in content
     assert "`unchanged`" in content
+
+
+def test_constitution_command_defines_runtime_fast_path_and_bounded_reads():
+    content = read("templates/commands/constitution.md")
+
+    assert "Build one run-local **change impact map** before broad reads" in content
+    assert "`governance-only`" in content
+    assert "`template-affecting`" in content
+    assert "`repo-first-affecting`" in content
+    assert "Resolve impacted families from the change impact map first, then read/update only those families." in content
+    assert "Do not run directory-wide or repository-wide exploratory scans" in content
+    assert "Repository-first fast path gate (evaluate before regeneration)" in content
+    assert "If no trigger is true, keep canonical baseline files as-is and mark each artifact `unchanged` without template re-render." in content
+    assert "Apply a **bounded evidence budget** for this run" in content
+    assert "Runtime guidance docs (`README.md`, `docs/quickstart.md`, agent docs) are **opt-in by trigger** only" in content
+    assert "Keep runtime output concise: no unchanged-file inventories" in content

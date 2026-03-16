@@ -745,8 +745,8 @@ class TestCliValidation:
         plain = re.sub(r'\x1b\[[0-9;]*m', '', result.output)
         normalized = re.sub(r"[│╭╮╰╯─]+", " ", plain)
         normalized = re.sub(r"\s+", " ", normalized)
-        assert "/sdd.plan - Initialize the planning control plane" in normalized
-        assert "/sdd.plan.research - Start the planning queue" in normalized
+        assert "/sdd.plan <spec.md> [ALL] - Initialize the planning control plane or run the full planning queue" in normalized
+        assert "/sdd.plan.research <plan.md> - Start the planning queue" in normalized
         assert "/sdd.plan.data-model" in normalized
         assert "/sdd.plan.test-matrix" in normalized
         assert "/sdd.plan.contract" in normalized

@@ -4,21 +4,32 @@ set -e
 
 # Parse command line arguments
 JSON_MODE=false
-ARGS=()
+SPEC_FILE=""
 
-for arg in "$@"; do
-    case "$arg" in
-        --json) 
-            JSON_MODE=true 
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --json)
+            JSON_MODE=true
+            shift
             ;;
-        --help|-h) 
-            echo "Usage: $0 [--json]"
-            echo "  --json    Output results in JSON format"
-            echo "  --help    Show this help message"
-            exit 0 
+        --spec-file)
+            if [[ $# -lt 2 ]]; then
+                echo "Error: --spec-file requires a path to spec.md" >&2
+                exit 1
+            fi
+            SPEC_FILE="$2"
+            shift 2
             ;;
-        *) 
-            ARGS+=("$arg") 
+        --help|-h)
+            echo "Usage: $0 --spec-file <path/to/spec.md> [--json]"
+            echo "  --spec-file <path>  Explicit path to spec.md under repo/specs/**"
+            echo "  --json              Output results in JSON format"
+            echo "  --help              Show this help message"
+            exit 0
+            ;;
+        *)
+            echo "Error: Unknown option '$1'" >&2
+            exit 1
             ;;
     esac
 done
@@ -27,8 +38,14 @@ done
 SCRIPT_DIR="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
-# Get all paths and variables from common functions
-eval $(get_feature_paths)
+if [[ -z "$SPEC_FILE" ]]; then
+    echo "Error: --spec-file is required and must point to spec.md under repo/specs/**" >&2
+    exit 1
+fi
+
+# Get all paths and variables from explicit spec file
+FEATURE_PATHS_ENV="$(get_feature_paths_from_spec_file "$SPEC_FILE")" || exit 1
+eval "$FEATURE_PATHS_ENV"
 
 TEMPLATE="$REPO_ROOT/.specify/templates/plan-template.md"
 if [[ ! -r "$TEMPLATE" ]]; then
@@ -36,20 +53,28 @@ if [[ ! -r "$TEMPLATE" ]]; then
     exit 1
 fi
 
-# Check if we're on a proper feature branch (only for git repos)
-check_feature_branch "$CURRENT_BRANCH" "$HAS_GIT" || exit 1
+if [[ ! -f "$FEATURE_SPEC" ]]; then
+    echo "Error: spec.md not found at $FEATURE_SPEC" >&2
+    exit 1
+fi
 
 # Ensure the feature directory exists
 mkdir -p "$FEATURE_DIR"
 
 # Copy plan template
 cp "$TEMPLATE" "$IMPL_PLAN"
-echo "Copied plan template to $IMPL_PLAN"
+if ! $JSON_MODE; then
+    echo "Copied plan template to $IMPL_PLAN"
+fi
 
 # Output results
 if $JSON_MODE; then
-    printf '{"FEATURE_SPEC":"%s","IMPL_PLAN":"%s","SPECS_DIR":"%s","BRANCH":"%s","HAS_GIT":"%s"}\n' \
-        "$FEATURE_SPEC" "$IMPL_PLAN" "$FEATURE_DIR" "$CURRENT_BRANCH" "$HAS_GIT"
+    printf '{"FEATURE_SPEC":%s,"IMPL_PLAN":%s,"SPECS_DIR":%s,"BRANCH":%s,"HAS_GIT":%s}\n' \
+        "$(json_string "$FEATURE_SPEC")" \
+        "$(json_string "$IMPL_PLAN")" \
+        "$(json_string "$FEATURE_DIR")" \
+        "$(json_string "$CURRENT_BRANCH")" \
+        "$(json_string "$HAS_GIT")"
 else
     echo "FEATURE_SPEC: $FEATURE_SPEC"
     echo "IMPL_PLAN: $IMPL_PLAN" 

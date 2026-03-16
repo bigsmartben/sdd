@@ -39,6 +39,15 @@ Follow this execution flow:
      - PATCH: Clarifications, wording, typo fixes, non-semantic refinements.
      - Adding or materially expanding generation/validation/execution ownership boundaries is always `MINOR`.
    - If version bump type ambiguous, propose reasoning before finalizing.
+   - Build one run-local **change impact map** before broad reads:
+     - `governance-only`: dates/version text/rationale clarifications with no downstream rule impact
+     - `template-affecting`: principle/rule wording that changes downstream command or template behavior
+     - `repo-first-affecting`: repository-first evidence, dependency-governance, boundary, or invocation-rule changes
+   - Use this impact map to drive all follow-up reads/updates. Default to the smallest affected scope.
+   - Apply a **bounded evidence budget** for this run:
+     - Start with constitution file + only directly impacted files.
+     - Read at section/slice level first; avoid whole-file replay unless a targeted slice is insufficient.
+     - Hard cap broad context expansion to files required by active impact classes; do not expand "just in case".
 
 3. Draft the updated constitution content:
    - For newly initialized files, replace every placeholder with concrete text (no bracketed tokens left except intentionally retained template slots that the project has chosen not to define yet—explicitly justify any left).
@@ -61,6 +70,15 @@ Follow this execution flow:
      - Repository-first projection templates: Read `.specify/templates/technical-dependency-matrix-template.md`, `.specify/templates/domain-boundary-responsibilities-template.md`, and `.specify/templates/module-invocation-spec-template.md` and keep them aligned with constitution repository-first rules.
      - Command templates: Read each command file in the active agent command directory (for example `.roo/commands/*.md`, `.claude/commands/*.md`, `.github/agents/*.agent.md`, `.gemini/commands/*.toml`); if `templates/commands/*.md` exists in this repository, review it as well. Verify no outdated references (agent-specific names like CLAUDE only) remain when generic guidance is required.
      - Runtime guidance docs: Read any runtime guidance docs (for example `README.md`, `docs/quickstart.md`, or agent-specific guidance files if present) and update references to principles changed.
+   - Runtime efficiency protocol:
+     - Resolve impacted families from the change impact map first, then read/update only those families.
+     - If the change is `governance-only`, skip downstream family reads unless an explicit user request asks for broader synchronization.
+     - Do not run directory-wide or repository-wide exploratory scans to "double check" unaffected families.
+     - When a family is skipped, record `unchanged (not impacted)` in the Sync Impact Report.
+     - For command templates, prioritize active agent command files first; inspect mirrors (`templates/commands/*`) only when active-agent files are absent or impacted rules are generic.
+     - Runtime guidance docs (`README.md`, `docs/quickstart.md`, agent docs) are **opt-in by trigger** only:
+       - read/update only when renamed principles/terms or invocation guidance text changed
+       - otherwise skip and mark `unchanged (not impacted)`
 
 5. Repository-first global baseline pipeline (mandatory):
    - Detect build manifests from repo root using deterministic priority and process all supported ecosystems detected:
@@ -68,6 +86,12 @@ Follow this execution flow:
      - Node: `package.json` (workspace-aware)
      - Python: `pyproject.toml` (and `requirements*.txt` / lock hints when present)
      - Go: `go.mod`
+   - Repository-first fast path gate (evaluate before regeneration):
+     - Reproject only when at least one trigger is true:
+       - change impact map includes `repo-first-affecting`
+       - any supported build-manifest set changed since last successful baseline update
+       - any canonical repository-first artifact is missing
+     - If no trigger is true, keep canonical baseline files as-is and mark each artifact `unchanged` without template re-render.
    - Use `.specify/memory/repository-first/` as the canonical output directory for repository-first projections:
      - `.specify/memory/repository-first/technical-dependency-matrix.md`
      - `.specify/memory/repository-first/domain-boundary-responsibilities.md`
@@ -76,6 +100,7 @@ Follow this execution flow:
      - `.specify/templates/technical-dependency-matrix-template.md`
      - `.specify/templates/domain-boundary-responsibilities-template.md`
      - `.specify/templates/module-invocation-spec-template.md`
+   - Always resolve repository-first artifacts by canonical paths under `.specify/memory/repository-first/`; never read or stat bare projection filenames from repo root.
    - Apply diff-based rewrite behavior:
      - `created`: file did not exist and is created
      - `updated`: file existed and content changed
@@ -98,6 +123,9 @@ Follow this execution flow:
    - Repository-first baseline status in `.specify/memory/repository-first/`:
      - Build-manifest detection outcome (ecosystems found / not found)
      - Artifact status per file (`created` / `updated` / `unchanged`)
+   - Keep report compact:
+     - include changed paths explicitly
+     - for unchanged families, prefer one-line grouped summaries over per-file prose
    - Follow-up TODOs if any placeholders intentionally deferred.
 
 7. Final quality check before output (constitution-local only):
@@ -120,6 +148,7 @@ Follow this execution flow:
    - Any files flagged for manual follow-up.
    - Suggested commit message (e.g., `docs: amend constitution to vX.Y.Z (principle additions + governance update)`).
    - No cross-artifact PASS/FAIL gate decision in this command.
+   - Keep runtime output concise: no unchanged-file inventories, no duplicated rule restatements, no repeated rationale blocks.
 
 Formatting & Style Requirements:
 
