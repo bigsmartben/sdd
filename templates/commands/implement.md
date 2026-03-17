@@ -109,6 +109,7 @@ Terminology note (compatibility, non-normative):
    - Treat `[Pre:T###,...]` as inline dependency mirror only.
    - Read `plan.md` for tech stack, architecture, and file structure.
    - Load supporting artifacts only when needed for a ready task or its completion anchor:
+
 - `contracts/` realization-design sections for per-interface behavior/sequencing
       - `data-model.md` for entity/lifecycle context
       - `contracts/` for interface semantics/contract checks
@@ -116,16 +117,16 @@ Terminology note (compatibility, non-normative):
       - `research.md` for implementation constraints/decisions
       - `.specify/memory/repository-first/technical-dependency-matrix.md` for dependency-governance execution baseline
       - `.specify/memory/repository-first/module-invocation-spec.md` for invocation direction/layering execution baseline
-   - Treat runtime batching notes, ready-task summaries, and local execution shortcuts as derived views only.
-   - If local execution notes conflict with authoritative artifacts, use the authoritative artifact for semantics; if unresolved safely, stop and route upstream repair.
-   - Treat `TODO(REPO_ANCHOR)` as forward-looking notes only; execute only repository-anchored semantics.
-   - Repository-first execution discipline:
-      - dependency changes MUST be validated against `.specify/memory/repository-first/technical-dependency-matrix.md`
-      - invocation-direction/layering changes MUST be validated against `.specify/memory/repository-first/module-invocation-spec.md`
-      - feature-local copies are derived views only and MUST NOT replace canonical baseline semantics
-      - if required canonical repository-first evidence is missing/stale/non-traceable, stop affected execution scope and route repair to `/sdd.constitution` or `/sdd.analyze` (do not infer semantics from docs/plans/summaries in `/sdd.implement`)
+  - Treat runtime batching notes, ready-task summaries, and local execution shortcuts as derived views only.
+  - If local execution notes conflict with authoritative artifacts, use the authoritative artifact for semantics; if unresolved safely, stop and route upstream repair.
+  - Treat `TODO(REPO_ANCHOR)` as forward-looking notes only; execute only repository-anchored semantics.
+  - Repository-first execution discipline:
+    - dependency changes MUST be validated against `.specify/memory/repository-first/technical-dependency-matrix.md`
+    - invocation-direction/layering changes MUST be validated against `.specify/memory/repository-first/module-invocation-spec.md`
+    - feature-local copies are derived views only and MUST NOT replace canonical baseline semantics
+    - if required canonical repository-first evidence is missing/stale/non-traceable, stop affected execution scope and route repair to `/sdd.constitution` or `/sdd.analyze` (do not infer semantics from docs/plans/summaries in `/sdd.implement`)
 
-5. Generate an execution strategy summary before modifying code:
+1. Generate an execution strategy summary before modifying code:
    - Produce a short `Execution Strategy Summary` that states:
      - planned execution batches/layers from DAG
      - candidate file-path conflicts
@@ -143,7 +144,7 @@ Terminology note (compatibility, non-normative):
      Heartbeat Interval: 60-90s
      ```
 
-6. Parse the selected runtime source exactly once and extract:
+2. Parse the selected runtime source exactly once and extract:
    - **Execution scopes**: `GLOBAL` and `IF-###` units
    - **Task DAG**: adjacency list and topological execution layers
    - **Task metadata**: `TaskID`, `Type`, `Scope`, `Role` (when present), `Pre`, description, file paths or command targets, completion anchors (when present)
@@ -151,7 +152,7 @@ Terminology note (compatibility, non-normative):
    - **Execution flow**: DAG-driven order and file-level conflict constraints
    - **Single-parse rule**: after this extraction step, reuse the in-memory scheduling graph and metadata cache; do not re-run full markdown parsing loops during the same `/sdd.implement` run.
 
-7. Execute implementation following the task plan:
+3. Execute implementation following the task plan:
    - **DAG-first execution**: Schedule tasks strictly by `Task DAG` dependency satisfaction
    - **Scope-aware flow**: Execute `GLOBAL` foundation tasks and IF-scoped execution work packages (`IF-###` units) according to DAG, not section order alone
    - **GLOBAL foundation first when required by DAG**: complete shared infra/bootstrap/config prerequisites before dependent IF tasks
@@ -178,7 +179,7 @@ Terminology note (compatibility, non-normative):
      - Suggest next steps if implementation cannot proceed
    - **IMPORTANT**: for completed tasks, mark the task as `[X]` in `tasks.md`.
 
-8. Completion validation:
+4. Completion validation:
    - Verify all reachable required DAG tasks are completed or explicitly waived by user
    - Verify `Task DAG` dependency closure (no completed task missing required predecessors)
    - Verify each interface unit (`IF-###`) reaches the task-defined completion anchors that exist for that unit
@@ -188,6 +189,6 @@ Terminology note (compatibility, non-normative):
    - Report final status with summary of completed work, blocked items, and remediation follow-ups
    - If unresolved drift remains, recommend upstream artifact repair or `/sdd.analyze`
 
-9. Execute `after_implement` hooks using the Hook Dispatch Protocol.
+5. Execute `after_implement` hooks using the Hook Dispatch Protocol.
 
 Note: This command assumes a complete, DAG-usable task breakdown exists. Preferred runtime input is `tasks.manifest.json` (when valid), with `tasks.md` as authoritative orchestration source and fallback parse target. If required sections are missing, no current `/sdd.analyze` pass exists and the user does not explicitly waive it, DAG is invalid, manifest validation fails without safe fallback, or task rows are incomplete, suggest running `/sdd.tasks` or `/sdd.analyze` first before retrying `/sdd.implement`.

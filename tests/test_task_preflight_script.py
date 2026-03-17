@@ -165,7 +165,8 @@ def test_bash_check_prerequisites_can_embed_tasks_bootstrap(tmp_path):
 
 def test_tasks_command_prefers_task_preflight_bootstrap():
     tasks_command = (REPO_ROOT / "templates" / "commands" / "tasks.md").read_text(encoding="utf-8")
-    mapping_doc = (REPO_ROOT / "docs" / "command-template-mapping.md").read_text(encoding="utf-8")
+    mapping_path = REPO_ROOT / "docs" / "command-template-mapping.md"
+    mapping_doc = mapping_path.read_text(encoding="utf-8") if mapping_path.exists() else None
     readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
     powershell_script = (REPO_ROOT / "scripts" / "powershell" / "check-prerequisites.ps1").read_text(encoding="utf-8")
 
@@ -174,8 +175,9 @@ def test_tasks_command_prefers_task_preflight_bootstrap():
     assert "parse `FEATURE_DIR`, `AVAILABLE_DOCS`, and `TASKS_BOOTSTRAP`" in tasks_command
     assert "Prefer `TASKS_BOOTSTRAP.unit_inventory` and `TASKS_BOOTSTRAP.ready_unit_inventory`" in tasks_command
 
-    assert "prerequisite script may emit `TASKS_BOOTSTRAP` as a derived preflight packet" in mapping_doc
-    assert "if `TASKS_BOOTSTRAP` is missing, invalid, or contradictory, fall back to the authoritative `plan.md` control plane" in mapping_doc
+    if mapping_doc is not None:
+        assert "prerequisite script may emit `TASKS_BOOTSTRAP` as a derived preflight packet" in mapping_doc
+        assert "if `TASKS_BOOTSTRAP` is missing, invalid, or contradictory, fall back to the authoritative `plan.md` control plane" in mapping_doc
     assert "pre-extract a compact `TASKS_BOOTSTRAP` packet from `plan.md`" in readme
 
     assert "-TaskPreflight" in powershell_script

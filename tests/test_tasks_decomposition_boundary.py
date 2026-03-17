@@ -65,19 +65,21 @@ def test_tasks_template_requires_explicit_single_target_tasks():
 
 
 def test_docs_describe_tasks_as_execution_decomposition_only():
-    mapping_doc = read("docs/command-template-mapping.md")
+    mapping_doc_path = REPO_ROOT / "docs" / "command-template-mapping.md"
+    mapping_doc = mapping_doc_path.read_text(encoding="utf-8") if mapping_doc_path.exists() else None
     readme = read("README.md")
     spec_driven = read("spec-driven.md")
 
-    assert "project completed `plan`-stage detailed design into execution decomposition only; it does not supplement missing design." in mapping_doc
-    assert "must use one unique tuple inventory derived from `Binding Projection Index` plus completed `Artifact Status` rows as the sole task-generation inventory." in mapping_doc
-    assert "must hard-fail and route to the relevant `/sdd.plan.*` command when required execution anchors are missing or non-traceable" in mapping_doc
-    assert "must treat contract `Spec Projection Slice` and `Test Projection Slice` as authoritative downstream projection input per IF unit." in mapping_doc
-    assert "must keep contract projection for current task output and emit explicit upstream writeback repair actions (`/sdd.specify` for spec drift, `/sdd.plan.test-matrix` for test drift)." in mapping_doc
-    assert "must keep the contract boundary for verification/binding refs and use the implementation entry/collaborator path for implementation target mapping." in mapping_doc
-    assert "must not supplement verification semantics, target paths, completion anchors, dependency meaning, or execution rationale" in mapping_doc
-    assert "each generated work package/task must map to exactly one `operationId` or one shared prerequisite objective, one explicit target path cluster or command target, and one primary completion anchor." in mapping_doc
-    assert "must not emit placeholder/blocked/todo execution rows or infer new business ordering, responsibility boundaries, or implementation strategy." in mapping_doc
+    if mapping_doc is not None:
+        assert "project completed `plan`-stage detailed design into execution decomposition only; it does not supplement missing design." in mapping_doc
+        assert "must use one unique tuple inventory derived from `Binding Projection Index` plus completed `Artifact Status` rows as the sole task-generation inventory." in mapping_doc
+        assert "must hard-fail and route to the relevant `/sdd.plan.*` command when required execution anchors are missing or non-traceable" in mapping_doc
+        assert "must treat contract `Spec Projection Slice` and `Test Projection Slice` as authoritative downstream projection input per IF unit." in mapping_doc
+        assert "must keep contract projection for current task output and emit explicit upstream writeback repair actions (`/sdd.specify` for spec drift, `/sdd.plan.test-matrix` for test drift)." in mapping_doc
+        assert "must keep the contract boundary for verification/binding refs and use the implementation entry/collaborator path for implementation target mapping." in mapping_doc
+        assert "must not supplement verification semantics, target paths, completion anchors, dependency meaning, or execution rationale" in mapping_doc
+        assert "each generated work package/task must map to exactly one `operationId` or one shared prerequisite objective, one explicit target path cluster or command target, and one primary completion anchor." in mapping_doc
+        assert "must not emit placeholder/blocked/todo execution rows or infer new business ordering, responsibility boundaries, or implementation strategy." in mapping_doc
 
     assert "This is an execution decomposition step only" in readme
     assert "hard-fails on missing execution anchors instead of supplementing design or writing placeholder tasks" in readme

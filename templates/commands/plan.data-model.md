@@ -3,7 +3,7 @@ description: Generate the pending data-model.md artifact selected from an explic
 handoffs:
   - label: Continue Test Matrix Queue
     agent: sdd.plan.test-matrix
-    prompt: Continue the planning queue by running /sdd.plan.test-matrix <path/to/plan.md> with the same explicit plan.md path.
+    prompt: Run /sdd.plan.test-matrix <path/to/plan.md> with the same absolute plan.md path.
     send: true
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json
@@ -46,11 +46,25 @@ Use `.specify/templates/data-model-template.md` only. If the runtime template is
 4. Require the `research` row to be `done`
 5. If the required row does not exist or prerequisites are not done, stop and report the blocker
 
+## Stage Packet (Data-Model Unit)
+
+Build one bounded run-local packet for the selected `data-model` row from:
+
+- selected `Stage Queue` row in explicit `PLAN_FILE`
+- `Shared Context Snapshot` in explicit `PLAN_FILE`
+- resolved `FEATURE_SPEC` path
+- resolved `research.md` path
+- selected row source/output fingerprint fields
+
+Use this packet as the default context for generation.
+Do not load additional artifacts unless the selected-row blocker or lifecycle constraints require them.
+
 ## Plan Control-Plane Input Path (Mandatory)
 
-- Use only the explicit `PLAN_FILE` resolved through `{SCRIPT}` as planning control plane.
-- Ignore alternate `plan.md` paths from environment variables or repository discovery. Non-`plan.md` user files are allowed only when they are already listed in `Allowed Inputs`; they never redefine control-plane state.
-- If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
+Use only the explicit `PLAN_FILE` resolved through `{SCRIPT}` as planning control plane.
+Ignore alternate `plan.md` paths from environment variables or repository discovery.
+Non-`plan.md` user files are allowed only when already listed in `Allowed Inputs`; they never redefine control-plane state.
+If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 
 ## Path Constraints
 
@@ -60,6 +74,7 @@ Use `.specify/templates/data-model-template.md` only. If the runtime template is
 - Lifecycle anchors MUST come from symbols/files explicitly referenced by `Shared Context Snapshot` or by a concrete blocker in the selected row.
 - Finish row selection and prerequisite checks before broader repo reads; do not scan the repository for additional context, alternate `plan.md` paths, or other feature folders.
 - Do not use any existing `data-model.md` outside the current target artifact path as an input or style source.
+- Prefer section-level reads of `spec.md` and `research.md` that are relevant to the selected unit; avoid whole-file replay unless the selected row is blocked by missing local context.
 
 ## Repo Anchor Decision Protocol (Mandatory)
 
@@ -79,6 +94,16 @@ Read only:
 - resolved `FEATURE_SPEC`
 - `research.md`
 - targeted lifecycle repo anchors required for stable states and invariants
+
+### Conditional Inputs
+
+Read additional files only when the selected-row blocker cannot be resolved from the stage packet.
+When conditional reads are required, prefer section-level rereads over whole-file replay.
+
+### Repo Anchor Input Limits
+
+Read at most five repo-backed files per data-model run.
+If that cap is insufficient, keep unresolved lifecycle/invariant evidence explicit in `data-model.md` and set row `Blocker` instead of expanding scope.
 
 `data-model.md` remains the authoritative output for backbone semantics.
 `PLAN_FILE` remains queue state plus binding projection state only.

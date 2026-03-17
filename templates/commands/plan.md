@@ -3,7 +3,7 @@ description: Orchestrate the planning phase from an explicit spec.md path by gen
 handoffs:
   - label: Start Research Queue
     agent: sdd.plan.research
-    prompt: Continue the planning queue by running /sdd.plan.research <path/to/plan.md> with the explicit plan.md path resolved in the previous step.
+    prompt: Run /sdd.plan.research <path/to/plan.md> with the resolved absolute plan.md path.
     send: true
 scripts:
   sh: scripts/bash/setup-plan.sh --json
@@ -35,12 +35,22 @@ If the first positional token is missing or invalid, stop immediately and report
 
 `/sdd.plan` is the planning control-plane entrypoint.
 
-Responsibilities are limited to:
+Do only two things:
 
 1. Build the Stage 0 `Shared Context Snapshot` inside `plan.md`
-2. Initialize and refresh the planning queue, binding projection ledger, artifact status, and source-fingerprint tracking
+2. Initialize or refresh queue state, binding rows, artifact status, and fingerprints
 
 `/sdd.plan` does **not** generate downstream planning-stage artifacts directly.
+
+## Planning Sharding Model (Mandatory)
+
+Keep the two-layer sharding model for planning runs:
+
+1. Stage sharding (fixed): `research -> data-model -> test-matrix -> contract`
+2. Binding sharding (fixed): `/sdd.plan.contract` consumes one `BindingRowID` row per run
+
+Do not collapse all planning work into one broad run.
+Optimization target is packet-first consumption with bounded inputs per shard, not shard removal.
 
 ## Setup
 
@@ -60,7 +70,7 @@ Fail fast and route to `/sdd.constitution` if any canonical baseline artifact is
 
 ## Stage 0 Shared Context Snapshot
 
-Generate the `Shared Context Snapshot` section inside `plan.md` from these inputs only:
+Build `Shared Context Snapshot` from these inputs only:
 
 - resolved `SPEC_FILE`
 - `.specify/memory/constitution.md`
@@ -70,7 +80,7 @@ Generate the `Shared Context Snapshot` section inside `plan.md` from these input
 Do **not** read or reuse `research.md`, `data-model.md`, `test-matrix.md`, or `contracts/` when building Stage 0.
 Do **not** materialize a separate `shared-context.md` file.
 
-The snapshot must remain bounded to shared bootstrap facts only:
+Keep the snapshot to shared bootstrap facts only:
 
 - feature identity and scope anchors
 - actors, in-scope / out-of-scope, stable UC/UIF/FR references
@@ -83,7 +93,7 @@ Do **not** write long summaries, audit payload, planning-stage prose, or executi
 ## Planning Control Plane Requirements
 
 Use `.specify/templates/plan-template.md` as the structure source for `plan.md`. This runtime template path is mandatory; if the file is missing or non-consumable, stop and report the blocker. Do not substitute `templates/plan-template.md` or any other template location.
-The generated `plan.md` is the sole planning control plane and MUST contain exactly these functional content dimensions:
+The generated `plan.md` is the sole planning control plane and MUST contain exactly these dimensions:
 
 1. downstream-consumption context: `Shared Context Snapshot`
 2. orchestration context: `Stage Queue` and `Artifact Status`
@@ -94,7 +104,7 @@ Queue rows, binding rows, fingerprints, and other control-plane restatements are
 
 ## Queue Initialization Rules
 
-Initialize or refresh `plan.md` with:
+Initialize or refresh only these sections:
 
 ### Stage Queue
 
@@ -130,6 +140,10 @@ Required columns:
 - `TC IDs`
 - `Operation ID`
 - `Boundary Anchor`
+- `Implementation Entry Anchor`
+- `Boundary Anchor Status`
+- `Implementation Entry Anchor Status`
+- `Test Scope`
 
 ### Artifact Status
 
@@ -149,7 +163,7 @@ Required columns:
 
 Frontmatter `handoffs` are static advisory metadata only.
 Use at most one unconditional handoff target in frontmatter.
-If the next command depends on `plan.md` queue state, child commands MUST emit that result through `Handoff Decision` in the runtime output instead of encoding branching paths in frontmatter.
+State-dependent routing belongs in runtime `Handoff Decision`, not frontmatter.
 
 Child-command selection rules are non-negotiable:
 

@@ -100,7 +100,7 @@ Use this protocol whenever the Outline asks to execute extension hooks for a pha
      - `Binding Projection Index`
      - `Artifact Status`
    - Stop and route to `/sdd.plan` if these control-plane sections are missing or non-consumable.
-    - Stop and route to the relevant `/sdd.plan.*` child command if:
+   - Stop and route to the relevant `/sdd.plan.*` child command if:
       - any `Stage Queue` row required for planning completion is not `done`
       - any `Artifact Status` row for `contract` remains non-`done`
    - Stop and route to `/sdd.plan.test-matrix` if `test-matrix.md` is missing, non-consumable, or lacks the tuple keys needed for executable verification mapping.
@@ -130,7 +130,7 @@ Use this protocol whenever the Outline asks to execute extension hooks for a pha
      - one work package maps to exactly one target path cluster or one command target
      - one work package maps to exactly one primary completion anchor
      - do not merge multiple operations, unrelated file clusters, or distinct validation objectives into one task
-    - Between `Generate` and `Compress`, run **hard execution safety gates only** for the active unit: required anchor presence, prevention of promoting `TODO(REPO_ANCHOR)` or any `todo` anchor-status tuple (`Anchor Status`, `Implementation Entry Anchor Status`) into executable semantics, local mapping completeness, and dependency-safe schedulability.
+   - Between `Generate` and `Compress`, run **hard execution safety gates only** for the active unit: required anchor presence, prevention of promoting `TODO(REPO_ANCHOR)` or any `todo` anchor-status tuple (`Anchor Status`, `Implementation Entry Anchor Status`) into executable semantics, local mapping completeness, and dependency-safe schedulability.
    - **GLOBAL inventory and foundation unit**:
       - Load `data-model.md` and capture shared global object baselines required by tasks.
       - Build a run-local `global-anchor-summary` from the minimum shared anchors and invariants needed for cross-interface prerequisites.
@@ -179,10 +179,10 @@ Use this protocol whenever the Outline asks to execute extension hooks for a pha
 8. **Report (Execution Summary + Analyze Handoff Only)**: Output a concise summary only:
    - Generated artifact paths: `tasks.md`, `tasks.manifest.json`
    - Total task count and count split by `GLOBAL` and each interface unit (`IF-###`)
-    - DAG schedulability result (dependency-safe / blockers detected)
-    - Manifest alignment result (task count and task IDs aligned with `tasks.md`)
-    - Upstream alignment repair actions emitted due to projection drift (if any), including target artifact and owner command
-    - Analyze handoff note: direct non-mainline comprehensive audit concerns to `/sdd.analyze`
+   - DAG schedulability result (dependency-safe / blockers detected)
+   - Manifest alignment result (task count and task IDs aligned with `tasks.md`)
+   - Upstream alignment repair actions emitted due to projection drift (if any), including target artifact and owner command
+   - Analyze handoff note: direct non-mainline comprehensive audit concerns to `/sdd.analyze`
 
 9. Execute `after_tasks` hooks using the Hook Dispatch Protocol.
 

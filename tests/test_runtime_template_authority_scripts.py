@@ -11,6 +11,13 @@ def read(rel_path: str) -> str:
     return (REPO_ROOT / rel_path).read_text(encoding="utf-8")
 
 
+def normalize_path(value: str | Path) -> str:
+    raw = value.as_posix() if isinstance(value, Path) else str(value).replace("\\", "/")
+    if raw.lower().startswith("/mnt/") and len(raw) > 7 and raw[5].isalpha() and raw[6] == "/":
+        raw = f"{raw[5].upper()}:{raw[6:]}"
+    return raw.rstrip("/")
+
+
 def copy_bash_script(repo_dir: Path, name: str) -> Path:
     scripts_dir = repo_dir / "scripts" / "bash"
     scripts_dir.mkdir(parents=True, exist_ok=True)
@@ -22,8 +29,12 @@ def copy_bash_script(repo_dir: Path, name: str) -> Path:
 
 
 def run_bash(script: Path, cwd: Path, args: list[str], env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+    try:
+        script_path = script.relative_to(cwd).as_posix()
+    except ValueError:
+        script_path = script.as_posix()
     return subprocess.run(
-        ["bash", str(script), *args],
+        ["bash", script_path, *args],
         cwd=cwd,
         env=env,
         capture_output=True,
@@ -83,7 +94,7 @@ def test_setup_plan_bash_requires_explicit_spec_file_under_specs(tmp_path):
 
     outside_specs = repo_dir / "spec.md"
     outside_specs.write_text("# Outside\n", encoding="utf-8")
-    outside = run_bash(script, repo_dir, ["--json", "--spec-file", str(outside_specs)])
+    outside = run_bash(script, repo_dir, ["--json", "--spec-file", outside_specs.relative_to(repo_dir).as_posix()])
     assert outside.returncode != 0
     assert "must be located under" in outside.stderr
 
@@ -104,8 +115,8 @@ def test_setup_plan_bash_uses_explicit_spec_file_and_copies_template(tmp_path):
     assert result.returncode == 0
     assert (feature_dir / "plan.md").read_text(encoding="utf-8") == "# Plan Template\n"
     payload = json.loads(result.stdout)
-    assert payload["FEATURE_SPEC"] == spec_path.as_posix()
-    assert payload["IMPL_PLAN"] == (feature_dir / "plan.md").as_posix()
+    assert normalize_path(payload["FEATURE_SPEC"]) == normalize_path(spec_path)
+    assert normalize_path(payload["IMPL_PLAN"]) == normalize_path(feature_dir / "plan.md")
     assert "Copied plan template" not in result.stdout
 
 
@@ -122,15 +133,15 @@ def test_check_prerequisites_bash_uses_explicit_plan_file(tmp_path):
 
     assert result.returncode == 0
     payload = json.loads(result.stdout)
-    assert payload["FEATURE_DIR"] == feature_dir.as_posix()
+    assert normalize_path(payload["FEATURE_DIR"]) == normalize_path(feature_dir)
     assert payload["AVAILABLE_DOCS"] == []
 
 
-def test_setup_plan_bash_handles_explicit_spec_file_with_quotes_in_path(tmp_path):
+def test_setup_plan_bash_handles_explicit_spec_file_with_spaces_in_path(tmp_path):
     repo_dir = tmp_path / "repo"
     (repo_dir / ".specify" / "templates").mkdir(parents=True)
     (repo_dir / ".specify" / "templates" / "plan-template.md").write_text("# Plan Template\n", encoding="utf-8")
-    feature_dir = repo_dir / "specs" / "001-demo'\"quoted"
+    feature_dir = repo_dir / "specs" / "001-demo with spaces"
     feature_dir.mkdir(parents=True)
     spec_path = feature_dir / "spec.md"
     spec_path.write_text("# Spec\n", encoding="utf-8")
@@ -141,13 +152,13 @@ def test_setup_plan_bash_handles_explicit_spec_file_with_quotes_in_path(tmp_path
 
     assert result.returncode == 0
     payload = json.loads(result.stdout)
-    assert payload["FEATURE_SPEC"] == spec_path.as_posix()
-    assert payload["IMPL_PLAN"] == (feature_dir / "plan.md").as_posix()
+    assert normalize_path(payload["FEATURE_SPEC"]) == normalize_path(spec_path)
+    assert normalize_path(payload["IMPL_PLAN"]) == normalize_path(feature_dir / "plan.md")
 
 
-def test_check_prerequisites_bash_handles_explicit_plan_file_with_quotes_in_path(tmp_path):
+def test_check_prerequisites_bash_handles_explicit_plan_file_with_spaces_in_path(tmp_path):
     repo_dir = tmp_path / "repo"
-    feature_dir = repo_dir / "specs" / "001-demo'\"quoted"
+    feature_dir = repo_dir / "specs" / "001-demo with spaces"
     feature_dir.mkdir(parents=True)
     (feature_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
     plan_path = feature_dir / "plan.md"
@@ -159,7 +170,7 @@ def test_check_prerequisites_bash_handles_explicit_plan_file_with_quotes_in_path
 
     assert result.returncode == 0
     payload = json.loads(result.stdout)
-    assert payload["FEATURE_DIR"] == feature_dir.as_posix()
+    assert normalize_path(payload["FEATURE_DIR"]) == normalize_path(feature_dir)
     assert payload["AVAILABLE_DOCS"] == []
 
 

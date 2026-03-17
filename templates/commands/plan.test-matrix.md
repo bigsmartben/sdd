@@ -3,7 +3,7 @@ description: Generate the pending test-matrix.md artifact and initialize binding
 handoffs:
   - label: Continue Contract Queue
     agent: sdd.plan.contract
-    prompt: Continue the planning queue by running /sdd.plan.contract <path/to/plan.md> with the same explicit plan.md path.
+    prompt: Run /sdd.plan.contract <path/to/plan.md> with the same absolute plan.md path.
     send: true
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json
@@ -45,11 +45,26 @@ Use `.specify/templates/test-matrix-template.md` only. If the runtime template i
 4. Require `research` and `data-model` rows to be `done`
 5. If prerequisites are not satisfied, stop and report the blocker
 
+## Stage Packet (Test-Matrix Unit)
+
+Build one bounded run-local packet for the selected `test-matrix` row from:
+
+- selected `Stage Queue` row in explicit `PLAN_FILE`
+- `Shared Context Snapshot` in explicit `PLAN_FILE`
+- resolved `FEATURE_SPEC` path
+- resolved `research.md` path
+- resolved `data-model.md` path
+- selected row source/output fingerprint fields
+
+Use this packet as the default context for generation and binding projection.
+Do not load additional artifacts unless the selected-row blocker cannot be resolved from this packet.
+
 ## Plan Control-Plane Input Path (Mandatory)
 
-- Use only the explicit `PLAN_FILE` resolved through `{SCRIPT}` as planning control plane.
-- Ignore alternate `plan.md` paths from environment variables or repository discovery. Non-`plan.md` user files are allowed only when they are already listed in `Allowed Inputs`; they never redefine control-plane state.
-- If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
+Use only the explicit `PLAN_FILE` resolved through `{SCRIPT}` as planning control plane.
+Ignore alternate `plan.md` paths from environment variables or repository discovery.
+Non-`plan.md` user files are allowed only when already listed in `Allowed Inputs`; they never redefine control-plane state.
+If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 
 ## Allowed Inputs
 
@@ -62,19 +77,23 @@ Read only:
 - `research.md`
 - `data-model.md`
 
+When consuming allowed inputs, prefer section-level rereads over whole-file replay for the selected unit.
+
 `test-matrix.md` remains the authoritative source for verification semantics and stable tuple keys.
-`PLAN_FILE` receives only a binding projection index and artifact queue rows derived from that matrix.
+`test-matrix.md` also carries the per-binding contract bootstrap packet consumed by `/sdd.plan.contract`.
+`PLAN_FILE` receives only a compact binding projection index and artifact queue rows derived from that matrix.
 
 ## Binding Projection Rules
 
 Project only stable and unique binding rows from `test-matrix.md` into `Binding Projection Index`.
 Do not copy scenario prose into `PLAN_FILE`.
 Project `Boundary Anchor` as the client-facing contract binding key only, preserving the first consumer-callable entry selected in `test-matrix.md`.
-Do not add internal handoff fields to `Binding Projection Index`; realization-design details are authored in the generated `contracts/` artifact.
+Project only the minimum extra fields required to help `/sdd.plan.contract` select and validate the next unit without re-reading broad context.
+Keep DTO anchors, collaborator anchors, and other realization-detail evidence in `test-matrix.md`; do not mirror them into `PLAN_FILE`.
 Apply repo-anchor decision order `existing -> extended -> new -> todo`.
 `extended` is valid only for same-entity field/state expansion.
 `new` is normative only when explicit `path::symbol` target evidence is present.
-Rows with `Anchor Status = todo` remain forward-looking/non-normative and MUST NOT be projected as main-path binding rows.
+Rows with `Boundary Anchor Status = todo` or `Implementation Entry Anchor Status = todo` remain forward-looking/non-normative and MUST NOT be projected as main-path binding rows.
 
 Required columns in each binding row:
 
@@ -87,6 +106,36 @@ Required columns in each binding row:
 - `TC IDs`
 - `Operation ID`
 - `Boundary Anchor`
+- `Implementation Entry Anchor`
+- `Boundary Anchor Status`
+- `Implementation Entry Anchor Status`
+- `Test Scope`
+
+## Binding Contract Packet Requirements
+
+For each stable binding in `test-matrix.md`, emit a contract bootstrap packet that `/sdd.plan.contract` can consume without re-deriving the tuple from broad context.
+This packet remains authoritative in `test-matrix.md`; do not mirror it in full into `PLAN_FILE`.
+
+Each binding packet MUST include:
+
+- `BindingRowID`
+- `Operation ID`
+- `IF Scope`
+- `Boundary Anchor`
+- `Boundary Anchor Status`
+- `Implementation Entry Anchor`
+- `Implementation Entry Anchor Status`
+- `Request DTO Anchor`
+- `Response DTO Anchor`
+- `Primary Collaborator Anchor`
+- `TM ID`
+- `TC IDs`
+- `Spec Ref(s)`
+- `Scenario Ref(s)`
+- `Success Ref(s)`
+- `Edge Ref(s)`
+- `Main Pass Anchor`
+- `Branch/Failure Anchor(s)`
 
 For each `BindingRowID`, initialize exactly one `Artifact Status` row:
 

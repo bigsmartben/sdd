@@ -15,7 +15,7 @@ Use this skill when the user asks to release, publish, cut a version, or verify 
 bash .codex/skills/release-gate/scripts/release-run.sh vX.Y.Z
 ```
 
-2. Publish only after preflight succeeds:
+1. Publish only after preflight succeeds:
 
 ```bash
 bash .codex/skills/release-gate/scripts/release-run.sh vX.Y.Z --publish
@@ -37,4 +37,3 @@ bash .codex/skills/release-gate/scripts/release-run.sh vX.Y.Z --publish
 4. Generate `release_notes.md` via `generate-release-notes.sh`.
 5. Enforce template coverage gate locally.
 6. If `--publish` is present, run `create-github-release.sh` (which re-checks gates).
-
