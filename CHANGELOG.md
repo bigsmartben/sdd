@@ -7,6 +7,13 @@ Recent changes to the Specify CLI and templates are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.19] - 2026-03-17
+
+### Fixed
+
+- Keep planning-lint bash test paths compatible with Git Bash/MSYS on Windows by using `/c/...`-style absolute paths instead of WSL-only `/mnt/c/...`
+- Publish patch release `2.0.19` for the unified contract-planning guidance update in `src/specify_cli/__init__.py`
+
 ## [2.0.18] - 2026-03-17
 
 ### Fixed

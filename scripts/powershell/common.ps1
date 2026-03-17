@@ -154,7 +154,7 @@ function Resolve-FeatureFilePath {
     }
 
     if ((Split-Path -Leaf $resolvedPath) -ne $ExpectedFileName) {
-        throw "$Label must point to a file named $ExpectedFileName: $resolvedPath"
+        throw "$Label must point to a file named ${ExpectedFileName}: $resolvedPath"
     }
 
     if (-not (Test-Path $resolvedPath -PathType Leaf)) {

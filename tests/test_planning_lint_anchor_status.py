@@ -76,25 +76,19 @@ def _write_feature_fixture(
 
 def _run_planning_lint(feature_dir: Path) -> dict:
     def to_bash_path(p: Path) -> str:
-        value = str(p.resolve()).replace("\\", "/")
-        if len(value) >= 2 and value[1] == ":":
-            drive = value[0].lower()
-            tail = value[2:]
-            if not tail.startswith("/"):
-                tail = "/" + tail
-            return f"/mnt/{drive}{tail}"
-        return value
+        return str(p.resolve()).replace("\\", "/")
 
     completed = subprocess.run(
         [
             "bash",
-            to_bash_path(LINT_SCRIPT),
+            "scripts/bash/run-planning-lint.sh",
             "--feature-dir",
             to_bash_path(feature_dir),
             "--rules",
             to_bash_path(RULES_FILE),
             "--json",
         ],
+        cwd=REPO_ROOT,
         check=False,
         capture_output=True,
         text=True,

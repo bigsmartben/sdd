@@ -167,6 +167,7 @@ def test_powershell_generation_scripts_remove_template_fallbacks():
     create_feature = read("scripts/powershell/create-new-feature.ps1")
     setup_plan = read("scripts/powershell/setup-plan.ps1")
     check_prerequisites = read("scripts/powershell/check-prerequisites.ps1")
+    common = read("scripts/powershell/common.ps1")
 
     assert "Required runtime template not found or not readable at $template" in create_feature
     assert "New-Item -ItemType File -Path $specFile" not in create_feature
@@ -181,6 +182,9 @@ def test_powershell_generation_scripts_remove_template_fallbacks():
 
     assert "[string]$PlanFile" in check_prerequisites
     assert "Get-FeaturePathsFromPlanFile" in check_prerequisites
+
+    assert '${ExpectedFileName}: $resolvedPath' in common
+    assert '$ExpectedFileName: $resolvedPath' not in common
 
 
 def test_update_agent_context_scripts_require_runtime_agent_template():

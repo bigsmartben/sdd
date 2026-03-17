@@ -31,7 +31,30 @@ error() {
 }
 
 is_abs_path() {
-    [[ "$1" == /* ]]
+    [[ "$1" == /* || "$1" =~ ^[A-Za-z]:/ ]]
+}
+
+normalize_fs_path() {
+    local path="$1"
+
+    if [[ "$path" =~ ^[A-Za-z]:/ ]]; then
+        if command -v wslpath >/dev/null 2>&1; then
+            wslpath "$path"
+            return 0
+        fi
+        if command -v cygpath >/dev/null 2>&1; then
+            cygpath -u "$path"
+            return 0
+        fi
+
+        local drive="${path:0:1}"
+        local tail="${path:2}"
+        drive="$(echo "$drive" | tr '[:upper:]' '[:lower:]')"
+        printf '/mnt/%s%s\n' "$drive" "$tail"
+        return 0
+    fi
+
+    printf '%s\n' "$path"
 }
 
 trim() {
@@ -239,6 +262,9 @@ if ! is_abs_path "$RULES_PATH"; then
     error "--rules must be an absolute path"
     exit 1
 fi
+
+FEATURE_DIR="$(normalize_fs_path "$FEATURE_DIR")"
+RULES_PATH="$(normalize_fs_path "$RULES_PATH")"
 
 if [[ ! -d "$FEATURE_DIR" ]]; then
     error "Feature directory not found: $FEATURE_DIR"
