@@ -13,7 +13,7 @@ It is derived for planning semantics and MUST NOT supersede `research.md`, `data
 
 ## Shared Context Snapshot
 
-Use this section for shared bootstrap facts only.
+Shared bootstrap facts only.
 Do not place stage prose, audit payload, or execution logs here.
 
 ### Feature Identity

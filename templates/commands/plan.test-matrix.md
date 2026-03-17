@@ -3,7 +3,7 @@ description: Generate the pending test-matrix.md artifact and initialize binding
 handoffs:
   - label: Continue Contract Queue
     agent: sdd.plan.contract
-    prompt: Continue the planning queue by running /sdd.plan.contract <path/to/plan.md> with the same explicit plan.md path.
+    prompt: Run /sdd.plan.contract <path/to/plan.md> with the same absolute plan.md path.
     send: true
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json
@@ -47,9 +47,10 @@ Use `.specify/templates/test-matrix-template.md` only. If the runtime template i
 
 ## Plan Control-Plane Input Path (Mandatory)
 
-- Use only the explicit `PLAN_FILE` resolved through `{SCRIPT}` as planning control plane.
-- Ignore alternate `plan.md` paths from environment variables or repository discovery. Non-`plan.md` user files are allowed only when they are already listed in `Allowed Inputs`; they never redefine control-plane state.
-- If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
+Use only the explicit `PLAN_FILE` resolved through `{SCRIPT}` as planning control plane.
+Ignore alternate `plan.md` paths from environment variables or repository discovery.
+Non-`plan.md` user files are allowed only when already listed in `Allowed Inputs`; they never redefine control-plane state.
+If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 
 ## Allowed Inputs
 

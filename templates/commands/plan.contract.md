@@ -49,9 +49,10 @@ This unified artifact includes both:
 
 ## Plan Control-Plane Input Path (Mandatory)
 
-- Use only the explicit `PLAN_FILE` resolved through `{SCRIPT}` as planning control plane.
-- Ignore alternate `plan.md` paths from environment variables or repository discovery. Non-`plan.md` user files are allowed only when they are already listed in `Allowed Inputs`; they never redefine control-plane state.
-- If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
+Use only the explicit `PLAN_FILE` resolved through `{SCRIPT}` as planning control plane.
+Ignore alternate `plan.md` paths from environment variables or repository discovery.
+Non-`plan.md` user files are allowed only when already listed in `Allowed Inputs`; they never redefine control-plane state.
+If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 
 ## Path Constraints
 

@@ -3,7 +3,7 @@ description: Generate the pending data-model.md artifact selected from an explic
 handoffs:
   - label: Continue Test Matrix Queue
     agent: sdd.plan.test-matrix
-    prompt: Continue the planning queue by running /sdd.plan.test-matrix <path/to/plan.md> with the same explicit plan.md path.
+    prompt: Run /sdd.plan.test-matrix <path/to/plan.md> with the same absolute plan.md path.
     send: true
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json
@@ -48,9 +48,10 @@ Use `.specify/templates/data-model-template.md` only. If the runtime template is
 
 ## Plan Control-Plane Input Path (Mandatory)
 
-- Use only the explicit `PLAN_FILE` resolved through `{SCRIPT}` as planning control plane.
-- Ignore alternate `plan.md` paths from environment variables or repository discovery. Non-`plan.md` user files are allowed only when they are already listed in `Allowed Inputs`; they never redefine control-plane state.
-- If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
+Use only the explicit `PLAN_FILE` resolved through `{SCRIPT}` as planning control plane.
+Ignore alternate `plan.md` paths from environment variables or repository discovery.
+Non-`plan.md` user files are allowed only when already listed in `Allowed Inputs`; they never redefine control-plane state.
+If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 
 ## Path Constraints
 
