@@ -1,5 +1,5 @@
 ---
-description: Generate exactly one pending contract artifact selected from an explicit plan.md path.
+description: Generate exactly one pending northbound interface design artifact selected from an explicit plan.md path.
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json
   ps: scripts/powershell/check-prerequisites.ps1 -Json
@@ -26,9 +26,15 @@ If `PLAN_FILE` is missing or invalid, stop immediately and report the required i
 
 ## Goal
 
-Generate exactly one minimum contract artifact by consuming the first pending `contract` row from `PLAN_FILE` `Artifact Status`.
+Generate exactly one unified northbound interface design artifact by consuming the first pending `contract` row from `PLAN_FILE` `Artifact Status`.
 This command MUST NOT generate multiple contract files in one run.
-Use `.specify/templates/contract-template.md` only. If the runtime template is missing or unreadable, stop and report the blocker instead of inferring structure from mirrors or prior generated contracts.
+Use `.specify/templates/contract-template.md` only. If the runtime template is missing or unreadable, stop and report the blocker instead of inferring structure from mirrors or prior generated artifacts.
+
+This unified artifact includes both:
+
+- Northbound minimal contract semantics (`UIF` + necessary `UDD` slice only)
+- Delivery-level realization design (internal handoff, sequence, UML, failure propagation, southbound dependencies)
+- Explicit downstream projection slices for execution (`spec` refs + `test` scope/anchors) used by `/sdd.tasks` and `/sdd.implement`
 
 ## Selection Rules
 
@@ -50,17 +56,30 @@ Use `.specify/templates/contract-template.md` only. If the runtime template is m
 ## Path Constraints
 
 - Stay inside the resolved `FEATURE_DIR` plus the explicit files listed in `Allowed Inputs`.
-- Complete `BindingRowID` selection and prerequisite validation from the explicit `PLAN_FILE` before reading `spec.md`, `data-model.md`, `test-matrix.md`, or any repo anchors.
+- Complete `BindingRowID` selection and prerequisite validation from the explicit `PLAN_FILE` before reading `spec.md`, `research.md`, `data-model.md`, `test-matrix.md`, or any repo anchors.
 - Before that point, do not open repository files, generated artifacts, or run repository-wide discovery/search.
 - After selection, read only the selected row's planning inputs and the targeted symbols/files required for that `BindingRowID`.
 
-## Boundary Anchor Selection (Client Entry First)
+## Northbound Entry Selection (Client Entry First)
 
-- Treat this contract as the UIF/client-facing entry artifact for the selected binding.
+- Treat this artifact as the northbound interface definition for the selected binding.
 - Select `Boundary Anchor` as the first consumer-callable entry, not an internal service/manager/mapper hop.
 - If the operation is consumer-called via HTTP, prefer `HTTP METHOD /path` and keep any controller symbol as repo anchor evidence.
 - If the operation is consumer-called via RPC/facade, use the anchored `Facade.method` surface.
-- If both HTTP/controller and facade symbols exist, keep the actual consumer-visible first callable entry as normative `Boundary Anchor`; downstream internal handoff belongs in interface-detail.
+- If both HTTP/controller and facade symbols exist, keep the actual consumer-visible first callable entry as normative `Boundary Anchor`.
+
+## Unified Design Requirements
+
+- Contract scope is `UIF` semantics plus necessary `UDD` only: lock behavior-significant request/response fields, constraints, and visible outcomes; do not expand to an exhaustive payload handbook.
+- Realization design scope is delivery-ready: internal handoff, failure propagation, sequence closure, UML ownership, and southbound dependency chain.
+- Fill `Downstream Projection Input (Required)` with one executable slice for the selected `IF Scope` / `Operation ID`: include `spec` refs (`UC/UIF/FR/SC/EC`) and `test` refs (`Test Scope`, `TM/TC`, pass/failure anchors, command/assertion signal).
+- Sequence design MUST start from consumer/client entry and reach the internal implementation entry within the first two request hops.
+- Sequence design MUST remain end-to-end contiguous at current document granularity; no disconnected hops, orphan participants, or broken return chains.
+- Each declared behavior path MUST map to one contiguous ordered sequence step chain from trigger entry to contract-visible outcome/failure.
+- If `Boundary Anchor` and `Implementation Entry Anchor` resolve to the same repo-backed symbol, do not invent a handoff relay hop; reuse one participant/class in sequence and UML.
+- UML MUST cover all executable sequence participants at this document granularity.
+- Every sequence call MUST map to an owning UML method with directed caller/callee relationship.
+- Any newly introduced field/method/call MUST be explicitly marked as new and connected to owner/consumer or caller/callee.
 
 ## Repo Anchor Decision Protocol (Mandatory)
 
@@ -79,12 +98,13 @@ Read only:
 - matching `BindingRowID` row from `Binding Projection Index` in the explicit `PLAN_FILE` only
 - `Shared Context Snapshot` from the explicit `PLAN_FILE` only
 - resolved `FEATURE_SPEC`
+- `research.md` when constraints materially affect this `BindingRowID`
 - `data-model.md`
 - `test-matrix.md`
-- targeted repo boundary symbols (route/controller and/or façade as applicable), plus DTO anchors required for the selected `BindingRowID`
+- targeted repo boundary/entry/DTO/collaborator anchors required for the selected `BindingRowID` (for example route/controller, facade, service, manager, mapper/gateway, downstream adapters)
 
-After generation, the selected artifact under `contracts/` becomes the authoritative source for interface semantics for that binding.
-`PLAN_FILE` is queue state plus stable binding keys only.
+After generation, the selected artifact under `contracts/` becomes the authoritative source for interface semantics and realization design semantics for that binding.
+`PLAN_FILE` remains queue state plus stable binding keys only.
 
 ## Required Writeback
 
@@ -97,7 +117,7 @@ Update only the selected contract row in `Artifact Status`:
 - `Blocker`
 
 Do not modify unrelated `BindingRowID` rows.
-Do not write contract semantics into `PLAN_FILE`.
+Do not write contract/design prose into `PLAN_FILE`.
 
 ## Handoff Decision
 
@@ -111,10 +131,10 @@ Emit a `Handoff Decision` section in the runtime output with exactly these field
 Determine `Next Command` from the explicit `PLAN_FILE` state only after the selected contract row writeback:
 
 - If any `contract` rows remain `pending`, `Next Command = /sdd.plan.contract <absolute path to plan.md>`
-- Otherwise, if no `contract` rows remain `pending` and at least one `interface-detail` row is `pending`, `Next Command = /sdd.plan.interface-detail <absolute path to plan.md>`
+- Otherwise, if all required planning rows are complete, `Next Command = /sdd.tasks`
 - Otherwise, if queue state is inconsistent with either condition, keep `Next Command` empty and set `Ready/Blocked = Blocked`
 
-`Decision Basis` MUST cite the post-writeback `Artifact Status` state that produced the routing decision.
+`Decision Basis` MUST cite the post-writeback `Artifact Status` state and planning-complete check that produced the routing decision.
 
 ## Final Output
 

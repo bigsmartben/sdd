@@ -137,9 +137,6 @@ if ((Test-Path $paths.CONTRACTS_DIR) -and (Get-ChildItem -Path $paths.CONTRACTS_
 }
 
 if (Test-Path $paths.TEST_MATRIX) { $docs += 'test-matrix.md' }
-if ((Test-Path $paths.INTERFACE_DETAILS_DIR) -and (Get-ChildItem -Path $paths.INTERFACE_DETAILS_DIR -ErrorAction SilentlyContinue | Select-Object -First 1)) {
-    $docs += 'interface-details/'
-}
 
 # Include tasks.md if requested and it exists
 if ($IncludeTasks -and (Test-Path $paths.TASKS)) { 
@@ -171,8 +168,7 @@ if ($Json) {
                         --spec $paths.FEATURE_SPEC `
                         --data-model $paths.DATA_MODEL `
                         --test-matrix $paths.TEST_MATRIX `
-                        --contracts-dir $paths.CONTRACTS_DIR `
-                        --interface-details-dir $paths.INTERFACE_DETAILS_DIR
+                        --contracts-dir $paths.CONTRACTS_DIR
 
                     if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($taskBootstrapJson)) {
                         $payload.TASKS_BOOTSTRAP = $taskBootstrapJson | ConvertFrom-Json
@@ -195,7 +191,6 @@ if ($Json) {
     Test-FileExists -Path $paths.DATA_MODEL -Description 'data-model.md' | Out-Null
     Test-DirHasFiles -Path $paths.CONTRACTS_DIR -Description 'contracts/' | Out-Null
     Test-FileExists -Path $paths.TEST_MATRIX -Description 'test-matrix.md' | Out-Null
-    Test-DirHasFiles -Path $paths.INTERFACE_DETAILS_DIR -Description 'interface-details/' | Out-Null
     
     if ($IncludeTasks) {
         Test-FileExists -Path $paths.TASKS -Description 'tasks.md' | Out-Null

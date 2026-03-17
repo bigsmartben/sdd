@@ -8,7 +8,7 @@ This guide will help you get started with Spec-Driven Development using Spec Kit
 ## The 6-Step Core Process
 
 > [!TIP]
-> **Context Awareness**: Spec Kit commands automatically detect the active feature based on your current Git branch (e.g., `001-feature-name`). To switch between different specifications, simply switch Git branches.
+> **Path-Driven Planning**: Planning commands use explicit `spec.md` and `plan.md` paths. Do not rely on active-branch feature discovery for `/sdd.plan*` routing.
 
 ### Step 1: Install Specify
 
@@ -145,10 +145,9 @@ Then run the planning queue one command at a time:
 /sdd.plan.data-model specs/001-create-taskify/plan.md
 /sdd.plan.test-matrix specs/001-create-taskify/plan.md
 /sdd.plan.contract specs/001-create-taskify/plan.md
-/sdd.plan.interface-detail specs/001-create-taskify/plan.md
 ```
 
-For repeated `/sdd.plan.contract` and `/sdd.plan.interface-detail` runs, use each command's runtime `Handoff Decision` output with the explicit `plan.md` path. `plan.md` queue state is the authority for the next step.
+For repeated `/sdd.plan.contract` runs, use each command's runtime `Handoff Decision` output with the explicit `plan.md` path. `plan.md` queue state is the authority for the next step.
 
 ### Step 6: Define Tasks
 

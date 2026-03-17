@@ -23,8 +23,8 @@ Keep the matrix minimal-but-sufficient: merge pure permutations with identical o
 - `extended` is valid only for same-entity field/state expansion.
 - `new` is normative only when explicit `path::symbol` target evidence is provided.
 - If explicit target evidence is missing, set `Anchor Status = todo` and keep the row non-normative forward-looking only.
-- Keep `Operation ID` / `Boundary Anchor` / `IF Scope` values textually consistent with `contracts/` and `interface-details/`.
-- `Implementation Entry Anchor` belongs only in `interface-details/`; do not encode internal handoff entrypoints in TM/TC tuple keys.
+- Keep `Operation ID` / `Boundary Anchor` / `IF Scope` values textually consistent with `contracts/`.
+- `Implementation Entry Anchor` belongs only in contract realization design sections; do not encode internal handoff entrypoints in TM/TC tuple keys.
 - Main-path verification binding MUST use tuples with `Anchor Status = existing|extended|new`. Rows with `Anchor Status = todo` MUST NOT enter primary verification path rows.
 
 ## Scenario Matrix
@@ -44,6 +44,6 @@ Keep the matrix minimal-but-sufficient: merge pure permutations with identical o
 - Keep this artifact in the planning flow as feature-level test design only.
 - Prefer the smallest scenario/case set that still preserves meaningful path coverage and stable downstream bindings.
 - Bind TM/TC rows to tuples with `Anchor Status = existing|extended|new` for normative verification; keep rows with `Anchor Status = todo` out of the main validation path.
-- Treat `Boundary Anchor` as the client-facing contract entry only; keep internal implementation handoff anchors for Stage 4 interface detail.
+- Treat `Boundary Anchor` as the client-facing contract entry only; keep internal implementation handoff anchors for contract realization design sections.
 - Treat `BA-*` as non-normative shorthand only; never use it as a normative tuple key.
 - Do not redefine contract fields, interface internals, audit tables, or traceability ledgers here.

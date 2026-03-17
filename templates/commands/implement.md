@@ -109,7 +109,7 @@ Terminology note (compatibility, non-normative):
    - Treat `[Pre:T###,...]` as inline dependency mirror only.
    - Read `plan.md` for tech stack, architecture, and file structure.
    - Load supporting artifacts only when needed for a ready task or its completion anchor:
-      - `interface-details/` for per-interface behavior/sequencing
+- `contracts/` realization-design sections for per-interface behavior/sequencing
       - `data-model.md` for entity/lifecycle context
       - `contracts/` for interface semantics/contract checks
       - `test-matrix.md` for feature verification anchors referenced by tasks

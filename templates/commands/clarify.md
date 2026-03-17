@@ -144,7 +144,7 @@ Execution steps:
     - Preserve formatting: do not reorder unrelated sections; keep heading hierarchy intact.
     - Keep each inserted clarification minimal and testable (avoid narrative drift).
     - Keep stage boundaries intact:
-      - do not add planning control-plane content, contract/interface-detail design, task orchestration, audit tables, or implementation choreography into `spec.md`
+- do not add planning control-plane content, contract realization design, task orchestration, audit tables, or implementation choreography into `spec.md`
     - Keep terminology context-pure:
       - Do not inject legacy/example domain identifiers from prior conversations.
       - If a candidate term is not present in current spec/user input/assumptions, replace it with neutral wording or ask a bounded clarification.

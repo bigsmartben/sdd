@@ -205,7 +205,6 @@ emit_feature_paths() {
     printf 'DATA_MODEL=%q\n' "$feature_dir/data-model.md"
     printf 'TEST_MATRIX=%q\n' "$feature_dir/test-matrix.md"
     printf 'CONTRACTS_DIR=%q\n' "$feature_dir/contracts"
-    printf 'INTERFACE_DETAILS_DIR=%q\n' "$feature_dir/interface-details"
 }
 
 get_feature_paths_from_spec_file() {

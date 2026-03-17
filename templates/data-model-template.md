@@ -3,7 +3,7 @@
 **Stage**: Stage 1 Data Model
 **Inputs**: `spec.md`, `research.md`
 
-Use this artifact to define the reusable global backbone model for planning outputs. It should explain what shared domain elements exist, how they relate, which rules and lifecycle anchors govern them, and what downstream authors must treat as globally stable. The content must be concrete enough to support downstream `contracts/` and `interface-details/` authoring while remaining backbone-only.
+Use this artifact to define the reusable global backbone model for planning outputs. It should explain what shared domain elements exist, how they relate, which rules and lifecycle anchors govern them, and what downstream authors must treat as globally stable. The content must be concrete enough to support downstream `contracts/` authoring while remaining backbone-only.
 
 ## Model Overview
 
@@ -167,5 +167,5 @@ Use this final section to confirm that the backbone model is coherent, complete,
 
 - Ensure the model covers the shared elements, stable fields, labeled relationships, invariants, and lifecycle anchors required by `spec.md` and `research.md`.
 - Ensure the content remains backbone-only and does not expand into full DTO inventories, endpoint-by-endpoint contracts, implementation layers, persistence schema design, or interface-level sequence behavior.
-- Ensure terminology, invariants, and lifecycle definitions are consistent with downstream `contract-template.md` and `interface-detail-template.md` expectations without duplicating their scope.
+- Ensure terminology, invariants, and lifecycle definitions are consistent with downstream `contract-template.md` expectations without duplicating scope.
 - If anything is still uncertain, set `Anchor Status = todo` and record the gap with `TODO(REPO_ANCHOR)` in `Assumptions / Open Questions` or `Boundary Notes` rather than leaving backbone semantics ambiguous.

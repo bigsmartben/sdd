@@ -67,9 +67,9 @@ If a required rule is not yet fully defined, it MUST be recorded explicitly as
 ### II. Contract-Centric Continuity
 
 - **Rule**: Contract semantics MUST be the canonical downstream interface source;
-  plan/interface details/tasks MAY project or reference contracts but MUST NOT
+  plan/tasks MAY project or reference contracts but MUST NOT
   redefine or contradict contract behavior.
-- **Scope**: `contracts/`, `plan.md`, `interface-details/`, `tasks.md`, and
+- **Scope**: `contracts/`, `plan.md`, `tasks.md`, and
   implementation outputs.
 - **Rationale**: A single source of interface truth prevents drift and rework.
 - **Exceptions**: Temporary divergence is allowed only during active refactor,

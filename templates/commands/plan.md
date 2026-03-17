@@ -67,7 +67,7 @@ Generate the `Shared Context Snapshot` section inside `plan.md` from these input
 - `.specify/memory/repository-first/*`
 - remaining user planning context after argument parsing
 
-Do **not** read or reuse `research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, or `interface-details/` when building Stage 0.
+Do **not** read or reuse `research.md`, `data-model.md`, `test-matrix.md`, or `contracts/` when building Stage 0.
 Do **not** materialize a separate `shared-context.md` file.
 
 The snapshot must remain bounded to shared bootstrap facts only:
@@ -157,8 +157,6 @@ Child-command selection rules are non-negotiable:
 - `/sdd.plan.data-model <path/to/plan.md>` takes the first `data-model` row in `Stage Queue` with status `pending`
 - `/sdd.plan.test-matrix <path/to/plan.md>` takes the first `test-matrix` row in `Stage Queue` with status `pending`
 - `/sdd.plan.contract <path/to/plan.md>` takes the first `Artifact Status` row where `Unit Type = contract` and `Status = pending`
-- `/sdd.plan.interface-detail <path/to/plan.md>` takes the first `Artifact Status` row where `Unit Type = interface-detail`, `Status = pending`, and the matching contract row is `done`
-
 Child commands MUST NOT scan the repository to invent the next target.
 They MUST consume queue state from the explicit `PLAN_FILE` only.
 
@@ -193,4 +191,4 @@ Always write or refresh `plan.md` first, then report:
 - initialized `Binding Projection Index` row count
 - initialized `Artifact Status` row count
 - explicit next command: `/sdd.plan.research <absolute path to plan.md>`
-- explicit handoff order: `sdd.plan.research -> sdd.plan.data-model -> sdd.plan.test-matrix -> sdd.plan.contract -> sdd.plan.interface-detail`
+- explicit handoff order: `sdd.plan.research -> sdd.plan.data-model -> sdd.plan.test-matrix -> sdd.plan.contract`

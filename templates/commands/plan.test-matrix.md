@@ -70,7 +70,7 @@ Read only:
 Project only stable and unique binding rows from `test-matrix.md` into `Binding Projection Index`.
 Do not copy scenario prose into `PLAN_FILE`.
 Project `Boundary Anchor` as the client-facing contract binding key only, preserving the first consumer-callable entry selected in `test-matrix.md`.
-Do not add `Implementation Entry Anchor` or other internal handoff fields to `Binding Projection Index`; those belong only in `interface-details/`.
+Do not add internal handoff fields to `Binding Projection Index`; realization-design details are authored in the generated `contracts/` artifact.
 Apply repo-anchor decision order `existing -> extended -> new -> todo`.
 `extended` is valid only for same-entity field/state expansion.
 `new` is normative only when explicit `path::symbol` target evidence is present.
@@ -88,10 +88,9 @@ Required columns in each binding row:
 - `Operation ID`
 - `Boundary Anchor`
 
-For each `BindingRowID`, initialize exactly two `Artifact Status` rows:
+For each `BindingRowID`, initialize exactly one `Artifact Status` row:
 
 1. `Unit Type = contract`
-2. `Unit Type = interface-detail`
 
 Each artifact row must include:
 
@@ -103,7 +102,7 @@ Each artifact row must include:
 - `Output Fingerprint`
 - `Blocker`
 
-The total number of minimum planning interface units equals the row count of `Binding Projection Index`.
+The total number of minimum planning artifact units equals the row count of `Binding Projection Index`.
 
 ## Required Writeback
 
