@@ -78,6 +78,7 @@ def _prepare_packaging_fixture(tmp_path: Path) -> None:
         "agent_templates",
         "memory",
         "scripts",
+        "src",
         "templates",
     ]:
         _copy_tree(rel, tmp_path)
