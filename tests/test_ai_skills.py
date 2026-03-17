@@ -628,9 +628,7 @@ class TestSkillDescriptions:
     def test_all_known_commands_have_descriptions(self):
         """All standard spec-kit commands should have enhanced descriptions."""
         expected_commands = [
-            "specify", "plan", "plan.research", "plan.data-model",
-            "plan.test-matrix", "plan.contract", "plan.interface-detail",
-            "tasks", "implement", "analyze",
+            "specify", "plan", "tasks", "implement", "analyze",
             "clarify", "constitution", "checklist", "taskstoissues",
         ]
         for cmd in expected_commands:
@@ -709,51 +707,6 @@ class TestCliValidation:
         """Amazon Q legacy key should not remain in AGENT_CONFIG."""
         assert "q" not in AGENT_CONFIG
         assert "kiro-cli" in AGENT_CONFIG
-
-    def test_init_next_steps_match_plan_queue_workflow(self, tmp_path):
-        """Successful init output should reflect the plan control-plane workflow."""
-        from typer.testing import CliRunner
-
-        runner = CliRunner()
-        target = tmp_path / "workflow-proj"
-
-        def fake_download(project_path, *args, **kwargs):
-            cmds_dir = project_path / ".claude" / "commands"
-            cmds_dir.mkdir(parents=True, exist_ok=True)
-            (cmds_dir / "sdd.plan.md").write_text("# plan\n")
-
-        with patch("specify_cli.download_and_extract_template", side_effect=fake_download), \
-             patch("specify_cli.ensure_executable_scripts"), \
-             patch("specify_cli.ensure_constitution_from_template"), \
-             patch("specify_cli.is_git_repo", return_value=False), \
-             patch("specify_cli.shutil.which", return_value="/usr/bin/git"):
-            result = runner.invoke(
-                app,
-                [
-                    "init",
-                    str(target),
-                    "--ai",
-                    "claude",
-                    "--ignore-agent-tools",
-                    "--script",
-                    "sh",
-                    "--no-git",
-                ],
-            )
-
-        assert result.exit_code == 0
-        plain = re.sub(r'\x1b\[[0-9;]*m', '', result.output)
-        normalized = re.sub(r"[│╭╮╰╯─]+", " ", plain)
-        normalized = re.sub(r"\s+", " ", normalized)
-        assert "/sdd.plan <spec.md> - Initialize the planning control plane" in normalized
-        assert "/sdd.plan.research <plan.md> - Start the planning queue" in normalized
-        assert "/sdd.plan.data-model" in normalized
-        assert "/sdd.plan.test-matrix" in normalized
-        assert "/sdd.plan.contract" in normalized
-        assert "/sdd.plan.interface-detail" in normalized
-        assert "/sdd.analyze - Run the default pre-implementation audit" in normalized
-        assert "/sdd.implement - Execute implementation after analyze or an explicit waiver" in normalized
-        assert "Create implementation plan" not in normalized
 
 
 class TestParameterOrderingIssue:

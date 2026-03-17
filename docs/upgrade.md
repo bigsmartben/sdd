@@ -258,16 +258,9 @@ It **only** skips running `git init` and creating the initial commit.
 
 ### Working without Git
 
-If you use `--no-git`, you'll need to manage feature directories manually.
+If you use `--no-git`, you'll need to manage feature directories manually:
 
-For planning commands, pass explicit file paths:
-
-```bash
-/sdd.plan specs/001-my-feature/spec.md
-/sdd.plan.research specs/001-my-feature/plan.md
-```
-
-**Set the `SPECIFY_FEATURE` environment variable** only for commands that still rely on active-feature discovery, such as `/sdd.clarify` or `/sdd.tasks`:
+**Set the `SPECIFY_FEATURE` environment variable** before using planning commands:
 
 ```bash
 # Bash/Zsh
@@ -277,9 +270,9 @@ export SPECIFY_FEATURE="001-my-feature"
 $env:SPECIFY_FEATURE = "001-my-feature"
 ```
 
-This tells Spec Kit which feature directory to use for commands that still resolve the active feature automatically.
+This tells Spec Kit which feature directory to use when creating specs, plans, and tasks.
 
-**Why this matters:** Without git, Spec Kit can't detect your current branch name to determine the active feature for commands that still use branch-style feature discovery. Planning commands now use explicit file paths instead.
+**Why this matters:** Without git, Spec Kit can't detect your current branch name to determine the active feature. The environment variable provides that context manually.
 
 ---
 

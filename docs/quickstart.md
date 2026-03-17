@@ -55,10 +55,10 @@ uvx --from git+https://github.com/bigsmartben/sdd.git specify init <PROJECT_NAME
 
 ### Step 5: Create a Technical Implementation Plan
 
-**In the chat**, use the `/sdd.plan` slash command with an explicit `spec.md` path to provide your tech stack and architecture choices.
+**In the chat**, use the `/sdd.plan` slash command to provide your tech stack and architecture choices.
 
 ```markdown
-/sdd.plan specs/001-photo-albums/spec.md The application uses Vite with minimal number of libraries. Use vanilla HTML, CSS, and JavaScript as much as possible. Images are not uploaded anywhere and metadata is stored in a local SQLite database.
+/sdd.plan The application uses Vite with minimal number of libraries. Use vanilla HTML, CSS, and JavaScript as much as possible. Images are not uploaded anywhere and metadata is stored in a local SQLite database.
 ```
 
 ### Step 6: Break Down and Implement
@@ -69,7 +69,7 @@ uvx --from git+https://github.com/bigsmartben/sdd.git specify init <PROJECT_NAME
 /sdd.tasks
 ```
 
-Default pre-implementation gate: run the dedicated audit pass with `/sdd.analyze` before `/sdd.implement` (traceability, drift, contradictions, and boundary violations):
+Optional vertical quality gate: run the dedicated audit pass with `/sdd.analyze` before implementation when needed (traceability, drift, contradictions, and boundary violations):
 
 ```markdown
 /sdd.analyze
@@ -130,25 +130,13 @@ Run the standalone checklist pass with the `/sdd.checklist` command when needed 
 /sdd.checklist
 ```
 
-### Step 5: Initialize the Planning Control Plane with `/sdd.plan`
+### Step 5: Generate Technical Plan with `/sdd.plan`
 
 Be specific about your tech stack and technical requirements:
 
 ```bash
-/sdd.plan specs/001-create-taskify/spec.md We are going to generate this using .NET Aspire, using Postgres as the database. The frontend should use Blazor server with drag-and-drop task boards, real-time updates. There should be a REST API created with a projects API, tasks API, and a notifications API.
+/sdd.plan We are going to generate this using .NET Aspire, using Postgres as the database. The frontend should use Blazor server with drag-and-drop task boards, real-time updates. There should be a REST API created with a projects API, tasks API, and a notifications API.
 ```
-
-Then run the planning queue one command at a time:
-
-```bash
-/sdd.plan.research specs/001-create-taskify/plan.md
-/sdd.plan.data-model specs/001-create-taskify/plan.md
-/sdd.plan.test-matrix specs/001-create-taskify/plan.md
-/sdd.plan.contract specs/001-create-taskify/plan.md
-/sdd.plan.interface-detail specs/001-create-taskify/plan.md
-```
-
-For repeated `/sdd.plan.contract` and `/sdd.plan.interface-detail` runs, use each command's runtime `Handoff Decision` output with the explicit `plan.md` path. `plan.md` queue state is the authority for the next step.
 
 ### Step 6: Define Tasks
 
@@ -158,9 +146,9 @@ Generate an actionable task list using the `/sdd.tasks` command:
 /sdd.tasks
 ```
 
-### Gate B + Implement
+### Optional Gate B + Implement
 
-Before implementation, run the dedicated cross-artifact audit with `/sdd.analyze` as the default gate (traceability, drift, contradictions, and boundary violations):
+Before implementation, run the dedicated cross-artifact audit with `/sdd.analyze` when needed (traceability, drift, contradictions, and boundary violations):
 
 ```bash
 /sdd.analyze

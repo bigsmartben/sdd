@@ -85,23 +85,22 @@ This command transforms a simple feature description (the user-prompt) into a co
 
 ### The `/sdd.plan` Command
 
-Once a feature specification exists, `/sdd.plan <spec.md>` initializes the planning control plane:
+Once a feature specification exists, this command creates a comprehensive implementation plan:
 
-1. **Specification Analysis**: Reads and understands the feature requirements, user stories, and acceptance criteria from the explicit `spec.md` path
+1. **Specification Analysis**: Reads and understands the feature requirements, user stories, and acceptance criteria
 2. **Constitutional Compliance**: Ensures alignment with project constitution and architectural principles
-3. **Control-Plane Initialization**: Writes `plan.md` with `Shared Context Snapshot`, `Stage Queue`, `Binding Projection Index`, and `Artifact Status`
-4. **Queue-Driven Planning**: The child commands `/sdd.plan.research <plan.md>`, `/sdd.plan.data-model <plan.md>`, `/sdd.plan.test-matrix <plan.md>`, `/sdd.plan.contract <plan.md>`, and `/sdd.plan.interface-detail <plan.md>` generate stage artifacts one queue unit at a time
+3. **Technical Translation**: Converts business requirements into technical architecture and stage-scoped planning artifacts
+4. **Feature Verification Design**: Generates `test-matrix.md` to cover feature-level main, branch, normal, exception, and degraded paths from spec `UC/UIF`
+5. **Contracts and Interface Design**: Produces minimum-I/O contracts and per-operation detailed design artifacts
 
 ### The `/sdd.tasks` Command
 
-After a plan is created, this command projects the completed planning-stage design set into an executable task list:
+After a plan is created, this command analyzes the plan and related design documents to generate an executable task list:
 
 1. **Inputs**: Reads `plan.md`, `spec.md`, `data-model.md`, `test-matrix.md`, `contracts/`, `interface-details/`, and `research.md`
 2. **Task Derivation**: Converts approved planning artifacts into executable tasks organized by `GLOBAL` and `IF-###`, where each `IF-###` unit is an IF-scoped execution work package rather than a second design pass
 3. **Dependency Modeling**: Builds a `Task DAG` that becomes the runtime ordering authority
 4. **Output**: Writes `tasks.md` in the feature directory, ready for execution by a Task agent
-
-`/sdd.tasks` does not supplement missing design or audit the feature end-to-end. If required execution anchors are missing, it should stop and route back to the relevant planning command instead of emitting placeholder tasks.
 
 Before implementation, `/sdd.analyze` can be used as the dedicated audit pass to detect drift, contradictions, uncovered MUST requirements, repo-anchor misuse, and unnecessary audit/traceability overhead across `spec.md`, `plan.md`, and `tasks.md`.
 
@@ -131,26 +130,19 @@ Total: ~12 hours of documentation work
 # - Generates specs/003-chat-system/spec.md
 # - Populates it with structured requirements
 
-# Step 2: Initialize planning control plane (5 minutes)
-/sdd.plan specs/003-chat-system/spec.md WebSocket for real-time messaging, PostgreSQL for history, Redis for presence
-
-# Step 2b: Execute the planning queue in order
-/sdd.plan.research specs/003-chat-system/plan.md
-/sdd.plan.data-model specs/003-chat-system/plan.md
-/sdd.plan.test-matrix specs/003-chat-system/plan.md
-/sdd.plan.contract specs/003-chat-system/plan.md
-/sdd.plan.interface-detail specs/003-chat-system/plan.md
+# Step 2: Generate implementation plan (5 minutes)
+/sdd.plan WebSocket for real-time messaging, PostgreSQL for history, Redis for presence
 
 # Step 3: Generate executable tasks (5 minutes)
 /sdd.tasks
 
 # This automatically creates:
 # - specs/003-chat-system/plan.md
-# - specs/003-chat-system/research.md (via /sdd.plan.research <plan.md>)
-# - specs/003-chat-system/data-model.md (via /sdd.plan.data-model <plan.md>)
-# - specs/003-chat-system/test-matrix.md (via /sdd.plan.test-matrix <plan.md>)
-# - specs/003-chat-system/contracts/ (via repeated /sdd.plan.contract <plan.md>)
-# - specs/003-chat-system/interface-details/ (via repeated /sdd.plan.interface-detail <plan.md>)
+# - specs/003-chat-system/research.md (WebSocket library comparisons)
+# - specs/003-chat-system/data-model.md (Global model backbone)
+# - specs/003-chat-system/test-matrix.md (Feature verification paths and key scenarios)
+# - specs/003-chat-system/contracts/ (Minimum external I/O contracts)
+# - specs/003-chat-system/interface-details/ (Per-operation implementation design projections)
 # - specs/003-chat-system/tasks.md (Task list derived from the plan)
 ```
 
@@ -285,7 +277,7 @@ The templates transform the LLM from a creative writer into a disciplined specif
 
 ## The Constitutional Foundation: Enforcing Architectural Discipline
 
-At the heart of SDD lies a constitution—a set of immutable principles that govern how specifications become code. The constitution (`.specify/memory/constitution.md`) acts as the architectural DNA of the system, ensuring that every generated implementation maintains consistency, simplicity, and quality.
+At the heart of SDD lies a constitution—a set of immutable principles that govern how specifications become code. The runtime constitution (`.specify/memory/constitution.md`), materialized from `templates/constitution-template.md`, acts as the architectural DNA of the system, ensuring that every generated implementation maintains consistency, simplicity, and quality.
 
 ### The Nine Articles of Development
 

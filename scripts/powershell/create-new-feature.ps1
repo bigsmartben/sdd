@@ -195,12 +195,6 @@ try {
 
 Set-Location $repoRoot
 
-$template = Join-Path $repoRoot '.specify/templates/spec-template.md'
-if (-not (Test-Path $template -PathType Leaf)) {
-    Write-Error "Required runtime template not found or not readable at $template"
-    exit 1
-}
-
 $specsDir = Join-Path $repoRoot 'specs'
 New-Item -ItemType Directory -Path $specsDir -Force | Out-Null
 
@@ -322,8 +316,13 @@ if ($hasGit) {
 $featureDir = Join-Path $specsDir $branchName
 New-Item -ItemType Directory -Path $featureDir -Force | Out-Null
 
+$template = Join-Path $repoRoot '.specify/templates/spec-template.md'
 $specFile = Join-Path $featureDir 'spec.md'
-Copy-Item $template $specFile -Force
+if (Test-Path $template) { 
+    Copy-Item $template $specFile -Force 
+} else { 
+    New-Item -ItemType File -Path $specFile | Out-Null 
+}
 
 # Set the SPECIFY_FEATURE environment variable for the current session
 $env:SPECIFY_FEATURE = $branchName
@@ -343,3 +342,4 @@ if ($Json) {
     Write-Output "HAS_GIT: $hasGit"
     Write-Output "SPECIFY_FEATURE environment variable set to: $branchName"
 }
+

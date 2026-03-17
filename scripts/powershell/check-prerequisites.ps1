@@ -11,7 +11,6 @@
 #   -Json               Output in JSON format
 #   -RequireTasks       Require tasks.md to exist (for implementation phase)
 #   -IncludeTasks       Include tasks.md in AVAILABLE_DOCS list
-#   -TaskPreflight      Include compact tasks bootstrap packet extracted from plan.md (JSON mode only)
 #   -PathsOnly          Only output path variables (no validation)
 #   -Help, -h           Show help message
 
@@ -20,8 +19,6 @@ param(
     [switch]$Json,
     [switch]$RequireTasks,
     [switch]$IncludeTasks,
-    [switch]$TaskPreflight,
-    [string]$PlanFile,
     [switch]$PathsOnly,
     [switch]$Help
 )
@@ -39,8 +36,6 @@ OPTIONS:
   -Json               Output in JSON format
   -RequireTasks       Require tasks.md to exist (for implementation phase)
   -IncludeTasks       Include tasks.md in AVAILABLE_DOCS list
-  -TaskPreflight      Include compact tasks bootstrap packet extracted from plan.md (JSON mode only)
-  -PlanFile <path>    Explicit path to plan.md under repo/specs/** for planning commands
   -PathsOnly          Only output path variables (no prerequisite validation)
   -Help, -h           Show this help message
 
@@ -50,12 +45,6 @@ EXAMPLES:
   
   # Check implementation prerequisites (plan.md + tasks.md required)
   .\check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks
-
-  # Resolve planning inputs from an explicit plan.md path
-  .\check-prerequisites.ps1 -Json -PlanFile specs/001-demo/plan.md
-
-  # Extract compact tasks bootstrap packet for /sdd.tasks
-  .\check-prerequisites.ps1 -Json -TaskPreflight
   
   # Get feature paths only (no validation)
   .\check-prerequisites.ps1 -PathsOnly
@@ -64,23 +53,11 @@ EXAMPLES:
     exit 0
 }
 
-if ($TaskPreflight -and -not $Json) {
-    Write-Output "ERROR: -TaskPreflight requires -Json output mode."
-    exit 1
-}
-
 # Source common functions
 . "$PSScriptRoot/common.ps1"
 
-# Get feature paths and validate branch only when using active-feature discovery.
-if ($PlanFile) {
-    $paths = Get-FeaturePathsFromPlanFile -PlanFile $PlanFile
-} else {
-    $paths = Get-FeaturePathsEnv
-    if (-not (Test-FeatureBranch -Branch $paths.CURRENT_BRANCH -HasGit:$paths.HAS_GIT)) {
-        exit 1
-    }
-}
+# Get feature paths
+$paths = Get-FeaturePathsEnv
 
 # If paths-only mode, output paths and exit (support combined -Json -PathsOnly)
 if ($PathsOnly) {
@@ -102,6 +79,11 @@ if ($PathsOnly) {
         Write-Output "TASKS: $($paths.TASKS)"
     }
     exit 0
+}
+
+# Validate branch only for full prerequisite checks.
+if (-not (Test-FeatureBranch -Branch $paths.CURRENT_BRANCH -HasGit:$paths.HAS_GIT)) {
+    exit 1
 }
 
 # Validate required directories and files
@@ -149,42 +131,10 @@ if ($IncludeTasks -and (Test-Path $paths.TASKS)) {
 # Output results
 if ($Json) {
     # JSON output
-    $payload = [ordered]@{
+    [PSCustomObject]@{ 
         FEATURE_DIR = $paths.FEATURE_DIR
-        AVAILABLE_DOCS = $docs
-    }
-
-    if ($TaskPreflight) {
-        $payload.TASKS_BOOTSTRAP = $null
-        $helper = Join-Path (Split-Path $PSScriptRoot -Parent) 'task_preflight.py'
-        if (Test-Path $helper -PathType Leaf) {
-            $pythonCmd = Get-Command python3 -ErrorAction SilentlyContinue
-            if (-not $pythonCmd) {
-                $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
-            }
-
-            if ($pythonCmd) {
-                try {
-                    $taskBootstrapJson = & $pythonCmd.Source $helper `
-                        --feature-dir $paths.FEATURE_DIR `
-                        --plan $paths.IMPL_PLAN `
-                        --spec $paths.FEATURE_SPEC `
-                        --data-model $paths.DATA_MODEL `
-                        --test-matrix $paths.TEST_MATRIX `
-                        --contracts-dir $paths.CONTRACTS_DIR `
-                        --interface-details-dir $paths.INTERFACE_DETAILS_DIR
-
-                    if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($taskBootstrapJson)) {
-                        $payload.TASKS_BOOTSTRAP = $taskBootstrapJson | ConvertFrom-Json
-                    }
-                } catch {
-                    $payload.TASKS_BOOTSTRAP = $null
-                }
-            }
-        }
-    }
-
-    [PSCustomObject]$payload | ConvertTo-Json -Compress -Depth 8
+        AVAILABLE_DOCS = $docs 
+    } | ConvertTo-Json -Compress
 } else {
     # Text output
     Write-Output "FEATURE_DIR:$($paths.FEATURE_DIR)"

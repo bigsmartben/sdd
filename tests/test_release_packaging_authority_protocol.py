@@ -123,24 +123,9 @@ def test_powershell_release_packaging_carries_authority_protocol_into_all_agent_
 
     script_path = tmp_path / ".github" / "workflows" / "scripts" / "create-release-packages.ps1"
     script_text = script_path.read_text(encoding="utf-8")
-    match = re.search(r"\$AllAgents\s*=\s*@\(([^)]*)\)", script_text)
-    if match is not None:
-        agents = re.findall(r"'([^']+)'", match.group(1))
-    else:
-        assert "$AllAgents = Get-AllAgents" in script_text
-        helper_script = script_path.parent / "list-agent-config-keys.py"
-        python_exe = shutil.which("python3") or shutil.which("python")
-        assert python_exe is not None
-        helper_result = subprocess.run(
-            [python_exe, str(helper_script)],
-            cwd=tmp_path,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        agents = [line.strip() for line in helper_result.stdout.splitlines() if line.strip()]
-
-    assert agents
+    match = re.search(r"\$AllAgents = @\(([^)]*)\)", script_text)
+    assert match is not None
+    agents = re.findall(r"'([^']+)'", match.group(1))
 
     subprocess.run(
         [

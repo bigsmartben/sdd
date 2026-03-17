@@ -230,18 +230,11 @@ JSON Schema for validating extension configuration.
 description: "Command description"          # Required
 tools:                                      # Optional
   - 'tool-name/function'
-handoffs:                                   # Optional, static handoff metadata only
-  - label: "Build Plan"
-    agent: sdd.plan
-    prompt: "Create a plan for the spec."
-    send: true
 scripts:                                    # Optional
   sh: ../../scripts/bash/helper.sh
   ps: ../../scripts/powershell/helper.ps1
 ---
 ```
-
-`handoffs` are advisory metadata only. Each entry must be unconditional; do not encode state-dependent or multi-result routing in frontmatter. If the next step depends on runtime state, emit that decision in the command body instead.
 
 ### Body (Markdown)
 

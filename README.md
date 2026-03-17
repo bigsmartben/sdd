@@ -114,38 +114,25 @@ Use the **`/sdd.specify`** command to describe what you want to build. Focus on 
 /sdd.specify Build an application that can help me organize my photos in separate photo albums. Albums are grouped by date and can be re-organized by dragging and dropping on the main page. Albums are never in other nested albums. Within each album, photos are previewed in a tile-like interface.
 ```
 
-### 4. Create a planning control plane
+### 4. Create a technical implementation plan
 
-Use the **`/sdd.plan`** command with an explicit `spec.md` path to create `plan.md` as the planning control plane. It captures Stage 0 shared context, the planning queue, and the binding projection ledger for later `sdd.plan.*` child commands.
+Use the **`/sdd.plan`** command to generate design-stage implementation artifacts from your tech stack and architecture choices.
 
 ```bash
-/sdd.plan specs/001-photo-albums/spec.md The application uses Vite with minimal number of libraries. Use vanilla HTML, CSS, and JavaScript as much as possible. Images are not uploaded anywhere and metadata is stored in a local SQLite database.
+/sdd.plan The application uses Vite with minimal number of libraries. Use vanilla HTML, CSS, and JavaScript as much as possible. Images are not uploaded anywhere and metadata is stored in a local SQLite database.
 ```
 
-### 5. Run the planning queue
+### 5. Break down into tasks
 
-Use the `sdd.plan.*` child commands to generate planning artifacts one unit at a time:
-
-- `/sdd.plan.research specs/001-photo-albums/plan.md`
-- `/sdd.plan.data-model specs/001-photo-albums/plan.md`
-- `/sdd.plan.test-matrix specs/001-photo-albums/plan.md`
-- repeated `/sdd.plan.contract specs/001-photo-albums/plan.md`
-- repeated `/sdd.plan.interface-detail specs/001-photo-albums/plan.md`
-
-`plan.md` queue state is the sole authority for planning handoff decisions.
-For repeated `/sdd.plan.contract` and `/sdd.plan.interface-detail` runs, follow the runtime `Handoff Decision` output rather than any static frontmatter suggestion. Every planning command now requires its explicit file path; planning commands no longer derive their target from Git branch or `SPECIFY_FEATURE`.
-
-### 6. Break down into tasks
-
-Use **`/sdd.tasks`** to convert approved planning artifacts into executable orchestration (`Task DAG`, `GLOBAL`, `IF-###`) without performing a unified semantic audit. This is an execution decomposition step only: it projects completed `plan`-stage design into work packages and hard-fails on missing execution anchors instead of supplementing design or writing placeholder tasks.
+Use **`/sdd.tasks`** to convert approved planning artifacts into executable orchestration (`Task DAG`, `GLOBAL`, `IF-###`) without performing a unified semantic audit.
 
 ```bash
 /sdd.tasks
 ```
 
-### 7. Execute implementation
+### 6. Execute implementation
 
-Use **`/sdd.implement`** to execute tasks with runtime hard gates and build your feature according to the plan. Run **`/sdd.analyze`** first as the default pre-implementation audit; if no current audit exists, implementation should stop with an analyze-first blocking reminder unless you explicitly waive it.
+Use **`/sdd.implement`** to execute tasks with runtime hard gates and build your feature according to the plan (`/sdd.analyze` first is advisory, not blocking).
 
 ```bash
 /sdd.implement
@@ -312,14 +299,9 @@ Essential commands for the Spec-Driven Development workflow:
 | ----------------------- | ------------------------------------------------------------------------ |
 | `/sdd.constitution` | Create or update project governing principles and development guidelines |
 | `/sdd.specify`      | Define what you want to build (requirements and user stories)            |
-| `/sdd.plan <spec.md>`         | Create `plan.md` as the planning control plane and Stage 0 shared context |
-| `/sdd.plan.research <plan.md>` | Generate the queued `research.md` artifact |
-| `/sdd.plan.data-model <plan.md>` | Generate the queued `data-model.md` artifact |
-| `/sdd.plan.test-matrix <plan.md>` | Generate the queued `test-matrix.md` artifact and binding rows |
-| `/sdd.plan.contract <plan.md>` | Generate one queued contract artifact |
-| `/sdd.plan.interface-detail <plan.md>` | Generate one queued interface-detail artifact |
+| `/sdd.plan`         | Generate design-stage implementation artifacts from your chosen tech stack |
 | `/sdd.tasks`        | Produce executable orchestration from approved planning artifacts (no unified semantic audit) |
-| `/sdd.implement`    | Execute tasks with runtime hard gates (expects `/sdd.analyze` first; missing audit triggers a blocking reminder unless explicitly waived) |
+| `/sdd.implement`    | Execute tasks with runtime hard gates (`/sdd.analyze`-first is advisory, not blocking) |
 
 #### Optional Commands
 
@@ -335,7 +317,7 @@ Additional commands for enhanced quality and validation:
 
 | Variable          | Description                                                                                                                                                                                                                                                                                            |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `SPECIFY_FEATURE` | Override feature detection for non-Git repositories. Set to the feature directory name (e.g., `001-photo-albums`) to work on a specific feature when not using Git branches.<br/>\*\*Planning commands use explicit file paths now, so this variable mainly affects commands that still rely on active-feature discovery such as `/sdd.clarify` or `/sdd.tasks`. |
+| `SPECIFY_FEATURE` | Override feature detection for non-Git repositories. Set to the feature directory name (e.g., `001-photo-albums`) to work on a specific feature when not using Git branches.<br/>\*\*Must be set in the context of the agent you're working with prior to using `/sdd.plan` or follow-up commands. |
 
 ## 📚 Core Philosophy
 
@@ -456,7 +438,7 @@ Go to the project folder and run your AI agent. In our example, we're using `cla
 
 ![Bootstrapping Claude Code environment](./media/bootstrap-claude-code.gif)
 
-You will know that things are configured correctly if you see the `/sdd.constitution`, `/sdd.specify`, `/sdd.plan`, `sdd.plan.*`, `/sdd.tasks`, and `/sdd.implement` commands available.
+You will know that things are configured correctly if you see the `/sdd.constitution`, `/sdd.specify`, `/sdd.plan`, `/sdd.tasks`, and `/sdd.implement` commands available.
 
 The first step should be establishing your project's governing principles using the `/sdd.constitution` command. This helps ensure consistent decision-making throughout all subsequent development phases:
 
@@ -555,29 +537,21 @@ If you want checklist-style validation at this point, run `/sdd.checklist` as a 
 
 It's important to use the interaction with Claude Code as an opportunity to clarify and ask questions around the specification - **do not treat its first attempt as final**.
 
-### **STEP 4:** Initialize the planning control plane
+### **STEP 4:** Generate a plan
 
-You can now be specific about the tech stack and other technical requirements. Use `/sdd.plan <spec.md>` with an explicit `spec.md` path:
+You can now be specific about the tech stack and other technical requirements. You can use the `/sdd.plan` command that is built into the project template with a prompt like this:
 
 ```text
-/sdd.plan specs/001-create-taskify/spec.md We are going to generate this using .NET Aspire, using Postgres as the database. The frontend should use
+We are going to generate this using .NET Aspire, using Postgres as the database. The frontend should use
 Blazor server with drag-and-drop task boards, real-time updates. There should be a REST API created with a projects API,
 tasks API, and a notifications API.
 ```
 
-The output of this step will initialize `plan.md` as the planning control plane. It contains:
-
-- `Shared Context Snapshot`
-- `Stage Queue`
-- `Binding Projection Index`
-- `Artifact Status`
-
-At this point the downstream planning artifacts are still generated by `sdd.plan.*` child commands.
-
-The directory tree after `/sdd.plan` will resemble this:
+The output of this step will include a number of implementation detail documents, with your directory tree resembling this:
 
 ```text
-.specify
+.
+├── CLAUDE.md
 ├── memory
 │  └── constitution.md
 ├── scripts
@@ -586,6 +560,19 @@ The directory tree after `/sdd.plan` will resemble this:
 │  ├── create-new-feature.sh
 │  ├── setup-plan.sh
 │  └── update-claude-md.sh
+├── specs
+│  └── 001-create-taskify
+│      ├── data-model.md
+│      ├── test-matrix.md
+│      ├── contracts
+│      │  ├── api-spec.json
+│      │  └── signalr-spec.md
+│      ├── interface-details
+│      │  ├── create-project.md
+│      │  └── create-task.md
+│      ├── plan.md
+│      ├── research.md
+│      └── spec.md
 └── templates
     ├── contract-template.md
     ├── data-model-template.md
@@ -596,32 +583,11 @@ The directory tree after `/sdd.plan` will resemble this:
     ├── spec-template.md
     ├── test-matrix-template.md
     └── tasks-template.md
-
-specs/
-└── 001-create-taskify
-    ├── plan.md
-    └── spec.md
 ```
 
-All generation commands must read runtime templates from `.specify/templates/`. `/sdd.plan` uses `.specify/templates/plan-template.md` for `plan.md`, and the `sdd.plan.*` child commands use their corresponding runtime templates under `.specify/templates/` to generate the stage artifacts.
+`/sdd.plan` uses `plan-template.md` for `plan.md`, and the planning templates in `templates/` as the structure sources for the stage artifacts it generates.
 
-### **STEP 5:** Execute the planning queue
-
-Run the child commands in queue order:
-
-```text
-/sdd.plan.research specs/001-create-taskify/plan.md
-/sdd.plan.data-model specs/001-create-taskify/plan.md
-/sdd.plan.test-matrix specs/001-create-taskify/plan.md
-/sdd.plan.contract specs/001-create-taskify/plan.md
-/sdd.plan.interface-detail specs/001-create-taskify/plan.md
-```
-
-`/sdd.plan.contract` and `/sdd.plan.interface-detail` are repeated commands. Each run processes one queued unit from `plan.md`, updates that unit's status, and then emits a `Handoff Decision` derived only from the post-writeback queue state in `plan.md`. The `Handoff Decision` should include the next command with the explicit `plan.md` path.
-
-Static command frontmatter `handoffs` are advisory metadata only. They may point to one unconditional next command, but they are not the authority for state-dependent routing.
-
-Check the resulting planning artifacts as they are generated. For example, validate `research.md` after `/sdd.plan.research`, then `data-model.md`, `test-matrix.md`, and the queued contract/interface-detail artifacts.
+Check the `research.md` document to ensure that the right tech stack is used, based on your instructions. You can ask Claude Code to refine it if any of the components stand out, or even have it check the locally-installed version of the platform/framework you want to use (e.g., .NET).
 
 Additionally, you might want to ask Claude Code to research details about the chosen tech stack if it's something that is rapidly changing (e.g., .NET Aspire, JS frameworks), with a prompt like this:
 
@@ -648,18 +614,18 @@ That's way too untargeted research. The research needs to help you solve a speci
 > [!NOTE]
 > Claude Code might be over-eager and add components that you did not ask for. Ask it to clarify the rationale and the source of the change.
 
-### **STEP 6:** Audit model and optional checklist (`/sdd.analyze`, `/sdd.checklist`)
+### **STEP 5:** Optional vertical quality gates (`/sdd.analyze`, `/sdd.checklist`)
 
-With the plan in place, proceed to `/sdd.tasks` as the main flow. Avoid ad hoc audit prompts here. After `/sdd.tasks`, run `/sdd.analyze` as the default pre-implementation audit pass: it combines lint-backed mechanical checks with cross-artifact semantic findings across `spec.md`, `plan.md`, and `tasks.md` (drift, contradictions, repo-anchor misuse, audit payload leakage, uncovered MUST requirements, and boundary violations).
+With the plan in place, proceed to `/sdd.tasks` as the main flow. Avoid ad hoc audit prompts here. When you need a dedicated pre-implementation audit pass, run `/sdd.analyze` after `/sdd.tasks` as the unified audit entrypoint: it combines lint-backed mechanical checks with cross-artifact semantic findings across `spec.md`, `plan.md`, and `tasks.md` (drift, contradictions, repo-anchor misuse, audit payload leakage, uncovered MUST requirements, and boundary violations).
 
 If you want checklist-style validation, run `/sdd.checklist` as a separate standalone vertical pass rather than folding checklist burden back into the main-flow artifacts.
 
 You can also ask Claude Code (if you have the [GitHub CLI](https://docs.github.com/en/github-cli/github-cli) installed) to go ahead and create a pull request from your current branch to `main` with a detailed description, to make sure that the effort is properly tracked.
 
 > [!NOTE]
-> If you suspect over-engineered decisions or cross-artifact drift before implementation, use `/sdd.analyze` as the dedicated audit step and then adjust the upstream artifacts it flags. Ensure that Claude Code follows the [constitution](.specify/memory/constitution.md) as the foundational piece that it must adhere to when refining the plan. Repo semantic anchors come from source code plus `.specify/memory/constitution.md`; helper docs and prior generated artifacts are not repo anchors.
+> If you suspect over-engineered decisions or cross-artifact drift before implementation, use `/sdd.analyze` as the dedicated audit step and then adjust the upstream artifacts it flags. Ensure that Claude Code follows the runtime constitution (`.specify/memory/constitution.md`), materialized from the [constitution template](templates/constitution-template.md), as the foundational piece that it must adhere to when refining the plan. Repo semantic anchors come from source code plus `.specify/memory/constitution.md`; helper docs and prior generated artifacts are not repo anchors.
 
-### **STEP 7:** Generate task breakdown with /sdd.tasks
+### **STEP 6:** Generate task breakdown with /sdd.tasks
 
 With the implementation plan ready (and any optional vertical checks complete), you can now break down the plan into specific, actionable tasks that can be executed in the correct order. Use the `/sdd.tasks` command to automatically generate a detailed task breakdown from your implementation plan:
 
@@ -677,15 +643,11 @@ This step creates a `tasks.md` file in your feature specification directory that
 
 `/sdd.tasks` consumes approved planning artifacts and turns them into execution orchestration. It does not reopen research, data-model, contract, or interface-detail design, and it does not perform the unified cross-artifact semantic audit.
 
-It should emit single-target work packages only: each task must carry one explicit path or command target plus one primary completion anchor. If required anchors are missing from `plan.md`, `contracts/`, `interface-details/`, or `test-matrix.md`, `/sdd.tasks` should stop and route back to the relevant `/sdd.plan.*` command rather than inferring new semantics or emitting `blocked`/`todo` placeholder tasks.
-
-For faster runs, the prerequisite script may pre-extract a compact `TASKS_BOOTSTRAP` packet from `plan.md` so `/sdd.tasks` can reuse a joined control-plane inventory instead of reparsing the planning tables during the same run.
-
-Run `/sdd.analyze` after `/sdd.tasks` as the default pre-implementation audit pass for repo-anchor misuse, audit payload leakage, drift, contradictions, boundary violations, uncovered MUST requirements, and other cross-artifact issues.
+Run `/sdd.analyze` after `/sdd.tasks` when you want the dedicated pre-implementation audit pass for repo-anchor misuse, audit payload leakage, drift, contradictions, boundary violations, uncovered MUST requirements, and other cross-artifact issues.
 
 The generated tasks.md provides a clear roadmap for the `/sdd.implement` command, ensuring systematic implementation that maintains code quality without turning the task artifact itself into an audit ledger.
 
-### **STEP 8:** Implementation
+### **STEP 7:** Implementation
 
 Once ready, use the `/sdd.implement` command to execute your implementation plan:
 
@@ -693,7 +655,7 @@ Once ready, use the `/sdd.implement` command to execute your implementation plan
 /sdd.implement
 ```
 
-The `/sdd.implement` command is execution plus runtime hard gates. It is not the unified semantic audit step; if no current `/sdd.analyze` pass exists for the current task artifacts, implementation should stop with an analyze-first blocking reminder unless you explicitly waive the audit step.
+The `/sdd.implement` command is execution plus runtime hard gates. It is not the unified semantic audit step; running `/sdd.analyze` beforehand is advisory and non-blocking.
 
 The `/sdd.implement` command will:
 

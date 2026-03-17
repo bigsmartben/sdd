@@ -49,24 +49,16 @@ def test_constitution_command_blocks_lint_detail_embedding_and_dual_authority_ex
     assert "Do not duplicate one normative rule into competing expansions across multiple command templates" in content
 
 
-def test_constitution_command_groups_alignment_work_and_avoids_redundant_restatements():
-    content = read("templates/commands/constitution.md")
-
-    assert "Review and refresh impacted artifact families only; avoid mechanical full-repo rewrites of unchanged downstream files." in content
-    assert "Prefer targeted references over restating the same rule text across multiple downstream templates." in content
-    assert "Keep this report delta-oriented; do not restate unchanged template inventories or canonical baseline details beyond status." in content
-    assert "reference the Sync Impact Report instead of restating it" in content
-
-
 def test_constitution_command_uses_active_agent_command_directory_guidance():
     content = read("templates/commands/constitution.md")
 
-    assert "Read each command file in the active agent command directory" in content
+    assert "Read only files affected by the delta set, not the whole repo." in content
+    assert "Review command files in the active agent command directory only when the delta affects command contracts or wording" in content
     assert ".roo/commands/*.md" in content
     assert ".claude/commands/*.md" in content
     assert ".github/agents/*.agent.md" in content
     assert ".gemini/commands/*.toml" in content
-    assert "if `templates/commands/*.md` exists in this repository, review it as well" in content
+    assert "If `templates/commands/*.md` exists in this repository, review the matching mirror there as well." in content
     assert "Runtime template authority path is `.specify/templates/`" in content
     assert "use the `templates/` mirror for the same files" in content
 
@@ -76,8 +68,6 @@ def test_constitution_command_uses_current_constitution_state_not_placeholder_pr
 
     assert "Treat the current file as the authoritative working constitution" in content
     assert ".specify/templates/constitution-template.md" in content
-    assert "stop and report the blocker" in content
-    assert "Do not substitute `templates/constitution-template.md` or any other template location." in content
     assert "do not force a template-token rewrite pass" in content
     assert "This file is a TEMPLATE containing placeholder tokens" not in content
 
@@ -94,24 +84,16 @@ def test_constitution_command_owns_repository_first_baseline_pipeline():
     assert "Node: `package.json`" in content
     assert "Python: `pyproject.toml`" in content
     assert "Go: `go.mod`" in content
-    assert "never read or stat bare projection filenames from repo root" in content
     assert "`created`" in content
     assert "`updated`" in content
     assert "`unchanged`" in content
-    assert "`deleted`" in content
 
 
-def test_constitution_command_defines_runtime_fast_path_and_bounded_reads():
+def test_constitution_command_uses_delta_first_speed_rules_and_stays_trim():
     content = read("templates/commands/constitution.md")
 
-    assert "Build one run-local **change impact map** before broad reads" in content
-    assert "`governance-only`" in content
-    assert "`template-affecting`" in content
-    assert "`repo-first-affecting`" in content
-    assert "Resolve impacted families from the change impact map first, then read/update only those families." in content
-    assert "Do not run directory-wide or repository-wide exploratory scans" in content
-    assert "Repository-first fast path gate (evaluate before regeneration)" in content
-    assert "If no trigger is true, keep canonical baseline files as-is and mark each artifact `unchanged` without template re-render." in content
-    assert "Apply a **bounded evidence budget** for this run" in content
-    assert "Runtime guidance docs (`README.md`, `docs/quickstart.md`, agent docs) are **opt-in by trigger** only" in content
-    assert "Keep runtime output concise: no unchanged-file inventories" in content
+    assert "Decide the delta set before opening downstream templates or docs." in content
+    assert "Reuse current headings and nearby anchors instead of replaying full-file rewrites." in content
+    assert "Sync only the files touched by the delta set plus the mandatory repository-first templates." in content
+    assert "Stop after constitution, impacted mirrors, and canonical repository-first projections are aligned." in content
+    assert len(content.split()) < 1150

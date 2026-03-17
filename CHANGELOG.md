@@ -7,33 +7,6 @@ Recent changes to the Specify CLI and templates are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.15] - 2026-03-16
-
-### Changed
-
-- Remove planning-mode variant guidance across command templates, CLI help text, docs, and regression tests
-- Keep `/sdd.plan` as a control-plane bootstrap/orchestration command and require queue execution through explicit `/sdd.plan.*` child commands
-
-## [2.0.14] - 2026-03-16
-
-### Changed
-
-- Switch `/sdd.plan` and all `/sdd.plan.*` child commands to mandatory explicit file-path inputs, using `spec.md` for planning bootstrap and `plan.md` for queue-driven child stages
-- Add planning-mode variant guidance while preserving queue-order semantics and first-blocker stop behavior
-- Update planning scripts, CLI guidance, docs, and regression coverage to remove branch-driven planning path discovery from the planning command lane
-
-## [2.0.13] - 2026-03-16
-
-### Added
-
-- Add queued `/sdd.plan.*` child-command templates for `research`, `data-model`, `test-matrix`, `contract`, and `interface-detail` planning artifacts, with regression coverage for the new planning workflow
-
-### Changed
-
-- Refactor `/sdd.plan` into a planning control plane that owns queue state, binding-projection tracking, and runtime handoff decisions instead of generating all downstream planning artifacts directly
-- Align CLI next-step guidance, setup scripts, runtime-template authority rules, and user-facing docs around the staged planning queue plus analyze-first pre-implementation flow
-- Publish patch release `2.0.13` for the planning-control-plane and runtime-template-authority update set
-
 ## [2.0.12] - 2026-03-16
 
 ### Changed
@@ -43,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.0.11] - 2026-03-15
 
 ### Changed
+
+
+
 
 ## [2.0.9] - 2026-03-16
 

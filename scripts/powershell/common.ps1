@@ -12,7 +12,7 @@ function Get-RepoRoot {
     }
     
     # Fall back to script location for non-git repos
-    return (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
+    return (Resolve-Path (Join-Path $PSScriptRoot "../../..")).Path
 }
 
 function Get-CurrentBranch {
@@ -92,128 +92,6 @@ function Get-FeatureDir {
     Join-Path $RepoRoot "specs/$Branch"
 }
 
-function Test-PathWithinRoot {
-    param(
-        [string]$Path,
-        [string]$Root
-    )
-
-    $normalizedPath = [System.IO.Path]::GetFullPath($Path).TrimEnd('\', '/')
-    $normalizedRoot = [System.IO.Path]::GetFullPath($Root).TrimEnd('\', '/')
-    $prefix = $normalizedRoot + [System.IO.Path]::DirectorySeparatorChar
-
-    return $normalizedPath -eq $normalizedRoot -or $normalizedPath.StartsWith($prefix, [System.StringComparison]::Ordinal)
-}
-
-function Resolve-RepoRelativePath {
-    param(
-        [string]$RepoRoot,
-        [string]$InputPath
-    )
-
-    if (-not $InputPath) {
-        throw "Path is required."
-    }
-
-    $candidate = if ([System.IO.Path]::IsPathRooted($InputPath)) {
-        $InputPath
-    } else {
-        Join-Path $RepoRoot $InputPath
-    }
-
-    $parent = Split-Path -Parent $candidate
-    if (-not (Test-Path $parent -PathType Container)) {
-        throw "Unable to resolve path: $InputPath"
-    }
-
-    Join-Path (Resolve-Path $parent).Path (Split-Path -Leaf $candidate)
-}
-
-function Resolve-FeatureFilePath {
-    param(
-        [string]$RepoRoot,
-        [string]$InputPath,
-        [string]$ExpectedFileName,
-        [string]$Label
-    )
-
-    $specsRoot = Join-Path $RepoRoot 'specs'
-    if (-not (Test-Path $specsRoot -PathType Container)) {
-        throw "specs directory not found: $specsRoot"
-    }
-
-    try {
-        $resolvedPath = Resolve-RepoRelativePath -RepoRoot $RepoRoot -InputPath $InputPath
-    } catch {
-        throw "Unable to resolve $Label path: $InputPath"
-    }
-
-    $resolvedSpecsRoot = (Resolve-Path $specsRoot).Path
-    if (-not (Test-PathWithinRoot -Path $resolvedPath -Root $resolvedSpecsRoot)) {
-        throw "$Label must be located under $resolvedSpecsRoot"
-    }
-
-    if ((Split-Path -Leaf $resolvedPath) -ne $ExpectedFileName) {
-        throw "$Label must point to a file named $ExpectedFileName: $resolvedPath"
-    }
-
-    if (-not (Test-Path $resolvedPath -PathType Leaf)) {
-        throw "$Label not found: $resolvedPath"
-    }
-
-    $resolvedPath
-}
-
-function New-FeaturePathsObject {
-    param(
-        [string]$RepoRoot,
-        [string]$CurrentBranch,
-        [bool]$HasGit,
-        [string]$FeatureDir,
-        [string]$FeatureSpec,
-        [string]$ImplPlan
-    )
-
-    [PSCustomObject]@{
-        REPO_ROOT             = $RepoRoot
-        CURRENT_BRANCH        = $CurrentBranch
-        HAS_GIT               = $HasGit
-        FEATURE_DIR           = $FeatureDir
-        FEATURE_SPEC          = $FeatureSpec
-        IMPL_PLAN             = $ImplPlan
-        TASKS                 = Join-Path $FeatureDir 'tasks.md'
-        RESEARCH              = Join-Path $FeatureDir 'research.md'
-        DATA_MODEL            = Join-Path $FeatureDir 'data-model.md'
-        TEST_MATRIX           = Join-Path $FeatureDir 'test-matrix.md'
-        CONTRACTS_DIR         = Join-Path $FeatureDir 'contracts'
-        INTERFACE_DETAILS_DIR = Join-Path $FeatureDir 'interface-details'
-    }
-}
-
-function Get-FeaturePathsFromSpecFile {
-    param([string]$SpecFile)
-
-    $repoRoot = Get-RepoRoot
-    $currentBranch = Get-CurrentBranch
-    $hasGit = Test-HasGit
-    $resolvedSpec = Resolve-FeatureFilePath -RepoRoot $repoRoot -InputPath $SpecFile -ExpectedFileName 'spec.md' -Label 'spec file'
-    $featureDir = Split-Path -Parent $resolvedSpec
-
-    New-FeaturePathsObject -RepoRoot $repoRoot -CurrentBranch $currentBranch -HasGit:$hasGit -FeatureDir $featureDir -FeatureSpec $resolvedSpec -ImplPlan (Join-Path $featureDir 'plan.md')
-}
-
-function Get-FeaturePathsFromPlanFile {
-    param([string]$PlanFile)
-
-    $repoRoot = Get-RepoRoot
-    $currentBranch = Get-CurrentBranch
-    $hasGit = Test-HasGit
-    $resolvedPlan = Resolve-FeatureFilePath -RepoRoot $repoRoot -InputPath $PlanFile -ExpectedFileName 'plan.md' -Label 'plan file'
-    $featureDir = Split-Path -Parent $resolvedPlan
-
-    New-FeaturePathsObject -RepoRoot $repoRoot -CurrentBranch $currentBranch -HasGit:$hasGit -FeatureDir $featureDir -FeatureSpec (Join-Path $featureDir 'spec.md') -ImplPlan $resolvedPlan
-}
-
 function Find-FeatureDirByPrefix {
     param(
         [string]$RepoRoot,
@@ -254,8 +132,21 @@ function Get-FeaturePathsEnv {
     $currentBranch = Get-CurrentBranch
     $hasGit = Test-HasGit
     $featureDir = Find-FeatureDirByPrefix -RepoRoot $repoRoot -BranchName $currentBranch
-
-    New-FeaturePathsObject -RepoRoot $repoRoot -CurrentBranch $currentBranch -HasGit:$hasGit -FeatureDir $featureDir -FeatureSpec (Join-Path $featureDir 'spec.md') -ImplPlan (Join-Path $featureDir 'plan.md')
+    
+    [PSCustomObject]@{
+        REPO_ROOT     = $repoRoot
+        CURRENT_BRANCH = $currentBranch
+        HAS_GIT       = $hasGit
+        FEATURE_DIR   = $featureDir
+        FEATURE_SPEC  = Join-Path $featureDir 'spec.md'
+        IMPL_PLAN     = Join-Path $featureDir 'plan.md'
+        TASKS         = Join-Path $featureDir 'tasks.md'
+        RESEARCH      = Join-Path $featureDir 'research.md'
+        DATA_MODEL    = Join-Path $featureDir 'data-model.md'
+        TEST_MATRIX   = Join-Path $featureDir 'test-matrix.md'
+        CONTRACTS_DIR = Join-Path $featureDir 'contracts'
+        INTERFACE_DETAILS_DIR = Join-Path $featureDir 'interface-details'
+    }
 }
 
 function Test-FileExists {

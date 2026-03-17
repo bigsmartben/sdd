@@ -109,7 +109,7 @@ Include only project-critical concepts here, for example:
 Constitution-level repository-first facts MUST define stable evidence classes, canonical baseline artifacts,
 and dependency derivation policy used by downstream commands.
 
-- Repository-first analysis is limited to two conclusions:
+- Repository-first analysis is limited to three conclusions:
   - technical dependency matrix facts
   - module invocation and layering governance
 - Evidence classes (hard rule):
@@ -131,12 +131,13 @@ and dependency derivation policy used by downstream commands.
   - `Type` values MUST be `2nd` or `3rd`
   - `Version Source` values MUST be `direct`, `dependencyManagement`, `module-dependencyManagement`, or `unresolved`
   - version divergence and `unresolved` MUST be preserved as governance signals (no silent normalization)
-- Invocation-governance binding (hard rule):
+- Projection-boundary binding (hard rule):
+  - invocation governance MUST derive from real module/source anchors
   - invocation governance MUST consume dependency-governance signals from canonical dependency matrix
 - Supporting-input boundary (hard rule):
   - planning artifacts, docs, tests, demos, and generated outputs are supporting context only and MUST NOT be promoted into repo semantic evidence
 - Separation (hard rule):
-  - `.specify/memory/repository-first/technical-dependency-matrix.md` (facts) and `.specify/memory/repository-first/module-invocation-spec.md` (execution constraints) are complementary and MUST NOT replace one another
+  - `technical-dependency-matrix.md` (facts) and `module-invocation-spec.md` (execution constraints) are complementary and MUST NOT replace one another
 
 ## State Machine Applicability Gate
 

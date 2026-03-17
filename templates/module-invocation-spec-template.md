@@ -2,7 +2,7 @@
 
 **Projection Type**: Repository-First Projection  
 **Canonical Path**: `.specify/memory/repository-first/module-invocation-spec.md`  
-**Primary Inputs**: Real module layering + governance signals from `.specify/memory/repository-first/technical-dependency-matrix.md`
+**Primary Inputs**: Real module layering + governance signals from `technical-dependency-matrix.md`
 
 Use this artifact to define module invocation constraints.
 Rules in this document MUST use normative language (`MUST`/`SHOULD`/`MUST NOT`).
@@ -31,7 +31,7 @@ Define invocation directions that are prohibited.
 
 ## Dependency Governance Rules
 
-These rules MUST consume version-divergence and `unresolved` signals from `.specify/memory/repository-first/technical-dependency-matrix.md`.
+These rules MUST consume version-divergence and `unresolved` signals from `technical-dependency-matrix.md`.
 
 | Rule ID | Trigger Signal (from matrix) | Governance Rule | Required Action |
 |---------|------------------------------|-----------------|-----------------|
@@ -41,4 +41,4 @@ These rules MUST consume version-divergence and `unresolved` signals from `.spec
 
 ## Boundary Notes
 
-- This artifact defines invocation governance only; it does not replace dependency facts from `.specify/memory/repository-first/technical-dependency-matrix.md`.
+- This artifact defines invocation governance only; it does not replace dependency facts from `technical-dependency-matrix.md`.

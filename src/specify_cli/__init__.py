@@ -1145,15 +1145,10 @@ DEFAULT_SKILLS_DIR = ".agents/skills"
 # Enhanced descriptions for each SDD command skill
 SKILL_DESCRIPTIONS = {
     "specify": "Create or update feature specifications from natural language descriptions. Use when starting new features or refining requirements. Generates spec.md with user stories, functional requirements, and acceptance criteria following spec-driven development methodology.",
-    "plan": "Initialize the planning control plane from an explicit spec.md path. Use `/sdd.plan <path/to/spec.md> ...` after creating a spec to produce plan.md with Stage 0 shared context, queue state, and binding projection tracking for the /sdd.plan.* child commands.",
-    "plan.research": "Generate the queued research.md artifact selected from an explicit plan.md path. Use `/sdd.plan.research <path/to/plan.md>` after /sdd.plan to resolve the first pending research unit and emit the next runtime handoff decision.",
-    "plan.data-model": "Generate the queued data-model.md artifact selected from an explicit plan.md path. Use `/sdd.plan.data-model <path/to/plan.md>` after /sdd.plan.research to produce one backbone data model unit and emit the next runtime handoff decision.",
-    "plan.test-matrix": "Generate the queued test-matrix.md artifact selected from an explicit plan.md path. Use `/sdd.plan.test-matrix <path/to/plan.md>` after /sdd.plan.data-model to seed binding rows and emit the next runtime handoff decision.",
-    "plan.contract": "Generate one queued contract artifact from an explicit plan.md path. Use `/sdd.plan.contract <path/to/plan.md>` until the runtime Handoff Decision advances planning to /sdd.plan.interface-detail.",
-    "plan.interface-detail": "Generate one queued interface-detail artifact from an explicit plan.md path. Use `/sdd.plan.interface-detail <path/to/plan.md>` until the runtime Handoff Decision advances planning to /sdd.tasks.",
-    "tasks": "Break down approved planning artifacts into actionable task lists. Use after the planning queue is complete to create a structured task breakdown organized by GLOBAL and IF-### scopes with a Task DAG for dependency-safe execution.",
-    "implement": "Execute all tasks from the task breakdown to build the feature. Use after /sdd.analyze as the default pre-implementation audit, or only after an explicit audit waiver for the current run.",
-    "analyze": "Run the dedicated cross-artifact audit across spec.md, plan.md, and tasks.md. Use after task generation as the default pre-implementation audit to surface drift, contradictions, uncovered MUST requirements, and other blocking issues.",
+    "plan": "Generate implementation plans from feature specifications. Use after creating a spec to produce research, a global data model, feature verification design, minimum-I/O contracts, and interface-level detailed design.",
+    "tasks": "Break down implementation plans into actionable task lists. Use after planning to create a structured task breakdown organized by GLOBAL and IF-### scopes with a Task DAG for dependency-safe execution.",
+    "implement": "Execute all tasks from the task breakdown to build the feature. Use after task generation to run the planned solution from tasks.md, validate execution closure, and follow TDD where applicable.",
+    "analyze": "Run the dedicated cross-artifact audit across spec.md, plan.md, and tasks.md. Use after task generation to surface drift, contradictions, uncovered MUST requirements, and other pre-implementation issues.",
     "clarify": "Structured clarification workflow for underspecified requirements. Use before planning to resolve ambiguities through coverage-based questioning. Records answers in spec clarifications section.",
     "constitution": "Create or update project governing principles and development guidelines. Use at project start to establish code quality, testing standards, and architectural constraints that guide all development.",
     "checklist": "Generate custom quality checklists for validating requirements completeness and clarity. Use to create unit tests for English that ensure spec quality before implementation.",
@@ -1766,12 +1761,9 @@ def init(
 
     steps_lines.append(f"   2.1 [cyan]/{COMMAND_NAMESPACE}.constitution[/] - Establish project principles")
     steps_lines.append(f"   2.2 [cyan]/{COMMAND_NAMESPACE}.specify[/] - Create baseline specification")
-    steps_lines.append(f"   2.3 [cyan]/{COMMAND_NAMESPACE}.plan <spec.md>[/] - Initialize the planning control plane")
-    steps_lines.append(f"   2.4 [cyan]/{COMMAND_NAMESPACE}.plan.research <plan.md>[/] - Start the planning queue")
-    steps_lines.append(f"   2.5 Follow runtime Handoff Decision through [cyan]/{COMMAND_NAMESPACE}.plan.data-model <plan.md>[/], [cyan]/{COMMAND_NAMESPACE}.plan.test-matrix <plan.md>[/], repeated [cyan]/{COMMAND_NAMESPACE}.plan.contract <plan.md>[/], and repeated [cyan]/{COMMAND_NAMESPACE}.plan.interface-detail <plan.md>[/]")
-    steps_lines.append(f"   2.6 [cyan]/{COMMAND_NAMESPACE}.tasks[/] - Generate actionable tasks")
-    steps_lines.append(f"   2.7 [cyan]/{COMMAND_NAMESPACE}.analyze[/] - Run the default pre-implementation audit")
-    steps_lines.append(f"   2.8 [cyan]/{COMMAND_NAMESPACE}.implement[/] - Execute implementation after analyze or an explicit waiver")
+    steps_lines.append(f"   2.3 [cyan]/{COMMAND_NAMESPACE}.plan[/] - Create implementation plan")
+    steps_lines.append(f"   2.4 [cyan]/{COMMAND_NAMESPACE}.tasks[/] - Generate actionable tasks")
+    steps_lines.append(f"   2.5 [cyan]/{COMMAND_NAMESPACE}.implement[/] - Execute implementation")
 
     steps_panel = Panel("\n".join(steps_lines), title="Next Steps", border_style="cyan", padding=(1,2))
     console.print()
@@ -1781,6 +1773,7 @@ def init(
         "Optional commands that you can use for your specs [bright_black](improve quality & confidence)[/bright_black]",
         "",
         f"○ [cyan]/{COMMAND_NAMESPACE}.clarify[/] [bright_black](optional)[/bright_black] - Ask structured questions to de-risk ambiguous areas before planning (run before [cyan]/{COMMAND_NAMESPACE}.plan[/] if used)",
+        f"○ [cyan]/{COMMAND_NAMESPACE}.analyze[/] [bright_black](optional)[/bright_black] - Dedicated audit pass for drift, contradictions, and coverage gaps (after [cyan]/{COMMAND_NAMESPACE}.tasks[/], before [cyan]/{COMMAND_NAMESPACE}.implement[/])",
         f"○ [cyan]/{COMMAND_NAMESPACE}.checklist[/] [bright_black](optional)[/bright_black] - Generate quality checklists to validate requirements completeness, clarity, and consistency (after [cyan]/{COMMAND_NAMESPACE}.plan[/])"
     ]
     enhancements_panel = Panel("\n".join(enhancement_lines), title="Enhancement Commands", border_style="cyan", padding=(1,2))

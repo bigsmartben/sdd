@@ -18,104 +18,66 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 You are updating the project constitution at `.specify/memory/constitution.md`. Treat the current file as the authoritative working constitution and amend it in-place based on user intent and governance rules.
 
-**Runtime template path rule**: If `.specify/memory/constitution.md` does not exist yet, initialize it from `.specify/templates/constitution-template.md` first. If that runtime template is missing or non-consumable when initialization is required, stop and report the blocker. Do not substitute `templates/constitution-template.md` or any other template location. In the Spec Kit source repository, `templates/constitution-template.md` is the source mirror of that runtime template.
+**Runtime template path rule**: If `.specify/memory/constitution.md` does not exist yet, initialize it from `.specify/templates/constitution-template.md` first. In the Spec Kit source repository, `templates/constitution-template.md` is the source mirror of that runtime template.
 
 Follow this execution flow:
 
-1. Load the existing constitution at `.specify/memory/constitution.md`.
-   - If this run initialized the file from template, identify placeholder tokens of the form `[ALL_CAPS_IDENTIFIER]` and resolve them.
+1. Bootstrap the authoritative source:
+   - Load `.specify/memory/constitution.md`; if it does not exist, initialize it from `.specify/templates/constitution-template.md`.
+   - If this run initialized the file, resolve placeholder tokens of the form `[ALL_CAPS_IDENTIFIER]`.
    - If the file already existed, treat it as live governance content and amend only the required deltas; do not force a template-token rewrite pass.
-   **IMPORTANT**: The user might require less or more principles than the ones used in the template. If a number is specified, respect that - follow the general template shape while preserving existing ratification history unless explicitly changed.
+   - If the user specifies a principle count, respect it while preserving existing ratification history unless explicitly changed.
 
-2. Collect/derive required updates:
-   - If initialized from template in this run, collect values for placeholder fields.
-   - If amending an existing constitution, collect only changed principle/governance values and keep untouched sections stable.
-   - If user input (conversation) supplies a value, use it.
-   - Otherwise infer from existing repo context (README, docs, prior constitution versions if embedded).
-   - For governance dates: `RATIFICATION_DATE` is the original adoption date (if unknown ask or mark TODO), `LAST_AMENDED_DATE` is today if changes are made, otherwise keep previous.
+2. Derive the delta set before broad reads:
+   - Prefer user input; otherwise infer from the current constitution plus minimal repo context.
+   - For governance dates, keep `RATIFICATION_DATE` as the original adoption date (ask or TODO if unknown) and set `LAST_AMENDED_DATE` to today only when content changes.
    - `CONSTITUTION_VERSION` must increment according to semantic versioning rules:
-     - MAJOR: Backward incompatible governance/principle removals or redefinitions.
-     - MINOR: New principle/section added or materially expanded guidance.
-     - PATCH: Clarifications, wording, typo fixes, non-semantic refinements.
+     - MAJOR: backward incompatible governance/principle removals or redefinitions.
+     - MINOR: new principle/section added or materially expanded guidance.
+     - PATCH: clarifications, wording, typo fixes, non-semantic refinements.
      - Adding or materially expanding generation/validation/execution ownership boundaries is always `MINOR`.
-   - If version bump type ambiguous, propose reasoning before finalizing.
-   - Build one run-local **change impact map** before broad reads:
-     - `governance-only`: dates/version text/rationale clarifications with no downstream rule impact
-     - `template-affecting`: principle/rule wording that changes downstream command or template behavior
-     - `repo-first-affecting`: repository-first dependency/invocation evidence or governance-rule changes
-   - Use this impact map to drive all follow-up reads/updates. Default to the smallest affected scope.
-   - Apply a **bounded evidence budget** for this run:
-     - Start with constitution file + only directly impacted files.
-     - Read at section/slice level first; avoid whole-file replay unless a targeted slice is insufficient.
-     - Hard cap broad context expansion to files required by active impact classes; do not expand "just in case".
+   - If the bump type is ambiguous, state the reasoning before finalizing.
 
-3. Draft the updated constitution content:
-   - For newly initialized files, replace every placeholder with concrete text (no bracketed tokens left except intentionally retained template slots that the project has chosen not to define yet—explicitly justify any left).
-   - For existing files, preserve unaffected text and avoid mechanical full-template rewrites.
-   - Preserve heading hierarchy and comments can be removed once replaced unless they still add clarifying guidance.
-   - Ensure each Principle section: succinct name line, paragraph (or bullet list) capturing non‑negotiable rules, explicit rationale if not obvious.
-   - Ensure Governance section lists amendment procedure, versioning policy, and compliance review expectations.
-
-4. Fact-source propagation and redundancy control:
+3. Build the sync workset before broad reads:
    - Treat `.specify/memory/constitution.md` as the authoritative project-level rule source.
-   - Treat `.specify/memory/constitution.md` as the authoritative project-level fact source. Any summaries, extracted rule lists, or downstream restatements of constitution content are derived views only and MUST be refreshed when constitution facts change.
+   - Treat `.specify/memory/constitution.md` as the authoritative project-level fact source; summaries, extracted rule lists, and downstream restatements are derived views only and MUST be refreshed when constitution facts change.
    - Constitution content MUST stay at long-lived rule/terminology/ownership-boundary level; do not embed mechanical lint catalog details (rule IDs, regex patterns, script flags, payload schemas).
    - Runtime template authority path is `.specify/templates/`; when editing Spec Kit source directly, use the `templates/` mirror for the same files.
-   - Review and refresh impacted artifact families only; avoid mechanical full-repo rewrites of unchanged downstream files.
-   - Prefer targeted references over restating the same rule text across multiple downstream templates. When a downstream command or template only needs the constitution as authority, keep the downstream wording brief and aligned instead of cloning full rule prose.
-   - Required alignment families:
-     - Planning control plane template: Read `.specify/templates/plan-template.md` and ensure any "Constitution Check" or rules align with updated principles.
-     - Planning-stage templates: Read the planning-stage templates in `.specify/templates/` (`research-template.md`, `data-model-template.md`, `test-matrix-template.md`, `contract-template.md`, and `interface-detail-template.md`) and ensure they reflect the updated principles and stage boundaries.
-     - Feature/task templates: Read `.specify/templates/spec-template.md` for scope/requirements alignment and `.specify/templates/tasks-template.md` for principle-driven task categorization changes (for example observability, versioning, testing discipline).
-     - Repository-first projection templates: Read `.specify/templates/technical-dependency-matrix-template.md` and `.specify/templates/module-invocation-spec-template.md` and keep them aligned with constitution repository-first rules.
-     - Command templates: Read each command file in the active agent command directory (for example `.roo/commands/*.md`, `.claude/commands/*.md`, `.github/agents/*.agent.md`, `.gemini/commands/*.toml`); if `templates/commands/*.md` exists in this repository, review it as well. Verify no outdated references (agent-specific names like CLAUDE only) remain when generic guidance is required.
-     - Runtime guidance docs: Read any runtime guidance docs (for example `README.md`, `docs/quickstart.md`, or agent-specific guidance files if present) and update references to principles changed.
-   - Runtime efficiency protocol:
-     - Resolve impacted families from the change impact map first, then read/update only those families.
-     - If the change is `governance-only`, skip downstream family reads unless an explicit user request asks for broader synchronization.
-     - Do not run directory-wide or repository-wide exploratory scans to "double check" unaffected families.
-     - When a family is skipped, record `unchanged (not impacted)` in the Sync Impact Report.
-     - For command templates, prioritize active agent command files first; inspect mirrors (`templates/commands/*`) only when active-agent files are absent or impacted rules are generic.
-     - Runtime guidance docs (`README.md`, `docs/quickstart.md`, agent docs) are **opt-in by trigger** only:
-       - read/update only when renamed principles/terms or invocation guidance text changed
-       - otherwise skip and mark `unchanged (not impacted)`
+   - Read only files affected by the delta set, not the whole repo.
+   - Always review `.specify/templates/plan-template.md`, `.specify/templates/technical-dependency-matrix-template.md`, and `.specify/templates/module-invocation-spec-template.md`.
+   - Review changed planning-stage templates in `.specify/templates/` (`research-template.md`, `data-model-template.md`, `test-matrix-template.md`, `contract-template.md`, `interface-detail-template.md`) only when the delta affects their stage rules or boundaries.
+   - Review `.specify/templates/spec-template.md` only when the delta changes required feature sections or constraints.
+   - Review `.specify/templates/tasks-template.md` only when the delta changes execution/task categorization rules.
+   - Review command files in the active agent command directory only when the delta affects command contracts or wording; common examples include `.roo/commands/*.md`, `.claude/commands/*.md`, `.github/agents/*.agent.md`, and `.gemini/commands/*.toml`. If `templates/commands/*.md` exists in this repository, review the matching mirror there as well.
+   - Review runtime guidance docs (for example `README.md`, `docs/quickstart.md`, or agent-specific guidance files) only when they explicitly reference the changed principle or command contract.
+
+4. Draft and apply the constitution update:
+   - For newly initialized files, replace every placeholder with concrete text unless the project intentionally defers one; justify every retained placeholder explicitly.
+   - For existing files, preserve unaffected text, keep the heading hierarchy, and avoid mechanical full-template rewrites.
+   - Ensure each Principle section has a succinct name, declarative rules, and rationale when non-obvious.
+   - Ensure Governance covers amendment procedure, versioning policy, and compliance review expectations.
 
 5. Repository-first global baseline pipeline (mandatory):
-   - Detect build manifests from repo root using deterministic priority and process all supported ecosystems detected:
+   - Detect build manifests from repo root using deterministic priority and process supported ecosystems found:
      - Maven: `pom.xml`
      - Node: `package.json` (workspace-aware)
      - Python: `pyproject.toml` (and `requirements*.txt` / lock hints when present)
      - Go: `go.mod`
-   - Repository-first fast path gate (evaluate before regeneration):
-     - Reproject only when at least one trigger is true:
-       - change impact map includes `repo-first-affecting`
-       - any supported build-manifest set changed since last successful baseline update
-       - any canonical repository-first artifact is missing
-     - If no trigger is true, keep canonical baseline files as-is and mark each artifact `unchanged` without template re-render.
-   - Use `.specify/memory/repository-first/` as the canonical output directory for repository-first projections:
+   - Canonical output directory: `.specify/memory/repository-first/`
      - `.specify/memory/repository-first/technical-dependency-matrix.md`
      - `.specify/memory/repository-first/module-invocation-spec.md`
-   - Generate/refresh these files from their templates and constitution rules:
-     - `.specify/templates/technical-dependency-matrix-template.md`
-     - `.specify/templates/module-invocation-spec-template.md`
-   - Legacy migration rule (mandatory):
-     - If a legacy third baseline file exists under `.specify/memory/repository-first/`, remove it and record artifact status as `deleted`.
-   - Always resolve repository-first artifacts by canonical paths under `.specify/memory/repository-first/`; never read or stat bare projection filenames from repo root.
-   - Apply diff-based rewrite behavior:
+   - Generate/refresh these files from `.specify/templates/technical-dependency-matrix-template.md` and `.specify/templates/module-invocation-spec-template.md`.
+   - Apply diff-based rewrite behavior only:
      - `created`: file did not exist and is created
      - `updated`: file existed and content changed
      - `unchanged`: file existed and content is identical (do not rewrite)
-     - `deleted`: legacy baseline file removed by migration
    - Dependency matrix generation policy:
-     - Normalize `Dependency (G:A)` as:
-       - Maven: `group:artifact`
-       - Node/Python/Go: `ecosystem:package_or_module`
+     - Normalize `Dependency (G:A)` as Maven = `group:artifact`; Node/Python/Go = `ecosystem:package_or_module`
      - Enforce `Type` values as `2nd` or `3rd` only.
      - Enforce `Version Source` values as `direct`, `dependencyManagement`, `module-dependencyManagement`, or `unresolved`.
-     - Preserve version divergence and `unresolved` as governance signals (no silent normalization).
+     - Preserve version divergence and `unresolved` as governance signals.
 
 6. Produce a Sync Impact Report (prepend as an HTML comment at top of the constitution file after update):
-   - Keep this report delta-oriented; do not restate unchanged template inventories or canonical baseline details beyond status.
    - Version change: old → new
    - List of modified principles (old title → new title if renamed)
    - Added sections
@@ -123,10 +85,7 @@ Follow this execution flow:
    - Templates requiring updates (✅ updated / ⚠ pending) with file paths
    - Repository-first baseline status in `.specify/memory/repository-first/`:
      - Build-manifest detection outcome (ecosystems found / not found)
-     - Artifact status per file (`created` / `updated` / `unchanged` / `deleted`)
-   - Keep report compact:
-     - include changed paths explicitly
-     - for unchanged families, prefer one-line grouped summaries over per-file prose
+     - Artifact status per file (`created` / `updated` / `unchanged`)
    - Follow-up TODOs if any placeholders intentionally deferred.
 
 7. Final quality check before output (constitution-local only):
@@ -136,7 +95,6 @@ Follow this execution flow:
    - Principles are declarative, testable, and free of vague language ("should" → replace with MUST/SHOULD rationale where appropriate).
    - Constitution text does not include lint-catalog implementation details (rule IDs, regexes, script parameters, or execution payload shapes).
    - Do not duplicate one normative rule into competing expansions across multiple command templates; keep one constitution-level rule and downstream references aligned to that single authority.
-   - Downstream alignment updates are minimal and delta-based; unchanged command/template text should not be rewritten just to restate existing authority.
    - Do not introduce cross-artifact PASS/FAIL gates here; centralized consistency gating belongs to `/sdd.analyze`.
    - Repository-first canonical directory and files exist or are explicitly reported with unresolved blockers.
 
@@ -144,21 +102,25 @@ Follow this execution flow:
 
 9. Output a final summary to the user with:
    - New version and bump rationale.
-   - Net-new fact source changes only (for example repository-first dependency/invocation baseline updates); reference the Sync Impact Report instead of restating it.
-   - Repository-first baseline update summary only when status changed (`created` / `updated`) or blockers remain.
+   - Fact source changes (for example repository-first definitions or ownership-boundary baseline updates).
+   - Repository-first baseline update summary (`created` / `updated` / `unchanged` + detection outcome).
    - Any files flagged for manual follow-up.
    - Suggested commit message (e.g., `docs: amend constitution to vX.Y.Z (principle additions + governance update)`).
    - No cross-artifact PASS/FAIL gate decision in this command.
-   - Keep runtime output concise: no unchanged-file inventories, no duplicated rule restatements, no repeated rationale blocks.
 
 Formatting & Style Requirements:
 
 - Use Markdown headings exactly as in the template (do not demote/promote levels).
-- Wrap long rationale lines to keep readability (<100 chars ideally) but do not hard enforce with awkward breaks.
-- Keep a single blank line between sections.
-- Avoid trailing whitespace.
+- Keep spacing readable and avoid trailing whitespace.
 
-If the user supplies partial updates (e.g., only one principle revision), still perform validation and version decision steps.
+Execution-speed rules:
+
+- Decide the delta set before opening downstream templates or docs.
+- Reuse current headings and nearby anchors instead of replaying full-file rewrites.
+- Sync only the files touched by the delta set plus the mandatory repository-first templates.
+- Stop after constitution, impacted mirrors, and canonical repository-first projections are aligned.
+
+If the user supplies partial updates (e.g., only one principle revision), still perform delta, validation, and version-decision steps.
 
 If critical info missing (e.g., ratification date truly unknown), insert `TODO(<FIELD_NAME>): explanation` and include in the Sync Impact Report under deferred items.
 

@@ -53,7 +53,7 @@ SCRIPT_DIR="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
 # Get all paths and variables from common functions
-eval "$(get_feature_paths)"
+eval $(get_feature_paths)
 
 NEW_PLAN="$IMPL_PLAN"  # Alias for compatibility with existing code
 AGENT_TYPE="${1:-}"
@@ -148,10 +148,9 @@ validate_environment() {
     fi
     
     # Check if template exists (needed for new files)
-    if [[ ! -r "$TEMPLATE_FILE" ]]; then
-        log_error "Template file not found at $TEMPLATE_FILE"
-        log_info "Run specify init to scaffold .specify/templates, or add agent-file-template.md there."
-        exit 1
+    if [[ ! -f "$TEMPLATE_FILE" ]]; then
+        log_warning "Template file not found at $TEMPLATE_FILE"
+        log_warning "Creating new agent files will fail"
     fi
 }
 

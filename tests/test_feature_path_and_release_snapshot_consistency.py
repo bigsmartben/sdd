@@ -55,33 +55,3 @@ def test_release_packaging_rewrites_memory_and_scripts_paths_on_both_platforms()
 
     assert "-replace '(/?)\\bmemory/', '.specify/memory/'" in pwsh_release
     assert "-replace '(/?)\\bscripts/', '.specify/scripts/'" in pwsh_release
-
-
-def test_release_packaging_adds_cross_agent_generation_count_guards():
-    bash_release = read(".github/workflows/scripts/create-release-packages.sh")
-    pwsh_release = read(".github/workflows/scripts/create-release-packages.ps1")
-
-    # Both scripts should compute a shared template command count baseline
-    assert "TEMPLATE_COMMAND_COUNT=" in bash_release
-    assert "$TemplateCommandCount =" in pwsh_release
-
-    # Both scripts should validate generated command artifact counts per agent output
-    assert "validate_generated_command_files" in bash_release
-    assert "validate_generated_command_files \"$output_dir\" \"$ext\" \"$agent\"" in bash_release
-
-    assert "function Validate-GeneratedCommandFiles" in pwsh_release
-    assert "Validate-GeneratedCommandFiles -OutputDir $OutputDir -Extension $Extension -Agent $Agent" in pwsh_release
-
-    # Copilot companion prompt generation should be count-validated on both platforms
-    assert "validate_copilot_prompt_files" in bash_release
-    assert "validate_copilot_prompt_files \"$agents_dir\" \"$prompts_dir\"" in bash_release
-
-    assert "function Validate-CopilotPromptFiles" in pwsh_release
-    assert "Validate-CopilotPromptFiles -AgentsDir $AgentsDir -PromptsDir $PromptsDir" in pwsh_release
-
-    # Kimi skills generation should be count-validated on both platforms
-    assert "validate_generated_kimi_skills" in bash_release
-    assert "validate_generated_kimi_skills \"$skills_dir\"" in bash_release
-
-    assert "function Validate-GeneratedKimiSkills" in pwsh_release
-    assert "Validate-GeneratedKimiSkills -SkillsDir $SkillsDir" in pwsh_release
