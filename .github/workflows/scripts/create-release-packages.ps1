@@ -502,13 +502,13 @@ $AllAgents = Get-AllAgents
 $AllScripts = @('sh', 'ps')
 
 function Normalize-List {
-    param([string]$Input)
+    param([string]$RawList)
 
-    if ([string]::IsNullOrEmpty($Input)) {
+    if ([string]::IsNullOrEmpty($RawList)) {
         return @()
     }
 
-    return ($Input -split '[,\s]+' | Where-Object { $_ } | Select-Object -Unique)
+    return ($RawList -split '[,\s]+' | Where-Object { $_ } | Select-Object -Unique)
 }
 
 function Validate-Subset {
@@ -529,7 +529,7 @@ function Validate-Subset {
 }
 
 if (-not [string]::IsNullOrEmpty($Agents)) {
-    $AgentList = Normalize-List -Input $Agents
+    $AgentList = Normalize-List -RawList $Agents
     if (-not (Validate-Subset -Type 'agent' -Allowed $AllAgents -Items $AgentList)) {
         exit 1
     }
@@ -538,7 +538,7 @@ if (-not [string]::IsNullOrEmpty($Agents)) {
 }
 
 if (-not [string]::IsNullOrEmpty($Scripts)) {
-    $ScriptList = Normalize-List -Input $Scripts
+    $ScriptList = Normalize-List -RawList $Scripts
     if (-not (Validate-Subset -Type 'script' -Allowed $AllScripts -Items $ScriptList)) {
         exit 1
     }
