@@ -460,7 +460,15 @@ function Build-Variant {
     }
 
     $zipFile = Join-Path $GenReleasesDir "spec-kit-template-${Agent}-${Script}-${Version}.zip"
-    Compress-Archive -Path "$baseDir/*" -DestinationPath $zipFile -Force
+    $archiveItems = @(
+        Get-ChildItem -Path $baseDir -Force -ErrorAction SilentlyContinue | ForEach-Object {
+            $_.FullName
+        }
+    )
+    if ($archiveItems.Count -eq 0) {
+        throw "No files generated under $baseDir for agent '$Agent' ($Script)"
+    }
+    Compress-Archive -Path $archiveItems -DestinationPath $zipFile -Force
     Write-Host "Created $zipFile"
 }
 
@@ -494,13 +502,13 @@ $AllAgents = Get-AllAgents
 $AllScripts = @('sh', 'ps')
 
 function Normalize-List {
-    param([string]$Input)
+    param([string]$RawList)
 
-    if ([string]::IsNullOrEmpty($Input)) {
+    if ([string]::IsNullOrEmpty($RawList)) {
         return @()
     }
 
-    return ($Input -split '[,\s]+' | Where-Object { $_ } | Select-Object -Unique)
+    return ($RawList -split '[,\s]+' | Where-Object { $_ } | Select-Object -Unique)
 }
 
 function Validate-Subset {
@@ -521,7 +529,7 @@ function Validate-Subset {
 }
 
 if (-not [string]::IsNullOrEmpty($Agents)) {
-    $AgentList = Normalize-List -Input $Agents
+    $AgentList = Normalize-List -RawList $Agents
     if (-not (Validate-Subset -Type 'agent' -Allowed $AllAgents -Items $AgentList)) {
         exit 1
     }
@@ -530,7 +538,7 @@ if (-not [string]::IsNullOrEmpty($Agents)) {
 }
 
 if (-not [string]::IsNullOrEmpty($Scripts)) {
-    $ScriptList = Normalize-List -Input $Scripts
+    $ScriptList = Normalize-List -RawList $Scripts
     if (-not (Validate-Subset -Type 'script' -Allowed $AllScripts -Items $ScriptList)) {
         exit 1
     }
