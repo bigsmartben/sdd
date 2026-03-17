@@ -149,6 +149,9 @@ class TestAgentConfigConsistency:
         gh_release_text = (REPO_ROOT / ".github" / "workflows" / "scripts" / "create-github-release.sh").read_text(encoding="utf-8")
 
         assert "spec-kit-template-*-${VERSION}.zip" in gh_release_text
+        assert "list-agent-config-keys.py" in gh_release_text
+        assert "Release gate failed: missing template archives" in gh_release_text
+        assert "template archive count mismatch" in gh_release_text
 
     def test_agent_context_scripts_include_tabnine(self):
         """Agent context scripts should support tabnine agent type."""
@@ -172,6 +175,11 @@ class TestAgentConfigConsistency:
         assert AGENT_CONFIG["cline"]["folder"] == ".clinerules/"
         assert AGENT_CONFIG["cline"]["commands_subdir"] == "workflows"
         assert AGENT_CONFIG["cline"]["requires_cli"] is False
+
+    def test_runtime_config_kilocode_and_auggie_match_rules_subdir(self):
+        """Kilo Code and Auggie should use rules subdir across runtime and packaging."""
+        assert AGENT_CONFIG["kilocode"]["commands_subdir"] == "rules"
+        assert AGENT_CONFIG["auggie"]["commands_subdir"] == "rules"
 
     def test_extension_registrar_includes_cline(self):
         """CommandRegistrar.AGENT_CONFIGS should include cline workflow directory."""

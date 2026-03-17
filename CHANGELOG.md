@@ -7,6 +7,20 @@ Recent changes to the Specify CLI and templates are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.17] - 2026-03-17
+
+### Fixed
+
+- Enforce strict latest-release behavior in `specify init`: when the latest release does not contain the requested agent template asset, initialization now fails fast instead of scanning older releases
+- Add a hard release gate in `.github/workflows/scripts/create-github-release.sh` that requires complete template coverage for every `AGENT_CONFIG` key across both `sh` and `ps` archives before publishing a release
+
+## [2.0.16] - 2026-03-17
+
+### Fixed
+
+- Make `specify init` fall back to earlier non-draft releases when the latest release is missing the requested `spec-kit-template-<agent>-<script>` asset, preventing multi-agent initialization failures when a partial release is published
+- Align runtime `AGENT_CONFIG` command directories for `kilocode` and `auggie` to `rules` so initialized template layouts match packaged artifacts
+
 ## [2.0.15] - 2026-03-16
 
 ### Changed

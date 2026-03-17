@@ -191,14 +191,14 @@ AGENT_CONFIG = {
     "kilocode": {
         "name": "Kilo Code",
         "folder": ".kilocode/",
-        "commands_subdir": "workflows",  # Special: uses workflows/ not commands/
+        "commands_subdir": "rules",  # Special: uses rules/ not commands/
         "install_url": None,  # IDE-based
         "requires_cli": False,
     },
     "auggie": {
         "name": "Auggie CLI",
         "folder": ".augment/",
-        "commands_subdir": "commands",
+        "commands_subdir": "rules",  # Special: uses rules/ not commands/
         "install_url": "https://docs.augmentcode.com/cli/setup-auggie/install-auggie-cli",
         "requires_cli": True,
     },
@@ -290,12 +290,6 @@ AGENT_CONFIG = {
 
 AI_ASSISTANT_ALIASES = {
     "kiro": "kiro-cli",
-}
-
-# When an older published release does not yet contain agent-specific assets,
-# fall back to a compatible template package so init can still proceed.
-TEMPLATE_ASSET_FALLBACKS = {
-    "cline": "generic",
 }
 
 def _build_ai_assistant_help() -> str:
@@ -779,19 +773,16 @@ def download_template_from_github(ai_assistant: str, download_dir: Path, *, scri
         console.print(Panel(str(e), title="Fetch Error", border_style="red"))
         raise typer.Exit(1)
 
-    assets = release_data.get("assets", [])
     candidate_agents = [ai_assistant]
-    fallback_agent = TEMPLATE_ASSET_FALLBACKS.get(ai_assistant)
-    if fallback_agent and fallback_agent not in candidate_agents:
-        candidate_agents.append(fallback_agent)
 
+    assets = release_data.get("assets", [])
     asset = None
     asset_agent = ai_assistant
     for candidate in candidate_agents:
         pattern = f"{RELEASE_ASSET_PREFIX}-{candidate}-{script_type}"
         matching_assets = [
             found_asset for found_asset in assets
-            if pattern in found_asset["name"] and found_asset["name"].endswith(".zip")
+            if pattern in found_asset.get("name", "") and found_asset.get("name", "").endswith(".zip")
         ]
         if matching_assets:
             asset = matching_assets[0]
@@ -801,15 +792,9 @@ def download_template_from_github(ai_assistant: str, download_dir: Path, *, scri
     if asset is None:
         expected_patterns = ", ".join(f"{RELEASE_ASSET_PREFIX}-{candidate}-{script_type}" for candidate in candidate_agents)
         console.print(f"[red]No matching release asset found[/red] for [bold]{ai_assistant}[/bold] (expected pattern: [bold]{expected_patterns}[/bold])")
-        asset_names = [a.get('name', '?') for a in assets]
+        asset_names = [a.get('name', '?') for a in release_data.get("assets", [])]
         console.print(Panel("\n".join(asset_names) or "(no assets)", title="Available Assets", border_style="yellow"))
         raise typer.Exit(1)
-
-    if asset_agent != ai_assistant and verbose:
-        console.print(
-            f"[yellow]Template asset for '{ai_assistant}' not found in latest release; "
-            f"falling back to '{asset_agent}' template package.[/yellow]"
-        )
 
     download_url = asset["browser_download_url"]
     filename = asset["name"]
