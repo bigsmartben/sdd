@@ -7,6 +7,13 @@ Recent changes to the Specify CLI and templates are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.18] - 2026-03-17
+
+### Fixed
+
+- Enforce fail-fast agent loading in `.github/workflows/scripts/create-release-packages.sh`: helper script absence, missing `python3`, helper execution failure, or empty agent key output now abort packaging instead of falling back to seeded agent lists
+- Stop suppressing helper stderr during bash packaging agent discovery so release-path failures surface deterministic diagnostics
+
 ## [2.0.17] - 2026-03-17
 
 ### Fixed

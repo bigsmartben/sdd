@@ -63,6 +63,21 @@ class TestAgentConfigConsistency:
         assert "agy" in helper_agents
         assert "q" not in helper_agents
 
+    def test_release_bash_agent_loading_is_fail_fast_without_seeded_fallback(self):
+        """Bash release packaging must fail fast if helper loading fails."""
+        sh_text = (REPO_ROOT / ".github" / "workflows" / "scripts" / "create-release-packages.sh").read_text(encoding="utf-8")
+
+        assert "Warning: agent key helper not found; using seeded ALL_AGENTS list" not in sh_text
+        assert "Warning: python3 unavailable; using seeded ALL_AGENTS list" not in sh_text
+        assert "Warning: failed to load AGENT_CONFIG keys; using seeded ALL_AGENTS list" not in sh_text
+        assert "Warning: AGENT_CONFIG key list is empty; using seeded ALL_AGENTS list" not in sh_text
+        assert 'python3 "$AGENT_KEYS_SCRIPT" 2>/dev/null' not in sh_text
+
+        assert "Error: agent key helper not found:" in sh_text
+        assert "Error: python3 is required to load AGENT_CONFIG keys" in sh_text
+        assert "Error: failed to load AGENT_CONFIG keys from helper script:" in sh_text
+        assert "Error: AGENT_CONFIG key list is empty; refusing to continue" in sh_text
+
     def test_release_ps_switch_has_shai_and_agy_generation(self):
         """PowerShell release builder must generate files for shai and agy agents."""
         ps_text = (REPO_ROOT / ".github" / "workflows" / "scripts" / "create-release-packages.ps1").read_text(encoding="utf-8")

@@ -384,35 +384,31 @@ build_variant() {
 }
 
 # Compatibility seed list for tooling/tests that parse ALL_AGENTS directly.
-# Runtime agent selection is still refreshed from AGENT_CONFIG via load_all_agents().
+# Runtime agent selection is refreshed from AGENT_CONFIG via load_all_agents().
 ALL_AGENTS=(copilot claude gemini cursor-agent cline qwen opencode codex windsurf kilocode auggie codebuddy qodercli roo kiro-cli amp shai tabnine agy bob vibe kimi generic)
 
 load_all_agents() {
-  local seeded_agents=("${ALL_AGENTS[@]}")
   local helper_output
 
   if [[ ! -f "$AGENT_KEYS_SCRIPT" ]]; then
-    echo "Warning: agent key helper not found; using seeded ALL_AGENTS list" >&2
-    ALL_AGENTS=("${seeded_agents[@]}")
-    return
+    echo "Error: agent key helper not found: $AGENT_KEYS_SCRIPT" >&2
+    exit 1
   fi
 
   if ! command -v python3 >/dev/null 2>&1; then
-    echo "Warning: python3 unavailable; using seeded ALL_AGENTS list" >&2
-    ALL_AGENTS=("${seeded_agents[@]}")
-    return
+    echo "Error: python3 is required to load AGENT_CONFIG keys" >&2
+    exit 1
   fi
 
-  if ! helper_output=$(python3 "$AGENT_KEYS_SCRIPT" 2>/dev/null); then
-    echo "Warning: failed to load AGENT_CONFIG keys; using seeded ALL_AGENTS list" >&2
-    ALL_AGENTS=("${seeded_agents[@]}")
-    return
+  if ! helper_output=$(python3 "$AGENT_KEYS_SCRIPT"); then
+    echo "Error: failed to load AGENT_CONFIG keys from helper script: $AGENT_KEYS_SCRIPT" >&2
+    exit 1
   fi
 
-  mapfile -t ALL_AGENTS < <(printf '%s\n' "$helper_output")
+  mapfile -t ALL_AGENTS < <(printf '%s\n' "$helper_output" | awk 'NF')
   if [[ ${#ALL_AGENTS[@]} -eq 0 ]]; then
-    echo "Warning: AGENT_CONFIG key list is empty; using seeded ALL_AGENTS list" >&2
-    ALL_AGENTS=("${seeded_agents[@]}")
+    echo "Error: AGENT_CONFIG key list is empty; refusing to continue" >&2
+    exit 1
   fi
 }
 
