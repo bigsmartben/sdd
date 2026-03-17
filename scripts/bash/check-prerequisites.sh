@@ -175,9 +175,6 @@ if [[ -d "$CONTRACTS_DIR" ]] && [[ -n "$(ls -A "$CONTRACTS_DIR" 2>/dev/null)" ]]
 fi
 
 [[ -f "$TEST_MATRIX" ]] && docs+=("test-matrix.md")
-if [[ -d "$INTERFACE_DETAILS_DIR" ]] && [[ -n "$(ls -A "$INTERFACE_DETAILS_DIR" 2>/dev/null)" ]]; then
-    docs+=("interface-details/")
-fi
 
 # Include tasks.md if requested and it exists
 if $INCLUDE_TASKS && [[ -f "$TASKS" ]]; then
@@ -200,8 +197,7 @@ if $JSON_MODE; then
                 --spec "$FEATURE_SPEC" \
                 --data-model "$DATA_MODEL" \
                 --test-matrix "$TEST_MATRIX" \
-                --contracts-dir "$CONTRACTS_DIR" \
-                --interface-details-dir "$INTERFACE_DETAILS_DIR")"; then
+                --contracts-dir "$CONTRACTS_DIR")"; then
                 :
             else
                 task_bootstrap="null"
@@ -227,7 +223,6 @@ else
     check_file "$DATA_MODEL" "data-model.md"
     check_dir "$CONTRACTS_DIR" "contracts/"
     check_file "$TEST_MATRIX" "test-matrix.md"
-    check_dir "$INTERFACE_DETAILS_DIR" "interface-details/"
     
     if $INCLUDE_TASKS; then
         check_file "$TASKS" "tasks.md"

@@ -72,7 +72,6 @@ After initialization, you should see the following commands available in your AI
 - `/sdd.plan.data-model <plan.md>` - Generate the queued data model artifact
 - `/sdd.plan.test-matrix <plan.md>` - Generate the queued test matrix artifact
 - `/sdd.plan.contract <plan.md>` - Generate one queued contract artifact
-- `/sdd.plan.interface-detail <plan.md>` - Generate one queued interface-detail artifact
 - `/sdd.tasks` - Break down into actionable tasks
 
 Repeated planning commands use runtime `Handoff Decision` output derived from `plan.md` queue state. Static frontmatter handoffs are advisory only, and planning commands no longer infer their target feature from branch or `SPECIFY_FEATURE`.

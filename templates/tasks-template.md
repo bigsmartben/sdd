@@ -15,14 +15,14 @@ description: "Interface-delivery-oriented execution orchestration template for f
 - Interface delivery units are IF-scoped execution work packages derived from approved planning artifacts.
 - `tasks.md` MUST define clear task units and explicit execution dependencies.
 - `tasks.md` MUST NOT duplicate interface/data-model/test semantics from upstream documents.
-- `tasks.md` consumes approved planning artifacts and MUST NOT redesign research, data model, contract, or interface-detail semantics.
+- `tasks.md` consumes approved planning artifacts and MUST NOT redesign research, data model, or contract semantics.
 - `tasks.md` MUST NOT supplement missing design, verification semantics, target paths, completion anchors, or dependency meaning.
 - Comprehensive cross-artifact auditing (consistency/coverage/ambiguity/drift/traceability hygiene) is owned by `/sdd.analyze`, not this task-orchestration artifact.
 
 Boundary ownership:
 
 - `plan.md`: planning control plane, queue state, and artifact target paths
-- `interface-details/<operationId>.md`: per-interface detailed design projection
+- `contracts/<operationId>.md`: per-interface northbound contract + realization design projection
 - `data-model.md`: global object semantics and invariants
 - `test-matrix.md`: feature verification anchors (`TM-*` / `TC-*`)
 
@@ -32,13 +32,15 @@ Reference precedence:
 - Contract semantics: `contracts/`
 - Global model semantics: `data-model.md`
 - Feature verification semantics: `test-matrix.md`
+- Downstream execution projection authority (per IF unit): selected contract `Spec Projection Slice` + `Test Projection Slice`
 - `tasks.md`: execution mapping only; must not redefine the above semantics
 - Inline task summaries, local execution notes, and other derived views must yield to the authoritative artifacts above when conflicts appear.
+- If contract projection slices drift from `spec.md` or `test-matrix.md`, keep contract projection as execution truth for this run and emit explicit upstream writeback repair actions (no local semantic merge).
 
 Stage boundary guard:
 
 - `tasks.md` consumes Stage 4 outputs; it does not generate or backfill missing interface design artifacts.
-- If required execution anchors are missing from `plan.md`, `contracts/`, `interface-details/`, or `test-matrix.md`, stop and repair upstream artifacts rather than writing compensating tasks.
+- If required execution anchors are missing from `plan.md`, `contracts/`, or `test-matrix.md`, stop and repair upstream artifacts rather than writing compensating tasks.
 - `tasks.md` uses `GLOBAL` and `Interface Delivery Units` as execution packages only, not as replacement design sections.
 
 ## 2) Upstream Inputs (Execution References)
@@ -52,7 +54,21 @@ Use concise references only. Do not build registry/audit tables here.
 | `data-model.md` | entity/invariant references | Yes |
 | `test-matrix.md` | feature verification anchors (`TM-*` / `TC-*`) | Yes |
 | `contracts/` | interface operation targets | Yes |
-| `interface-details/` | per-interface behavior anchors | Yes |
+
+## 2.1) Upstream Alignment Repair (Required On Projection Drift)
+
+Only include this section when drift exists between contract projection slices and upstream artifacts.
+
+| Drift Type | Contract Projection Evidence | Upstream Target | Owner Command | Required Repair |
+| --- | --- | --- | --- | --- |
+| `spec` drift | [operationId + `Spec Projection Slice` refs] | `spec.md` | `/sdd.specify` | [align `spec.md` refs/phrasing to contract projection] |
+| `test` drift | [operationId + `Test Projection Slice` refs] | `test-matrix.md` | `/sdd.plan.test-matrix` | [align TM/TC rows and anchors to contract projection] |
+
+Rules:
+
+- Keep entries execution-oriented and file-targeted; do not add audit prose.
+- These rows are mandatory when drift is detected during `/sdd.tasks`.
+- Do not dual-write conflicting semantics into `tasks.md`; keep one active projection source per IF unit.
 
 ## 3) Execution Ordering Model
 
@@ -130,7 +146,9 @@ Interface delivery units are IF-scoped execution work packages. Keep them execut
 
 - Goal: [one-line delivery goal; short execution-only reference]
 - Contract: [single operationId / boundary anchor]
-- Implementation Entry: [single repo-backed entry anchor from interface detail, or same as contract boundary]
+- Implementation Entry: [single repo-backed entry anchor from contract realization section, or same as contract boundary]
+- Spec Slice: [UC/UIF/FR/SC/EC refs projected from contract `Spec Projection Slice`]
+- Test Slice: [Test Scope + TM/TC + pass/failure anchors projected from contract `Test Projection Slice`]
 - Primary Refs: [short refs that help execution or completion checks]
 
 Recommended delivery loop:
@@ -150,6 +168,7 @@ Rules:
 - Each IF unit SHOULD form a verification-implementation-completion loop (document exceptions).
 - Keep IF sections reference-oriented; do not copy upstream design prose or add design explanation paragraphs.
 - Use `Contract` as the client-facing binding reference and `Implementation Entry` as the internal execution-target reference when they differ.
+- `Spec Slice` and `Test Slice` are mandatory per IF unit and are the authoritative downstream execution projection slices from contract; they are not optional narrative notes.
 - Keep `Goal`, `Contract`, `Implementation Entry`, and `Primary Refs` as short execution references only.
 - If multiple operations share an `IF Scope`, keep them as separate work packages inside the same IF unit; do not merge them into a composite task.
 - Use `CaseID/TM/TC` as completion anchors only when they help prove delivery.

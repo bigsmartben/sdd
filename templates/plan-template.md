@@ -9,7 +9,7 @@
 
 `plan.md` is the planning control plane for this feature.
 It is authoritative for planning queue state, binding-projection rows, and source/output fingerprints only.
-It is derived for planning semantics and MUST NOT supersede `research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, or `interface-details/`.
+It is derived for planning semantics and MUST NOT supersede `research.md`, `data-model.md`, `test-matrix.md`, or `contracts/`.
 
 ## Shared Context Snapshot
 
@@ -63,7 +63,7 @@ Rules:
 - `BindingRowID` is the plan-local identifier for one stable binding row projected from `test-matrix.md`.
 - `Binding Projection Index` is a projection ledger only.
 - `Boundary Anchor` is the client-facing contract binding key projected from `test-matrix.md`; it is not the internal implementation handoff anchor.
-- Internal handoff anchors such as `Implementation Entry Anchor` belong in `interface-details/`, not `plan.md`.
+- Internal realization-design anchors are authored in `contracts/`, not `plan.md`.
 - If a stable key is not confirmed, keep it out of the index.
 
 ## Artifact Status
@@ -73,11 +73,10 @@ Track minimum planning artifacts derived from each `BindingRowID`.
 | BindingRowID | Unit Type | Target Path | Status | Source Fingerprint | Output Fingerprint | Blocker |
 |--------------|-----------|-------------|--------|--------------------|--------------------|---------|
 | [BindingRowID-001] | contract | `contracts/[artifact].md` | pending | [fingerprint] | [fingerprint] | [none] |
-| [BindingRowID-001] | interface-detail | `interface-details/[operationId].md` | pending | [fingerprint] | [fingerprint] | [none] |
 
 Rules:
 
-- `contract` and `interface-detail` are tracked independently.
+- `contract` is tracked as the single per-binding interface design artifact.
 - One command run updates one row only.
 - Child commands may write only status, target path, blocker, and fingerprints.
 
@@ -85,7 +84,7 @@ Rules:
 
 - `/sdd.plan` initializes this file and starts the queue.
 - `/sdd.plan.research`, `/sdd.plan.data-model`, and `/sdd.plan.test-matrix` advance `Stage Queue`.
-- `/sdd.plan.contract` and `/sdd.plan.interface-detail` advance `Artifact Status` one row at a time.
+- `/sdd.plan.contract` advances `Artifact Status` one row at a time.
 - `/sdd.tasks` starts only after all required stage and artifact rows are `done`.
 
 ## Complexity Tracking

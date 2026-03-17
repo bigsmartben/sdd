@@ -33,7 +33,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--data-model", required=True, help="Path to data-model.md")
     parser.add_argument("--test-matrix", required=True, help="Path to test-matrix.md")
     parser.add_argument("--contracts-dir", required=True, help="Path to contracts directory")
-    parser.add_argument("--interface-details-dir", required=True, help="Path to interface-details directory")
     return parser.parse_args(argv)
 
 
@@ -128,11 +127,8 @@ def build_unit_inventory(
     for row in binding_rows:
         binding_row_id = clean_cell(row.get("BindingRowID", ""))
         contract_row = artifacts_by_binding.get(binding_row_id, {}).get("contract", {})
-        interface_detail_row = artifacts_by_binding.get(binding_row_id, {}).get("interface-detail", {})
         contract_target_path_abs = resolve_target_path(feature_dir, contract_row.get("Target Path", ""))
-        interface_detail_target_path_abs = resolve_target_path(feature_dir, interface_detail_row.get("Target Path", ""))
         contract_exists = bool(contract_target_path_abs) and Path(contract_target_path_abs).is_file()
-        interface_detail_exists = bool(interface_detail_target_path_abs) and Path(interface_detail_target_path_abs).is_file()
 
         unit = {
             "binding_row_id": binding_row_id,
@@ -147,21 +143,10 @@ def build_unit_inventory(
                 "target_path_abs": contract_target_path_abs,
                 "exists": contract_exists,
             },
-            "interface_detail": {
-                "status": clean_cell(interface_detail_row.get("Status", "")),
-                "target_path": clean_cell(interface_detail_row.get("Target Path", "")),
-                "target_path_abs": interface_detail_target_path_abs,
-                "exists": interface_detail_exists,
-            },
         }
         unit_inventory.append(unit)
 
-        if (
-            unit["contract"]["status"] == "done"
-            and unit["interface_detail"]["status"] == "done"
-            and contract_exists
-            and interface_detail_exists
-        ):
+        if unit["contract"]["status"] == "done" and contract_exists:
             ready_unit_inventory.append(unit)
 
     return unit_inventory, ready_unit_inventory
@@ -176,7 +161,6 @@ def main(argv: list[str] | None = None) -> int:
     data_model_path = Path(args.data_model).resolve()
     test_matrix_path = Path(args.test_matrix).resolve()
     contracts_dir = Path(args.contracts_dir).resolve()
-    interface_details_dir = Path(args.interface_details_dir).resolve()
 
     if not plan_path.is_file():
         print(f"ERROR: plan.md not found: {plan_path}", file=sys.stderr)
@@ -240,7 +224,6 @@ def main(argv: list[str] | None = None) -> int:
         "data_model_path": str(data_model_path),
         "test_matrix_path": str(test_matrix_path),
         "contracts_dir": str(contracts_dir),
-        "interface_details_dir": str(interface_details_dir),
         "required_sections": required_sections,
         "missing_sections": missing_sections,
         "stage_queue": stage_queue,

@@ -90,13 +90,13 @@ Once a feature specification exists, `/sdd.plan <spec.md>` initializes the plann
 1. **Specification Analysis**: Reads and understands the feature requirements, user stories, and acceptance criteria from the explicit `spec.md` path
 2. **Constitutional Compliance**: Ensures alignment with project constitution and architectural principles
 3. **Control-Plane Initialization**: Writes `plan.md` with `Shared Context Snapshot`, `Stage Queue`, `Binding Projection Index`, and `Artifact Status`
-4. **Queue-Driven Planning**: The child commands `/sdd.plan.research <plan.md>`, `/sdd.plan.data-model <plan.md>`, `/sdd.plan.test-matrix <plan.md>`, `/sdd.plan.contract <plan.md>`, and `/sdd.plan.interface-detail <plan.md>` generate stage artifacts one queue unit at a time
+4. **Queue-Driven Planning**: The child commands `/sdd.plan.research <plan.md>`, `/sdd.plan.data-model <plan.md>`, `/sdd.plan.test-matrix <plan.md>`, and repeated `/sdd.plan.contract <plan.md>` generate stage artifacts one queue unit at a time
 
 ### The `/sdd.tasks` Command
 
 After a plan is created, this command projects the completed planning-stage design set into an executable task list:
 
-1. **Inputs**: Reads `plan.md`, `spec.md`, `data-model.md`, `test-matrix.md`, `contracts/`, `interface-details/`, and `research.md`
+1. **Inputs**: Reads `plan.md`, `spec.md`, `data-model.md`, `test-matrix.md`, `contracts/`, and `research.md`
 2. **Task Derivation**: Converts approved planning artifacts into executable tasks organized by `GLOBAL` and `IF-###`, where each `IF-###` unit is an IF-scoped execution work package rather than a second design pass
 3. **Dependency Modeling**: Builds a `Task DAG` that becomes the runtime ordering authority
 4. **Output**: Writes `tasks.md` in the feature directory, ready for execution by a Task agent
@@ -139,7 +139,6 @@ Total: ~12 hours of documentation work
 /sdd.plan.data-model specs/003-chat-system/plan.md
 /sdd.plan.test-matrix specs/003-chat-system/plan.md
 /sdd.plan.contract specs/003-chat-system/plan.md
-/sdd.plan.interface-detail specs/003-chat-system/plan.md
 
 # Step 3: Generate executable tasks (5 minutes)
 /sdd.tasks
@@ -150,7 +149,6 @@ Total: ~12 hours of documentation work
 # - specs/003-chat-system/data-model.md (via /sdd.plan.data-model <plan.md>)
 # - specs/003-chat-system/test-matrix.md (via /sdd.plan.test-matrix <plan.md>)
 # - specs/003-chat-system/contracts/ (via repeated /sdd.plan.contract <plan.md>)
-# - specs/003-chat-system/interface-details/ (via repeated /sdd.plan.interface-detail <plan.md>)
 # - specs/003-chat-system/tasks.md (Task list derived from the plan)
 ```
 

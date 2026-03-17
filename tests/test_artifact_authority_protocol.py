@@ -17,7 +17,9 @@ def test_command_mapping_documents_authority_model():
     assert "Runtime template authority path for generation and output-structure commands is `.specify/templates/`." in content
     assert "| `plan.md` | Planning control plane, binding projection ledger, queue/fingerprint state | Derived for planning semantics; authoritative for planning queue state |" in content
     assert "| `/sdd.plan.test-matrix <plan.md>` | Generate the queued verification matrix and initialize binding rows | `.specify/templates/test-matrix-template.md` | `test-matrix.md`, `plan.md` binding rows |" in content
-    assert "must stop when `plan.md` queue rows show incomplete planning stages or pending contract / interface-detail units" in content
+    assert "selected contract `Spec Projection Slice` and `Test Projection Slice` are the authoritative downstream projection input" in content
+    assert "keep contract projection for current execution output and issue explicit upstream writeback repair actions" in content
+    assert "must stop when `plan.md` queue rows show incomplete planning stages or pending contract units" in content
     assert "owns final stale-planning detection" in content
 
 
@@ -48,11 +50,14 @@ def test_tasks_implement_and_analyze_enforce_authority_protocol():
     assert "This runtime scheduling guidance is execution-only. It MUST NOT change artifact authority" in tasks
     assert "Any tuple indexes, execution maps, or working summaries created during `/sdd.tasks` are derived views only" in tasks
     assert "Temporary derived views created during `/sdd.tasks` are run-local only" in tasks
+    assert "treat contract `Downstream Projection Input (Required)` (`Spec Projection Slice`, `Test Projection Slice`) as the authoritative downstream execution projection" in tasks
+    assert "keep contract projection as execution truth for this run and emit explicit upstream writeback repair actions" in tasks
     assert "Binding Projection Index" in tasks
     assert "does **not** own coverage completeness, uncovered MUST requirement analysis, ambiguity sweeps" in tasks
     assert "helper-doc leakage checks" in tasks
     assert ".specify/templates/tasks-template.md" in tasks
     assert "Inline task summaries, local execution notes, and other derived views must yield to the authoritative artifacts above" in tasks_template
+    assert "If contract projection slices drift from `spec.md` or `test-matrix.md`, keep contract projection as execution truth for this run" in tasks_template
     assert "same run-local execution graph used to render `tasks.md`" in tasks_template
 
     assert "Analyze-first is a blocking reminder by default" in implement
@@ -65,6 +70,8 @@ def test_tasks_implement_and_analyze_enforce_authority_protocol():
     assert "`plan.md` is the planning control plane for queue state, binding-projection rows, and source/output fingerprints only" in analyze
     assert "owns comprehensive implementation-readiness analysis and audit responsibilities" in analyze
     assert "Treat task-local summaries or inline mirrors as derived views only" in analyze
+    assert "contract-projection drift governance" in analyze
+    assert "route spec writeback repairs to `/sdd.specify`; route test-matrix writeback repairs to `/sdd.plan.test-matrix`" in analyze
     assert ".specify/templates/lint-report-template.md" in analyze
     assert "stale planning outputs" in analyze
     assert "route stale `test-matrix` rows or missing binding rows to `/sdd.plan.test-matrix`" in analyze

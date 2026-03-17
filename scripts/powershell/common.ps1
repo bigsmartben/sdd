@@ -186,7 +186,6 @@ function New-FeaturePathsObject {
         DATA_MODEL            = Join-Path $FeatureDir 'data-model.md'
         TEST_MATRIX           = Join-Path $FeatureDir 'test-matrix.md'
         CONTRACTS_DIR         = Join-Path $FeatureDir 'contracts'
-        INTERFACE_DETAILS_DIR = Join-Path $FeatureDir 'interface-details'
     }
 }
 

@@ -56,17 +56,15 @@ Use this protocol whenever the Outline asks to execute extension hooks for a pha
 
 ## Responsibility Boundary (Scope Guard)
 
-Terminology note (compatibility, non-normative):
-
-- In this command, **Hard Gates** means the existing "hard execution safety gates" set (same semantics, alias only).
-- This alias is for cross-command readability and does not change ownership, checks, or blocking behavior.
-
 - `/sdd.tasks` owns executable task generation and DAG-oriented orchestration of approved planning outputs only.
 - `/sdd.tasks` is the execution decomposition step for completed `plan`-stage detailed design. It projects approved design into work packages; it does not supplement missing design.
 - `Interface Delivery Units` are IF-scoped execution work packages, not a second design stage.
 - Keep checks in this command limited to a **P0-frozen set of hard execution safety gates only**: input availability, repository-anchored tuple executability for generated tasks, DAG schedulability, and task-line completeness.
 - `/sdd.tasks` MUST NOT supplement design details, verification semantics, target paths, completion anchors, or dependency meaning that are not already traceable to authoritative upstream artifacts.
-- If required execution anchors are missing from `Binding Projection Index`, completed `Artifact Status` rows, `contracts/`, `interface-details/`, or `test-matrix.md`, fail fast and route back to the relevant `/sdd.plan.*` command; do not emit placeholder execution tasks.
+- If required execution anchors are missing from `Binding Projection Index`, completed `Artifact Status` rows, `contracts/`, or `test-matrix.md`, fail fast and route back to the relevant `/sdd.plan.*` command; do not emit placeholder execution tasks.
+- If required downstream projection anchors are missing from a selected contract (`Downstream Projection Input (Required)`), fail fast and route back to `/sdd.plan.contract`; do not infer spec/test anchors.
+- For each active IF unit, treat contract `Downstream Projection Input (Required)` (`Spec Projection Slice`, `Test Projection Slice`) as the authoritative downstream execution projection.
+- If contract projection slices conflict with `spec.md` or `test-matrix.md`, keep contract projection as execution truth for this run and emit explicit upstream writeback repair actions; do not reconcile by local semantic inference inside `/sdd.tasks`.
 - `/sdd.tasks` may fail when execution-critical inputs are missing or non-consumable, but it does **not** own coverage completeness, uncovered MUST requirement analysis, ambiguity sweeps, terminology/diagram drift detection, repo-anchor misuse audits, helper-doc leakage checks, audit hygiene checks, or cross-artifact contradiction analysis.
 - This runtime scheduling guidance is execution-only. It MUST NOT change artifact authority.
 - Any tuple indexes, execution maps, or working summaries created during `/sdd.tasks` are derived views only.
@@ -92,7 +90,7 @@ Terminology note (compatibility, non-normative):
    - Prefer `TASKS_BOOTSTRAP.unit_inventory` and `TASKS_BOOTSTRAP.ready_unit_inventory` over reparsing `Binding Projection Index` / `Artifact Status` tables. Re-open `plan.md` control-plane tables only when bootstrap data is missing, invalid, or contradictory.
 
 4. **Load design documents (required + on-demand)**: Read from FEATURE_DIR:
-   - **Required**: `plan.md`, `spec.md`, `data-model.md`, `test-matrix.md`, `contracts/`, `interface-details/`.
+   - **Required**: `plan.md`, `spec.md`, `data-model.md`, `test-matrix.md`, `contracts/`.
    - First validate `TASKS_BOOTSTRAP.required_sections`, `TASKS_BOOTSTRAP.stage_queue`, and `TASKS_BOOTSTRAP.unit_inventory`. If valid, use them as the default bounded control-plane packet for this run.
    - Consume only the slices needed for the active generation unit. Prefer section-level or row-level rereads over whole-file replay.
    - **On-demand only**: `research.md` when constraints/decisions materially affect the active unit.
@@ -102,12 +100,11 @@ Terminology note (compatibility, non-normative):
      - `Binding Projection Index`
      - `Artifact Status`
    - Stop and route to `/sdd.plan` if these control-plane sections are missing or non-consumable.
-   - Stop and route to the relevant `/sdd.plan.*` child command if:
-     - any `Stage Queue` row required for planning completion is not `done`
-     - any `Artifact Status` row for `contract` or `interface-detail` remains non-`done`
+    - Stop and route to the relevant `/sdd.plan.*` child command if:
+      - any `Stage Queue` row required for planning completion is not `done`
+      - any `Artifact Status` row for `contract` remains non-`done`
    - Stop and route to `/sdd.plan.test-matrix` if `test-matrix.md` is missing, non-consumable, or lacks the tuple keys needed for executable verification mapping.
    - Stop and route to `/sdd.plan.contract` if a required contract artifact/path is missing, non-consumable, or cannot be aligned to the selected binding tuple.
-   - Stop and route to `/sdd.plan.interface-detail` if a required interface-detail artifact/path is missing, non-consumable, or cannot be aligned to the selected binding tuple.
 
 5. **Execute task generation workflow**:
    - Treat `plan.md` as the planning control plane and binding projection ledger; it is still a planning summary / structure guide, not as a replacement for canonical requirement, contract, model, or verification semantics.
@@ -133,7 +130,7 @@ Terminology note (compatibility, non-normative):
      - one work package maps to exactly one target path cluster or one command target
      - one work package maps to exactly one primary completion anchor
      - do not merge multiple operations, unrelated file clusters, or distinct validation objectives into one task
-   - Between `Generate` and `Compress`, run **hard execution safety gates only** for the active unit: required anchor presence, prevention of promoting `TODO(REPO_ANCHOR)` or any `todo` anchor-status tuple (`Anchor Status`, `Boundary Anchor Status`, `Implementation Entry Anchor Status`) into executable semantics, local mapping completeness, and dependency-safe schedulability.
+    - Between `Generate` and `Compress`, run **hard execution safety gates only** for the active unit: required anchor presence, prevention of promoting `TODO(REPO_ANCHOR)` or any `todo` anchor-status tuple (`Anchor Status`, `Implementation Entry Anchor Status`) into executable semantics, local mapping completeness, and dependency-safe schedulability.
    - **GLOBAL inventory and foundation unit**:
       - Load `data-model.md` and capture shared global object baselines required by tasks.
       - Build a run-local `global-anchor-summary` from the minimum shared anchors and invariants needed for cross-interface prerequisites.
@@ -144,15 +141,15 @@ Terminology note (compatibility, non-normative):
       - Build IF-scoped unit inventory from `TASKS_BOOTSTRAP.ready_unit_inventory` first; if bootstrap is unavailable, fall back to `Binding Projection Index`. Do not discover execution units by repository scan.
       - Map verification refs from `test-matrix.md` (`TM-*` / `TC-*`) using stable tuple keys projected in `Binding Projection Index` (`Operation ID`, `Boundary Anchor`, `IF Scope`).
       - Use `contracts/` as canonical interface semantics for implementation/verification task targets.
-      - Resolve `contract` and `interface-detail` target paths from the completed `Artifact Status` rows in `plan.md`, then validate tuple alignment against the authoritative artifacts.
-      - If contracts define interface operations but required interface-detail docs are missing, stop and request upstream completion.
-      - For the active `IF Scope`, read only matching contract/detail slices, relevant `TM/TC` rows, relevant `data-model.md` anchors, and required `spec.md` refs.
-      - Use `interface-details/` as the authoritative internal handoff design for execution targeting; extract `Implementation Entry Anchor` and repo-backed participating components when placing implementation tasks.
-      - When `Boundary Anchor` and `Implementation Entry Anchor` differ, keep `Boundary Anchor` for verification/binding refs but anchor implementation tasks to the internal entry/collaborator path defined in `interface-details/`.
-      - Do not target implementation work at the external boundary alone when the detail doc defines a narrower repo-backed internal handoff entry.
-      - Consume only repository-anchored contract/interface tuples as executable semantics; treat `TODO(REPO_ANCHOR)` or any tuple with `Anchor Status = todo`, `Boundary Anchor Status = todo`, or `Implementation Entry Anchor Status = todo` as blocker/note only.
-      - Build work packages only from the active scope's matching contract/interface-detail/test tuples. If multiple operations share one `IF Scope`, keep them as separate work packages rather than one composite task.
-      - When artifacts overlap, keep semantics authoritative in upstream artifacts (`spec.md`, `contracts/`, `data-model.md`, `test-matrix.md`); `tasks.md` maps execution only.
+      - Resolve `contract` target paths from the completed `Artifact Status` rows in `plan.md`, then validate tuple alignment against the authoritative artifacts.
+      - For the active `IF Scope`, read only matching contract slices, relevant `TM/TC` rows, relevant `data-model.md` anchors, and required `spec.md` refs.
+      - Require the selected contract to provide `Downstream Projection Input (Required)` with both `Spec Projection Slice` and `Test Projection Slice`; use these as the per-operation execution projection base.
+      - Use `contracts/` as the authoritative realization design source for execution targeting; extract `Implementation Entry Anchor` and repo-backed participating components from the contract realization section when placing implementation tasks.
+      - When `Boundary Anchor` and `Implementation Entry Anchor` differ, keep `Boundary Anchor` for verification/binding refs but anchor implementation tasks to the internal entry/collaborator path defined in `contracts/`.
+      - Do not target implementation work at the external boundary alone when the contract realization section defines a narrower repo-backed internal handoff entry.
+      - Consume only repository-anchored contract tuples as executable semantics; treat `TODO(REPO_ANCHOR)` or any tuple with `Anchor Status = todo` or `Implementation Entry Anchor Status = todo` as blocker/note only.
+      - Build work packages only from the active scope's matching contract/test tuples. If multiple operations share one `IF Scope`, keep them as separate work packages rather than one composite task.
+      - When projection drift is detected (`Spec Projection Slice` or `Test Projection Slice` vs `spec.md` / `test-matrix.md`), keep contract projection semantics for this execution run and emit `Upstream Alignment Repair` actions mapped to owner commands (`/sdd.specify` for spec drift, `/sdd.plan.test-matrix` for test-matrix drift).
       - Generate one IF-scoped delivery unit at a time, then compress before loading the next.
       - After each unit is compressed, discard its detailed local working set and carry forward only stable delivery anchors.
    - **Final DAG synthesis and document assembly**:
@@ -182,9 +179,10 @@ Terminology note (compatibility, non-normative):
 8. **Report (Execution Summary + Analyze Handoff Only)**: Output a concise summary only:
    - Generated artifact paths: `tasks.md`, `tasks.manifest.json`
    - Total task count and count split by `GLOBAL` and each interface unit (`IF-###`)
-   - DAG schedulability result (dependency-safe / blockers detected)
-   - Manifest alignment result (task count and task IDs aligned with `tasks.md`)
-   - Analyze handoff note: direct non-mainline comprehensive audit concerns to `/sdd.analyze`
+    - DAG schedulability result (dependency-safe / blockers detected)
+    - Manifest alignment result (task count and task IDs aligned with `tasks.md`)
+    - Upstream alignment repair actions emitted due to projection drift (if any), including target artifact and owner command
+    - Analyze handoff note: direct non-mainline comprehensive audit concerns to `/sdd.analyze`
 
 9. Execute `after_tasks` hooks using the Hook Dispatch Protocol.
 
@@ -204,21 +202,22 @@ Use `.specify/templates/tasks-template.md` as the authoritative source for docum
 
 Additional generation constraints:
 
-- Map each interface detail / contract to one interface delivery unit keyed by `IF Scope`.
+- Map each contract interface design unit to one interface delivery unit keyed by `IF Scope`.
 - Treat interface delivery units as execution mapping only.
 - Use `Binding Projection Index` from `plan.md` as the execution-unit inventory source; if it is missing or incomplete, stop and route to `/sdd.plan.test-matrix`.
-- Use the completed `Artifact Status` rows plus `Binding Projection Index` to resolve the only allowed contract/detail target paths for task generation.
+- Use the completed `Artifact Status` rows plus `Binding Projection Index` to resolve the only allowed contract target paths for task generation.
 - Each interface delivery unit SHOULD surface the contract binding plus the `Implementation Entry Anchor` when it differs from the contract boundary.
 - Each interface delivery unit SHOULD include at least one `Verify` task and one `Interface` task (document exceptions explicitly).
 - Each task MUST project exactly one execution target: one `operationId` or one shared prerequisite objective, one explicit target path cluster or command target, and one primary completion anchor.
 - If a target path, command target, completion anchor, or predecessor edge cannot be stated explicitly from upstream artifacts, stop rather than infer it.
 - A single task MUST NOT cover multiple operations, multiple unrelated file clusters, or multiple distinct validation objectives.
+- Apply the projection authority and drift-writeback rules defined in `Responsibility Boundary (Scope Guard)` for every active IF unit.
 - Tasks may refine operation-level mappings but MUST NOT rewrite approved global object semantics.
-- Interface implementation tasks SHOULD target the repo-backed `Implementation Entry Anchor` or directly participating collaborators from `interface-details/`; verification tasks SHOULD keep contract/test anchors explicit.
+- Interface implementation tasks SHOULD target the repo-backed `Implementation Entry Anchor` or directly participating collaborators from `contracts/`; verification tasks SHOULD keep contract/test anchors explicit.
 - If multiple operations share an `IF Scope`, keep them as separate work packages inside that IF unit; do not merge them into a synthetic combined task.
 - `GLOBAL` is limited to prerequisites shared by multiple IF units. Using `GLOBAL` as overflow for one-scope work is a hard error.
 - Repository-first projection artifacts in `.specify/memory/repository-first/` are complementary and MUST NOT replace one another (`.specify/memory/repository-first/technical-dependency-matrix.md` = dependency facts, `.specify/memory/repository-first/module-invocation-spec.md` = invocation constraints).
-- Task execution targets MUST reference anchored tuples only. `TODO(REPO_ANCHOR)` items and tuples carrying `Anchor Status = todo`, `Boundary Anchor Status = todo`, or `Implementation Entry Anchor Status = todo` MUST NOT be converted into executable interface semantics, completion anchors, or implementation objectives.
+- Task execution targets MUST reference anchored tuples only. `TODO(REPO_ANCHOR)` items and tuples carrying `Anchor Status = todo` or `Implementation Entry Anchor Status = todo` MUST NOT be converted into executable interface semantics, completion anchors, or implementation objectives.
 - Do not emit `blocked`, `todo`, placeholder, or compensating tasks to represent missing upstream design anchors.
 - Use deterministic refs (`operationId`, `CaseID`, `TM-*`, `TC-*`) only when they help execution or completion checking.
 - Keep Task DAG dependency-safe and minimally sufficient (avoid speculative over-constraint).

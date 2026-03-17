@@ -629,7 +629,7 @@ class TestSkillDescriptions:
         """All standard spec-kit commands should have enhanced descriptions."""
         expected_commands = [
             "specify", "plan", "plan.research", "plan.data-model",
-            "plan.test-matrix", "plan.contract", "plan.interface-detail",
+            "plan.test-matrix", "plan.contract",
             "tasks", "implement", "analyze",
             "clarify", "constitution", "checklist", "taskstoissues",
         ]
@@ -750,7 +750,7 @@ class TestCliValidation:
         assert "/sdd.plan.data-model" in normalized
         assert "/sdd.plan.test-matrix" in normalized
         assert "/sdd.plan.contract" in normalized
-        assert "/sdd.plan.interface-detail" in normalized
+        assert "/sdd.plan.interface-detail" not in normalized
         assert "/sdd.analyze - Run the default pre-implementation audit" in normalized
         assert "/sdd.implement - Execute implementation after analyze or an explicit waiver" in normalized
         assert "Create implementation plan" not in normalized

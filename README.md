@@ -130,10 +130,9 @@ Use the `sdd.plan.*` child commands to generate planning artifacts one unit at a
 - `/sdd.plan.data-model specs/001-photo-albums/plan.md`
 - `/sdd.plan.test-matrix specs/001-photo-albums/plan.md`
 - repeated `/sdd.plan.contract specs/001-photo-albums/plan.md`
-- repeated `/sdd.plan.interface-detail specs/001-photo-albums/plan.md`
 
 `plan.md` queue state is the sole authority for planning handoff decisions.
-For repeated `/sdd.plan.contract` and `/sdd.plan.interface-detail` runs, follow the runtime `Handoff Decision` output rather than any static frontmatter suggestion. Every planning command now requires its explicit file path; planning commands no longer derive their target from Git branch or `SPECIFY_FEATURE`.
+For repeated `/sdd.plan.contract` runs, follow the runtime `Handoff Decision` output rather than any static frontmatter suggestion. Every planning command now requires its explicit file path; planning commands no longer derive their target from Git branch or `SPECIFY_FEATURE`.
 
 ### 6. Break down into tasks
 
@@ -317,7 +316,6 @@ Essential commands for the Spec-Driven Development workflow:
 | `/sdd.plan.data-model <plan.md>` | Generate the queued `data-model.md` artifact |
 | `/sdd.plan.test-matrix <plan.md>` | Generate the queued `test-matrix.md` artifact and binding rows |
 | `/sdd.plan.contract <plan.md>` | Generate one queued contract artifact |
-| `/sdd.plan.interface-detail <plan.md>` | Generate one queued interface-detail artifact |
 | `/sdd.tasks`        | Produce executable orchestration from approved planning artifacts (no unified semantic audit) |
 | `/sdd.implement`    | Execute tasks with runtime hard gates (expects `/sdd.analyze` first; missing audit triggers a blocking reminder unless explicitly waived) |
 
@@ -518,7 +516,6 @@ At this stage, your project folder contents should resemble the following:
     └── templates
         ├── contract-template.md
         ├── data-model-template.md
-        ├── interface-detail-template.md
         ├── plan-template.md
         ├── research-template.md
         ├── spec-template.md
@@ -590,7 +587,6 @@ The directory tree after `/sdd.plan` will resemble this:
     ├── contract-template.md
     ├── data-model-template.md
     ├── CLAUDE-template.md
-    ├── interface-detail-template.md
     ├── plan-template.md
     ├── research-template.md
     ├── spec-template.md
@@ -614,14 +610,13 @@ Run the child commands in queue order:
 /sdd.plan.data-model specs/001-create-taskify/plan.md
 /sdd.plan.test-matrix specs/001-create-taskify/plan.md
 /sdd.plan.contract specs/001-create-taskify/plan.md
-/sdd.plan.interface-detail specs/001-create-taskify/plan.md
 ```
 
-`/sdd.plan.contract` and `/sdd.plan.interface-detail` are repeated commands. Each run processes one queued unit from `plan.md`, updates that unit's status, and then emits a `Handoff Decision` derived only from the post-writeback queue state in `plan.md`. The `Handoff Decision` should include the next command with the explicit `plan.md` path.
+`/sdd.plan.contract` is a repeated command. Each run processes one queued unit from `plan.md`, updates that unit's status, and then emits a `Handoff Decision` derived only from the post-writeback queue state in `plan.md`. The `Handoff Decision` should include the next command with the explicit `plan.md` path.
 
 Static command frontmatter `handoffs` are advisory metadata only. They may point to one unconditional next command, but they are not the authority for state-dependent routing.
 
-Check the resulting planning artifacts as they are generated. For example, validate `research.md` after `/sdd.plan.research`, then `data-model.md`, `test-matrix.md`, and the queued contract/interface-detail artifacts.
+Check the resulting planning artifacts as they are generated. For example, validate `research.md` after `/sdd.plan.research`, then `data-model.md`, `test-matrix.md`, and the queued contract artifacts.
 
 Additionally, you might want to ask Claude Code to research details about the chosen tech stack if it's something that is rapidly changing (e.g., .NET Aspire, JS frameworks), with a prompt like this:
 
@@ -675,9 +670,9 @@ This step creates a `tasks.md` file in your feature specification directory that
 - **Verification-first delivery loops** - Verify, implement, and completion tasks are grouped around each interface unit
 - **Completion anchors** - Tasks carry deterministic pass signals such as contract checks, build/test commands, or case anchors
 
-`/sdd.tasks` consumes approved planning artifacts and turns them into execution orchestration. It does not reopen research, data-model, contract, or interface-detail design, and it does not perform the unified cross-artifact semantic audit.
+`/sdd.tasks` consumes approved planning artifacts and turns them into execution orchestration. It does not reopen research, data-model, or contract design, and it does not perform the unified cross-artifact semantic audit.
 
-It should emit single-target work packages only: each task must carry one explicit path or command target plus one primary completion anchor. If required anchors are missing from `plan.md`, `contracts/`, `interface-details/`, or `test-matrix.md`, `/sdd.tasks` should stop and route back to the relevant `/sdd.plan.*` command rather than inferring new semantics or emitting `blocked`/`todo` placeholder tasks.
+It should emit single-target work packages only: each task must carry one explicit path or command target plus one primary completion anchor. If required anchors are missing from `plan.md`, `contracts/`, or `test-matrix.md`, `/sdd.tasks` should stop and route back to the relevant `/sdd.plan.*` command rather than inferring new semantics or emitting `blocked`/`todo` placeholder tasks.
 
 For faster runs, the prerequisite script may pre-extract a compact `TASKS_BOOTSTRAP` packet from `plan.md` so `/sdd.tasks` can reuse a joined control-plane inventory instead of reparsing the planning tables during the same run.
 

@@ -30,7 +30,7 @@ This document replaces the prior refactor baseline document.
 | `.specify/memory/constitution.md` | Project-wide principles, terminology boundaries, governance rules (rule authority, not component-boundary evidence) | Authoritative |
 | `.specify/memory/repository-first/*` | Canonical repository-first dependency/invocation projections | Authoritative |
 | `spec.md` | Feature business semantics and user-visible requirements | Authoritative |
-| `research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, `interface-details/` | Planning-stage design semantics within their defined scopes | Authoritative within scope |
+| `research.md`, `data-model.md`, `test-matrix.md`, `contracts/` | Planning-stage design semantics within their defined scopes | Authoritative within scope |
 | `plan.md` | Planning control plane, binding projection ledger, queue/fingerprint state | Derived for planning semantics; authoritative for planning queue state |
 | `tasks.md` | Execution mapping and DAG scheduling authority | Authoritative for execution order; derived for upstream semantics |
 | `tasks.manifest.json` | machine-readable sidecar projection of `tasks.md` runtime metadata | Derived view |
@@ -42,6 +42,8 @@ Authority rules:
 - `Task DAG` remains the execution authority inside `tasks.md`; task prose and inline predecessor mirrors do not outrank it.
 - `plan.md` does not supersede the stage artifacts it dispatches.
 - `tasks.md` does not supersede `spec.md`, `contracts/`, `data-model.md`, or `test-matrix.md` for semantics.
+- For `/sdd.tasks` execution mapping, the selected contract `Spec Projection Slice` and `Test Projection Slice` are the authoritative downstream projection input for that IF unit.
+- If contract projection slices conflict with `spec.md` or `test-matrix.md`, keep contract projection for current execution output and issue explicit upstream writeback repair actions.
 - `tasks.manifest.json` is generated from `tasks.md` and must not become an independent semantic source.
 
 ## Mapping Overview
@@ -57,7 +59,6 @@ Runtime template authority path for generation and output-structure commands is 
 | `/sdd.plan.data-model <plan.md>` | Generate the queued backbone data model artifact | `.specify/templates/data-model-template.md` | `data-model.md` |
 | `/sdd.plan.test-matrix <plan.md>` | Generate the queued verification matrix and initialize binding rows | `.specify/templates/test-matrix-template.md` | `test-matrix.md`, `plan.md` binding rows |
 | `/sdd.plan.contract <plan.md>` | Generate one queued contract artifact | `.specify/templates/contract-template.md` | one file in `contracts/` |
-| `/sdd.plan.interface-detail <plan.md>` | Generate one queued interface detail artifact | `.specify/templates/interface-detail-template.md` | one file in `interface-details/` |
 | `/sdd.tasks` | Convert approved planning artifacts into executable work mapping | `.specify/templates/tasks-template.md` | `tasks.md`, `tasks.manifest.json` |
 | `/sdd.implement` | Execute tasks against the approved design set | N/A | Implementation progress and completion output |
 | `/sdd.checklist` | Generate vertical checklist output | `.specify/templates/checklist-template.md` | `checklists/*.md` |
@@ -67,7 +68,7 @@ Runtime template authority path for generation and output-structure commands is 
 
 Recommended sequence:
 
-`/sdd.specify` -> `/sdd.clarify` -> `/sdd.plan <spec.md>` -> `/sdd.plan.research <plan.md>` -> `/sdd.plan.data-model <plan.md>` -> `/sdd.plan.test-matrix <plan.md>` -> repeated `/sdd.plan.contract <plan.md>` -> repeated `/sdd.plan.interface-detail <plan.md>` -> `/sdd.tasks` -> `/sdd.analyze` -> `/sdd.implement`
+`/sdd.specify` -> `/sdd.clarify` -> `/sdd.plan <spec.md>` -> `/sdd.plan.research <plan.md>` -> `/sdd.plan.data-model <plan.md>` -> `/sdd.plan.test-matrix <plan.md>` -> repeated `/sdd.plan.contract <plan.md>` -> `/sdd.tasks` -> `/sdd.analyze` -> `/sdd.implement`
 
 Gate rules:
 
@@ -98,14 +99,14 @@ Planning rules:
   - binding projection keys
 - `plan.md` must not absorb audit payload, long stage summaries, or stage-body prose.
 - `/sdd.plan <spec.md>` requires an explicit `spec.md` path under `repo/specs/**`.
-- `/sdd.plan` performs Stage 0 shared-context extraction inside `plan.md`; it does not directly generate `research.md`, `data-model.md`, `test-matrix.md`, `contracts/`, or `interface-details/`.
+- `/sdd.plan` performs Stage 0 shared-context extraction inside `plan.md`; it does not directly generate `research.md`, `data-model.md`, `test-matrix.md`, or `contracts/`.
 - child-stage selection must come from `plan.md` queue rows, not repository scanning.
 - command frontmatter `handoffs`, when present, are static advisory metadata only and may name at most one unconditional next command.
 - state-dependent planning routing must be emitted through a runtime `Handoff Decision` derived from `plan.md`, not encoded as branching frontmatter.
 - `/sdd.constitution` owns creation/refresh of repository-first canonical projections in `.specify/memory/repository-first/`.
 - dependency-matrix canonical baseline is built from build-manifest auto-detection (`pom.xml`, `package.json`, `pyproject.toml` + requirements/lock hints, `go.mod`).
 - `/sdd.plan` MUST consume canonical repository-first projections and fail-fast to `/sdd.constitution` when they are missing/stale.
-- The five `/sdd.plan.*` child commands (`/sdd.plan.research`, `/sdd.plan.data-model`, `/sdd.plan.test-matrix`, `/sdd.plan.contract`, `/sdd.plan.interface-detail`) must read planning queue/control-plane state from the explicit `plan.md` path provided by the user.
+- The four `/sdd.plan.*` child commands (`/sdd.plan.research`, `/sdd.plan.data-model`, `/sdd.plan.test-matrix`, `/sdd.plan.contract`) must read planning queue/control-plane state from the explicit `plan.md` path provided by the user.
 - User-provided non-`plan.md` files may be consumed only if they are already permitted by the command's `Allowed Inputs`; they must not replace control-plane state.
 
 ## /sdd.plan.research
@@ -137,14 +138,6 @@ Planning rules:
 - Rule: emit a runtime `Handoff Decision` with `Next Command`, `Decision Basis`, `Selected BindingRowID`, and `Ready/Blocked`.
 - Rule: determine the next command from post-writeback `Artifact Status` only; repeated routing stays on `/sdd.plan.contract` until no pending contract rows remain, then advances through runtime `Handoff Decision`.
 
-## /sdd.plan.interface-detail
-
-- Command role: generate one queued interface-detail artifact.
-- Template role: `.specify/templates/interface-detail-template.md` defines each per-operation detail artifact in `interface-details/`.
-- Rule: consume the first pending `interface-detail` row from the explicit `plan.md` input `Artifact Status`; require the matching contract row to be `done`.
-- Rule: emit a runtime `Handoff Decision` with `Next Command`, `Decision Basis`, `Selected BindingRowID`, and `Ready/Blocked`.
-- Rule: determine the next command from post-writeback `Artifact Status` only; repeated routing stays on `/sdd.plan.interface-detail` until planning is complete, then advances through runtime `Handoff Decision`.
-
 ## Planning Artifact Traits
 
 ### `research.md`
@@ -163,7 +156,7 @@ Planning rules:
 - defines cross-operation shared invariants as normative `INV-###` rules with applicability and anchors
 - captures aggregate/entity lifecycle anchors using state field, stable states, allowed transitions, and forbidden transitions
 - includes backbone UML that shows core classes/interfaces, key stable fields, and labeled relationships
-- concrete enough to support downstream `.specify/templates/contract-template.md` and `.specify/templates/interface-detail-template.md` reuse
+- concrete enough to support downstream `.specify/templates/contract-template.md` reuse
 - remains backbone-only: no per-operation spillover, no field-complete DTO modeling, no implementation-layer expansion, no persistence schema design
 
 ### `test-matrix.md`
@@ -175,22 +168,13 @@ Planning rules:
 
 ### `contracts/`
 
-- minimum external I/O only
+- keeps northbound external I/O as a minimal UIF+necessary UDD slice
 - defines success and failure semantics
 - defines preconditions, postconditions, and visible side effects
-- keeps only minimum downstream binding references
-- contains no internal projections or sequence/UML design
+- keeps only minimum downstream binding references plus realization design anchors
+- includes realization design coverage needed for execution targeting (behavior paths, sequence, UML, runtime correctness checks)
+- includes explicit downstream projection slices (`spec` refs + `test` scope/anchors) required as normalized inputs for `/sdd.tasks` and `/sdd.implement`
 - contains no audit or traceability ledger
-
-### `interface-details/`
-
-- defines field semantics
-- defines internal handoff anchors and collaborator ownership for execution targeting
-- defines sequence diagrams
-- defines UML class design
-- defines upstream references
-- reuses and extends `data-model.md` vocabulary in UML
-- does not expand into behavior ledgers or verification notes
 
 ## /sdd.tasks
 
@@ -206,12 +190,15 @@ Planning rules:
 - Rule: it must treat `plan.md` as a planning control plane and `Binding Projection Index` as the execution-unit inventory source.
 - Rule: if `TASKS_BOOTSTRAP` is missing, invalid, or contradictory, fall back to the authoritative `plan.md` control plane rather than treating bootstrap data as independent authority.
 - Rule: it must use one unique tuple inventory derived from `Binding Projection Index` plus completed `Artifact Status` rows as the sole task-generation inventory.
-- Rule: it must stop when `plan.md` queue rows show incomplete planning stages or pending contract / interface-detail units.
-- Rule: it must hard-fail and route to the relevant `/sdd.plan.*` command when required execution anchors are missing or non-traceable in `Binding Projection Index`, `Artifact Status`, `contracts/`, `interface-details/`, or `test-matrix.md`.
-- Rule: when contract boundary and interface-detail implementation entry differ, it must keep the contract boundary for verification/binding refs and use the implementation entry/collaborator path for implementation target mapping.
+- Rule: it must stop when `plan.md` queue rows show incomplete planning stages or pending contract units.
+- Rule: it must hard-fail and route to the relevant `/sdd.plan.*` command when required execution anchors are missing or non-traceable in `Binding Projection Index`, `Artifact Status`, `contracts/`, or `test-matrix.md`.
+- Rule: it must hard-fail and route to `/sdd.plan.contract` when selected contracts are missing required downstream projection slices (`Spec Projection Slice`, `Test Projection Slice`).
+- Rule: for execution mapping, it must treat contract `Spec Projection Slice` and `Test Projection Slice` as authoritative downstream projection input per IF unit.
+- Rule: when projection slices drift from `spec.md` or `test-matrix.md`, it must keep contract projection for current task output and emit explicit upstream writeback repair actions (`/sdd.specify` for spec drift, `/sdd.plan.test-matrix` for test drift).
+- Rule: when contract boundary and implementation entry differ, it must keep the contract boundary for verification/binding refs and use the implementation entry/collaborator path for implementation target mapping.
 - Rule: it consumes upstream semantics but must not redefine them.
 - Rule: it may consume `test-matrix.md` as test-design input, not as audit material.
-- Rule: it must not reopen research, data-model, contract, or interface-detail design.
+- Rule: it must not reopen research, data-model, or contract design.
 - Rule: it must not supplement verification semantics, target paths, completion anchors, dependency meaning, or execution rationale not already traceable to authoritative inputs.
 - Rule: `GLOBAL` is limited to prerequisites shared by multiple IF units; it must not be used as overflow for one-scope work.
 - Rule: each generated work package/task must map to exactly one `operationId` or one shared prerequisite objective, one explicit target path cluster or command target, and one primary completion anchor.
@@ -236,7 +223,7 @@ Planning rules:
 - Command role: vertical checklist generation.
 - It owns checklist-style verification work.
 - It remains outside the main planning flow.
-- It must not push checklist burden back into `spec.md`, `plan.md`, `data-model.md`, `contracts/`, or `interface-details/`.
+- It must not push checklist burden back into `spec.md`, `plan.md`, `data-model.md`, or `contracts/`.
 
 ## /sdd.analyze
 
