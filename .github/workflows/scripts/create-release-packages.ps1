@@ -460,7 +460,15 @@ function Build-Variant {
     }
 
     $zipFile = Join-Path $GenReleasesDir "spec-kit-template-${Agent}-${Script}-${Version}.zip"
-    Compress-Archive -Path "$baseDir/*" -DestinationPath $zipFile -Force
+    $archiveItems = @(
+        Get-ChildItem -Path $baseDir -Force -ErrorAction SilentlyContinue | ForEach-Object {
+            $_.FullName
+        }
+    )
+    if ($archiveItems.Count -eq 0) {
+        throw "No files generated under $baseDir for agent '$Agent' ($Script)"
+    }
+    Compress-Archive -Path $archiveItems -DestinationPath $zipFile -Force
     Write-Host "Created $zipFile"
 }
 
