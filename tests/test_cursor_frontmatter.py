@@ -5,20 +5,17 @@ Verifies that update-agent-context.sh properly prepends YAML frontmatter
 to .mdc files so that Cursor IDE auto-includes the rules.
 """
 
-import os
 import shutil
 import subprocess
 import textwrap
+from pathlib import Path
 
 import pytest
 
-SCRIPT_PATH = os.path.join(
-    os.path.dirname(__file__),
-    os.pardir,
-    "scripts",
-    "bash",
-    "update-agent-context.sh",
-)
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SCRIPT_PATH = REPO_ROOT / "scripts" / "bash" / "update-agent-context.sh"
+COMMON_SCRIPT_PATH = REPO_ROOT / "scripts" / "bash" / "common.sh"
+POWERSHELL_SCRIPT_PATH = REPO_ROOT / "scripts" / "powershell" / "update-agent-context.ps1"
 
 EXPECTED_FRONTMATTER_LINES = [
     "---",
@@ -56,14 +53,7 @@ class TestScriptFrontmatterPattern:
 
     def test_powershell_script_has_mdc_frontmatter_logic(self):
         """PowerShell script must also handle .mdc frontmatter."""
-        ps_path = os.path.join(
-            os.path.dirname(__file__),
-            os.pardir,
-            "scripts",
-            "powershell",
-            "update-agent-context.ps1",
-        )
-        with open(ps_path, encoding="utf-8") as f:
+        with open(POWERSHELL_SCRIPT_PATH, encoding="utf-8") as f:
             content = f.read()
         assert "alwaysApply: true" in content
         occurrences = content.count(r"\.mdc$")
@@ -128,6 +118,11 @@ class TestCursorFrontmatterIntegration:
             "## Recent Changes\n\n"
             "[LAST 3 FEATURES AND WHAT THEY ADDED]\n"
         )
+        scripts_dir = repo / "scripts" / "bash"
+        scripts_dir.mkdir(parents=True)
+        shutil.copy2(SCRIPT_PATH, scripts_dir / "update-agent-context.sh")
+        shutil.copy2(COMMON_SCRIPT_PATH, scripts_dir / "common.sh")
+        (scripts_dir / "update-agent-context.sh").chmod(0o755)
 
         # Create initial commit
         subprocess.run(
@@ -162,7 +157,7 @@ class TestCursorFrontmatterIntegration:
 
     def _run_update(self, repo, agent_type="cursor-agent"):
         """Run update-agent-context.sh for a specific agent type."""
-        script = os.path.abspath(SCRIPT_PATH)
+        script = "scripts/bash/update-agent-context.sh"
         result = subprocess.run(
             ["bash", script, agent_type],
             cwd=str(repo),

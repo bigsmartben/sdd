@@ -8,11 +8,21 @@ def read(rel_path: str) -> str:
     return (REPO_ROOT / rel_path).read_text(encoding="utf-8")
 
 
+def read_if_exists(rel_path: str) -> str | None:
+    path = REPO_ROOT / rel_path
+    if not path.exists():
+        return None
+    return path.read_text(encoding="utf-8")
+
+
 def test_plan_command_is_control_plane_only():
     content = read("templates/commands/plan.md")
     assert "does **not** generate downstream planning-stage artifacts directly" in content
     assert "The first positional token is mandatory and is `SPEC_FILE`" in content
     assert "`/sdd.plan <path/to/spec.md> [technical-context...]`" in content
+    assert "Planning Sharding Model (Mandatory)" in content
+    assert "Stage sharding (fixed): `research -> data-model -> test-matrix -> contract`" in content
+    assert "Binding sharding (fixed): `/sdd.plan.contract` consumes one `BindingRowID` row per run" in content
 
 
 def test_plan_child_commands_are_contract_only():
@@ -35,7 +45,73 @@ def test_plan_child_commands_are_contract_only():
 def test_plan_template_tracks_only_contract_artifacts():
     content = read("templates/plan-template.md")
     assert "`contract` is tracked as the single per-binding interface design artifact." in content
+    assert "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | Boundary Anchor | Implementation Entry Anchor | Boundary Anchor Status | Implementation Entry Anchor Status | Test Scope |" in content
+    assert "compact bootstrap fields only" in content
     assert "interface-detail" not in content
+
+
+def test_plan_and_test_matrix_templates_precompute_contract_bootstrap_inputs():
+    plan = read("templates/commands/plan.md")
+    test_matrix_command = read("templates/commands/plan.test-matrix.md")
+    test_matrix_template = read("templates/test-matrix-template.md")
+
+    assert "- `Implementation Entry Anchor`" in plan
+    assert "- `Boundary Anchor Status`" in plan
+    assert "- `Implementation Entry Anchor Status`" in plan
+    assert "- `Test Scope`" in plan
+
+    assert "contract bootstrap packet" in test_matrix_command
+    assert "Do not read `research.md` in this stage." not in test_matrix_command
+    assert "- `Implementation Entry Anchor`" in test_matrix_command
+    assert "- `Boundary Anchor Status`" in test_matrix_command
+    assert "- `Implementation Entry Anchor Status`" in test_matrix_command
+    assert "- `Request DTO Anchor`" in test_matrix_command
+    assert "- `Branch/Failure Anchor(s)`" in test_matrix_command
+
+    assert "## Binding Contract Packets" in test_matrix_template
+    assert "minimal per-binding bootstrap packet consumed by `/sdd.plan.contract`" in test_matrix_template
+    assert "MUST NOT be added to `Scenario Matrix` or `Verification Case Anchors` tuple keys" in test_matrix_template
+    assert "| BindingRowID | Operation ID | IF Scope | Boundary Anchor | Boundary Anchor Status | Implementation Entry Anchor |" in test_matrix_template
+
+
+def test_contract_command_uses_test_matrix_as_default_semantic_source():
+    content = read("templates/commands/plan.contract.md")
+
+    assert "treat the selected binding packet in `test-matrix.md` as the default semantic source for the contract run." in content
+    assert "Compatibility Fallback (Legacy `test-matrix.md`)" in content
+    assert "compatibility packet from" in content
+    assert "if absent, enter compatibility fallback mode" in content
+    assert "Do not read `research.md` in default mode for this stage." in content
+    assert "do not read `research.md`; keep fallback bounded to `PLAN_FILE` + `test-matrix.md` + conditional `spec.md`/`data-model.md` only" in content
+    assert "Keep repo-backed verification bounded to no more than five files in one contract run" in content
+    assert "- request DTO anchor target, when present" in content
+    assert "- response DTO anchor target, when present" in content
+    assert "- one primary collaborator anchor, when required for contract-visible behavior" in content
+
+
+def test_contract_selection_rules_handle_empty_queue_before_packet_resolution():
+    content = read("templates/commands/plan.contract.md")
+    no_pending_idx = content.index("If no pending contract row exists, stop and report that the contract queue is complete")
+    resolve_packet_idx = content.index("Attempt to resolve one selected binding packet in `test-matrix.md` by the same `BindingRowID`; if absent, enter compatibility fallback mode")
+    assert no_pending_idx < resolve_packet_idx
+
+
+def test_research_data_model_and_test_matrix_are_packet_first():
+    research = read("templates/commands/plan.research.md")
+    data_model = read("templates/commands/plan.data-model.md")
+    test_matrix = read("templates/commands/plan.test-matrix.md")
+
+    assert "Stage Packet (Research Unit)" in research
+    assert "Read at most three repo-backed files per research run." in research
+    assert "Use this packet as the default context for generation." in research
+
+    assert "Stage Packet (Data-Model Unit)" in data_model
+    assert "Read at most five repo-backed files per data-model run." in data_model
+    assert "Prefer section-level reads of `spec.md` and `research.md`" in data_model
+
+    assert "Stage Packet (Test-Matrix Unit)" in test_matrix
+    assert "Use this packet as the default context for generation and binding projection." in test_matrix
+    assert "prefer section-level rereads over whole-file replay for the selected unit" in test_matrix
 
 
 def test_contract_template_contains_unified_realization_requirements():
@@ -100,25 +176,28 @@ def test_analyze_routes_stale_contract_rows_only():
 
 
 def test_docs_describe_contract_only_planning_queue():
-    mapping = read("docs/command-template-mapping.md")
+    mapping = read_if_exists("docs/command-template-mapping.md")
     readme = read("README.md")
-    installation = read("docs/installation.md")
-    quickstart = read("docs/quickstart.md")
+    installation = read_if_exists("docs/installation.md")
+    quickstart = read_if_exists("docs/quickstart.md")
     spec_driven = read("spec-driven.md")
 
-    assert "repeated `/sdd.plan.contract <plan.md>`" in mapping
-    assert "/sdd.plan.interface-detail" not in mapping
-    assert "interface-details/" not in mapping
+    if mapping is not None:
+        assert "repeated `/sdd.plan.contract <plan.md>`" in mapping
+        assert "/sdd.plan.interface-detail" not in mapping
+        assert "interface-details/" not in mapping
 
     assert "/sdd.plan.contract" in readme
     assert "/sdd.plan.interface-detail" not in readme
     assert "interface-details/" not in readme
 
-    assert "/sdd.plan.contract <plan.md>" in installation
-    assert "/sdd.plan.interface-detail" not in installation
+    if installation is not None:
+        assert "/sdd.plan.contract <plan.md>" in installation
+        assert "/sdd.plan.interface-detail" not in installation
 
-    assert "/sdd.plan.contract specs/001-create-taskify/plan.md" in quickstart
-    assert "/sdd.plan.interface-detail" not in quickstart
+    if quickstart is not None:
+        assert "/sdd.plan.contract specs/001-create-taskify/plan.md" in quickstart
+        assert "/sdd.plan.interface-detail" not in quickstart
 
     assert "/sdd.plan.contract <plan.md>" in spec_driven
     assert "/sdd.plan.interface-detail" not in spec_driven

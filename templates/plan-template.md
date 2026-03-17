@@ -53,9 +53,9 @@ Rules:
 Initialize empty until `test-matrix.md` creates stable rows.
 Project stable binding keys only; do not copy narrative scenario text.
 
-| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | Boundary Anchor |
-|--------------|-------|--------|-------|------------------|-------|--------|--------------|-----------------|
-| [BindingRowID-001] | [UC-001] | [UIF-001] | [FR-001] | [IF-001] | [TM-001] | [TC-001, TC-002] | [operationId] | [METHOD /path or symbol] |
+| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | Boundary Anchor | Implementation Entry Anchor | Boundary Anchor Status | Implementation Entry Anchor Status | Test Scope |
+|--------------|-------|--------|-------|------------------|-------|--------|--------------|-----------------|-----------------------------|------------------------|------------------------------------|------------|
+| [BindingRowID-001] | [UC-001] | [UIF-001] | [FR-001] | [IF-001] | [TM-001] | [TC-001, TC-002] | [operationId] | [METHOD /path or symbol] | [path/to/file.ext::Symbol] | [existing] | [existing] | [Contract] |
 
 Rules:
 
@@ -63,7 +63,7 @@ Rules:
 - `BindingRowID` is the plan-local identifier for one stable binding row projected from `test-matrix.md`.
 - `Binding Projection Index` is a projection ledger only.
 - `Boundary Anchor` is the client-facing contract binding key projected from `test-matrix.md`; it is not the internal implementation handoff anchor.
-- Internal realization-design anchors are authored in `contracts/`, not `plan.md`.
+- `Implementation Entry Anchor`, `Boundary Anchor Status`, `Implementation Entry Anchor Status`, and `Test Scope` are compact bootstrap fields only; DTO anchors, collaborator anchors, and realization-detail evidence remain authoritative in `test-matrix.md`.
 - If a stable key is not confirmed, keep it out of the index.
 
 ## Artifact Status

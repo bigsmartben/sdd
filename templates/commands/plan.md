@@ -42,6 +42,16 @@ Do only two things:
 
 `/sdd.plan` does **not** generate downstream planning-stage artifacts directly.
 
+## Planning Sharding Model (Mandatory)
+
+Keep the two-layer sharding model for planning runs:
+
+1. Stage sharding (fixed): `research -> data-model -> test-matrix -> contract`
+2. Binding sharding (fixed): `/sdd.plan.contract` consumes one `BindingRowID` row per run
+
+Do not collapse all planning work into one broad run.
+Optimization target is packet-first consumption with bounded inputs per shard, not shard removal.
+
 ## Setup
 
 Run `{SCRIPT} --spec-file <SPEC_FILE>` once from repo root and parse JSON for `FEATURE_SPEC`, `IMPL_PLAN`, `SPECS_DIR`, and `BRANCH`.
@@ -130,6 +140,10 @@ Required columns:
 - `TC IDs`
 - `Operation ID`
 - `Boundary Anchor`
+- `Implementation Entry Anchor`
+- `Boundary Anchor Status`
+- `Implementation Entry Anchor Status`
+- `Test Scope`
 
 ### Artifact Status
 

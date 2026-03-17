@@ -45,6 +45,18 @@ Use `.specify/templates/research-template.md` only. If the runtime template is m
 4. If no such row exists, stop and report that the research queue is already complete
 5. Do not scan the repository to invent other work
 
+## Stage Packet (Research Unit)
+
+Build one bounded run-local packet for the selected `research` row from:
+
+- selected `Stage Queue` row in explicit `PLAN_FILE`
+- `Shared Context Snapshot` in explicit `PLAN_FILE`
+- resolved `FEATURE_SPEC` path
+- selected row source/output fingerprint fields
+
+Use this packet as the default context for generation.
+Do not load additional artifacts unless a selected-row blocker explicitly requires them.
+
 ## Plan Control-Plane Input Path (Mandatory)
 
 Use only the explicit `PLAN_FILE` resolved through `{SCRIPT}` as planning control plane.
@@ -62,6 +74,16 @@ Read only:
 - resolved `FEATURE_SPEC`
 - `.specify/memory/constitution.md`
 - targeted repo anchors only when required by the active research blocker
+
+### Conditional Inputs
+
+Read additional files only when the selected row's blocker cannot be resolved from the stage packet.
+When conditional reads are required, prefer section-level rereads over whole-file replay.
+
+### Repo Anchor Input Limits
+
+Read at most three repo-backed files per research run.
+If that cap is insufficient, keep unresolved findings explicit in `research.md` and set row `Blocker` instead of expanding scope.
 
 `research.md` remains the authoritative output for research semantics.
 `PLAN_FILE` is queue state only.

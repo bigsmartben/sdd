@@ -4,6 +4,11 @@ This is the latest set of releases that you can use with your agent of choice. W
 
 ## Changelog
 
+- refactor: streamline plan-stage prompts
+- Fix planning lint parsing and PowerShell path errors
+- chore: add codex environments and release notes
+- Merge branch 'codex/3d61-sync-20260317'
+- Unify contract projection authority and upstream writeback rules
 - Merge pull request #20 from bigsmartben/codex/release-2.0.18
 - fix(release): enforce fail-fast bash agent loading
 - Merge pull request #19 from bigsmartben/codex/handoff
@@ -11,4 +16,3 @@ This is the latest set of releases that you can use with your agent of choice. W
 - fix(release): include dot-directories in ps package archives
 - test: include src in release packaging fixture for agent key helper
 - fix: enforce strict latest-release gating and add deterministic release skill
-

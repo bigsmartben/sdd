@@ -156,6 +156,21 @@ For detailed step-by-step instructions, see our [comprehensive guide](./spec-dri
 
 Want to see Spec Kit in action? Watch our [video overview](https://www.youtube.com/watch?v=a9eR1xsfvHg&pp=0gcJCckJAYcqIYzv)!
 
+## Project Skills
+
+This repository also carries project-local skills under `.codex/skills/` for
+workflow enforcement.
+
+- `release-gate`: deterministic release preflight and publish workflow
+- `sdd-scenario-governance`: enforce architecture/module-boundary discipline and
+  split work into `development` vs `release`
+
+Example invocation:
+
+```text
+使用 $sdd-scenario-governance 处理这个需求
+```
+
 [![Spec Kit video header](/media/spec-kit-video-header.jpg)](https://www.youtube.com/watch?v=a9eR1xsfvHg&pp=0gcJCckJAYcqIYzv)
 
 ## 🚶 Community Walkthroughs

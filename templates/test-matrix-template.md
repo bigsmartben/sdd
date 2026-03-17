@@ -24,7 +24,8 @@ Keep the matrix minimal-but-sufficient: merge pure permutations with identical o
 - `new` is normative only when explicit `path::symbol` target evidence is provided.
 - If explicit target evidence is missing, set `Anchor Status = todo` and keep the row non-normative forward-looking only.
 - Keep `Operation ID` / `Boundary Anchor` / `IF Scope` values textually consistent with `contracts/`.
-- `Implementation Entry Anchor` belongs only in contract realization design sections; do not encode internal handoff entrypoints in TM/TC tuple keys.
+- `Implementation Entry Anchor` MUST NOT be added to `Scenario Matrix` or `Verification Case Anchors` tuple keys.
+- `Implementation Entry Anchor` is allowed only in `Binding Contract Packets` as a contract-bootstrap field for `/sdd.plan.contract`.
 - Main-path verification binding MUST use tuples with `Anchor Status = existing|extended|new`. Rows with `Anchor Status = todo` MUST NOT enter primary verification path rows.
 
 ## Scenario Matrix
@@ -39,10 +40,21 @@ Keep the matrix minimal-but-sufficient: merge pure permutations with identical o
 |-------|-------|--------------|-----------------|----------|-------------|---------------|-------------------|------------------------|
 | TC-001 | TM-001 | [operationId or N/A] | [same as scenario row or N/A] | [IF-### or N/A] | [same as scenario row] | [same as scenario row] | [What this case proves] | [Assertion, signal, or check] |
 
+## Binding Contract Packets
+
+Use this section to emit the minimal per-binding bootstrap packet consumed by `/sdd.plan.contract`.
+Keep the packet compact and tuple-oriented; do not restate scenario prose or realization-design narrative here.
+
+| BindingRowID | Operation ID | IF Scope | Boundary Anchor | Boundary Anchor Status | Implementation Entry Anchor | Implementation Entry Anchor Status | Request DTO Anchor | Response DTO Anchor | Primary Collaborator Anchor | TM ID | TC IDs | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) | Main Pass Anchor | Branch/Failure Anchor(s) |
+|--------------|--------------|----------|-----------------|------------------------|-----------------------------|------------------------------------|--------------------|--------------------|-----------------------------|-------|--------|-------------|-----------------|----------------|-------------|------------------|--------------------------|
+| BR-001 | [operationId or N/A] | [IF-### or N/A] | [HTTP `METHOD /path` \| `event.topic` \| `Facade.method` \| `cli command` \| `N/A`] | [`existing` \| `extended` \| `new` \| `todo`] | [`path/to/file.ext::Symbol` or `TODO(REPO_ANCHOR)`] | [`existing` \| `extended` \| `new` \| `todo`] | [`path/to/file.ext::Symbol` or `N/A` or `TODO(REPO_ANCHOR)`] | [`path/to/file.ext::Symbol` or `N/A` or `TODO(REPO_ANCHOR)`] | [`path/to/file.ext::Symbol` or `N/A` or `TODO(REPO_ANCHOR)`] | [TM-001] | [TC-001, TC-002] | [UC / UIF / FR refs] | [SC / scenario refs] | [success refs] | [edge / EC refs] | [primary success check] | [branch or failure checks] |
+
 ## Boundary Notes
 
 - Keep this artifact in the planning flow as feature-level test design only.
 - Prefer the smallest scenario/case set that still preserves meaningful path coverage and stable downstream bindings.
+- Emit one `Binding Contract Packets` row for every stable binding row that will enter the contract queue.
+- Keep tuple-key status semantics explicit: packet `Boundary Anchor Status` and `Implementation Entry Anchor Status` must be projected separately; do not collapse them into one ambiguous status token.
 - Bind TM/TC rows to tuples with `Anchor Status = existing|extended|new` for normative verification; keep rows with `Anchor Status = todo` out of the main validation path.
 - Treat `Boundary Anchor` as the client-facing contract entry only; keep internal implementation handoff anchors for contract realization design sections.
 - Treat `BA-*` as non-normative shorthand only; never use it as a normative tuple key.

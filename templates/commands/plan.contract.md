@@ -43,9 +43,10 @@ This unified artifact includes both:
 3. In `Artifact Status`, find the first row where:
    - `Unit Type = contract`
    - `Status = pending`
-4. Resolve the matching `BindingRowID` row in `Binding Projection Index`
-5. Require `test-matrix` stage row to be `done`
-6. If no pending contract row exists, stop and report that the contract queue is complete
+4. If no pending contract row exists, stop and report that the contract queue is complete
+5. Resolve the matching `BindingRowID` row in `Binding Projection Index`
+6. Require `test-matrix` stage row to be `done`
+7. Attempt to resolve one selected binding packet in `test-matrix.md` by the same `BindingRowID`; if absent, enter compatibility fallback mode
 
 ## Plan Control-Plane Input Path (Mandatory)
 
@@ -57,9 +58,13 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 ## Path Constraints
 
 - Stay inside the resolved `FEATURE_DIR` plus the explicit files listed in `Allowed Inputs`.
-- Complete `BindingRowID` selection and prerequisite validation from the explicit `PLAN_FILE` before reading `spec.md`, `research.md`, `data-model.md`, `test-matrix.md`, or any repo anchors.
+- Complete `BindingRowID` selection and prerequisite validation from the explicit `PLAN_FILE` before reading `test-matrix.md`, any conditional inputs, or any repo anchors.
 - Before that point, do not open repository files, generated artifacts, or run repository-wide discovery/search.
-- After selection, read only the selected row's planning inputs and the targeted symbols/files required for that `BindingRowID`.
+- After selection, treat the selected binding packet in `test-matrix.md` as the default semantic source for the contract run.
+- Read conditional inputs only when the selected binding packet is missing required fields for downstream projection or contract-visible behavior.
+- Read only the selected row's planning inputs and the targeted symbols/files required for that `BindingRowID`.
+- Keep repo-backed verification bounded to no more than five files in one contract run; if that cap is insufficient, keep unresolved items explicit as `todo` / `gap` instead of expanding scope.
+- If `test-matrix.md` has no `Binding Contract Packets` section or no packet matching the selected `BindingRowID`, enter compatibility fallback mode and derive a minimal packet from `Scenario Matrix` + `Verification Case Anchors` rows that match the selected binding tuple.
 
 ## Northbound Entry Selection (Client Entry First)
 
@@ -92,17 +97,64 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 
 ## Allowed Inputs
 
-Read only:
+Read only, in this order:
 
 - `.specify/templates/contract-template.md` for output structure
 - selected `Artifact Status` row from the explicit `PLAN_FILE` only
 - matching `BindingRowID` row from `Binding Projection Index` in the explicit `PLAN_FILE` only
 - `Shared Context Snapshot` from the explicit `PLAN_FILE` only
-- resolved `FEATURE_SPEC`
-- `research.md` when constraints materially affect this `BindingRowID`
-- `data-model.md`
-- `test-matrix.md`
-- targeted repo boundary/entry/DTO/collaborator anchors required for the selected `BindingRowID` (for example route/controller, facade, service, manager, mapper/gateway, downstream adapters)
+- selected binding packet from `test-matrix.md`
+
+Treat the selected binding packet in `test-matrix.md` as the default authoritative semantic input for this stage.
+Do not read `spec.md`, `research.md`, or `data-model.md` unless the selected binding packet is missing required fields.
+
+### Compatibility Fallback (Legacy `test-matrix.md`)
+
+If `Binding Contract Packets` is missing or no row matches the selected `BindingRowID`, keep the run unblocked by deriving a minimal compatibility packet from:
+
+- selected `BindingRowID` row in `PLAN_FILE` `Binding Projection Index`
+- matching rows in `test-matrix.md` `Scenario Matrix`
+- matching rows in `test-matrix.md` `Verification Case Anchors`
+
+In compatibility fallback mode:
+
+- treat `spec.md` as allowed for missing `UC/UIF/FR/SC/EC` refs
+- treat `data-model.md` as allowed only for lifecycle/invariant constraints required by the selected tuple
+- do not read `research.md`; keep fallback bounded to `PLAN_FILE` + `test-matrix.md` + conditional `spec.md`/`data-model.md` only
+
+### Conditional Inputs
+
+Read `spec.md` only if the selected binding packet is missing any of:
+
+- `UC Ref(s)`
+- `UIF Ref(s)`
+- `FR Ref(s)`
+- scenario / success / edge-case refs used by `Downstream Projection Input (Required)`
+
+Read `data-model.md` only if the selected binding packet explicitly depends on:
+
+- lifecycle transitions
+- state invariants
+- entity constraints required for contract-visible behavior
+
+Do not read `research.md` in default mode for this stage.
+
+### Repo Anchor Input Limits
+
+Read only the minimum repo-backed targets required to confirm the selected binding:
+
+- boundary entry anchor target
+- implementation entry anchor target
+- request DTO anchor target, when present
+- response DTO anchor target, when present
+- one primary collaborator anchor, when required for contract-visible behavior
+
+Do not run repository-wide discovery or broad symbol scans.
+If required evidence is still missing after reading the allowed repo-backed targets, keep the unresolved tuple forward-looking:
+
+- set missing anchor to `TODO(REPO_ANCHOR)`
+- set anchor status to `todo`
+- continue with explicit blocker / gap markers instead of expanding scope
 
 After generation, the selected artifact under `contracts/` becomes the authoritative source for interface semantics and realization design semantics for that binding.
 `PLAN_FILE` remains queue state plus stable binding keys only.

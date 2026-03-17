@@ -144,12 +144,13 @@ Execution steps:
     - Preserve formatting: do not reorder unrelated sections; keep heading hierarchy intact.
     - Keep each inserted clarification minimal and testable (avoid narrative drift).
     - Keep stage boundaries intact:
-- do not add planning control-plane content, contract realization design, task orchestration, audit tables, or implementation choreography into `spec.md`
-    - Keep terminology context-pure:
-      - Do not inject legacy/example domain identifiers from prior conversations.
-      - If a candidate term is not present in current spec/user input/assumptions, replace it with neutral wording or ask a bounded clarification.
 
-6. Validation (performed after EACH write plus final pass):
+- do not add planning control-plane content, contract realization design, task orchestration, audit tables, or implementation choreography into `spec.md`
+  - Keep terminology context-pure:
+    - Do not inject legacy/example domain identifiers from prior conversations.
+    - If a candidate term is not present in current spec/user input/assumptions, replace it with neutral wording or ask a bounded clarification.
+
+1. Validation (performed after EACH write plus final pass):
    - Clarifications session contains exactly one bullet per accepted answer (no duplicates).
    - Total asked (accepted) questions ≤ 5.
    - Updated sections contain no lingering vague placeholders the new answer was meant to resolve.
@@ -163,9 +164,9 @@ Execution steps:
    - Terminology consistency: same canonical term used across all updated sections.
    - Anti-solidification: no newly added term should be traceable only to prior analysis/examples.
 
-7. Write the updated spec back to `FEATURE_SPEC`.
+2. Write the updated spec back to `FEATURE_SPEC`.
 
-8. Report completion (after questioning loop ends or early termination):
+3. Report completion (after questioning loop ends or early termination):
    - Number of questions asked & answered.
    - Path to updated spec.
    - Sections touched (list names).
