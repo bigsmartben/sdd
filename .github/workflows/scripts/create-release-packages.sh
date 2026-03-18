@@ -103,8 +103,8 @@ generate_commands() {
     name=$(basename "$template" .md)
     file_content=$(tr -d '\r' < "$template")
 
-    description=$(printf '%s\n' "$file_content" | awk '/^description:/ {sub(/^description:[[:space:]]*/, ""); print; exit}')
-    script_command=$(printf '%s\n' "$file_content" | awk -v sv="$script_variant" '/^[[:space:]]*'"$script_variant"':[[:space:]]*/ {sub(/^[[:space:]]*'"$script_variant"':[[:space:]]*/, ""); print; exit}')
+    description=$(awk '/^description:/ {sub(/^description:[[:space:]]*/, ""); print; exit}' <<< "$file_content")
+    script_command=$(awk -v sv="$script_variant" '/^[[:space:]]*'"$script_variant"':[[:space:]]*/ {sub(/^[[:space:]]*'"$script_variant"':[[:space:]]*/, ""); print; exit}' <<< "$file_content")
 
     if [[ -z $script_command ]]; then
       if [[ $file_content == *"{SCRIPT}"* ]]; then
@@ -113,7 +113,7 @@ generate_commands() {
       script_command="(Missing script command for $script_variant)"
     fi
 
-    agent_script_command=$(printf '%s\n' "$file_content" | awk '
+    agent_script_command=$(awk '
       /^agent_scripts:$/ { in_agent_scripts=1; next }
       in_agent_scripts && /^[[:space:]]*'"$script_variant"':[[:space:]]*/ {
         sub(/^[[:space:]]*'"$script_variant"':[[:space:]]*/, "")
@@ -121,7 +121,7 @@ generate_commands() {
         exit
       }
       in_agent_scripts && /^[a-zA-Z]/ { in_agent_scripts=0 }
-    ')
+    ' <<< "$file_content")
 
     body=$(printf '%s\n' "$file_content" | sed "s|{SCRIPT}|${script_command}|g")
     if [[ -n $agent_script_command ]]; then
@@ -201,10 +201,10 @@ create_kimi_skills() {
 
     file_content=$(tr -d '\r' < "$template")
 
-    description=$(printf '%s\n' "$file_content" | awk '/^description:/ {sub(/^description:[[:space:]]*/, ""); print; exit}')
+    description=$(awk '/^description:/ {sub(/^description:[[:space:]]*/, ""); print; exit}' <<< "$file_content")
     [[ -z $description ]] && description="Spec Kit: ${name} workflow"
 
-    script_command=$(printf '%s\n' "$file_content" | awk -v sv="$script_variant" '/^[[:space:]]*'"$script_variant"':[[:space:]]*/ {sub(/^[[:space:]]*'"$script_variant"':[[:space:]]*/, ""); print; exit}')
+    script_command=$(awk -v sv="$script_variant" '/^[[:space:]]*'"$script_variant"':[[:space:]]*/ {sub(/^[[:space:]]*'"$script_variant"':[[:space:]]*/, ""); print; exit}' <<< "$file_content")
     if [[ -z $script_command ]]; then
       if [[ $file_content == *"{SCRIPT}"* ]]; then
         echo "Warning: no script command found for $script_variant in $template" >&2
@@ -212,7 +212,7 @@ create_kimi_skills() {
       script_command="(Missing script command for $script_variant)"
     fi
 
-    agent_script_command=$(printf '%s\n' "$file_content" | awk '
+    agent_script_command=$(awk '
       /^agent_scripts:$/ { in_agent_scripts=1; next }
       in_agent_scripts && /^[[:space:]]*'"$script_variant"':[[:space:]]*/ {
         sub(/^[[:space:]]*'"$script_variant"':[[:space:]]*/, "")
@@ -220,7 +220,7 @@ create_kimi_skills() {
         exit
       }
       in_agent_scripts && /^[a-zA-Z]/ { in_agent_scripts=0 }
-    ')
+    ' <<< "$file_content")
 
     body=$(printf '%s\n' "$file_content" | sed "s|{SCRIPT}|${script_command}|g")
     if [[ -n $agent_script_command ]]; then
@@ -413,7 +413,7 @@ load_all_agents() {
   fi
 
   if ! run_python -c "import sys" >/dev/null 2>&1; then
-    echo "Error: configured Python runtime is not executable (PYTHON_BIN=$PYTHON_BIN, USE_UV_PYTHON=$USE_UV_PYTHON)" >&2
+    echo "Error: python3 is required to load AGENT_CONFIG keys (PYTHON_BIN=$PYTHON_BIN, USE_UV_PYTHON=$USE_UV_PYTHON)" >&2
     exit 1
   fi
 
