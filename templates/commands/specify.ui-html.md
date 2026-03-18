@@ -1,5 +1,5 @@
 ---
-description: Generate a high-value interactive HTML prototype from an explicit spec.md path for walkthrough, review, and interaction validation.
+description: Generate a high-value interactive HTML prototype from an explicit or branch-derived spec.md path for walkthrough, review, and interaction validation.
 ---
 
 ## User Input
@@ -12,12 +12,18 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Argument Parsing
 
-1. Parse the first positional token from `$ARGUMENTS` as `SPEC_FILE`
-2. `SPEC_FILE` is mandatory and MUST resolve from repo root to an existing file named `spec.md`
-3. `SPEC_FILE` MUST stay under `repo/specs/**`
-4. Any remaining text after removing `SPEC_FILE` is optional prototype direction
+1. If present, the first positional token is `SPEC_FILE`
+2. Optional `SPEC_FILE` MUST resolve from repo root to an existing file named `spec.md`
+3. Optional `SPEC_FILE` MUST stay under `repo/specs/**`
+4. Any remaining text after removing optional `SPEC_FILE` is optional prototype direction
 
-If `SPEC_FILE` is missing or invalid, stop immediately and report the required invocation:
+If `SPEC_FILE` is omitted, resolve it from current feature branch using these defaults:
+
+- `feature-YYYYMMDD-slug` -> `repo/specs/YYYYMMDD-slug/spec.md`
+- `YYYYMMDD-slug` -> `repo/specs/YYYYMMDD-slug/spec.md`
+- legacy `NNN-slug` keeps legacy prefix mapping in `repo/specs/`
+
+If optional `SPEC_FILE` is present but invalid, stop immediately and report the required invocation shape:
 
 `/sdd.specify.ui-html <path/to/spec.md> [prototype-direction...]`
 
@@ -44,6 +50,25 @@ Use `.specify/templates/ui-html-template.html` only. If the runtime template is 
 - `ui.html` MUST reflect `spec.md`, not replace it.
 - If the prototype exposes semantic gaps or contradictions, route the repair back to `/sdd.specify` or `/sdd.clarify`.
 - Do **not** invent new requirements, actors, entities, or product flows that are not traceable to `spec.md` or current user input.
+
+## Action Entry Executability Rules (MUST)
+
+When `spec.md` implies a user-clickable action entry (for example: 查看/打开/进入/跳转/report/detail), enforce all rules below:
+
+- Every clickable entry MUST map to explicit semantics in prototype data:
+  - `entryLabel`
+  - `targetMeaning`
+  - `targetRoute` or a named click handler
+- Rendering a clickable control without executable target binding is forbidden.
+- Each rendered `.action-entry` MUST include either:
+  - navigable target (`href`, `location.href`, `window.open`), or
+  - `addEventListener("click", ...)` that resolves to a concrete in-prototype destination or flow.
+- If target semantics cannot be resolved from `spec.md`, render non-clickable explanatory text and keep the current flow usable.
+- Do not output a dead CTA (looks clickable but no-op).
+
+Before finalizing `ui.html`, run an internal self-check table for each action entry:
+`entryLabel | targetMeaning | targetRoute/handler | clickable(true/false)`.
+If any row has `clickable=true` with empty `targetRoute/handler`, regenerate `ui.html` before returning.
 
 ## Allowed Inputs
 

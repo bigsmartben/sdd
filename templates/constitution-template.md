@@ -18,14 +18,16 @@ If a required rule is not yet fully defined, it MUST be recorded explicitly as
 
 ## Core Principles
 
-> Each principle should be written as an enforceable rule.
-> Recommended structure per principle:
->
-> - **Rule**: what is required or prohibited
-> - **Scope**: where it applies
-> - **Rationale**: why it exists
-> - **Exceptions**: when deviation is allowed and how it must be documented
-> - At least one principle MUST define ownership boundaries for `Generation Rule`, `Validation Rule`, and `Hard Execution Gate`.
+<!--
+Writing guidance only; do not surface this scaffold in the runtime constitution:
+- Each principle should be written as an enforceable rule.
+- Recommended structure per principle:
+  - **Rule**: what is required or prohibited
+  - **Scope**: where it applies
+  - **Rationale**: why it exists
+  - **Exceptions**: when deviation is allowed and how it must be documented
+  - At least one principle MUST define ownership boundaries for `Generation Rule`, `Validation Rule`, and `Hard Execution Gate`.
+-->
 
 ### [PRINCIPLE_1_NAME]
 <!-- Example: I. Library-First -->
@@ -86,13 +88,15 @@ Suggested writing pattern:
 
 This section defines the key terms, boundaries, and semantic distinctions that MUST remain stable across downstream artifacts.
 
-Include only project-critical concepts here, for example:
-
-- core business terms that have precise meanings;
-- distinctions between user-facing concepts and internal technical representations;
-- phase or layer boundaries that must not be mixed;
-- terms that are commonly confused and therefore require explicit separation.
-- generation/validation/execution boundary terms that define rule ownership.
+<!--
+Writing guidance only; do not surface this scaffold in the runtime constitution:
+- Include only project-critical concepts here, for example:
+  - core business terms that have precise meanings
+  - distinctions between user-facing concepts and internal technical representations
+  - phase or layer boundaries that must not be mixed
+  - terms that are commonly confused and therefore require explicit separation
+  - generation/validation/execution boundary terms that define rule ownership
+-->
 
 [TERMINOLOGY_AND_BOUNDARIES]
 <!-- Example:
@@ -190,11 +194,13 @@ These rules should focus on compatibility, simplicity, and controlled evolution.
 
 This section defines lightweight expectations for constitution checks in downstream work.
 
-Each expectation SHOULD state:
-
-- **Expectation**: what should be checked
-- **Where Checked**: which artifact or stage should perform the check
-- **Handling**: what to do when the expectation is not met
+<!--
+Writing guidance only; do not surface this scaffold in the runtime constitution:
+- Each expectation SHOULD state:
+  - **Expectation**: what should be checked
+  - **Where Checked**: which artifact or stage should perform the check
+  - **Handling**: what to do when the expectation is not met
+-->
 
 [SECTION_3_CONTENT]
 <!-- Example:

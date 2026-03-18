@@ -1,5 +1,5 @@
 ---
-description: Orchestrate the planning phase from an explicit spec.md path by generating plan.md control-plane state, Stage 0 shared context, and the full handoff queue.
+description: Orchestrate the planning phase from an explicit or branch-derived spec.md path by generating plan.md control-plane state, Stage 0 shared context, and the full handoff queue.
 handoffs:
   - label: Start Research Queue
     agent: sdd.plan.research
@@ -22,12 +22,13 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 Parse `$ARGUMENTS` in this exact order before doing any planning work:
 
-1. The first positional token is mandatory and is `SPEC_FILE`
-2. `SPEC_FILE` MUST resolve from repo root to an existing file named `spec.md`
-3. `SPEC_FILE` MUST stay under `repo/specs/**`
-4. Any remaining text after removing `SPEC_FILE` is user planning context
+1. If present, the first positional token is `SPEC_FILE`
+2. Optional `SPEC_FILE` MUST resolve from repo root to an existing file named `spec.md`
+3. Optional `SPEC_FILE` MUST stay under `repo/specs/**`
+4. Any remaining text after removing optional `SPEC_FILE` is user planning context
 
-If the first positional token is missing or invalid, stop immediately and report the required invocation shape:
+If `SPEC_FILE` is omitted, resolve it from current feature branch using `{SCRIPT}` defaults.
+If optional `SPEC_FILE` is present but invalid, stop immediately and report the required invocation shape:
 
 `/sdd.plan <path/to/spec.md> [technical-context...]`
 
@@ -54,7 +55,9 @@ Optimization target is packet-first consumption with bounded inputs per shard, n
 
 ## Setup
 
-Run `{SCRIPT} --spec-file <SPEC_FILE>` once from repo root and parse JSON for `FEATURE_SPEC`, `IMPL_PLAN`, `SPECS_DIR`, and `BRANCH`.
+Run `{SCRIPT}` once from repo root.
+If `SPEC_FILE` is present, pass `--spec-file <SPEC_FILE>`; otherwise rely on script branch-derived default.
+Parse JSON for `FEATURE_SPEC`, `IMPL_PLAN`, `SPECS_DIR`, and `BRANCH`.
 All paths must be absolute.
 
 Treat the resolved `IMPL_PLAN` as the canonical `PLAN_FILE` for all downstream planning commands and runtime handoff output.
@@ -85,10 +88,11 @@ Keep the snapshot to shared bootstrap facts only:
 - feature identity and scope anchors
 - actors, in-scope / out-of-scope, stable UC/UIF/FR references
 - constitution-level constraints that affect every downstream stage
-- repository-first consumption slice relevant to this feature
+- repository-first consumption slice relevant to this feature, citing only concrete dependency usage rows, concrete module edges, and existing `SIG-*` rows needed for planning
 - shared blockers and must-read anchors
 
 Do **not** write long summaries, audit payload, planning-stage prose, or execution logs into the snapshot.
+Do **not** perform repository-first completeness or consistency audit here; `/sdd.analyze` owns that responsibility.
 
 ## Planning Control Plane Requirements
 
@@ -188,7 +192,7 @@ They MUST consume queue state from the explicit `PLAN_FILE` only.
 
 Stop immediately when any of the following occurs:
 
-- `SPEC_FILE` is missing, invalid, outside `repo/specs/**`, or not named `spec.md`
+- resolved `SPEC_FILE` is invalid, outside `repo/specs/**`, not named `spec.md`, or non-existent
 - required repository-first canonical baseline files are missing or stale
 - constitution-level constraints block downstream planning
 - required shared bootstrap anchors cannot be stabilized from authoritative inputs

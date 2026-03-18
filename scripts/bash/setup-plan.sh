@@ -21,8 +21,9 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         --help|-h)
-            echo "Usage: $0 --spec-file <path/to/spec.md> [--json]"
-            echo "  --spec-file <path>  Explicit path to spec.md under repo/specs/**"
+            echo "Usage: $0 [--spec-file <path/to/spec.md>] [--json]"
+            echo "  --spec-file <path>  Optional explicit path to spec.md under repo/specs/**"
+            echo "                      If omitted, infer spec.md from current feature branch"
             echo "  --json              Output results in JSON format"
             echo "  --help              Show this help message"
             exit 0
@@ -38,14 +39,15 @@ done
 SCRIPT_DIR="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
-if [[ -z "$SPEC_FILE" ]]; then
-    echo "Error: --spec-file is required and must point to spec.md under repo/specs/**" >&2
-    exit 1
+if [[ -n "$SPEC_FILE" ]]; then
+    # Explicit spec file takes precedence.
+    FEATURE_PATHS_ENV="$(get_feature_paths_from_spec_file "$SPEC_FILE")" || exit 1
+    eval "$FEATURE_PATHS_ENV"
+else
+    # Fallback to branch-derived default spec path.
+    eval "$(get_feature_paths)"
+    check_feature_branch "$CURRENT_BRANCH" "$HAS_GIT" || exit 1
 fi
-
-# Get all paths and variables from explicit spec file
-FEATURE_PATHS_ENV="$(get_feature_paths_from_spec_file "$SPEC_FILE")" || exit 1
-eval "$FEATURE_PATHS_ENV"
 
 TEMPLATE="$REPO_ROOT/.specify/templates/plan-template.md"
 if [[ ! -r "$TEMPLATE" ]]; then

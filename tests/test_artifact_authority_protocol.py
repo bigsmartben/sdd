@@ -42,6 +42,10 @@ def test_specify_and_plan_define_authority_vs_derived_views():
     assert ".specify/templates/plan-template.md" in plan
     assert "`plan.md` is the planning control plane for this feature." in plan_template
     assert "It is authoritative for planning queue state, binding-projection rows, and source/output fingerprints only." in plan_template
+    assert "citing only concrete dependency usage rows, concrete module edges, and existing `SIG-*` rows needed for planning" in plan
+    assert "Do **not** perform repository-first completeness or consistency audit here; `/sdd.analyze` owns that responsibility." in plan
+    assert "Relevant dependency usage rows / `SIG-*`: [cite concrete rows only]" in plan_template
+    assert "Relevant module-edge rules: [cite concrete module-to-module rows only]" in plan_template
 
 
 def test_tasks_implement_and_analyze_enforce_authority_protocol():
@@ -52,15 +56,19 @@ def test_tasks_implement_and_analyze_enforce_authority_protocol():
     constitution = read("templates/commands/constitution.md")
 
     assert "Treat `plan.md` as the planning control plane" in tasks
+    assert "authoritative for planning queue state, binding-projection rows, and source/output fingerprints only" in tasks
     assert "This runtime scheduling guidance is execution-only. It MUST NOT change artifact authority" in tasks
     assert "Any tuple indexes, execution maps, or working summaries created during `/sdd.tasks` are derived views only" in tasks
     assert "Temporary derived views created during `/sdd.tasks` are run-local only" in tasks
+    assert "Repository-first replay trace: list consumed dependency rows" in tasks
+    assert "Module-edge replay trace: list consumed invocation-governance rows" in tasks
     assert "treat contract `Downstream Projection Input (Required)` (`Spec Projection Slice`, `Test Projection Slice`) as the authoritative downstream execution projection" in tasks
     assert "keep contract projection as execution truth for this run and emit explicit upstream writeback repair actions" in tasks
     assert "Binding Projection Index" in tasks
     assert "does **not** own coverage completeness, uncovered MUST requirement analysis, ambiguity sweeps" in tasks
     assert "helper-doc leakage checks" in tasks
     assert ".specify/templates/tasks-template.md" in tasks
+    assert "module-edge invocation-governance task projection" in tasks
     assert "Inline task summaries, local execution notes, and other derived views must yield to the authoritative artifacts above" in tasks_template
     assert "If contract projection slices drift from `spec.md` or `test-matrix.md`, keep contract projection as execution truth for this run" in tasks_template
     assert "same run-local execution graph used to render `tasks.md`" in tasks_template
@@ -70,7 +78,14 @@ def test_tasks_implement_and_analyze_enforce_authority_protocol():
     assert "explicitly waives that audit step for this run" in implement
     assert "runtime batching notes, ready-task summaries, and local execution shortcuts as derived views only" in implement
     assert "use the authoritative artifact for semantics" in implement
+    assert "Read `plan.md` only as control-plane context (`Shared Context Snapshot`, `Stage Queue`, `Artifact Status`, `Binding Projection Index`) and resolved artifact paths" in implement
+    assert "do not treat it as a semantic source for architecture/contract/model requirements" in implement
     assert ".specify/memory/repository-first/technical-dependency-matrix.md" in implement
+    assert "module-edge execution baseline" in implement
+    assert "module-to-module invocation changes MUST be validated against `.specify/memory/repository-first/module-invocation-spec.md`" in implement
+    assert "do not perform completeness or consistency audit of repository-first baselines here; `/sdd.analyze` is the exclusive audit owner for that scope" in implement
+    assert "repository-first validation slice planned for this run (exact canonical dependency rows and module-edge rows to consume)" in implement
+    assert "Repository-first Validation Trace" in implement
 
     assert "`plan.md` is the planning control plane for queue state, binding-projection rows, and source/output fingerprints only" in analyze
     assert "owns comprehensive implementation-readiness analysis and audit responsibilities" in analyze
@@ -80,19 +95,29 @@ def test_tasks_implement_and_analyze_enforce_authority_protocol():
     assert ".specify/templates/lint-report-template.md" in analyze
     assert "stale planning outputs" in analyze
     assert "route stale `test-matrix` rows or missing binding rows to `/sdd.plan.test-matrix`" in analyze
+    assert "`Used By Module`, `Evidence`, and `SIG-*` governance signals including divergence, version-source-mix, and `unresolved`" in analyze
+    assert "using concrete module-to-module rows as the primary representation" in analyze
+    assert "flag dependency rows missing `Used By Module` or `Evidence`" in analyze
+    assert "flag allowed/forbidden rows that are not represented as concrete module-to-module edges" in analyze
+    assert "flag dependency-governance rules that do not reference an existing `SIG-*` row from the canonical dependency matrix" in analyze
+    assert "dependency rows missing `Used By Module` or `Evidence`" in analyze
+    assert "dependency rows that collapse multiple modules/scopes/version sources/evidence locations into one summary row" in analyze
+    assert "invocation-governance rows not represented as concrete module-to-module edges" in analyze
 
     assert "Treat `.specify/memory/constitution.md` as the authoritative project-level rule source." in constitution
 
 
 def test_constitution_declares_repo_anchor_whitelist_and_blacklist():
-    constitution = read(".specify/memory/constitution.md")
+    constitution = read("templates/constitution-template.md")
 
     assert "### Repo-Anchor Evidence Protocol" in constitution
     assert "**Source anchors**: source-code files/symbols" in constitution
     assert "**Engineering assembly facts**: build/module manifests" in constitution
-    assert "Repository-first projections are project-level authoritative artifacts located only at `.specify/memory/repository-first/`." in constitution
-    assert "Dependency evidence MUST come from build-manifest auto-detection with deterministic priority" in constitution
-    assert "planning artifacts, docs, tests, demos, and generated outputs may be read as context only" in constitution
+    assert ".specify/memory/repository-first/technical-dependency-matrix.md" in constitution
+    assert ".specify/memory/repository-first/module-invocation-spec.md" in constitution
+    assert "feature-local copies are derived views only and MUST NOT override canonical semantics" in constitution
+    assert "dependency evidence MUST come from build-manifest auto-detection with deterministic priority" in constitution
+    assert "planning artifacts, docs, tests, demos, and generated outputs are supporting context only" in constitution
     assert "MUST NOT be promoted into repo semantic evidence" in constitution
 
 
@@ -125,3 +150,9 @@ def test_analyze_boundary_owns_centralized_cross_artifact_audit_and_stale_gate()
     assert "stale planning outputs where `plan.md` source fingerprints no longer match the current upstream artifact state" in analyze
 
 
+def test_research_template_keeps_repo_first_as_optional_reference_not_primary_audit_input():
+    research = read("templates/research-template.md")
+
+    assert "For `/sdd.plan.research`, repository reuse evidence comes from source code and `.specify/memory/constitution.md`." in research
+    assert "Repository-first baseline files are consumed by `/sdd.plan` as shared bootstrap inputs" in research
+    assert "MAY be referenced here only when a research decision depends on an existing canonical dependency usage row, module-edge rule, or `SIG-*` signal." in research

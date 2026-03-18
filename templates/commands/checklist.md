@@ -1,5 +1,5 @@
 ---
-description: Generate a custom requirements-quality checklist from an explicit plan.md path.
+description: Generate a custom requirements-quality checklist from an explicit or branch-derived plan.md path.
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json
   ps: scripts/powershell/check-prerequisites.ps1 -Json
@@ -38,22 +38,23 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 Parse `$ARGUMENTS` in this exact order before doing any checklist work:
 
-1. The first positional token is mandatory and is `PLAN_FILE`
-2. `PLAN_FILE` MUST resolve from repo root to an existing file named `plan.md`
-3. `PLAN_FILE` MUST stay under `repo/specs/**`
-4. Any remaining text after removing `PLAN_FILE` is checklist context input
+1. If present, the first positional token is `PLAN_FILE`
+2. Optional `PLAN_FILE` MUST resolve from repo root to an existing file named `plan.md`
+3. Optional `PLAN_FILE` MUST stay under `repo/specs/**`
+4. Any remaining text after removing optional `PLAN_FILE` is checklist context input
 
-If `PLAN_FILE` is missing or invalid, stop immediately and report the required invocation:
+If `PLAN_FILE` is omitted, resolve it from current feature branch using `{SCRIPT}` defaults.
+If optional `PLAN_FILE` is present but invalid, stop immediately and report the required invocation shape:
 
 `/sdd.checklist <path/to/plan.md> [checklist-context...]`
 
 ## Execution Steps
 
-1. **Setup (hard gate)**: Run `{SCRIPT} --plan-file <PLAN_FILE>` from repo root and parse JSON for FEATURE_DIR and AVAILABLE_DOCS list.
+1. **Setup (hard gate)**: Run `{SCRIPT}` from repo root. If `PLAN_FILE` is present, pass `--plan-file <PLAN_FILE>`; otherwise rely on script branch-derived default. Parse JSON for FEATURE_DIR and AVAILABLE_DOCS list.
    - Treat resolved `PLAN_FILE` as the canonical planning anchor for this run.
    - All file paths must be absolute.
    - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
-   - Do not use current-branch feature inference for checklist target selection.
+   - Branch-derived default is allowed only when the resolved file is `repo/specs/**/plan.md`.
 
 2. **Build intent packet + clarify intent (dynamic)**:
    - Build a compact `Checklist Intent Packet` from user text and authoritative artifacts with:

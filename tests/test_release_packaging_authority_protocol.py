@@ -24,7 +24,11 @@ PACKAGED_COMMAND_DIR_OVERRIDES = {
 EXPECTED_MARKERS = [
     "`spec.md` becomes the authoritative feature-semantics artifact",
     "derived views only; they MUST NOT override upstream artifacts or downstream stage artifacts",
-    "planning summary / structure guide, not as a replacement for canonical requirement, contract, model, or verification semantics",
+    "authoritative for planning queue state, binding-projection rows, and source/output fingerprints only",
+    "`Used By Module`, `Evidence`, and `SIG-*` governance signals including divergence, version-source-mix, and `unresolved`",
+    "using concrete module-to-module rows as the primary representation",
+    "Repository-first replay trace: list consumed dependency rows",
+    "Repository-first Validation Trace",
     "CRITICAL/HIGH findings MUST cite the authoritative source artifact(s)",
 ]
 

@@ -4,7 +4,7 @@
 **Inputs**: `spec.md`, user input, targeted source-code reads, `.specify/memory/constitution.md`
 
 Use this artifact to capture planning-blocking research only. Keep it decision-oriented, concise, and grounded in evidence.
-For `/sdd.plan`, repo semantic evidence comes from source code and `.specify/memory/constitution.md` only. Do not treat `README.md`, `docs/**`, `specs/**`, demos, or generated artifacts as repo anchors in this file.
+For `/sdd.plan.research`, repository reuse evidence comes from source code and `.specify/memory/constitution.md`. Repository-first baseline files are consumed by `/sdd.plan` as shared bootstrap inputs and MAY be referenced here only when a research decision depends on an existing canonical dependency usage row, module-edge rule, or `SIG-*` signal. Do not treat `README.md`, `docs/**`, `specs/**`, demos, or generated artifacts as repo anchors in this file.
 
 ## Decisions
 

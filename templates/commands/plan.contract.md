@@ -1,5 +1,5 @@
 ---
-description: Generate exactly one blocked-or-pending northbound interface design artifact selected from an explicit plan.md path.
+description: Generate exactly one blocked-or-pending northbound interface design artifact selected from an explicit or branch-derived plan.md path.
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json
   ps: scripts/powershell/check-prerequisites.ps1 -Json
@@ -15,12 +15,13 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Argument Parsing
 
-1. Parse the first positional token from `$ARGUMENTS` as `PLAN_FILE`
-2. `PLAN_FILE` is mandatory and MUST resolve from repo root to an existing file named `plan.md`
-3. `PLAN_FILE` MUST stay under `repo/specs/**`
-4. Any remaining text after removing `PLAN_FILE` is optional scoped user context
+1. If present, the first positional token is `PLAN_FILE`
+2. Optional `PLAN_FILE` MUST resolve from repo root to an existing file named `plan.md`
+3. Optional `PLAN_FILE` MUST stay under `repo/specs/**`
+4. Any remaining text after removing optional `PLAN_FILE` is optional scoped user context
 
-If `PLAN_FILE` is missing or invalid, stop immediately and report the required invocation:
+If `PLAN_FILE` is omitted, resolve it from current feature branch using `{SCRIPT}` defaults.
+If optional `PLAN_FILE` is present but invalid, stop immediately and report the required invocation shape:
 
 `/sdd.plan.contract <path/to/plan.md> [context...]`
 
@@ -36,10 +37,11 @@ This unified artifact includes both:
 - Operation-scoped `Full Field Dictionary` as the authoritative field-level contract surface
 - Delivery-level realization design (internal handoff, sequence, UML, failure propagation, southbound dependencies)
 - Explicit downstream projection slices for execution (`spec` refs + `test` scope/anchors) used by `/sdd.tasks` and `/sdd.implement`
+- Cross-interface smoke candidate input used by `/sdd.tasks` `Cross-Interface Finalization`
 
 ## Selection Rules
 
-1. Run `{SCRIPT} --plan-file <PLAN_FILE>` once and resolve `FEATURE_DIR`, `FEATURE_SPEC`, and `IMPL_PLAN`
+1. Run `{SCRIPT}` once from repo root. If `PLAN_FILE` is present, pass `--plan-file <PLAN_FILE>`; otherwise rely on script branch-derived default. Resolve `FEATURE_DIR`, `FEATURE_SPEC`, and `IMPL_PLAN`
 2. Read only the resolved `IMPL_PLAN`
 3. In `Artifact Status`, find the first row where:
    - `Unit Type = contract`
@@ -54,7 +56,7 @@ This unified artifact includes both:
 
 ## Plan Control-Plane Input Path (Mandatory)
 
-Use only the explicit `PLAN_FILE` resolved through `{SCRIPT}` as planning control plane.
+Use only the resolved `PLAN_FILE` from `{SCRIPT}` as planning control plane.
 Ignore alternate `plan.md` paths from environment variables or repository discovery.
 Non-`plan.md` user files are allowed only when already listed in `Allowed Inputs`; they never redefine control-plane state.
 If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
@@ -62,7 +64,7 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 ## Path Constraints
 
 - Stay inside the resolved `FEATURE_DIR` plus the explicit files listed in `Allowed Inputs`.
-- Complete `BindingRowID` selection and prerequisite validation from the explicit `PLAN_FILE` before reading `test-matrix.md`, any conditional inputs, or any repo anchors.
+- Complete `BindingRowID` selection and prerequisite validation from the resolved `PLAN_FILE` before reading `test-matrix.md`, any conditional inputs, or any repo anchors.
 - Before that point, do not open repository files, generated artifacts, or run repository-wide discovery/search.
 - After selection, treat the selected binding packet in `test-matrix.md` as the default semantic source for the contract run.
 - Read conditional inputs only when the selected binding packet is missing required fields for downstream projection or contract-visible behavior.
@@ -86,13 +88,21 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 - Do not delete owner fields that this operation does not use; keep them in the field dictionary with `Used in <Operation ID> = no`.
 - Realization design scope is delivery-ready: internal handoff, failure propagation, sequence closure, UML ownership, and southbound dependency chain.
 - Fill `Downstream Projection Input (Required)` with one executable slice for the selected `IF Scope` / `Operation ID`: include `spec` refs (`UC/UIF/FR/SC/EC`) and `test` refs (`Test Scope`, `TM/TC`, pass/failure anchors, command/assertion signal).
+- Fill `Cross-Interface Smoke Candidate (Required)` with exactly one row for the selected operation.
+- `Cross-Interface Smoke Candidate (Required)` row MUST declare one `Candidate Role` in `entry|middle|exit|none`.
+- If `Candidate Role != none`, `Main Pass Anchor` and `Command / Assertion Signal` MUST be explicit and executable.
+- If `Candidate Role = none`, keep the row with explicit `N/A` values instead of omitting the section.
 - Sequence design MUST start from consumer/client entry and reach the internal implementation entry within the first two request hops.
 - Sequence design MUST remain end-to-end contiguous at current document granularity; no disconnected hops, orphan participants, or broken return chains.
 - Each declared behavior path MUST map to one contiguous ordered sequence step chain from trigger entry to contract-visible outcome/failure.
+- Sequence design MUST explicitly render every mandatory repo-backed collaborator hop in the selected behavior path, including second-party/third-party call-chain segments when present.
+- Sequence design MUST NOT collapse multiple mandatory collaborators/dependencies into one synthetic participant label (for example `A + B`).
+- `opt` blocks are valid only for truly conditional branches; mandatory main-path collaborator/dependency calls MUST NOT be rendered as optional.
 - `Boundary == Entry` is valid only when the boundary and the repo-backed implementation entry are the same callable symbol; do not collapse an HTTP `controller -> service/facade` chain to the downstream symbol.
 - If `Boundary Anchor` and `Implementation Entry Anchor` resolve to the same repo-backed symbol, do not invent a handoff relay hop; reuse one participant/class in sequence and UML.
 - UML MUST cover all executable sequence participants at this document granularity.
 - Every sequence call MUST map to an owning UML method with directed caller/callee relationship.
+- UML request/response class labels should use anchored symbols or repository boundary naming conventions; do not synthesize `RequestDTO` / `ResponseDTO` labels unless the anchored symbol itself uses those names.
 - Any newly introduced field/method/call MUST be explicitly marked as new and connected to owner/consumer or caller/callee.
 
 ## Repo Anchor Decision Protocol (Mandatory)
@@ -189,6 +199,14 @@ Set row `Status = done` only when the field dictionary is present and key gaps a
 
 Do not modify unrelated `BindingRowID` rows.
 Do not write contract/design prose into `PLAN_FILE`.
+
+## Feature-Level Smoke Readiness (Queue-Complete Gate)
+
+After selected-row writeback, if no `contract` rows remain `blocked` or `pending`, treat cross-interface smoke input as planning-complete required output:
+
+- All completed contract artifacts MUST contain `Cross-Interface Smoke Candidate (Required)` with one row each.
+- At least one completed contract artifact MUST declare `Candidate Role != none`.
+- If either condition fails, keep routing to `/sdd.plan.contract <absolute path to plan.md>` with `Ready/Blocked = Blocked` and explicit blocker details.
 
 ## Handoff Decision
 

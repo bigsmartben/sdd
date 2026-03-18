@@ -83,7 +83,7 @@ EXAMPLES:
   ./check-prerequisites.sh --json --require-tasks --include-tasks
 
   # Resolve planning inputs from an explicit plan.md path
-  ./check-prerequisites.sh --json --plan-file specs/001-demo/plan.md
+  ./check-prerequisites.sh --json --plan-file specs/20250708-parent-hanxue-channel/plan.md
 
   # Extract compact tasks bootstrap packet for /sdd.tasks
   ./check-prerequisites.sh --json --task-preflight

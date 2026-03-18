@@ -16,7 +16,7 @@ def test_tasks_command_hard_fails_on_missing_execution_anchors():
     assert "Treat `TASKS_BOOTSTRAP.execution_readiness` as the primary preflight hard-gate source when present and parseable." in content
     assert "If `TASKS_BOOTSTRAP.execution_readiness.ready_for_task_generation = false`, stop immediately and report blocker codes/details from `execution_readiness.errors`; do not continue into broad artifact reads." in content
     assert "If `TASKS_BOOTSTRAP.execution_readiness.ready_for_task_generation = true`, do not recompute full control-plane hard gates by replaying whole `plan.md` tables" in content
-    assert "Run `{SCRIPT} --plan-file <PLAN_FILE>`" in content
+    assert "If `PLAN_FILE` is present, pass `--plan-file <PLAN_FILE>`; otherwise rely on script branch-derived default." in content
     assert "execution decomposition step for completed `plan`-stage detailed design" in content
     assert "MUST NOT supplement design details, verification semantics, target paths, completion anchors, or dependency meaning" in content
     assert "fail fast and route back to the relevant `/sdd.plan.*` command; do not emit placeholder execution tasks" in content
@@ -24,6 +24,7 @@ def test_tasks_command_hard_fails_on_missing_execution_anchors():
     assert "Stop and route to `/sdd.plan.test-matrix` if `test-matrix.md` is missing, non-consumable, or lacks the tuple keys needed for executable verification mapping." in content
     assert "Stop and route to `/sdd.plan.contract` if a required contract artifact/path is missing, non-consumable, cannot be aligned to the selected binding tuple, is `blocked`, or lacks `Full Field Dictionary (Operation-scoped)`." in content
     assert "treat contract `Downstream Projection Input (Required)` (`Spec Projection Slice`, `Test Projection Slice`) as the authoritative downstream execution projection" in content
+    assert "Cross-Interface Smoke Candidate (Required)" in content
     assert "Treat contract `Full Field Dictionary (Operation-scoped)` as the authoritative upstream field-semantics source" in content
     assert "keep contract projection as execution truth for this run and emit explicit upstream writeback repair actions" in content
     assert "/sdd.plan.interface-detail" not in content
@@ -65,6 +66,7 @@ def test_tasks_template_requires_explicit_single_target_tasks():
     assert "Treat use of `GLOBAL` as overflow for one-scope work as invalid task generation." in content
     assert "## 2.1) Upstream Alignment Repair (Required On Projection Drift)" in content
     assert "Do not dual-write conflicting semantics into `tasks.md`; keep one active projection source per IF unit." in content
+    assert "Cross-interface smoke tasks MUST be projected from contract `Cross-Interface Smoke Candidate (Required)` rows." in content
     assert "- Implementation Entry: [single repo-backed entry anchor from contract realization section, or same as contract boundary]" in content
     assert "Use `Contract` as the client-facing binding reference and `Implementation Entry` as the internal execution-target reference when they differ." in content
     assert "Keep `Goal`, `Contract`, `Implementation Entry`, and `Primary Refs` as short execution references only." in content

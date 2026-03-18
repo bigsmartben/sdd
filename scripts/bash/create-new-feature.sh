@@ -45,8 +45,8 @@ while [ $i -le $# ]; do
             echo ""
             echo "Options:"
             echo "  --json              Output in JSON format"
-            echo "  --short-name <name> Provide a custom short name (2-4 words) for the branch"
-            echo "  --number N          Specify branch number manually (overrides auto-detection)"
+            echo "  --short-name <name> Provide a custom short name (2-4 words) for fallback naming"
+            echo "  --number N          Specify feature number manually for fallback naming"
             echo "  --help, -h          Show this help message"
             echo ""
             echo "Examples:"
@@ -288,68 +288,84 @@ generate_branch_name() {
     fi
 }
 
-# Generate branch name
+# Generate fallback branch suffix
 if [ -n "$SHORT_NAME" ]; then
-    # Use provided short name, just clean it up
     BRANCH_SUFFIX=$(clean_branch_name "$SHORT_NAME")
 else
-    # Generate from description with smart filtering
     BRANCH_SUFFIX=$(generate_branch_name "$FEATURE_DESCRIPTION")
 fi
 
-# Determine branch number
-if [ -z "$BRANCH_NUMBER" ]; then
-    if [ "$HAS_GIT" = true ]; then
-        # Check existing branches on remotes
-        BRANCH_NUMBER=$(check_existing_branches "$SPECS_DIR")
-    else
-        # Fall back to local directory check
-        HIGHEST=$(get_highest_from_specs "$SPECS_DIR")
-        BRANCH_NUMBER=$((HIGHEST + 1))
-    fi
-fi
-
-# Force base-10 interpretation to prevent octal conversion (e.g., 010 → 8 in octal, but should be 10 in decimal)
-FEATURE_NUM=$(printf "%03d" "$((10#$BRANCH_NUMBER))")
-BRANCH_NAME="${FEATURE_NUM}-${BRANCH_SUFFIX}"
-
-# GitHub enforces a 244-byte limit on branch names
-# Validate and truncate if necessary
-MAX_BRANCH_LENGTH=244
-if [ ${#BRANCH_NAME} -gt $MAX_BRANCH_LENGTH ]; then
-    # Calculate how much we need to trim from suffix
-    # Account for: feature number (3) + hyphen (1) = 4 chars
-    MAX_SUFFIX_LENGTH=$((MAX_BRANCH_LENGTH - 4))
-    
-    # Truncate suffix at word boundary if possible
-    TRUNCATED_SUFFIX=$(echo "$BRANCH_SUFFIX" | cut -c1-$MAX_SUFFIX_LENGTH)
-    # Remove trailing hyphen if truncation created one
-    TRUNCATED_SUFFIX=$(echo "$TRUNCATED_SUFFIX" | sed 's/-$//')
-    
-    ORIGINAL_BRANCH_NAME="$BRANCH_NAME"
-    BRANCH_NAME="${FEATURE_NUM}-${TRUNCATED_SUFFIX}"
-    
-    >&2 echo "[specify] Warning: Branch name exceeded GitHub's 244-byte limit"
-    >&2 echo "[specify] Original: $ORIGINAL_BRANCH_NAME (${#ORIGINAL_BRANCH_NAME} bytes)"
-    >&2 echo "[specify] Truncated to: $BRANCH_NAME (${#BRANCH_NAME} bytes)"
-fi
+BRANCH_NAME=""
+CURRENT_BRANCH_LEAF=""
 
 if [ "$HAS_GIT" = true ]; then
-    if ! git checkout -b "$BRANCH_NAME" 2>/dev/null; then
-        # Check if branch already exists
-        if git branch --list "$BRANCH_NAME" | grep -q .; then
-            >&2 echo "Error: Branch '$BRANCH_NAME' already exists. Please use a different feature name or specify a different number with --number."
-            exit 1
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+    if [ -n "$CURRENT_BRANCH" ] && [ "$CURRENT_BRANCH" != "HEAD" ]; then
+        CURRENT_BRANCH_LEAF="${CURRENT_BRANCH##*/}"
+        if echo "$CURRENT_BRANCH_LEAF" | grep -qE '^feature-[0-9]{8}-[a-z0-9][a-z0-9-]*$|^[0-9]+-[a-z0-9][a-z0-9-]*$'; then
+            BRANCH_NAME="$CURRENT_BRANCH_LEAF"
         else
-            >&2 echo "Error: Failed to create git branch '$BRANCH_NAME'. Please check your git configuration and try again."
-            exit 1
+            >&2 echo "[specify] Warning: current branch '$CURRENT_BRANCH' does not match 'feature-YYYYMMDD-short-name'; using fallback generated feature key"
         fi
     fi
-else
-    >&2 echo "[specify] Warning: Git repository not detected; skipped branch creation for $BRANCH_NAME"
 fi
 
-FEATURE_DIR="$SPECS_DIR/$BRANCH_NAME"
+if [ -z "$BRANCH_NAME" ]; then
+    if [ -z "$BRANCH_NUMBER" ]; then
+        if [ "$HAS_GIT" = true ]; then
+            BRANCH_NUMBER=$(check_existing_branches "$SPECS_DIR")
+        else
+            HIGHEST=$(get_highest_from_specs "$SPECS_DIR")
+            BRANCH_NUMBER=$((HIGHEST + 1))
+        fi
+    fi
+
+    FEATURE_NUM=$(printf "%03d" "$((10#$BRANCH_NUMBER))")
+    BRANCH_NAME="${FEATURE_NUM}-${BRANCH_SUFFIX}"
+
+    MAX_BRANCH_LENGTH=244
+    if [ ${#BRANCH_NAME} -gt $MAX_BRANCH_LENGTH ]; then
+        MAX_SUFFIX_LENGTH=$((MAX_BRANCH_LENGTH - 4))
+        TRUNCATED_SUFFIX=$(echo "$BRANCH_SUFFIX" | cut -c1-$MAX_SUFFIX_LENGTH)
+        TRUNCATED_SUFFIX=$(echo "$TRUNCATED_SUFFIX" | sed 's/-$//')
+
+        ORIGINAL_BRANCH_NAME="$BRANCH_NAME"
+        BRANCH_NAME="${FEATURE_NUM}-${TRUNCATED_SUFFIX}"
+
+        >&2 echo "[specify] Warning: Branch name exceeded GitHub's 244-byte limit"
+        >&2 echo "[specify] Original: $ORIGINAL_BRANCH_NAME (${#ORIGINAL_BRANCH_NAME} bytes)"
+        >&2 echo "[specify] Truncated to: $BRANCH_NAME (${#BRANCH_NAME} bytes)"
+    fi
+
+    if [ "$HAS_GIT" = true ] && [ -z "$CURRENT_BRANCH_LEAF" ]; then
+        if ! git branch --list "$BRANCH_NAME" | grep -q .; then
+            if ! git branch "$BRANCH_NAME" >/dev/null 2>&1; then
+                >&2 echo "Error: Failed to create git branch '$BRANCH_NAME'. Please check your git configuration and try again."
+                exit 1
+            fi
+        fi
+    fi
+fi
+
+FEATURE_PREFIX="${BRANCH_NAME%%-*}"
+if echo "$BRANCH_NAME" | grep -qE '^feature-([0-9]{8})-'; then
+    FEATURE_NUM=$(echo "$BRANCH_NAME" | sed -E 's/^feature-([0-9]{8})-.*/\1/')
+elif echo "$FEATURE_PREFIX" | grep -qE '^[0-9]+$'; then
+    if [ ${#FEATURE_PREFIX} -lt 3 ]; then
+        FEATURE_NUM=$(printf "%03d" "$((10#$FEATURE_PREFIX))")
+    else
+        FEATURE_NUM="$FEATURE_PREFIX"
+    fi
+else
+    FEATURE_NUM="000"
+fi
+
+FEATURE_KEY="$BRANCH_NAME"
+if echo "$BRANCH_NAME" | grep -qE '^feature-([0-9]{8}-[a-z0-9][a-z0-9-]*)$'; then
+    FEATURE_KEY=$(echo "$BRANCH_NAME" | sed -E 's/^feature-([0-9]{8}-[a-z0-9][a-z0-9-]*)$/\1/')
+fi
+
+FEATURE_DIR="$SPECS_DIR/$FEATURE_KEY"
 mkdir -p "$FEATURE_DIR"
 
 SPEC_FILE="$FEATURE_DIR/spec.md"

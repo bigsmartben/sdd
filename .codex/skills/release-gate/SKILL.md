@@ -28,6 +28,15 @@ bash .codex/skills/release-gate/scripts/release-run.sh vX.Y.Z --publish
 - Do not bypass `create-release-packages.sh` / `create-github-release.sh`.
 - Require complete template archives for every `AGENT_CONFIG` key and both `sh`/`ps`.
 - Fail fast on any missing asset, count mismatch, missing dist artifact, or missing required tool.
+- Release output must preserve prompt-governance protocol parity with source templates.
+
+## Prompt Protocol Parity Gate
+
+- Detect and block multi-copy drift between `templates/**` and `.genreleases/**`.
+- Reject mixed wording that combines fact-ledger authority with summary-style semantics in the same responsibility boundary.
+- Ensure comprehensive audit ownership remains exclusive to `/sdd.analyze` in packaged prompts.
+- Ensure packaged downstream prompts include replay evidence requirements when consuming repository-first canonical rows.
+- Ensure tests cover new protocol markers; do not release with stale marker assertions.
 
 ## Expected Sequence
 
@@ -36,4 +45,5 @@ bash .codex/skills/release-gate/scripts/release-run.sh vX.Y.Z --publish
 3. Build Python distributions via `uv build`.
 4. Generate `release_notes.md` via `generate-release-notes.sh`.
 5. Enforce template coverage gate locally.
-6. If `--publish` is present, run `create-github-release.sh` (which re-checks gates).
+6. Enforce prompt protocol parity checks (source templates, packaged snapshots, and tests aligned).
+7. If `--publish` is present, run `create-github-release.sh` (which re-checks gates).

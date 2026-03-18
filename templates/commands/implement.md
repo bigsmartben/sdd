@@ -111,7 +111,7 @@ Terminology note (compatibility, non-normative):
    - Build the in-memory scheduling graph exactly once per run from the selected runtime source, then reuse that graph for scheduling/checkpoints/completion validation.
    - Treat `Task DAG` as baseline dependency authority (`strict`: follow exactly; `adaptive`: allow local resequencing only when dependency safety is preserved, completion anchors remain satisfiable, and adaptations are reported).
    - Treat `[Pre:T###,...]` as inline dependency mirror only.
-   - Read `plan.md` for tech stack, architecture, and file structure.
+   - Read `plan.md` only as control-plane context (`Shared Context Snapshot`, `Stage Queue`, `Artifact Status`, `Binding Projection Index`) and resolved artifact paths; do not treat it as a semantic source for architecture/contract/model requirements.
    - Load supporting artifacts only when needed for a ready task or its completion anchor:
 
 - `contracts/` realization-design sections for per-interface behavior/sequencing
@@ -120,15 +120,16 @@ Terminology note (compatibility, non-normative):
       - `test-matrix.md` for feature verification anchors referenced by tasks
       - `research.md` for implementation constraints/decisions
       - `.specify/memory/repository-first/technical-dependency-matrix.md` for dependency-governance execution baseline
-      - `.specify/memory/repository-first/module-invocation-spec.md` for invocation direction/layering execution baseline
+      - `.specify/memory/repository-first/module-invocation-spec.md` for module-edge execution baseline
   - Treat runtime batching notes, ready-task summaries, and local execution shortcuts as derived views only.
   - If local execution notes conflict with authoritative artifacts, use the authoritative artifact for semantics; if unresolved safely, stop and route upstream repair.
   - Treat `TODO(REPO_ANCHOR)` as forward-looking notes only; execute only repository-anchored semantics.
   - Treat contract `Full Field Dictionary (Operation-scoped)` as the authoritative field-semantics source; do not fill missing owner/default/validation/persisted meaning during `/sdd.implement`.
   - Repository-first execution discipline:
     - dependency changes MUST be validated against `.specify/memory/repository-first/technical-dependency-matrix.md`
-    - invocation-direction/layering changes MUST be validated against `.specify/memory/repository-first/module-invocation-spec.md`
+    - module-to-module invocation changes MUST be validated against `.specify/memory/repository-first/module-invocation-spec.md`
     - feature-local copies are derived views only and MUST NOT replace canonical baseline semantics
+    - do not perform completeness or consistency audit of repository-first baselines here; `/sdd.analyze` is the exclusive audit owner for that scope
     - if required canonical repository-first evidence is missing/stale/non-traceable, stop affected execution scope and route repair to `/sdd.constitution` or `/sdd.analyze` (do not infer semantics from docs/plans/summaries in `/sdd.implement`)
 
 1. Generate an execution strategy summary before modifying code:
@@ -136,6 +137,7 @@ Terminology note (compatibility, non-normative):
      - planned execution batches/layers from DAG
      - candidate file-path conflicts
      - verify-before-interface opportunities
+     - repository-first validation slice planned for this run (exact canonical dependency rows and module-edge rows to consume)
      - in `adaptive` mode, any proposed local resequencing/merge/split decisions and rationale
    - In `strict` mode, this summary is descriptive only.
    - In `adaptive` mode, include any expected runtime adaptation notes.
@@ -191,6 +193,7 @@ Terminology note (compatibility, non-normative):
    - Verify each interface unit (`IF-###`) reaches the task-defined completion anchors that exist for that unit
    - Verify task-defined validation commands, tests, or contract checks passed for completed work
    - Confirm tasks.md checkboxes accurately reflect execution results
+   - Emit `Repository-first Validation Trace` in final output: cite exact canonical rows consumed/validated (`Dependency (G:A)`, `Version`, `Scope`, `Version Source`, `Used By Module`, `Evidence`, linked `SIG-*`, plus `From Module`/`To Module` invocation rows)
    - In `adaptive` mode, summarize adaptations and their dependency impact in final output
    - Report final status with summary of completed work, blocked items, and remediation follow-ups
    - If unresolved drift remains, recommend upstream artifact repair or `/sdd.analyze`

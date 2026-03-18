@@ -1,5 +1,5 @@
 ---
-description: Generate an executable, dependency-ordered tasks.md from an explicit plan.md path, organized by GLOBAL and interface delivery units keyed by IF Scope as execution work packages.
+description: Generate an executable, dependency-ordered tasks.md from an explicit or branch-derived plan.md path, organized by GLOBAL and interface delivery units keyed by IF Scope as execution work packages.
 handoffs:
   - label: Analyze For Consistency
     agent: sdd.analyze
@@ -20,12 +20,13 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Argument Parsing
 
-1. Parse the first positional token from `$ARGUMENTS` as `PLAN_FILE`
-2. `PLAN_FILE` is mandatory and MUST resolve from repo root to an existing file named `plan.md`
-3. `PLAN_FILE` MUST stay under `repo/specs/**`
-4. Any remaining text after removing `PLAN_FILE` is optional scoped user context
+1. If present, the first positional token is `PLAN_FILE`
+2. Optional `PLAN_FILE` MUST resolve from repo root to an existing file named `plan.md`
+3. Optional `PLAN_FILE` MUST stay under `repo/specs/**`
+4. Any remaining text after removing optional `PLAN_FILE` is optional scoped user context
 
-If `PLAN_FILE` is missing or invalid, stop immediately and report the required invocation:
+If `PLAN_FILE` is omitted, resolve it from current feature branch using `{SCRIPT}` defaults.
+If optional `PLAN_FILE` is present but invalid, stop immediately and report the required invocation shape:
 
 `/sdd.tasks <path/to/plan.md> [context...]`
 
@@ -82,6 +83,7 @@ Use this protocol whenever the Outline asks to execute extension hooks for a pha
 - If required execution anchors are missing from `Binding Projection Index`, completed `Artifact Status` rows, `contracts/`, or `test-matrix.md`, fail fast and route back to the relevant `/sdd.plan.*` command; do not emit placeholder execution tasks.
 - If a selected contract is `blocked`, is missing `Full Field Dictionary (Operation-scoped)`, or is missing required downstream projection anchors (`Downstream Projection Input (Required)`), fail fast and route back to `/sdd.plan.contract`; do not infer spec/test anchors or fill field semantics locally.
 - For each active IF unit, treat contract `Downstream Projection Input (Required)` (`Spec Projection Slice`, `Test Projection Slice`) as the authoritative downstream execution projection.
+- For `Cross-Interface Finalization`, treat contract `Cross-Interface Smoke Candidate (Required)` rows as the authoritative feature-level smoke projection input; do not invent cross-interface smoke chains locally.
 - Treat contract `Full Field Dictionary (Operation-scoped)` as the authoritative upstream field-semantics source for owner/default/validation/persisted meaning; `/sdd.tasks` MUST NOT backfill those semantics.
 - If contract projection slices conflict with `spec.md` or `test-matrix.md`, keep contract projection as execution truth for this run and emit explicit upstream writeback repair actions; do not reconcile by local semantic inference inside `/sdd.tasks`.
 - `/sdd.tasks` may fail when execution-critical inputs are missing or non-consumable, but it does **not** own coverage completeness, uncovered MUST requirement analysis, ambiguity sweeps, terminology/diagram drift detection, repo-anchor misuse audits, helper-doc leakage checks, audit hygiene checks, or cross-artifact contradiction analysis.
@@ -94,7 +96,7 @@ Use this protocol whenever the Outline asks to execute extension hooks for a pha
 
 ## Outline
 
-1. **Setup**: Run `{SCRIPT} --plan-file <PLAN_FILE>` from repo root and parse `FEATURE_DIR`, `AVAILABLE_DOCS`, and `TASKS_BOOTSTRAP`. All paths must be absolute. `TASKS_BOOTSTRAP` is an optional derived run-local control-plane projection extracted from `plan.md`; treat `plan.md` as the authority if bootstrap is null, missing, or fails validation. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
+1. **Setup**: Run `{SCRIPT}` from repo root. If `PLAN_FILE` is present, pass `--plan-file <PLAN_FILE>`; otherwise rely on script branch-derived default. Parse `FEATURE_DIR`, `AVAILABLE_DOCS`, and `TASKS_BOOTSTRAP`. All paths must be absolute. `TASKS_BOOTSTRAP` is an optional derived run-local control-plane projection extracted from `plan.md`; treat `plan.md` as the authority if bootstrap is null, missing, or fails validation. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
 2. Execute `before_tasks` hooks using the Hook Dispatch Protocol.
 
@@ -128,7 +130,7 @@ Use this protocol whenever the Outline asks to execute extension hooks for a pha
    - Stop and route to `/sdd.plan.contract` if a required contract artifact/path is missing, non-consumable, cannot be aligned to the selected binding tuple, is `blocked`, or lacks `Full Field Dictionary (Operation-scoped)`.
 
 5. **Execute task generation workflow**:
-   - Treat `plan.md` as the planning control plane and binding projection ledger; it is still a planning summary / structure guide, not as a replacement for canonical requirement, contract, model, or verification semantics.
+   - Treat `plan.md` as the planning control plane and binding projection ledger; it is authoritative for planning queue state, binding-projection rows, and source/output fingerprints only, and MUST NOT replace canonical requirement, contract, model, or verification semantics.
    - Prefer bootstrap extraction from `TASKS_BOOTSTRAP`. Read `plan.md` only to validate or repair missing bootstrap fields:
      - `Shared Context Snapshot`
      - `Binding Projection Index`
@@ -141,10 +143,10 @@ Use this protocol whenever the Outline asks to execute extension hooks for a pha
    - Repository-first consumption discipline:
      - Use canonical baseline files under `.specify/memory/repository-first/` only:
        - `.specify/memory/repository-first/technical-dependency-matrix.md` for dependency-governance task projection
-       - `.specify/memory/repository-first/module-invocation-spec.md` for invocation-direction and layering-governance task projection
-     - Feature-local copies are derived views only and MUST NOT replace canonical baseline semantics.
-     - Do not derive dependency matrix or invocation governance semantics from `README.md`, `docs/**`, planning narratives, or generated summaries.
-     - If required canonical repository-first evidence is missing, stale, or non-traceable, stop task generation for affected scope and route repair to `/sdd.constitution` or `/sdd.analyze`.
+       - `.specify/memory/repository-first/module-invocation-spec.md` for module-edge invocation-governance task projection
+      - Feature-local copies are derived views only and MUST NOT replace canonical baseline semantics.
+      - Do not derive dependency matrix or invocation governance semantics from `README.md`, `docs/**`, planning narratives, or generated summaries.
+      - If required canonical repository-first evidence is missing, stale, or non-traceable, stop task generation for affected scope and route repair to `/sdd.constitution` or `/sdd.analyze`.
    - Use the fixed loop `Discover -> Generate -> Compress` for every generation unit.
    - Use deterministic mechanical mapping rules during `Generate`:
      - one work package maps to exactly one `operationId` or one shared prerequisite objective
@@ -165,6 +167,7 @@ Use this protocol whenever the Outline asks to execute extension hooks for a pha
       - Resolve `contract` target paths from the completed `Artifact Status` rows in `plan.md`, then validate tuple alignment against the authoritative artifacts.
       - For the active `IF Scope`, read only matching contract slices, relevant `TM/TC` rows, relevant `data-model.md` anchors, and required `spec.md` refs.
       - Require the selected contract to provide both `Full Field Dictionary (Operation-scoped)` and `Downstream Projection Input (Required)` with `Spec Projection Slice` plus `Test Projection Slice`; use them as the per-operation execution projection base.
+      - Require the selected contract to provide `Cross-Interface Smoke Candidate (Required)` with one row; treat missing rows as upstream blocker routed to `/sdd.plan.contract`.
       - Use `contracts/` as the authoritative realization design source for execution targeting; extract `Implementation Entry Anchor` and repo-backed participating components from the contract realization section when placing implementation tasks.
       - When `Boundary Anchor` and `Implementation Entry Anchor` differ, keep `Boundary Anchor` for verification/binding refs but anchor implementation tasks to the internal entry/collaborator path defined in `contracts/`.
       - Do not target implementation work at the external boundary alone when the contract realization section defines a narrower repo-backed internal handoff entry.
@@ -178,6 +181,7 @@ Use this protocol whenever the Outline asks to execute extension hooks for a pha
       - Keep execution refs at task level inside GLOBAL/IF task definitions.
       - Build local predecessor edges per unit, then synthesize the full **Task DAG** adjacency list from the compressed unit outputs.
       - Add predecessor edges only when they are traceable to shared prerequisites, same-unit verify -> implement -> completion flow, or explicit upstream cross-unit dependency evidence. Do not infer new business ordering, responsibility boundaries, or implementation strategy.
+      - Build one run-local cross-interface smoke chain from contract `Cross-Interface Smoke Candidate (Required)` rows and map it to `Cross-Interface Finalization` verify tasks.
       - Accumulate compressed unit outputs into one run-local execution graph and metadata cache; this graph is the single source for task numbering, DAG synthesis, `tasks.md` rendering, and manifest projection during the run.
       - Add adaptation caution note only when task graph/file layout indicates extra `adaptive` risk.
       - Ensure each task line is executable with concrete path/command/completion signal where relevant.
@@ -206,6 +210,8 @@ Use this protocol whenever the Outline asks to execute extension hooks for a pha
    - Total task count and count split by `GLOBAL` and each interface unit (`IF-###`)
    - DAG schedulability result (dependency-safe / blockers detected)
    - Manifest alignment result (task count and task IDs aligned with `tasks.md`)
+   - Repository-first replay trace: list consumed dependency rows (`Dependency (G:A)`, `Version`, `Scope`, `Version Source`, `Used By Module`, `Evidence`, and linked `SIG-*` rows when used)
+   - Module-edge replay trace: list consumed invocation-governance rows (`From Module`, `To Module`, `Rule`) and linked `SIG-*` rows when used
    - Upstream alignment repair actions emitted due to projection drift (if any), including target artifact and owner command
    - Analyze handoff note: direct non-mainline comprehensive audit concerns to `/sdd.analyze`
 
@@ -239,6 +245,7 @@ Additional generation constraints:
 - Apply the projection authority and drift-writeback rules defined in `Responsibility Boundary (Scope Guard)` for every active IF unit.
 - Tasks may refine operation-level mappings but MUST NOT rewrite approved global object semantics.
 - Interface implementation tasks SHOULD target the repo-backed `Implementation Entry Anchor` or directly participating collaborators from `contracts/`; verification tasks SHOULD keep contract/test anchors explicit.
+- Cross-interface smoke tasks in `Cross-Interface Finalization` MUST be projected from contract `Cross-Interface Smoke Candidate (Required)` rows; if candidate rows are absent or all `Candidate Role = none`, stop and route to `/sdd.plan.contract`.
 - If multiple operations share an `IF Scope`, keep them as separate work packages inside that IF unit; do not merge them into a synthetic combined task.
 - `GLOBAL` is limited to prerequisites shared by multiple IF units. Using `GLOBAL` as overflow for one-scope work is a hard error.
 - Repository-first projection artifacts in `.specify/memory/repository-first/` are complementary and MUST NOT replace one another (`.specify/memory/repository-first/technical-dependency-matrix.md` = dependency facts, `.specify/memory/repository-first/module-invocation-spec.md` = invocation constraints).

@@ -31,8 +31,8 @@ Do not place stage prose, audit payload, or execution logs here.
 
 ### Repository-First Consumption Slice
 
-- Relevant dependency-governance facts: [short bullets]
-- Relevant invocation-governance facts: [short bullets]
+- Relevant dependency usage rows / `SIG-*`: [cite concrete rows only]
+- Relevant module-edge rules: [cite concrete module-to-module rows only]
 
 ## Stage Queue
 

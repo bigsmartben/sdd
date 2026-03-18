@@ -373,6 +373,40 @@ def test_bash_check_prerequisites_can_embed_tasks_bootstrap(tmp_path):
     assert payload["TASKS_BOOTSTRAP"]["execution_readiness"]["ready_for_task_generation"] is True
 
 
+def test_bash_check_prerequisites_supports_feature_prefixed_branch_default(tmp_path):
+    repo_dir = tmp_path / "repo"
+    scripts_bash = repo_dir / "scripts" / "bash"
+    scripts_bash.mkdir(parents=True)
+
+    shutil.copy2(REPO_ROOT / "scripts" / "bash" / "common.sh", scripts_bash / "common.sh")
+    shutil.copy2(REPO_ROOT / "scripts" / "bash" / "check-prerequisites.sh", scripts_bash / "check-prerequisites.sh")
+    shutil.copy2(REPO_ROOT / "scripts" / "task_preflight.py", repo_dir / "scripts" / "task_preflight.py")
+    (scripts_bash / "check-prerequisites.sh").chmod(0o755)
+
+    feature_dir = repo_dir / "specs" / "20250708-parent-hanxue-channel"
+    _write_minimal_feature(feature_dir)
+
+    subprocess.run(["git", "init"], cwd=repo_dir, capture_output=True, check=True)
+    subprocess.run(["git", "checkout", "-b", "feature-20250708-parent-hanxue-channel"], cwd=repo_dir, capture_output=True, check=True)
+
+    env = os.environ.copy()
+    env["SPECIFY_FEATURE"] = "feature-20250708-parent-hanxue-channel"
+
+    result = subprocess.run(
+        ["bash", "scripts/bash/check-prerequisites.sh", "--json", "--task-preflight"],
+        cwd=repo_dir,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["FEATURE_DIR"].replace("\\", "/").endswith("/repo/specs/20250708-parent-hanxue-channel")
+    assert payload["TASKS_BOOTSTRAP"]["execution_readiness"]["ready_for_task_generation"] is True
+
+
 def test_bash_check_prerequisites_task_preflight_supports_explicit_plan_file(tmp_path):
     repo_dir = tmp_path / "repo"
     scripts_bash = repo_dir / "scripts" / "bash"
@@ -412,8 +446,8 @@ def test_tasks_command_prefers_task_preflight_bootstrap():
     assert "scripts/bash/check-prerequisites.sh --json --task-preflight" in tasks_command
     assert "scripts/powershell/check-prerequisites.ps1 -Json -TaskPreflight" in tasks_command
     assert "`/sdd.tasks <path/to/plan.md> [context...]`" in tasks_command
-    assert "Run `{SCRIPT} --plan-file <PLAN_FILE>`" in tasks_command
-    assert "parse `FEATURE_DIR`, `AVAILABLE_DOCS`, and `TASKS_BOOTSTRAP`" in tasks_command
+    assert "If `PLAN_FILE` is present, pass `--plan-file <PLAN_FILE>`; otherwise rely on script branch-derived default." in tasks_command
+    assert "Parse `FEATURE_DIR`, `AVAILABLE_DOCS`, and `TASKS_BOOTSTRAP`" in tasks_command
     assert "Prefer `TASKS_BOOTSTRAP.unit_inventory` and `TASKS_BOOTSTRAP.ready_unit_inventory`" in tasks_command
     assert "Manifest top-level MUST include: `schema_version`, `generated_at`, `generated_from`, `tasks`." in tasks_command
     assert "`generated_from` MUST include at least: `plan_path`, `plan_source_fingerprint`, `contract_source_fingerprints`." in tasks_command

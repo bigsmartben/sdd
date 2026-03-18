@@ -52,7 +52,7 @@ EXAMPLES:
   .\check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks
 
   # Resolve planning inputs from an explicit plan.md path
-  .\check-prerequisites.ps1 -Json -PlanFile specs/001-demo/plan.md
+  .\check-prerequisites.ps1 -Json -PlanFile specs/20250708-parent-hanxue-channel/plan.md
 
   # Extract compact tasks bootstrap packet for /sdd.tasks
   .\check-prerequisites.ps1 -Json -TaskPreflight

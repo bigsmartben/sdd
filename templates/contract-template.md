@@ -64,6 +64,16 @@ Do not repeat full prose from `spec.md` or `test-matrix.md`; project only execut
 |----------|--------------|------------|-------|----------|------------------|--------------------------|----------------------------|
 | [IF-### or N/A] | [operationId or N/A] | [`Contract` / `Integration` / `E2E` / `Mixed`] | [TM-###] | [TC-###, TC-###] | [primary success check] | [failure/branch checks] | [test command or assertion signal] |
 
+### Cross-Interface Smoke Candidate (Required)
+
+This section seeds feature-level smoke orchestration in `/sdd.tasks` `Cross-Interface Finalization`.
+Emit exactly one candidate row for the selected operation.
+If this operation does not participate in feature-level smoke flow, keep a row with `Candidate Role = none` and explicit `N/A` values for dependency/trigger/anchors.
+
+| Smoke Candidate ID | IF Scope | Operation ID | Candidate Role | Depends On Candidate ID(s) | Trigger | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
+|--------------------|----------|--------------|----------------|----------------------------|---------|------------------|--------------------------|----------------------------|
+| [SMK-###] | [IF-### or N/A] | [operationId or N/A] | [`entry` / `middle` / `exit` / `none`] | [SMK-###, SMK-### or `N/A`] | [cross-interface trigger or `N/A`] | [cross-interface success signal or `N/A`] | [degraded/failure signal or `N/A`] | [smoke command/assertion signal or `N/A`] |
+
 ## Northbound Contract Summary
 
 This section is a reader-oriented summary only. It is **not** the authoritative field-completeness source for this contract.
@@ -109,7 +119,7 @@ If a field cannot be fully confirmed from the selected DTO/state-owner anchors, 
 
 | Field | Owner Class | Direction | Required/Optional | Default | Validation/Enum | Persisted | Contract-visible | Used in [operationId] | Source Anchor |
 |-------|-------------|-----------|-------------------|---------|-----------------|-----------|------------------|-----------------------|---------------|
-| [fieldPath] | [RequestDTO / ResponseDTO / StateOwner] | [input / output / state / derived] | [required / optional / conditional] | [default / derivation / none / gap] | [validation rule / enum vocabulary / gap] | [yes / no / derived / gap] | [yes / no / indirect] | [yes / no] | [`path/to/file.ext::Symbol` or `TODO(REPO_ANCHOR)`] |
+| [fieldPath] | [RequestModel / ResponseModel / StateOwner] | [input / output / state / derived] | [required / optional / conditional] | [default / derivation / none / gap] | [validation rule / enum vocabulary / gap] | [yes / no / derived / gap] | [yes / no / indirect] | [yes / no] | [`path/to/file.ext::Symbol` or `TODO(REPO_ANCHOR)`] |
 
 ## Contract Realization Design
 
@@ -137,6 +147,9 @@ Keep only materially distinct paths. Merge paths that differ only in internal me
 Sequence MUST start from consumer/client entry and reach `Implementation Entry Anchor` within the first two request hops.
 Sequence MUST be an end-to-end contiguous chain at this document's declared granularity: no broken hops, no orphan participants, and no disconnected request/response segments.
 Each `Behavior Paths` row MUST map to one contiguous ordered step chain from trigger entry to contract-visible outcome/failure.
+Sequence MUST explicitly represent every mandatory repo-backed collaborator hop (including second-party/third-party call chain segments when they are part of the selected behavior path).
+Sequence MUST NOT merge multiple mandatory collaborators/dependencies into one synthetic participant label (for example `A + B`).
+`opt` blocks are allowed only for truly conditional branches; mandatory main-path collaborator/dependency calls MUST remain outside `opt`.
 If both controller and facade exist for this operation, show both participants in order with explicit handoff.
 When the boundary is an HTTP route, the controller method is the first repo-backed participant; any service/facade hop must appear after that handoff.
 If `Boundary Anchor` and `Implementation Entry Anchor` differ, render **Sequence Variant A** and show both forward and return handoff messages explicitly.
@@ -151,7 +164,8 @@ sequenceDiagram
     participant Boundary as "<ContractBoundaryAnchor>"
     participant Entry as "<ImplementationEntryAnchor>"
     participant Coordinator as "<AnchoredCoordinatorSymbol>"
-    participant Dependency as "<AnchoredDependencySymbol>"
+    participant Collaborator as "<AnchoredCollaboratorSymbol>"
+    participant ExternalDependency as "<AnchoredSecondOrThirdPartySymbol>"
 
     Initiator->>Boundary: [operation request] (S1)
     Boundary->>Entry: handoff to internal entry (S2)
@@ -161,13 +175,15 @@ sequenceDiagram
         Entry-->>Boundary: mapped error/result handoff (S5)
         Boundary-->>Initiator: contract error response (S6)
     else success
-        opt optional repo-backed dependency interaction
-            Coordinator->>Dependency: [anchored side effect] (S7)
-            Dependency-->>Coordinator: [result/ack] (S8)
+        Coordinator->>Collaborator: required collaborator call (S7)
+        opt conditional downstream dependency (only when truly conditional)
+            Collaborator->>ExternalDependency: downstream call (S8)
+            ExternalDependency-->>Collaborator: downstream result/ack (S9)
         end
-        Coordinator-->>Entry: success result or mapped response (S9)
-        Entry-->>Boundary: contract response handoff (S10)
-        Boundary-->>Initiator: success response (S11)
+        Collaborator-->>Coordinator: collaborator result/ack (S10)
+        Coordinator-->>Entry: success result or mapped response (S11)
+        Entry-->>Boundary: contract response handoff (S12)
+        Boundary-->>Initiator: success response (S13)
     end
 ```
 
@@ -178,7 +194,8 @@ sequenceDiagram
     participant Initiator as "<ClientOrCaller>"
     participant Boundary as "<ContractBoundaryAnchor>"
     participant Coordinator as "<AnchoredCoordinatorSymbol>"
-    participant Dependency as "<AnchoredDependencySymbol>"
+    participant Collaborator as "<AnchoredCollaboratorSymbol>"
+    participant ExternalDependency as "<AnchoredSecondOrThirdPartySymbol>"
 
     Initiator->>Boundary: [operation request] (S1)
     Boundary->>Coordinator: validate + execute (S2)
@@ -186,12 +203,14 @@ sequenceDiagram
         Coordinator-->>Boundary: rejection reason / mapped error (S3)
         Boundary-->>Initiator: contract error response (S4)
     else success
-        opt optional repo-backed dependency interaction
-            Coordinator->>Dependency: [anchored side effect] (S5)
-            Dependency-->>Coordinator: [result/ack] (S6)
+        Coordinator->>Collaborator: required collaborator call (S5)
+        opt conditional downstream dependency (only when truly conditional)
+            Collaborator->>ExternalDependency: downstream call (S6)
+            ExternalDependency-->>Collaborator: downstream result/ack (S7)
         end
-        Coordinator-->>Boundary: success result or mapped response (S7)
-        Boundary-->>Initiator: success response (S8)
+        Collaborator-->>Coordinator: collaborator result/ack (S8)
+        Coordinator-->>Boundary: success result or mapped response (S9)
+        Boundary-->>Initiator: success response (S10)
     end
 ```
 
@@ -201,6 +220,7 @@ UML participants MUST cover all classes/interfaces that appear as executable par
 Every sequence call that invokes a class/interface operation MUST be represented by a named method on an owning UML class/interface with a directed relationship.
 Any newly introduced field/method/call (not already in anchored sources) MUST be explicitly marked as new and connected to both caller/callee or owner/consumer.
 For contract-visible request/response and behavior-significant fields, each field MUST have explicit UML ownership.
+UML request/response class labels should reuse anchored symbol names or repository boundary naming conventions; do not synthesize `RequestDTO` / `ResponseDTO` labels unless anchored symbols themselves use those names.
 If `Boundary Anchor` and `Implementation Entry Anchor` differ, render **UML Variant A**.
 If `Boundary Anchor` and `Implementation Entry Anchor` resolve to the same repo-backed symbol, render **UML Variant B only**: merge them into one UML class/interface and omit synthetic handoff relations.
 
@@ -216,14 +236,22 @@ classDiagram
         +[handle](requestDto): responseDto
     }
 
-    class RequestDTO["<RequestDTO>"] {
+    class RequestModel["<BoundaryRequestModel>"] {
         +[requestFieldA]: [Type]
         +[requestFieldB]: [Type]
     }
 
-    class ResponseDTO["<ResponseDTO>"] {
+    class ResponseModel["<BoundaryResponseModel>"] {
         +[responseFieldA]: [Type]
         +[status]: [StatusEnum]
+    }
+
+    class Collaborator["<AnchoredCollaboratorSymbol>"] {
+        +[execute](requestModel): [collaboratorResult]
+    }
+
+    class ExternalDependency["<AnchoredSecondOrThirdPartySymbol>"] {
+        +[invoke](collaboratorInput): [dependencyResult]
     }
 
     class DomainEntity["<DomainEntityOrDO>"] {
@@ -232,9 +260,12 @@ classDiagram
     }
 
     ContractBoundaryEntry --> ImplementationEntry : hands-off-to (only when distinct)
-    ImplementationEntry --> RequestDTO : consumes
-    ImplementationEntry --> ResponseDTO : produces
+    ImplementationEntry --> RequestModel : consumes
+    ImplementationEntry --> Collaborator : calls
+    Collaborator --> ExternalDependency : calls (if present)
+    ImplementationEntry --> ResponseModel : maps/produces
     ImplementationEntry --> DomainEntity : reads/writes
+    Collaborator --> DomainEntity : reads/writes (if applicable)
 ```
 
 #### UML Variant B (Boundary == Entry)
@@ -245,14 +276,22 @@ classDiagram
         +[consumerEntry](requestDto): responseDto
     }
 
-    class RequestDTO["<RequestDTO>"] {
+    class RequestModel["<BoundaryRequestModel>"] {
         +[requestFieldA]: [Type]
         +[requestFieldB]: [Type]
     }
 
-    class ResponseDTO["<ResponseDTO>"] {
+    class ResponseModel["<BoundaryResponseModel>"] {
         +[responseFieldA]: [Type]
         +[status]: [StatusEnum]
+    }
+
+    class Collaborator["<AnchoredCollaboratorSymbol>"] {
+        +[execute](requestModel): [collaboratorResult]
+    }
+
+    class ExternalDependency["<AnchoredSecondOrThirdPartySymbol>"] {
+        +[invoke](collaboratorInput): [dependencyResult]
     }
 
     class DomainEntity["<DomainEntityOrDO>"] {
@@ -260,9 +299,12 @@ classDiagram
         +[state]: [StatusEnum]
     }
 
-    ContractBoundaryEntry --> RequestDTO : consumes
-    ContractBoundaryEntry --> ResponseDTO : produces
+    ContractBoundaryEntry --> RequestModel : consumes
+    ContractBoundaryEntry --> Collaborator : calls
+    Collaborator --> ExternalDependency : calls (if present)
+    ContractBoundaryEntry --> ResponseModel : maps/produces
     ContractBoundaryEntry --> DomainEntity : reads/writes
+    Collaborator --> DomainEntity : reads/writes (if applicable)
 ```
 
 ## Runtime Correctness Check
@@ -274,6 +316,7 @@ All required rows in this section must be present; each row may remain `ok` or `
 | Boundary-to-entry reachability | Sequence reaches `Implementation Entry Anchor` from consumer/client entry within the first two request hops | [boundary/entry anchors + sequence steps] | [ok / gap] |
 | End-to-end chain continuity | Each declared behavior path maps to one contiguous request/response step chain with no disconnected hops | [behavior path ids + sequence step chains] | [ok / gap] |
 | Behavior-path closure | `Behavior Paths` trigger/outcome/failure is fully covered by `Sequence Ref` steps | [path + sequence steps + TM/TC] | [ok / gap] |
+| Collaborator-chain coverage | Every mandatory second-party/third-party collaborator hop in selected behavior paths is explicitly represented in sequence and UML without synthetic merged participants or optionalized main-path calls | [dependency notes + sequence steps + UML participants/relations] | [ok / gap] |
 | Failure consistency | Sequence failure steps map exactly to contract `Failure Output` semantics | [failure rows] | [ok / gap] |
 | State-transition legality | Every sequence step that reads/writes lifecycle state maps to a valid lifecycle transition and invariant | [data-model lifecycle + INV-*] | [ok / gap] |
 | Message callability | Every contract-visible sequence message maps to a callable boundary/collaborator operation with UML ownership | [entry surface/DTO + UML operation/responsibility] | [ok / gap] |
@@ -286,7 +329,7 @@ All required rows in this section must be present; each row may remain `ok` or `
 - `spec.md`: [canonical source for UC / FR / UIF refs]
 - `test-matrix.md`: [TM / TC refs captured above; keep tuple values aligned]
 - `data-model.md`: [shared concepts, invariants, and lifecycle anchors]
-- repo anchors: [boundary/entry/DTO/collaborator symbols]
+- repo anchors: [boundary/entry/request-response model/collaborator/dependency symbols]
 
 ## Boundary Notes
 

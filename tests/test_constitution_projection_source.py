@@ -36,6 +36,7 @@ def test_constitution_template_defines_owner_boundaries_and_terms():
     assert "/sdd.analyze" in content
     assert "/sdd.tasks" in content
     assert "/sdd.implement" in content
+    assert "Writing guidance only; do not surface this scaffold in the runtime constitution:" in content
     assert content.index("## Terminology & Boundary Definitions") < content.index("### Repo-Anchor Evidence Protocol")
     assert content.index("### Repo-Anchor Evidence Protocol") < content.index("## State Machine Applicability Gate")
 
@@ -80,6 +81,8 @@ def test_constitution_command_uses_current_constitution_state_not_placeholder_pr
     assert "Do not substitute `templates/constitution-template.md` or any other template location." in content
     assert "do not force a template-token rewrite pass" in content
     assert "This file is a TEMPLATE containing placeholder tokens" not in content
+    assert "Treat the target runtime repo and the Spec Kit source repo as different workspaces." in content
+    assert "do not create, inspect, or reconcile `.specify/memory/**` as if it were runtime output" in content
 
 
 def test_constitution_command_owns_repository_first_baseline_pipeline():
@@ -99,6 +102,14 @@ def test_constitution_command_owns_repository_first_baseline_pipeline():
     assert "`updated`" in content
     assert "`unchanged`" in content
     assert "`deleted`" in content
+    assert "Matrix rows MUST be exhaustive for the detected product/runtime manifests; do not emit highlight-only subsets." in content
+    assert "Emit one row per dependency usage; do not collapse multiple modules, scopes, version sources, or evidence locations into one summary row." in content
+    assert "Classify organization-owned or organization-coordinated dependencies as `2nd`; do not default all rows to `3rd`." in content
+    assert "Preserve version divergence, version-source-mix, and `unresolved` as governance signals" in content
+    assert "Every material signal MUST cite manifest paths and line refs." in content
+    assert "Allowed/forbidden direction tables MUST cover the concrete first-party module edges found in the target runtime repo." in content
+    assert "Use concrete module-to-module rows as the primary representation; layer summaries are optional metadata only." in content
+    assert "do not emit speculative future-signal rows" in content
 
 
 def test_constitution_command_defines_runtime_fast_path_and_bounded_reads():
@@ -115,3 +126,30 @@ def test_constitution_command_defines_runtime_fast_path_and_bounded_reads():
     assert "Apply a **bounded evidence budget** for this run" in content
     assert "Runtime guidance docs (`README.md`, `docs/quickstart.md`, agent docs) are **opt-in by trigger** only" in content
     assert "Keep runtime output concise: no unchanged-file inventories" in content
+
+
+def test_repository_first_templates_require_complete_and_replayable_outputs():
+    matrix = read("templates/technical-dependency-matrix-template.md")
+    invocation = read("templates/module-invocation-spec-template.md")
+
+    assert "The dependency matrix MUST be exhaustive for detected product/runtime manifests; do not emit highlight-only subsets." in matrix
+    assert "Classify organization-owned or organization-coordinated packages as `2nd`; external ecosystem packages as `3rd`." in matrix
+    assert "Tooling-only manifests that are outside the product/runtime build surface SHOULD stay in detection notes" in matrix
+    assert "Every material version-source mix, version divergence, or unresolved signal MUST cite manifest paths and line refs." in matrix
+    assert "Emit one row per normalized dependency usage found in detected product/runtime manifests." in matrix
+    assert "Do not collapse multiple modules, version sources, scopes, or evidence locations into one row." in matrix
+    assert "| Dependency (G:A) | Type | Version | Scope | Version Source | Used By Module | Evidence |" in matrix
+    assert "Used By Modules" not in matrix
+    assert "[version-divergence / version-source-mix / unresolved]" in matrix
+
+    assert "Allowed and forbidden direction tables MUST cover the concrete first-party module edges found in the target runtime repo." in invocation
+    assert "Do not collapse unmatched edges into broad grouped rows unless every covered edge shares the same rule and rationale." in invocation
+    assert "Every observed first-party cross-module edge MUST be represented as allowed or forbidden." in invocation
+    assert "| From Module | To Module | Layer View | Rule | Rationale |" in invocation
+    assert "| From Module | To Module | Layer View | Rule | Violation Risk |" in invocation
+    assert "From Module Layer" not in invocation
+    assert "To Module Layer" not in invocation
+    assert "Every governance rule MUST reference an existing `SIG-*` row from the matrix; do not emit speculative future-signal rows." in invocation
+    assert "[existing `SIG-*` row]" in invocation
+    assert "SIG-002" not in invocation
+    assert "SIG-003" not in invocation

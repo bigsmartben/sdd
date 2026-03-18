@@ -4,8 +4,6 @@ This is the latest set of releases that you can use with your agent of choice. W
 
 ## Changelog
 
-- Merge pull request #23 from bigsmartben/codex/fix-release-packaging-bash-sigpipe
-- fix: harden bash release packaging parser and fail-fast message
-- Merge pull request #22 from bigsmartben/codex/specify-ui-html-planning-gates
-- feat: add specify.ui-html flow and tighten planning gates
+- Merge pull request #24 from bigsmartben/codex/sync-release-notes-v2.0.20
+- docs: sync release notes for v2.0.20
 

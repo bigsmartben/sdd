@@ -6,38 +6,40 @@
 
 Use this artifact to define module invocation constraints.
 Rules in this document MUST use normative language (`MUST`/`SHOULD`/`MUST NOT`).
+Allowed and forbidden direction tables MUST cover the concrete first-party module edges found in the target runtime repo.
+Do not collapse unmatched edges into broad grouped rows unless every covered edge shares the same rule and rationale.
 
 ## Allowed Direction
 
 Define allowed invocation directions according to real module layering
 (`web/service/manager/dao/api/common` or repository-equivalent).
 
-| From Module Layer | To Module Layer | Rule | Rationale |
-|-------------------|-----------------|------|-----------|
-| [web] | [service] | [MUST invoke only through service boundary] | [Layering constraint] |
-| [service] | [manager] | [SHOULD use manager for orchestration paths] | [Orchestration constraint] |
-| [manager] | [dao] | [MUST use dao for persistence access] | [Persistence boundary] |
-| [service] | [api/common] | [MAY use shared contracts/utilities with stable boundary] | [Shared contract rationale] |
+| From Module | To Module | Layer View | Rule | Rationale |
+|-------------|-----------|------------|------|-----------|
+| [aidm-web] | [aidm-service] | [web -> service] | [MUST invoke only through service boundary] | [Layering constraint] |
+| [aidm-service] | [aidm-manager] | [service -> manager] | [SHOULD use manager for orchestration paths] | [Orchestration constraint] |
+| [aidm-manager] | [aidm-dao] | [manager -> dao] | [MUST use dao for persistence access] | [Persistence boundary] |
+| [aidm-service] | [aidm-api] | [service -> api] | [MAY use shared contracts through a stable boundary] | [Shared contract rationale] |
 
 ## Forbidden Direction
 
 Define invocation directions that are prohibited.
+Every observed first-party cross-module edge MUST be represented as allowed or forbidden.
 
-| From Module Layer | To Module Layer | Rule | Violation Risk |
-|-------------------|-----------------|------|----------------|
-| [web] | [dao] | [MUST NOT bypass service/manager boundary] | [Boundary collapse / transaction inconsistency] |
-| [dao] | [web] | [MUST NOT depend on presentation layer] | [Inverted dependency] |
-| [common] | [web/service/manager/dao] | [SHOULD avoid upward business coupling] | [Shared layer contamination] |
+| From Module | To Module | Layer View | Rule | Violation Risk |
+|-------------|-----------|------------|------|----------------|
+| [aidm-web] | [aidm-dao] | [web -> dao] | [MUST NOT bypass service/manager boundary] | [Boundary collapse / transaction inconsistency] |
+| [aidm-dao] | [aidm-web] | [dao -> web] | [MUST NOT depend on presentation layer] | [Inverted dependency] |
+| [aidm-common] | [aidm-service] | [common -> service] | [SHOULD avoid upward business coupling] | [Shared layer contamination] |
 
 ## Dependency Governance Rules
 
 These rules MUST consume version-divergence and `unresolved` signals from `.specify/memory/repository-first/technical-dependency-matrix.md`.
+Every governance rule MUST reference an existing `SIG-*` row from the matrix; do not emit speculative future-signal rows.
 
 | Rule ID | Trigger Signal (from matrix) | Governance Rule | Required Action |
 |---------|------------------------------|-----------------|-----------------|
-| [DG-001] | [version-divergence on dependency G:A] | [MUST prevent new cross-layer invocations that increase divergence surface] | [Unify version source or document exception] |
-| [DG-002] | [`unresolved` version source] | [MUST block dependency-driven invocation expansion until resolved] | [Resolve manifest source and re-validate] |
-| [DG-003] | [high-risk scope usage across boundary] | [SHOULD constrain invocation to approved adapter boundary] | [Add explicit adapter path and justification] |
+| [DG-001] | [existing `SIG-*` row] | [MUST prevent new cross-layer invocations that increase divergence surface] | [Unify version source or document exception] |
 
 ## Boundary Notes
 

@@ -17,8 +17,8 @@ if ($Help) {
     Write-Host ""
     Write-Host "Options:"
     Write-Host "  -Json               Output in JSON format"
-    Write-Host "  -ShortName <name>   Provide a custom short name (2-4 words) for the branch"
-    Write-Host "  -Number N           Specify branch number manually (overrides auto-detection)"
+    Write-Host "  -ShortName <name>   Provide a custom short name (2-4 words) for fallback naming"
+    Write-Host "  -Number N           Specify feature number manually for fallback naming"
     Write-Host "  -Help               Show this help message"
     Write-Host ""
     Write-Host "Examples:"
@@ -249,77 +249,95 @@ function Get-BranchName {
     }
 }
 
-# Generate branch name
+# Generate fallback branch suffix
 if ($ShortName) {
-    # Use provided short name, just clean it up
     $branchSuffix = ConvertTo-CleanBranchName -Name $ShortName
 } else {
-    # Generate from description with smart filtering
     $branchSuffix = Get-BranchName -Description $featureDesc
 }
 
-# Determine branch number
-if ($Number -eq 0) {
-    if ($hasGit) {
-        # Check existing branches on remotes
-        $Number = Get-NextBranchNumber -SpecsDir $specsDir
-    } else {
-        # Fall back to local directory check
-        $Number = (Get-HighestNumberFromSpecs -SpecsDir $specsDir) + 1
-    }
-}
-
-$featureNum = ('{0:000}' -f $Number)
-$branchName = "$featureNum-$branchSuffix"
-
-# GitHub enforces a 244-byte limit on branch names
-# Validate and truncate if necessary
-$maxBranchLength = 244
-if ($branchName.Length -gt $maxBranchLength) {
-    # Calculate how much we need to trim from suffix
-    # Account for: feature number (3) + hyphen (1) = 4 chars
-    $maxSuffixLength = $maxBranchLength - 4
-    
-    # Truncate suffix
-    $truncatedSuffix = $branchSuffix.Substring(0, [Math]::Min($branchSuffix.Length, $maxSuffixLength))
-    # Remove trailing hyphen if truncation created one
-    $truncatedSuffix = $truncatedSuffix -replace '-$', ''
-    
-    $originalBranchName = $branchName
-    $branchName = "$featureNum-$truncatedSuffix"
-    
-    Write-Warning "[specify] Branch name exceeded GitHub's 244-byte limit"
-    Write-Warning "[specify] Original: $originalBranchName ($($originalBranchName.Length) bytes)"
-    Write-Warning "[specify] Truncated to: $branchName ($($branchName.Length) bytes)"
-}
+$branchName = $null
+$currentBranchLeaf = $null
 
 if ($hasGit) {
-    $branchCreated = $false
     try {
-        git checkout -q -b $branchName 2>$null | Out-Null
-        if ($LASTEXITCODE -eq 0) {
-            $branchCreated = $true
+        $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
+        if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($currentBranch) -and $currentBranch -ne 'HEAD') {
+            $currentBranchLeaf = ($currentBranch -replace '^.*/', '')
+            if ($currentBranchLeaf -match '^feature-[0-9]{8}-[a-z0-9][a-z0-9-]*$|^\d+-[a-z0-9][a-z0-9-]*$') {
+                $branchName = $currentBranchLeaf
+            } else {
+                Write-Warning "[specify] Current branch '$currentBranch' does not match 'feature-YYYYMMDD-short-name'; using fallback generated feature key"
+            }
         }
     } catch {
-        # Exception during git command
+        Write-Verbose "Could not read current git branch: $_"
     }
-
-    if (-not $branchCreated) {
-        # Check if branch already exists
-        $existingBranch = git branch --list $branchName 2>$null
-        if ($existingBranch) {
-            Write-Error "Error: Branch '$branchName' already exists. Please use a different feature name or specify a different number with -Number."
-            exit 1
-        } else {
-            Write-Error "Error: Failed to create git branch '$branchName'. Please check your git configuration and try again."
-            exit 1
-        }
-    }
-} else {
-    Write-Warning "[specify] Warning: Git repository not detected; skipped branch creation for $branchName"
 }
 
-$featureDir = Join-Path $specsDir $branchName
+if (-not $branchName) {
+    if ($Number -eq 0) {
+        if ($hasGit) {
+            $Number = Get-NextBranchNumber -SpecsDir $specsDir
+        } else {
+            $Number = (Get-HighestNumberFromSpecs -SpecsDir $specsDir) + 1
+        }
+    }
+
+    $featureNum = ('{0:000}' -f $Number)
+    $branchName = "$featureNum-$branchSuffix"
+
+    # GitHub enforces a 244-byte limit on branch names
+    $maxBranchLength = 244
+    if ($branchName.Length -gt $maxBranchLength) {
+        $maxSuffixLength = $maxBranchLength - 4
+        $truncatedSuffix = $branchSuffix.Substring(0, [Math]::Min($branchSuffix.Length, $maxSuffixLength))
+        $truncatedSuffix = $truncatedSuffix -replace '-$', ''
+
+        $originalBranchName = $branchName
+        $branchName = "$featureNum-$truncatedSuffix"
+
+        Write-Warning "[specify] Branch name exceeded GitHub's 244-byte limit"
+        Write-Warning "[specify] Original: $originalBranchName ($($originalBranchName.Length) bytes)"
+        Write-Warning "[specify] Truncated to: $branchName ($($branchName.Length) bytes)"
+    }
+
+    if ($hasGit -and (-not $currentBranchLeaf)) {
+        $existingBranch = git branch --list $branchName 2>$null
+        if (-not $existingBranch) {
+            try {
+                git branch $branchName 2>$null | Out-Null
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Error "Error: Failed to create git branch '$branchName'. Please check your git configuration and try again."
+                    exit 1
+                }
+            } catch {
+                Write-Error "Error: Failed to create git branch '$branchName'. Please check your git configuration and try again."
+                exit 1
+            }
+        }
+    }
+}
+
+$featurePrefix = ($branchName -split '-', 2)[0]
+if ($branchName -match '^feature-([0-9]{8})-') {
+    $featureNum = $matches[1]
+} elseif ($featurePrefix -match '^\d+$') {
+    if ($featurePrefix.Length -lt 3) {
+        $featureNum = ('{0:000}' -f [int]$featurePrefix)
+    } else {
+        $featureNum = $featurePrefix
+    }
+} else {
+    $featureNum = '000'
+}
+
+$featureKey = $branchName
+if ($branchName -match '^feature-([0-9]{8}-[a-z0-9][a-z0-9-]*)$') {
+    $featureKey = $matches[1]
+}
+
+$featureDir = Join-Path $specsDir $featureKey
 New-Item -ItemType Directory -Path $featureDir -Force | Out-Null
 
 $specFile = Join-Path $featureDir 'spec.md'

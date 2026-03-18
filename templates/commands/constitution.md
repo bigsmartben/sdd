@@ -19,6 +19,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 You are updating the project constitution at `.specify/memory/constitution.md`. Treat the current file as the authoritative working constitution and amend it in-place based on user intent and governance rules.
 
 **Runtime template path rule**: If `.specify/memory/constitution.md` does not exist yet, initialize it from `.specify/templates/constitution-template.md` first. If that runtime template is missing or non-consumable when initialization is required, stop and report the blocker. Do not substitute `templates/constitution-template.md` or any other template location. In the Spec Kit source repository, `templates/constitution-template.md` is the source mirror of that runtime template.
+**Source/runtime boundary rule**: Treat the target runtime repo and the Spec Kit source repo as different workspaces. In a runtime repo, operate on `.specify/memory/**` and `.specify/templates/**`. When editing the Spec Kit source repo directly, edit `templates/**`, command mirrors, scripts, and tests only; do not create, inspect, or reconcile `.specify/memory/**` as if it were runtime output.
 
 Follow this execution flow:
 
@@ -53,6 +54,7 @@ Follow this execution flow:
    - For newly initialized files, replace every placeholder with concrete text (no bracketed tokens left except intentionally retained template slots that the project has chosen not to define yet—explicitly justify any left).
    - For existing files, preserve unaffected text and avoid mechanical full-template rewrites.
    - Preserve heading hierarchy and comments can be removed once replaced unless they still add clarifying guidance.
+   - Do not carry visible template teaching text into the final markdown; any remaining scaffold guidance must stay inside HTML comments only.
    - Ensure each Principle section: succinct name line, paragraph (or bullet list) capturing non‑negotiable rules, explicit rationale if not obvious.
    - Ensure Governance section lists amendment procedure, versioning policy, and compliance review expectations.
 
@@ -111,9 +113,19 @@ Follow this execution flow:
      - Normalize `Dependency (G:A)` as:
        - Maven: `group:artifact`
        - Node/Python/Go: `ecosystem:package_or_module`
+     - Matrix rows MUST be exhaustive for the detected product/runtime manifests; do not emit highlight-only subsets.
+     - Emit one row per dependency usage; do not collapse multiple modules, scopes, version sources, or evidence locations into one summary row.
      - Enforce `Type` values as `2nd` or `3rd` only.
+     - Classify organization-owned or organization-coordinated dependencies as `2nd`; do not default all rows to `3rd`.
      - Enforce `Version Source` values as `direct`, `dependencyManagement`, `module-dependencyManagement`, or `unresolved`.
-     - Preserve version divergence and `unresolved` as governance signals (no silent normalization).
+     - Preserve version divergence, version-source-mix, and `unresolved` as governance signals (no silent normalization).
+     - Tooling-only manifests outside the product/runtime build surface SHOULD stay in detection notes and MUST NOT displace product dependency rows.
+     - Every material signal MUST cite manifest paths and line refs.
+   - Module invocation generation policy:
+     - Allowed/forbidden direction tables MUST cover the concrete first-party module edges found in the target runtime repo.
+     - Use concrete module-to-module rows as the primary representation; layer summaries are optional metadata only.
+     - Do not collapse uncovered edges into broad grouped rows unless every covered edge shares the same rule and rationale.
+     - Every dependency-governance rule MUST reference an existing `SIG-*` row from the dependency matrix; do not emit speculative future-signal rows.
 
 2. Produce a Sync Impact Report (prepend as an HTML comment at top of the constitution file after update):
    - Keep this report delta-oriented; do not restate unchanged template inventories or canonical baseline details beyond status.

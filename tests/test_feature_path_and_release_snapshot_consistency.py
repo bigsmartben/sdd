@@ -21,9 +21,9 @@ def test_bash_and_powershell_share_prefix_based_feature_dir_resolution():
     assert "Find-FeatureDirByPrefix" in pwsh
     assert "$featureDir = Find-FeatureDirByPrefix -RepoRoot $repoRoot -BranchName $currentBranch" in pwsh
 
-    # Both sides should implement the same 3-digit prefix rule
-    assert "^([0-9]{3})-" in bash
-    assert "^(\\d{3})-" in pwsh
+    # Both sides should implement the same feature-YYYYMMDD branch-to-spec mapping rule
+    assert "^feature-([0-9]{8}-[a-z0-9][a-z0-9-]*)$" in bash
+    assert "^feature-([0-9]{8}-[a-z0-9][a-z0-9-]*)$" in pwsh
 
 
 def test_release_packaging_templates_snapshot_and_path_rewrite_rules_are_consistent():

@@ -26,22 +26,31 @@ get_current_branch() {
         return
     fi
 
-    # For non-git repos, try to find the latest feature directory
+    # For non-git repos, try to find the latest feature directory.
+    # Prefer date-based naming (YYYYMMDD-slug), then fallback to legacy NNN-slug.
     local repo_root=$(get_repo_root)
     local specs_dir="$repo_root/specs"
 
     if [[ -d "$specs_dir" ]]; then
         local latest_feature=""
-        local highest=0
+        local highest_date=0
+        local highest_legacy=0
 
         for dir in "$specs_dir"/*; do
             if [[ -d "$dir" ]]; then
                 local dirname=$(basename "$dir")
-                if [[ "$dirname" =~ ^([0-9]{3})- ]]; then
-                    local number=${BASH_REMATCH[1]}
-                    number=$((10#$number))
-                    if [[ "$number" -gt "$highest" ]]; then
-                        highest=$number
+                if [[ "$dirname" =~ ^([0-9]{8})- ]]; then
+                    local date_key=${BASH_REMATCH[1]}
+                    date_key=$((10#$date_key))
+                    if [[ "$date_key" -gt "$highest_date" ]]; then
+                        highest_date=$date_key
+                        latest_feature=$dirname
+                    fi
+                elif [[ "$dirname" =~ ^([0-9]{3})- ]]; then
+                    local legacy_number=${BASH_REMATCH[1]}
+                    legacy_number=$((10#$legacy_number))
+                    if [[ "$highest_date" -eq 0 && "$legacy_number" -gt "$highest_legacy" ]]; then
+                        highest_legacy=$legacy_number
                         latest_feature=$dirname
                     fi
                 fi
@@ -65,6 +74,7 @@ has_git() {
 check_feature_branch() {
     local branch="$1"
     local has_git_repo="$2"
+    local branch_leaf="${branch##*/}"
 
     # For non-git repos, we can't enforce branch naming but still provide output
     if [[ "$has_git_repo" != "true" ]]; then
@@ -72,9 +82,19 @@ check_feature_branch() {
         return 0
     fi
 
-    if [[ ! "$branch" =~ ^[0-9]{3}- ]]; then
+    if [[ "$branch_leaf" =~ ^feature-[0-9]{8}-[a-z0-9][a-z0-9-]*$ ]]; then
+        return 0
+    fi
+
+    # Backward-compatible acceptance for existing projects.
+    if [[ "$branch_leaf" =~ ^[0-9]{3}-[a-z0-9][a-z0-9-]*$ ]]; then
+        echo "[specify] Warning: legacy branch naming detected: $branch_leaf. Prefer feature-YYYYMMDD-short-name." >&2
+        return 0
+    fi
+
+    if [[ ! "$branch_leaf" =~ ^[0-9]{8}-[a-z0-9][a-z0-9-]*$ ]]; then
         echo "ERROR: Not on a feature branch. Current branch: $branch" >&2
-        echo "Feature branches should be named like: 001-feature-name" >&2
+        echo "Feature branches should be named like: feature-20250708-parent-hanxue-channel" >&2
         return 1
     fi
 
@@ -247,17 +267,31 @@ get_feature_paths_from_plan_file() {
     emit_feature_paths "$repo_root" "$current_branch" "$has_git_repo" "$feature_dir" "$feature_dir/spec.md" "$impl_plan"
 }
 
-# Find feature directory by numeric prefix instead of exact branch match
-# This allows multiple branches to work on the same spec (e.g., 004-fix-bug, 004-add-feature)
+# Resolve feature directory from branch naming rules.
+# Preferred: feature-YYYYMMDD-slug -> specs/YYYYMMDD-slug
+# Legacy: NNN-* prefixes still map by numeric prefix.
 find_feature_dir_by_prefix() {
     local repo_root="$1"
     local branch_name="$2"
     local specs_dir="$repo_root/specs"
+    local branch_leaf="${branch_name##*/}"
+
+    # Preferred naming: feature-YYYYMMDD-slug -> specs/YYYYMMDD-slug
+    if [[ "$branch_leaf" =~ ^feature-([0-9]{8}-[a-z0-9][a-z0-9-]*)$ ]]; then
+        echo "$specs_dir/${BASH_REMATCH[1]}"
+        return
+    fi
+
+    # Accept already normalized feature key as branch leaf.
+    if [[ "$branch_leaf" =~ ^([0-9]{8}-[a-z0-9][a-z0-9-]*)$ ]]; then
+        echo "$specs_dir/${BASH_REMATCH[1]}"
+        return
+    fi
 
     # Extract numeric prefix from branch (e.g., "004" from "004-whatever")
-    if [[ ! "$branch_name" =~ ^([0-9]{3})- ]]; then
+    if [[ ! "$branch_leaf" =~ ^([0-9]{3})- ]]; then
         # If branch doesn't have numeric prefix, fall back to exact match
-        echo "$specs_dir/$branch_name"
+        echo "$specs_dir/$branch_leaf"
         return
     fi
 
@@ -276,7 +310,7 @@ find_feature_dir_by_prefix() {
     # Handle results
     if [[ ${#matches[@]} -eq 0 ]]; then
         # No match found - return the branch name path (will fail later with clear error)
-        echo "$specs_dir/$branch_name"
+        echo "$specs_dir/$branch_leaf"
     elif [[ ${#matches[@]} -eq 1 ]]; then
         # Exactly one match - perfect!
         echo "$specs_dir/${matches[0]}"
@@ -284,7 +318,7 @@ find_feature_dir_by_prefix() {
         # Multiple matches - this shouldn't happen with proper naming convention
         echo "ERROR: Multiple spec directories found with prefix '$prefix': ${matches[*]}" >&2
         echo "Please ensure only one spec directory exists per numeric prefix." >&2
-        echo "$specs_dir/$branch_name"  # Return something to avoid breaking the script
+        echo "$specs_dir/$branch_leaf"  # Return something to avoid breaking the script
     fi
 }
 

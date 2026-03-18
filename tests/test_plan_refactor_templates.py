@@ -18,7 +18,7 @@ def read_if_exists(rel_path: str) -> str | None:
 def test_plan_command_is_control_plane_only():
     content = read("templates/commands/plan.md")
     assert "does **not** generate downstream planning-stage artifacts directly" in content
-    assert "The first positional token is mandatory and is `SPEC_FILE`" in content
+    assert "If present, the first positional token is `SPEC_FILE`" in content
     assert "`/sdd.plan <path/to/spec.md> [technical-context...]`" in content
     assert "Planning Sharding Model (Mandatory)" in content
     assert "Stage sharding (fixed): `research -> data-model -> test-matrix -> contract`" in content
@@ -91,6 +91,12 @@ def test_contract_command_uses_test_matrix_as_default_semantic_source():
     assert "- response DTO anchor target, when present" in content
     assert "- one primary collaborator anchor, when required for contract-visible behavior" in content
     assert "- up to three `State Owner Anchor(s)` targets, when present" in content
+    assert "Sequence design MUST explicitly render every mandatory repo-backed collaborator hop" in content
+    assert "Sequence design MUST NOT collapse multiple mandatory collaborators/dependencies into one synthetic participant label" in content
+    assert "`opt` blocks are valid only for truly conditional branches" in content
+    assert "do not synthesize `RequestDTO` / `ResponseDTO` labels unless the anchored symbol itself uses those names." in content
+    assert "## Feature-Level Smoke Readiness (Queue-Complete Gate)" in content
+    assert "Cross-Interface Smoke Candidate (Required)" in content
 
 
 def test_contract_selection_rules_handle_empty_queue_before_packet_resolution():
@@ -129,6 +135,7 @@ def test_contract_template_contains_unified_realization_requirements():
     assert "## Downstream Projection Input (Required)" in content
     assert "### Spec Projection Slice" in content
     assert "### Test Projection Slice" in content
+    assert "### Cross-Interface Smoke Candidate (Required)" in content
     assert "End-to-end chain continuity" in content
     assert "Sequence-participant UML closure" in content
     assert "New-field/method call linkage" in content
@@ -138,6 +145,11 @@ def test_contract_template_contains_unified_realization_requirements():
     assert "#### Sequence Variant B (Boundary == Entry)" in content
     assert "#### UML Variant A (Boundary != Entry)" in content
     assert "#### UML Variant B (Boundary == Entry)" in content
+    assert "Sequence MUST explicitly represent every mandatory repo-backed collaborator hop" in content
+    assert "Sequence MUST NOT merge multiple mandatory collaborators/dependencies into one synthetic participant label" in content
+    assert "mandatory main-path collaborator/dependency calls MUST remain outside `opt`." in content
+    assert "UML request/response class labels should reuse anchored symbol names or repository boundary naming conventions" in content
+    assert "Collaborator-chain coverage" in content
 
 
 def test_tasks_command_uses_contract_as_realization_source():
@@ -146,6 +158,7 @@ def test_tasks_command_uses_contract_as_realization_source():
     assert "Use `contracts/` as the authoritative realization design source for execution targeting" in content
     assert "Downstream Projection Input (Required)" in content
     assert "For each active IF unit, treat contract `Downstream Projection Input (Required)` (`Spec Projection Slice`, `Test Projection Slice`) as the authoritative downstream execution projection." in content
+    assert "Cross-Interface Smoke Candidate (Required)" in content
     assert "keep contract projection as execution truth for this run and emit explicit upstream writeback repair actions" in content
     assert "`/sdd.specify` for spec drift, `/sdd.plan.test-matrix` for test-matrix drift" in content
     assert "route back to `/sdd.plan.contract`" in content
@@ -164,6 +177,7 @@ def test_tasks_template_is_contract_only():
     assert "keep contract projection as execution truth for this run and emit explicit upstream writeback repair actions" in content
     assert "`/sdd.specify`" in content
     assert "`/sdd.plan.test-matrix`" in content
+    assert "Cross-Interface Smoke Candidate (Required)" in content
     assert "interface detail" not in content.lower()
 
 
@@ -178,6 +192,9 @@ def test_analyze_routes_stale_contract_rows_only():
     assert "contract/interface DTO drift" not in content
     assert "contract/interface field drift from anchored DTOs/signatures" not in content
     assert "runtime correctness (from unified contract realization design)" in content
+    assert "UML boundary naming drift:" in content
+    assert "collapse multiple mandatory collaborators/dependencies into one synthetic participant label" in content
+    assert "mandatory collaborator/dependency calls that are placed under `opt` optional blocks in main paths" in content
 
 
 def test_docs_describe_contract_only_planning_queue():
@@ -242,12 +259,12 @@ def test_lint_rules_for_unified_contract_runtime_rows():
     assert "Interface details are missing" not in content
 
 
-def test_checklist_command_requires_explicit_plan_input_and_hard_gate():
+def test_checklist_command_supports_optional_plan_input_with_hard_gate():
     content = read("templates/commands/checklist.md")
-    assert "The first positional token is mandatory and is `PLAN_FILE`" in content
+    assert "If present, the first positional token is `PLAN_FILE`" in content
+    assert "If `PLAN_FILE` is omitted, resolve it from current feature branch using `{SCRIPT}` defaults." in content
     assert "`/sdd.checklist <path/to/plan.md> [checklist-context...]`" in content
-    assert "Run `{SCRIPT} --plan-file <PLAN_FILE>` from repo root" in content
-    assert "Do not use current-branch feature inference for checklist target selection." in content
+    assert "Run `{SCRIPT}` from repo root. If `PLAN_FILE` is present, pass `--plan-file <PLAN_FILE>`; otherwise rely on script branch-derived default." in content
     assert "plan.md (required; must match resolved PLAN_FILE)" in content
 
 
@@ -264,5 +281,3 @@ def test_checklist_docs_and_templates_use_plan_path_invocation():
     assert "/sdd.checklist <path/to/plan.md>" in specify_command
     assert "/sdd.checklist <path/to/plan.md>" in checklist_template
     assert '/{COMMAND_NAMESPACE}.checklist <plan.md>' in cli_init
-
-

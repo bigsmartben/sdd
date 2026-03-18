@@ -12,8 +12,9 @@ $ErrorActionPreference = 'Stop'
 
 # Show help if requested
 if ($Help) {
-    Write-Output "Usage: ./setup-plan.ps1 -SpecFile <path/to/spec.md> [-Json] [-Help]"
-    Write-Output "  -SpecFile <path>  Explicit path to spec.md under repo/specs/**"
+    Write-Output "Usage: ./setup-plan.ps1 [-SpecFile <path/to/spec.md>] [-Json] [-Help]"
+    Write-Output "  -SpecFile <path>  Optional explicit path to spec.md under repo/specs/**"
+    Write-Output "                    If omitted, infer spec.md from current feature branch"
     Write-Output "  -Json             Output results in JSON format"
     Write-Output "  -Help             Show this help message"
     exit 0
@@ -22,13 +23,17 @@ if ($Help) {
 # Load common functions
 . "$PSScriptRoot/common.ps1"
 
-if (-not $SpecFile) {
-    Write-Error "-SpecFile is required and must point to spec.md under repo/specs/**"
-    exit 1
+if ($SpecFile) {
+    # Explicit spec file takes precedence.
+    $paths = Get-FeaturePathsFromSpecFile -SpecFile $SpecFile
+} else {
+    # Fallback to branch-derived default spec path.
+    $paths = Get-FeaturePathsEnv
+    $isFeatureBranch = [bool](Test-FeatureBranch -Branch $paths.CURRENT_BRANCH -HasGit:$paths.HAS_GIT | Select-Object -Last 1)
+    if (-not $isFeatureBranch) {
+        exit 1
+    }
 }
-
-# Get all paths and variables from explicit spec file
-$paths = Get-FeaturePathsFromSpecFile -SpecFile $SpecFile
 
 $template = Join-Path $paths.REPO_ROOT '.specify/templates/plan-template.md'
 if (-not (Test-Path $template -PathType Leaf)) {

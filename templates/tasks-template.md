@@ -175,11 +175,14 @@ Rules:
 
 ## 7) Cross-Interface Finalization
 
+- [ ] T### [Type:Verify] [Role:smoke] [Pre:T###,...] Run cross-interface smoke chain [SMK-### -> SMK-###] using [command/path] (Completion Anchor: [SMK-### pass signal])
 - [ ] T### [Type:Infra] [Role:validation] Run final validation command set in [path] (Completion Anchor: [command + pass signal])
 
 Rules:
 
 - Use this section only for tasks that cannot be scoped to one IF unit.
+- Cross-interface smoke tasks MUST be projected from contract `Cross-Interface Smoke Candidate (Required)` rows.
+- If all contract rows carry `Candidate Role = none`, document this explicitly and skip smoke-task generation.
 - Do not use this section for work that exists only because upstream design anchors are missing.
 - Do not use this section as overflow for interface-local tasks.
 

@@ -683,7 +683,7 @@ You can also ask Claude Code (if you have the [GitHub CLI](https://docs.github.c
 With the implementation plan ready (and any optional vertical checks complete), you can now break down the plan into specific, actionable tasks that can be executed in the correct order. Use the `/sdd.tasks` command to automatically generate a detailed task breakdown from your implementation plan:
 
 ```text
-/sdd.tasks specs/001-feature-name/plan.md
+/sdd.tasks specs/20250708-parent-hanxue-channel/plan.md
 ```
 
 This step creates a `tasks.md` file in your feature specification directory that contains:

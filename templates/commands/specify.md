@@ -59,7 +59,7 @@ Given that feature description, do this:
      - "Create a dashboard for analytics" → "analytics-dashboard"
      - "Fix payment processing timeout bug" → "fix-payment-timeout"
 
-2. **Create the feature branch** by running the script with `--short-name` (and `--json`), and do NOT pass `--number` (the script auto-detects the next globally available number across all branches and spec directories):
+2. **Resolve the feature key and spec path** by running the script with `--short-name` (and `--json`), and do NOT pass `--number` (the script auto-detects the next globally available number when fallback naming is needed):
 
    - Bash example: `{SCRIPT} --json --short-name "user-auth" "Add user authentication"`
    - PowerShell example: `{SCRIPT} -Json -ShortName "user-auth" "Add user authentication"`
@@ -70,6 +70,7 @@ Given that feature description, do this:
    - You must only ever run this script once per feature
    - The JSON is provided in the terminal as output - always refer to it to get the actual content you're looking for
    - The JSON output will contain BRANCH_NAME and SPEC_FILE paths
+   - The script must not switch branches; it uses the current branch when it already matches `feature-YYYYMMDD-short-name` (or legacy `NNN-short-name`), otherwise it generates fallback naming without checkout
    - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot")
 
 3. Load `.specify/templates/spec-template.md` to understand required sections. This runtime template path is mandatory; if the file is missing or non-consumable, stop and report the blocker. Do not substitute `templates/spec-template.md` or any other template location.
@@ -199,7 +200,7 @@ Given that feature description, do this:
 
 4. Report completion with branch name, spec file path, and readiness for the next phase (run `/sdd.specify.ui-html <path/to/spec.md>` for an interactive prototype if needed, then `/sdd.clarify` first, then `/sdd.plan`; if user explicitly skips clarification, warn about increased downstream rework risk and then proceed). If checklist-style validation output is needed, direct users to run `/sdd.checklist <path/to/plan.md>` as a separate vertical command after `/sdd.plan`.
 
-**NOTE:** The script creates and checks out the new branch and initializes the spec file before writing.
+**NOTE:** The script initializes the `specs/<feature-key>/spec.md` path (`feature-key = YYYYMMDD-short-name` for preferred branch naming) and never performs branch checkout/switch.
 
 ## General Guidelines
 

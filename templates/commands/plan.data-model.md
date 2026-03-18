@@ -1,5 +1,5 @@
 ---
-description: Generate the pending data-model.md artifact selected from an explicit plan.md path.
+description: Generate the pending data-model.md artifact selected from an explicit or branch-derived plan.md path.
 handoffs:
   - label: Continue Test Matrix Queue
     agent: sdd.plan.test-matrix
@@ -20,12 +20,13 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Argument Parsing
 
-1. Parse the first positional token from `$ARGUMENTS` as `PLAN_FILE`
-2. `PLAN_FILE` is mandatory and MUST resolve from repo root to an existing file named `plan.md`
-3. `PLAN_FILE` MUST stay under `repo/specs/**`
-4. Any remaining text after removing `PLAN_FILE` is optional scoped user context
+1. If present, the first positional token is `PLAN_FILE`
+2. Optional `PLAN_FILE` MUST resolve from repo root to an existing file named `plan.md`
+3. Optional `PLAN_FILE` MUST stay under `repo/specs/**`
+4. Any remaining text after removing optional `PLAN_FILE` is optional scoped user context
 
-If `PLAN_FILE` is missing or invalid, stop immediately and report the required invocation:
+If `PLAN_FILE` is omitted, resolve it from current feature branch using `{SCRIPT}` defaults.
+If optional `PLAN_FILE` is present but invalid, stop immediately and report the required invocation shape:
 
 `/sdd.plan.data-model <path/to/plan.md> [context...]`
 
@@ -38,7 +39,7 @@ Use `.specify/templates/data-model-template.md` only. If the runtime template is
 
 ## Selection Rules
 
-1. Run `{SCRIPT} --plan-file <PLAN_FILE>` once and resolve `FEATURE_DIR`, `FEATURE_SPEC`, and `IMPL_PLAN`
+1. Run `{SCRIPT}` once from repo root. If `PLAN_FILE` is present, pass `--plan-file <PLAN_FILE>`; otherwise rely on script branch-derived default. Resolve `FEATURE_DIR`, `FEATURE_SPEC`, and `IMPL_PLAN`
 2. Read only the resolved `IMPL_PLAN`
 3. Find the first `Stage Queue` row where:
    - `Stage ID = data-model`
@@ -50,8 +51,8 @@ Use `.specify/templates/data-model-template.md` only. If the runtime template is
 
 Build one bounded run-local packet for the selected `data-model` row from:
 
-- selected `Stage Queue` row in explicit `PLAN_FILE`
-- `Shared Context Snapshot` in explicit `PLAN_FILE`
+- selected `Stage Queue` row in resolved `PLAN_FILE`
+- `Shared Context Snapshot` in resolved `PLAN_FILE`
 - resolved `FEATURE_SPEC` path
 - resolved `research.md` path
 - selected row source/output fingerprint fields
@@ -61,7 +62,7 @@ Do not load additional artifacts unless the selected-row blocker or lifecycle co
 
 ## Plan Control-Plane Input Path (Mandatory)
 
-Use only the explicit `PLAN_FILE` resolved through `{SCRIPT}` as planning control plane.
+Use only the resolved `PLAN_FILE` from `{SCRIPT}` as planning control plane.
 Ignore alternate `plan.md` paths from environment variables or repository discovery.
 Non-`plan.md` user files are allowed only when already listed in `Allowed Inputs`; they never redefine control-plane state.
 If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
@@ -89,8 +90,8 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 Read only:
 
 - `.specify/templates/data-model-template.md` for output structure
-- selected `Stage Queue` row from the explicit `PLAN_FILE` only
-- `Shared Context Snapshot` from the explicit `PLAN_FILE` only
+- selected `Stage Queue` row from the resolved `PLAN_FILE` only
+- `Shared Context Snapshot` from the resolved `PLAN_FILE` only
 - resolved `FEATURE_SPEC`
 - `research.md`
 - targeted lifecycle repo anchors required for stable states and invariants

@@ -102,8 +102,8 @@ Load only sections needed for semantic conclusions:
   - `test-matrix.md` for path anchors
   - `contracts/` realization-design sections for operation behavior, sequence, UML details
 - From repository-first canonical baseline (required when plan outputs depend on repository-first projections):
-  - `.specify/memory/repository-first/technical-dependency-matrix.md` for dependency evidence (`Dependency (G:A)`, `Version Source`, divergence/`unresolved` governance signals)
-  - `.specify/memory/repository-first/module-invocation-spec.md` for invocation governance (`Allowed Direction`, `Forbidden Direction`, `Dependency Governance Rules`)
+  - `.specify/memory/repository-first/technical-dependency-matrix.md` for dependency evidence (`Dependency (G:A)`, `Version`, `Scope`, `Version Source`, `Used By Module`, `Evidence`, and `SIG-*` governance signals including divergence, version-source-mix, and `unresolved`)
+  - `.specify/memory/repository-first/module-invocation-spec.md` for invocation governance (`Allowed Direction`, `Forbidden Direction`, `Dependency Governance Rules`) using concrete module-to-module rows as the primary representation
   - if expected canonical files are missing/stale, stop and route remediation to `/sdd.constitution`
 - From constitution: MUST/SHOULD principles required for validation.
 
@@ -155,6 +155,8 @@ Mandatory explicit semantic checks (do not skip even when lint is available):
 - contract DTO drift:
   - flag contract `Request`/`Success`/`Failure` fields that drift from anchored client-entry signature surfaces or anchored request/response DTO structure
   - drift includes renaming anchored fields, flattening anchored nesting, or splitting into fields absent from anchored DTOs
+- UML boundary naming drift:
+  - flag UML boundary request/response class labels that use synthetic placeholders (for example `RequestDTO` / `ResponseDTO`) instead of anchored symbol names or repository boundary naming conventions
 - full-field contract coverage:
   - flag contracts missing `Full Field Dictionary (Operation-scoped)`
   - flag contract field-dictionary rows missing `Owner Class`, `Default`, `Validation/Enum`, `Persisted`, `Used in <Operation ID>`, or `Source Anchor`
@@ -171,6 +173,9 @@ Mandatory explicit semantic checks (do not skip even when lint is available):
   - flag HTTP-facing sequences that bypass the controller-layer implementation entry and start directly from a downstream service/facade symbol
   - flag HTTP-facing contracts that render `Sequence Variant B (Boundary == Entry)` or otherwise collapse controller-first entry into a downstream service/facade symbol
   - flag sequence designs with broken end-to-end continuity at declared granularity (disconnected hops, orphan participants, or broken return chains)
+  - flag sequence designs that collapse multiple mandatory collaborators/dependencies into one synthetic participant label (for example `A + B`)
+  - flag mandatory collaborator/dependency calls that are placed under `opt` optional blocks in main paths
+  - flag behavior paths that declare second-party/third-party dependency calls but do not render those hops explicitly in sequence + UML
   - flag behavior paths that do not map to one contiguous ordered sequence step chain
   - flag cases where both contract boundary and implementation entry are repo-backed but the handoff is omitted, reversed, or implied by invented participants only
   - flag behavior-path closure gaps where `Behavior Paths` outcomes/failures are not fully covered by `Sequence Ref` steps
@@ -192,12 +197,16 @@ Mandatory explicit semantic checks (do not skip even when lint is available):
     - flag canonical dependency-matrix rows not traceable to engineering assembly facts
     - verify dependency extraction aligns with supported build-manifest auto-detection (`pom.xml`, `package.json`, `pyproject.toml` + requirements/lock hints, `go.mod`) when those files exist
     - verify dependency key normalization (`group:artifact` for Maven, `ecosystem:package_or_module` for Node/Python/Go)
+    - flag dependency rows missing `Used By Module` or `Evidence`
     - flag missing/invalid `Version Source` values when dependency rows exist
-    - flag silent normalization when version divergence or `unresolved` evidence should be preserved
+    - flag silent normalization when version divergence, version-source-mix, or `unresolved` evidence should be preserved
+    - flag dependency rows that collapse multiple modules, scopes, version sources, or evidence locations into one summary row
   - invocation governance check:
     - flag `.specify/memory/repository-first/module-invocation-spec.md` missing any required section (`Allowed Direction`, `Forbidden Direction`, `Dependency Governance Rules`)
-    - flag invocation rules not aligned to real module layering
-    - flag dependency-governance rules that ignore divergence/`unresolved` signals from canonical `.specify/memory/repository-first/technical-dependency-matrix.md`
+    - flag allowed/forbidden rows that are not represented as concrete module-to-module edges
+    - flag invocation rules not aligned to real first-party module edges
+    - flag dependency-governance rules that ignore divergence/version-source-mix/`unresolved` signals from canonical `.specify/memory/repository-first/technical-dependency-matrix.md`
+    - flag dependency-governance rules that do not reference an existing `SIG-*` row from the canonical dependency matrix
 
 - planning control-plane stale checks:
   - compare each `Stage Queue` row `Source Fingerprint` against the current direct upstream artifact set for that row
@@ -257,7 +266,7 @@ Assemble and output one decision:
 - `FAIL`: at least one blocking finding remains.
 
 When `FAIL`, provide blocker list with evidence and remediation owner command (`/sdd.constitution`, `/sdd.specify`, `/sdd.plan.*`, or `/sdd.tasks`).
-Treat the following as blocking by default: normative use of `BA-*`, normative tuple rows with unresolved `TODO(REPO_ANCHOR)`, `Anchor Status = todo`, or `Implementation Entry Anchor Status = todo`, repo-anchor decision protocol violations (missing/invalid required anchor-status fields, non-`path::symbol` repo-anchor values, invalid `extended/new` evidence), contracts missing `Full Field Dictionary (Operation-scoped)` or carrying unresolved key field gaps, contract field drift from anchored DTOs/signatures or `test-matrix.md` field seeds, unresolved contract projection drift requiring upstream writeback (`/sdd.specify`, `/sdd.plan.test-matrix`), controller-first HTTP entry violations including illegal `Boundary == Entry` collapse, runtime correctness gaps in unified contract realization sections, lifecycle stable-state drift from anchored enum/state sources, missing/stale repository-first canonical baseline files, dependency-matrix evidence not traceable to engineering assembly facts, invocation-governance rules that drift from real module layering or ignore divergence/`unresolved` dependency governance signals, and stale planning control-plane rows where `Source Fingerprint` no longer matches current authoritative inputs.
+Treat the following as blocking by default: normative use of `BA-*`, normative tuple rows with unresolved `TODO(REPO_ANCHOR)`, `Anchor Status = todo`, or `Implementation Entry Anchor Status = todo`, repo-anchor decision protocol violations (missing/invalid required anchor-status fields, non-`path::symbol` repo-anchor values, invalid `extended/new` evidence), contracts missing `Full Field Dictionary (Operation-scoped)` or carrying unresolved key field gaps, contract field drift from anchored DTOs/signatures or `test-matrix.md` field seeds, unresolved contract projection drift requiring upstream writeback (`/sdd.specify`, `/sdd.plan.test-matrix`), controller-first HTTP entry violations including illegal `Boundary == Entry` collapse, sequence/runtime correctness gaps including collapsed mandatory collaborator chains or optionalized main-path dependency calls, UML boundary naming drift using synthetic request/response placeholders that ignore anchored symbols or repository conventions, lifecycle stable-state drift from anchored enum/state sources, missing/stale repository-first canonical baseline files, dependency-matrix evidence not traceable to engineering assembly facts, dependency rows missing `Used By Module` or `Evidence`, dependency rows that collapse multiple modules/scopes/version sources/evidence locations into one summary row, invocation-governance rows not represented as concrete module-to-module edges, dependency-governance rules that ignore divergence/version-source-mix/`unresolved` signals or fail to reference an existing `SIG-*` row, and stale planning control-plane rows where `Source Fingerprint` no longer matches current authoritative inputs.
 
 ### 7) Next Actions
 
