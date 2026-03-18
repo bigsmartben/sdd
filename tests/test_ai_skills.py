@@ -747,15 +747,15 @@ class TestCliValidation:
         normalized = re.sub(r"[│╭╮╰╯─]+", " ", plain)
         normalized = re.sub(r"\s+", " ", normalized)
         assert "/sdd.specify - Create baseline specification" in normalized
-        assert "/sdd.specify.ui-html <spec.md> - Generate an interactive prototype when needed" in normalized
-        assert "/sdd.plan <spec.md> - Initialize the planning control plane" in normalized
-        assert "/sdd.plan.research <plan.md> - Start the planning queue" in normalized
+        assert "/sdd.specify.ui-html - Generate an interactive prototype when needed" in normalized
+        assert "/sdd.plan - Initialize the planning control plane" in normalized
+        assert "/sdd.plan.research - Start the planning queue" in normalized
         assert "/sdd.plan.data-model" in normalized
         assert "/sdd.plan.test-matrix" in normalized
         assert "/sdd.plan.contract" in normalized
         assert "/sdd.plan.interface-detail" not in normalized
         assert "/sdd.analyze - Run the default pre-implementation audit" in normalized
-        assert "/sdd.implement - Execute implementation after analyze or an explicit waiver" in normalized
+        assert "/sdd.implement - Execute implementation (requires fresh analyze PASS by default)" in normalized
         assert "Create implementation plan" not in normalized
 
 
@@ -819,5 +819,3 @@ class TestParameterOrderingIssue:
         assert result.exit_code == 1
         assert "Invalid value for --ai-commands-dir" in result.output
         assert "--here" in result.output
-
-

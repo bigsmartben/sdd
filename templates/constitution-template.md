@@ -113,6 +113,19 @@ Writing guidance only; do not surface this scaffold in the runtime constitution:
 Constitution-level repository-first facts MUST define stable evidence classes, canonical baseline artifacts,
 and dependency derivation policy used by downstream commands.
 
+- Repo-anchor strategy priority (hard rule):
+  - evaluate and apply in strict order: `existing` -> `extended` -> `new`
+  - `existing` (reuse) MUST be selected first when an existing repo-backed `path::symbol` already satisfies required semantics
+  - `extended` is allowed only when reuse is insufficient and the change remains additive on the same owner/boundary (no responsibility or invocation-direction rewrite)
+  - `new` is allowed only after explicit rejection evidence for both `existing` and `extended`
+  - every selected `new` anchor MUST include:
+    - why `existing` cannot satisfy the required semantics
+    - why `extended` is insufficient or unsafe
+    - target repo-backed `path::symbol` and required upstream synchronization actions
+- Ownership binding for this strategy (hard rule):
+  - generation commands (`/sdd.plan.*`) own recording the evaluation and selected strategy
+  - `/sdd.analyze` owns compliance validation and MUST fail when `new` anchor evidence is missing
+  - `/sdd.tasks` and `/sdd.implement` own execution blocking when active tuples still carry unresolved/todo anchors or missing strategy evidence
 - Repository-first analysis is limited to two conclusions:
   - technical dependency matrix facts
   - module invocation and layering governance
@@ -129,11 +142,24 @@ and dependency derivation policy used by downstream commands.
     - Node: `package.json` (workspace-aware)
     - Python: `pyproject.toml` (plus `requirements*.txt` / lock hints when present)
     - Go: `go.mod`
+  - dependency declarations MUST be classified before emission as exactly one of:
+    - `in_repo_first_party_module`
+    - `external_second_party`
+    - `third_party`
+  - coordinates matching modules produced inside the current repository MUST be classified as `in_repo_first_party_module` and excluded from the technical dependency matrix
   - normalize `Dependency (G:A)` as:
     - Maven: `group:artifact`
     - Node/Python/Go: `ecosystem:package_or_module`
   - `Type` values MUST be `2nd` or `3rd`
+  - `Type` applies only to emitted rows after first-party filtering
   - `Version Source` values MUST be `direct`, `dependencyManagement`, `module-dependencyManagement`, or `unresolved`
+  - `Evidence` MUST bind to the exact dependency declaration occurrence that produced the row
+  - inherited version resolution MUST keep `Evidence` at the declaration site and MUST NOT move it to the version-provider row
+  - repeated declarations in one manifest MUST preserve one emitted row per occurrence with distinct line refs
+  - `unresolved` is allowed only when the effective version cannot be resolved from the declaration, the current module, or the detected in-repo ancestor manifest chain
+  - `version-source-mix` is allowed only when 2 or more distinct `Version Source` values exist across emitted rows for the same dependency
+  - `version-divergence` is allowed only when 2 or more distinct effective versions exist across emitted rows for the same dependency
+  - every dependency-governance signal MUST be derivable from emitted matrix rows only
   - version divergence and `unresolved` MUST be preserved as governance signals (no silent normalization)
 - Invocation-governance binding (hard rule):
   - invocation governance MUST consume dependency-governance signals from canonical dependency matrix

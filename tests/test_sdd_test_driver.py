@@ -118,11 +118,9 @@ def test_full_flow_success_returns_zero(tmp_path, monkeypatch):
     assert exit_code == driver.EXIT_SUCCESS
     assert len(calls) == 4
     setup_command = calls[1][0]
-    assert "--spec-file" in setup_command
-    assert str(spec_file.resolve()) in setup_command
+    assert setup_command == ["bash", str(config.setup_plan_script), "--json"]
     check_command = calls[2][0]
-    assert "--plan-file" in check_command
-    assert str((feature_dir / "plan.md").resolve()) in check_command
+    assert check_command == ["bash", str(config.check_prerequisites_script), "--json"]
     lint_command = calls[3][0]
     assert "--feature-dir" in lint_command
     assert str(feature_dir) in lint_command

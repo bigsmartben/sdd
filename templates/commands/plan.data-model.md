@@ -1,13 +1,13 @@
 ---
-description: Generate the pending data-model.md artifact selected from an explicit or branch-derived plan.md path.
+description: Generate the pending data-model.md artifact selected from the current feature branch plan.md.
 handoffs:
   - label: Continue Test Matrix Queue
     agent: sdd.plan.test-matrix
-    prompt: Run /sdd.plan.test-matrix <path/to/plan.md> with the same absolute plan.md path.
+    prompt: Run /sdd.plan.test-matrix with the same active feature branch context.
     send: true
 scripts:
-  sh: scripts/bash/check-prerequisites.sh --json
-  ps: scripts/powershell/check-prerequisites.ps1 -Json
+  sh: scripts/bash/check-prerequisites.sh --json --data-model-preflight
+  ps: scripts/powershell/check-prerequisites.ps1 -Json -DataModelPreflight
 ---
 
 ## User Input
@@ -20,15 +20,8 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Argument Parsing
 
-1. If present, the first positional token is `PLAN_FILE`
-2. Optional `PLAN_FILE` MUST resolve from repo root to an existing file named `plan.md`
-3. Optional `PLAN_FILE` MUST stay under `repo/specs/**`
-4. Any remaining text after removing optional `PLAN_FILE` is optional scoped user context
-
-If `PLAN_FILE` is omitted, resolve it from current feature branch using `{SCRIPT}` defaults.
-If optional `PLAN_FILE` is present but invalid, stop immediately and report the required invocation shape:
-
-`/sdd.plan.data-model <path/to/plan.md> [context...]`
+Treat all `$ARGUMENTS` as optional scoped user context.
+Resolve `PLAN_FILE` from the current feature branch using `{SCRIPT}` defaults.
 
 ## Goal
 
@@ -39,13 +32,11 @@ Use `.specify/templates/data-model-template.md` only. If the runtime template is
 
 ## Selection Rules
 
-1. Run `{SCRIPT}` once from repo root. If `PLAN_FILE` is present, pass `--plan-file <PLAN_FILE>`; otherwise rely on script branch-derived default. Resolve `FEATURE_DIR`, `FEATURE_SPEC`, and `IMPL_PLAN`
-2. Read only the resolved `IMPL_PLAN`
-3. Find the first `Stage Queue` row where:
-   - `Stage ID = data-model`
-   - `Status = pending`
-4. Require the `research` row to be `done`
-5. If the required row does not exist or prerequisites are not done, stop and report the blocker
+1. Run `{SCRIPT}` once from repo root and parse `FEATURE_DIR`, `AVAILABLE_DOCS`, and `DATA_MODEL_BOOTSTRAP`.
+2. Treat `DATA_MODEL_BOOTSTRAP.generation_readiness` as the primary hard gate.
+3. If `DATA_MODEL_BOOTSTRAP.generation_readiness.ready_for_generation = true`, reuse the selected stage row and resolved `plan.md` / `spec.md` / `research.md` / `data-model.md` paths from `DATA_MODEL_BOOTSTRAP`; do not rescan for alternate pending rows.
+4. If `DATA_MODEL_BOOTSTRAP` is missing, malformed, or contradictory, perform one bounded fallback validation from `plan.md` control-plane fields plus current `spec.md` / `research.md` availability.
+5. In fallback mode only, read the resolved `IMPL_PLAN`, find the first `Stage Queue` row where `Stage ID = data-model` and `Status = pending`, require the `research` row to be `done`, and stop on any blocker.
 
 ## Stage Packet (Data-Model Unit)
 
@@ -59,6 +50,16 @@ Build one bounded run-local packet for the selected `data-model` row from:
 
 Use this packet as the default context for generation.
 Do not load additional artifacts unless the selected-row blocker or lifecycle constraints require them.
+
+## Stop Conditions
+
+Stop immediately when any condition holds:
+
+1. Resolved branch-derived `PLAN_FILE` is missing or invalid.
+2. `DATA_MODEL_BOOTSTRAP.generation_readiness.ready_for_generation = false`.
+3. `DATA_MODEL_BOOTSTRAP` fallback validation cannot reconstruct a consumable stage packet.
+4. `DATA_MODEL_BOOTSTRAP.generation_readiness.errors` contains blockers.
+5. Required targeted repo-anchor evidence for the selected unit exceeds the five-file repo-anchor input cap.
 
 ## Plan Control-Plane Input Path (Mandatory)
 
@@ -84,6 +85,17 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 - `new` is allowed in normative sections only when explicit `path::symbol` target evidence is provided.
 - If explicit `path::symbol` target evidence is missing, set status to `todo` and keep the item forward-looking/non-normative.
 - Do not use repo anchors to invent business semantics; they only correct naming/lifecycle terms and provide traceability.
+
+## Normative Consistency Gates (Mandatory)
+
+Before writing `done` status for the selected row, validate:
+
+- Every `INV-*` block uses `Anchor Status` in `{existing, extended, new}`.
+- Every `INV-*` block has explicit repo evidence in `Repo Anchor(s)` (`path::symbol`); `TODO(REPO_ANCHOR)` is forbidden in `INV-*`.
+- Lifecycle sections that declare `Stable states` MUST use anchors with status `{existing, extended, new}` and MUST NOT use `TODO(REPO_ANCHOR)`.
+- Any unresolved evidence must be moved out of normative `INV-*`/lifecycle stable-state content into `Assumptions / Open Questions` (forward-looking).
+
+If any gate fails, do not mark the `data-model` row `done`; keep it non-done and populate `Blocker` with the exact missing anchor evidence.
 
 ## Allowed Inputs
 
@@ -123,7 +135,7 @@ After generating `data-model.md`, update the selected `Stage Queue` row only:
 
 Emit a `Handoff Decision` section in the runtime output with exactly these fields:
 
-- `Next Command`: `/sdd.plan.test-matrix <absolute path to plan.md>`
+- `Next Command`: `/sdd.plan.test-matrix`
 - `Decision Basis`: `Stage Queue` shows the selected `data-model` row is complete and the fixed next pending stage is `test-matrix`
 - `Selected Stage ID`: selected `data-model` stage row id
 - `Ready/Blocked`: `Ready` when the selected row is updated to `done`; otherwise `Blocked`

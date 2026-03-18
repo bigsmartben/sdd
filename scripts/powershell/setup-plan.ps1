@@ -1,10 +1,9 @@
 #!/usr/bin/env pwsh
 # Setup implementation plan for a feature
 
-[CmdletBinding()]
+[CmdletBinding(PositionalBinding = $false)]
 param(
     [switch]$Json,
-    [string]$SpecFile,
     [switch]$Help
 )
 
@@ -12,9 +11,8 @@ $ErrorActionPreference = 'Stop'
 
 # Show help if requested
 if ($Help) {
-    Write-Output "Usage: ./setup-plan.ps1 [-SpecFile <path/to/spec.md>] [-Json] [-Help]"
-    Write-Output "  -SpecFile <path>  Optional explicit path to spec.md under repo/specs/**"
-    Write-Output "                    If omitted, infer spec.md from current feature branch"
+    Write-Output "Usage: ./setup-plan.ps1 [-Json] [-Help]"
+    Write-Output "  Uses current feature branch to resolve specs/<feature-key>/spec.md"
     Write-Output "  -Json             Output results in JSON format"
     Write-Output "  -Help             Show this help message"
     exit 0
@@ -23,16 +21,10 @@ if ($Help) {
 # Load common functions
 . "$PSScriptRoot/common.ps1"
 
-if ($SpecFile) {
-    # Explicit spec file takes precedence.
-    $paths = Get-FeaturePathsFromSpecFile -SpecFile $SpecFile
-} else {
-    # Fallback to branch-derived default spec path.
-    $paths = Get-FeaturePathsEnv
-    $isFeatureBranch = [bool](Test-FeatureBranch -Branch $paths.CURRENT_BRANCH -HasGit:$paths.HAS_GIT | Select-Object -Last 1)
-    if (-not $isFeatureBranch) {
-        exit 1
-    }
+$paths = Get-FeaturePathsEnv
+$isFeatureBranch = [bool](Test-FeatureBranch -Branch $paths.CURRENT_BRANCH -HasGit:$paths.HAS_GIT | Select-Object -Last 1)
+if (-not $isFeatureBranch) {
+    exit 1
 }
 
 $template = Join-Path $paths.REPO_ROOT '.specify/templates/plan-template.md'
@@ -52,7 +44,9 @@ New-Item -ItemType Directory -Path $paths.FEATURE_DIR -Force | Out-Null
 
 # Copy plan template
 Copy-Item $template $paths.IMPL_PLAN -Force
-Write-Output "Copied plan template to $($paths.IMPL_PLAN)"
+if (-not $Json) {
+    Write-Output "Copied plan template to $($paths.IMPL_PLAN)"
+}
 
 # Output results
 if ($Json) {

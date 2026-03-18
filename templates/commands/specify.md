@@ -7,11 +7,11 @@ handoffs:
     send: true
   - label: Generate Interactive Prototype
     agent: sdd.specify.ui-html
-    prompt: Create an interactive prototype by running /sdd.specify.ui-html <path/to/spec.md> with the explicit spec.md path produced in this step.
+    prompt: Create an interactive prototype by running /sdd.specify.ui-html in the same active feature branch context.
     send: true
   - label: Build Technical Plan
     agent: sdd.plan
-    prompt: Create a plan by running /sdd.plan <path/to/spec.md> with the explicit spec.md path produced in this step. I am building with...
+    prompt: Create a plan by running /sdd.plan in the same active feature branch context. I am building with...
 scripts:
   sh: scripts/bash/create-new-feature.sh "{ARGS}"
   ps: scripts/powershell/create-new-feature.ps1 "{ARGS}"
@@ -70,7 +70,7 @@ Given that feature description, do this:
    - You must only ever run this script once per feature
    - The JSON is provided in the terminal as output - always refer to it to get the actual content you're looking for
    - The JSON output will contain BRANCH_NAME and SPEC_FILE paths
-   - The script must not switch branches; it uses the current branch when it already matches `feature-YYYYMMDD-short-name` (or legacy `NNN-short-name`), otherwise it generates fallback naming without checkout
+   - In Git repositories, the script MUST ensure the active branch is `BRANCH_NAME`: if already on it, keep it; otherwise switch to it (create then switch when needed)
    - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot")
 
 3. Load `.specify/templates/spec-template.md` to understand required sections. This runtime template path is mandatory; if the file is missing or non-consumable, stop and report the blocker. Do not substitute `templates/spec-template.md` or any other template location.
@@ -198,9 +198,9 @@ Given that feature description, do this:
         8. Update the spec by replacing each [NEEDS CLARIFICATION] marker with the user's selected or provided answer
         9. Re-run validation after all clarifications are resolved
 
-4. Report completion with branch name, spec file path, and readiness for the next phase (run `/sdd.specify.ui-html <path/to/spec.md>` for an interactive prototype if needed, then `/sdd.clarify` first, then `/sdd.plan`; if user explicitly skips clarification, warn about increased downstream rework risk and then proceed). If checklist-style validation output is needed, direct users to run `/sdd.checklist <path/to/plan.md>` as a separate vertical command after `/sdd.plan`.
+4. Report completion with branch name, spec file path, and readiness for the next phase (run `/sdd.specify.ui-html` for an interactive prototype if needed, then `/sdd.clarify` first, then `/sdd.plan`; if user explicitly skips clarification, warn about increased downstream rework risk and then proceed). If checklist-style validation output is needed, direct users to run `/sdd.checklist` as a separate vertical command after `/sdd.plan`.
 
-**NOTE:** The script initializes the `specs/<feature-key>/spec.md` path (`feature-key = YYYYMMDD-short-name` for preferred branch naming) and never performs branch checkout/switch.
+**NOTE:** The script initializes the `specs/<feature-key>/spec.md` path (`feature-key = YYYYMMDD-short-name` for preferred branch naming). In Git repositories it also switches to the resolved feature branch.
 
 ## General Guidelines
 

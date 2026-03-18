@@ -1,5 +1,5 @@
 ---
-description: Generate exactly one blocked-or-pending northbound interface design artifact selected from an explicit or branch-derived plan.md path.
+description: Generate exactly one blocked-or-pending northbound interface design artifact selected from the current feature branch plan.md.
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json
   ps: scripts/powershell/check-prerequisites.ps1 -Json
@@ -15,15 +15,8 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Argument Parsing
 
-1. If present, the first positional token is `PLAN_FILE`
-2. Optional `PLAN_FILE` MUST resolve from repo root to an existing file named `plan.md`
-3. Optional `PLAN_FILE` MUST stay under `repo/specs/**`
-4. Any remaining text after removing optional `PLAN_FILE` is optional scoped user context
-
-If `PLAN_FILE` is omitted, resolve it from current feature branch using `{SCRIPT}` defaults.
-If optional `PLAN_FILE` is present but invalid, stop immediately and report the required invocation shape:
-
-`/sdd.plan.contract <path/to/plan.md> [context...]`
+Treat all `$ARGUMENTS` as optional scoped user context.
+Resolve `PLAN_FILE` from the current feature branch using `{SCRIPT}` defaults.
 
 ## Goal
 
@@ -41,7 +34,7 @@ This unified artifact includes both:
 
 ## Selection Rules
 
-1. Run `{SCRIPT}` once from repo root. If `PLAN_FILE` is present, pass `--plan-file <PLAN_FILE>`; otherwise rely on script branch-derived default. Resolve `FEATURE_DIR`, `FEATURE_SPEC`, and `IMPL_PLAN`
+1. Run `{SCRIPT}` once from repo root. Resolve `FEATURE_DIR`, `FEATURE_SPEC`, and `IMPL_PLAN`
 2. Read only the resolved `IMPL_PLAN`
 3. In `Artifact Status`, find the first row where:
    - `Unit Type = contract`
@@ -118,9 +111,9 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 Read only, in this order:
 
 - `.specify/templates/contract-template.md` for output structure
-- selected `Artifact Status` row from the explicit `PLAN_FILE` only
-- matching `BindingRowID` row from `Binding Projection Index` in the explicit `PLAN_FILE` only
-- `Shared Context Snapshot` from the explicit `PLAN_FILE` only
+- selected `Artifact Status` row from the resolved `PLAN_FILE` only
+- matching `BindingRowID` row from `Binding Projection Index` in the resolved `PLAN_FILE` only
+- `Shared Context Snapshot` from the resolved `PLAN_FILE` only
 - selected binding packet from `test-matrix.md`
 
 Treat the selected binding packet in `test-matrix.md` as the default authoritative semantic input for this stage.
@@ -206,7 +199,7 @@ After selected-row writeback, if no `contract` rows remain `blocked` or `pending
 
 - All completed contract artifacts MUST contain `Cross-Interface Smoke Candidate (Required)` with one row each.
 - At least one completed contract artifact MUST declare `Candidate Role != none`.
-- If either condition fails, keep routing to `/sdd.plan.contract <absolute path to plan.md>` with `Ready/Blocked = Blocked` and explicit blocker details.
+- If either condition fails, keep routing to `/sdd.plan.contract` with `Ready/Blocked = Blocked` and explicit blocker details.
 
 ## Handoff Decision
 
@@ -217,11 +210,11 @@ Emit a `Handoff Decision` section in the runtime output with exactly these field
 - `Selected BindingRowID`: selected `BindingRowID`
 - `Ready/Blocked`
 
-Determine `Next Command` from the explicit `PLAN_FILE` state only after the selected contract row writeback:
+Determine `Next Command` from the resolved `PLAN_FILE` state only after the selected contract row writeback:
 
-- If any `contract` rows remain `blocked`, `Next Command = /sdd.plan.contract <absolute path to plan.md>`
-- Otherwise, if any `contract` rows remain `pending`, `Next Command = /sdd.plan.contract <absolute path to plan.md>`
-- Otherwise, if all required planning rows are complete, `Next Command = /sdd.tasks <absolute path to plan.md>`
+- If any `contract` rows remain `blocked`, `Next Command = /sdd.plan.contract`
+- Otherwise, if any `contract` rows remain `pending`, `Next Command = /sdd.plan.contract`
+- Otherwise, if all required planning rows are complete, `Next Command = /sdd.tasks`
 - Otherwise, if queue state is inconsistent with either condition, keep `Next Command` empty and set `Ready/Blocked = Blocked`
 
 `Decision Basis` MUST cite the post-writeback `Artifact Status` state and planning-complete check that produced the routing decision.

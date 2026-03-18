@@ -79,20 +79,20 @@ The SDD methodology is significantly enhanced through three powerful commands th
 This command transforms a simple feature description (the user-prompt) into a complete, structured specification with automatic repository management:
 
 1. **Automatic Feature Numbering**: Scans existing specs to determine the next feature number (e.g., 001, 002, 003)
-2. **Branch Creation**: Generates a semantic branch name from your description and creates it automatically
+2. **Branch Creation & Switch**: Generates a semantic branch name from your description, creates it when needed, and switches to that branch in Git repositories
 3. **Template-Based Generation**: Copies and customizes the feature specification template with your requirements
 4. **Directory Structure**: Creates the proper `specs/[branch-name]/` structure for all related documents
 
 ### The `/sdd.plan` Command
 
-Once a feature specification exists, `/sdd.plan <spec.md>` initializes the planning control plane:
+Once a feature specification exists, `/sdd.plan` initializes the planning control plane:
 
-1. **Specification Analysis**: Reads and understands the feature requirements, user stories, and acceptance criteria from the explicit `spec.md` path
+1. **Specification Analysis**: Reads and understands the feature requirements, user stories, and acceptance criteria from the current feature branch `spec.md`
 2. **Constitutional Compliance**: Ensures alignment with project constitution and architectural principles
 3. **Control-Plane Initialization**: Writes `plan.md` with `Shared Context Snapshot`, `Stage Queue`, `Binding Projection Index`, and `Artifact Status`
-4. **Queue-Driven Planning**: The child commands `/sdd.plan.research <plan.md>`, `/sdd.plan.data-model <plan.md>`, `/sdd.plan.test-matrix <plan.md>`, and repeated `/sdd.plan.contract <plan.md>` generate stage artifacts one queue unit at a time
+4. **Queue-Driven Planning**: The child commands `/sdd.plan.research`, `/sdd.plan.data-model`, `/sdd.plan.test-matrix`, and repeated `/sdd.plan.contract` generate stage artifacts one queue unit at a time
 
-### The `/sdd.tasks <plan.md>` Command
+### The `/sdd.tasks` Command
 
 After a plan is created, this command projects the completed planning-stage design set into an executable task list:
 
@@ -103,7 +103,7 @@ After a plan is created, this command projects the completed planning-stage desi
 
 `/sdd.tasks` does not supplement missing design or audit the feature end-to-end. If required execution anchors are missing, or if a selected contract is `blocked` / missing `Full Field Dictionary (Operation-scoped)`, it should stop and route back to the relevant planning command instead of emitting placeholder tasks.
 
-Before implementation, `/sdd.analyze` can be used as the dedicated audit pass to detect drift, contradictions, uncovered MUST requirements, repo-anchor misuse, and unnecessary audit/traceability overhead across `spec.md`, `plan.md`, and `tasks.md`.
+Before implementation, `/sdd.analyze` is the default dedicated audit pass to detect drift, contradictions, uncovered MUST requirements, repo-anchor misuse, and unnecessary audit/traceability overhead across `spec.md`, `plan.md`, and `tasks.md`; `/sdd.implement` should block by default when current analyze evidence is missing/stale or `Gate Decision: FAIL`, unless an explicit waiver is provided for that run.
 
 ### Example: Building a Chat Feature
 
@@ -132,27 +132,27 @@ Total: ~12 hours of documentation work
 # - Populates it with structured requirements
 
 # Step 1b: Optionally generate an interactive prototype
-/sdd.specify.ui-html specs/003-chat-system/spec.md
+/sdd.specify.ui-html
 
 # Step 2: Initialize planning control plane (5 minutes)
-/sdd.plan specs/003-chat-system/spec.md WebSocket for real-time messaging, PostgreSQL for history, Redis for presence
+/sdd.plan WebSocket for real-time messaging, PostgreSQL for history, Redis for presence
 
 # Step 2b: Execute the planning queue in order
-/sdd.plan.research specs/003-chat-system/plan.md
-/sdd.plan.data-model specs/003-chat-system/plan.md
-/sdd.plan.test-matrix specs/003-chat-system/plan.md
-/sdd.plan.contract specs/003-chat-system/plan.md
+/sdd.plan.research
+/sdd.plan.data-model
+/sdd.plan.test-matrix
+/sdd.plan.contract
 
 # Step 3: Generate executable tasks (5 minutes)
-/sdd.tasks specs/003-chat-system/plan.md
+/sdd.tasks
 
 # This automatically creates:
-# - specs/003-chat-system/ui.html (via /sdd.specify.ui-html <spec.md>)
+# - specs/003-chat-system/ui.html (via /sdd.specify.ui-html)
 # - specs/003-chat-system/plan.md
-# - specs/003-chat-system/research.md (via /sdd.plan.research <plan.md>)
-# - specs/003-chat-system/data-model.md (via /sdd.plan.data-model <plan.md>)
-# - specs/003-chat-system/test-matrix.md (via /sdd.plan.test-matrix <plan.md>)
-# - specs/003-chat-system/contracts/ (via repeated /sdd.plan.contract <plan.md>)
+# - specs/003-chat-system/research.md (via /sdd.plan.research)
+# - specs/003-chat-system/data-model.md (via /sdd.plan.data-model)
+# - specs/003-chat-system/test-matrix.md (via /sdd.plan.test-matrix)
+# - specs/003-chat-system/contracts/ (via repeated /sdd.plan.contract)
 # - specs/003-chat-system/tasks.md (Task list derived from the plan)
 ```
 
