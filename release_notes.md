@@ -4,9 +4,8 @@ This is the latest set of releases that you can use with your agent of choice. W
 
 ## Changelog
 
-- refactor: streamline plan-stage prompts and sync tests (#21)
-- Fix planning lint parsing and PowerShell path errors
-- chore: add codex environments and release notes
-- Merge branch 'codex/3d61-sync-20260317'
-- Unify contract projection authority and upstream writeback rules
+- Merge pull request #23 from bigsmartben/codex/fix-release-packaging-bash-sigpipe
+- fix: harden bash release packaging parser and fail-fast message
+- Merge pull request #22 from bigsmartben/codex/specify-ui-html-planning-gates
+- feat: add specify.ui-html flow and tighten planning gates
 
