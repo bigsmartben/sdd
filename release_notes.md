@@ -4,6 +4,7 @@ This is the latest set of releases that you can use with your agent of choice. W
 
 ## Changelog
 
+- release: v2.0.21
 - Merge pull request #24 from bigsmartben/codex/sync-release-notes-v2.0.20
 - docs: sync release notes for v2.0.20
 

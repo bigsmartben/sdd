@@ -156,6 +156,15 @@ When the spec lacks detail:
 - do not invent business rules or product scope
 - do not hardcode domain details not supported by the spec
 
+### 7. Positioning-Led De-duplication
+
+Use positioning to control redundancy.
+
+- In hero/top summary, state positioning once using: target user, core scenario, visible value.
+- Each downstream section must add new information; do not restate hero semantics with different wording.
+- Prefer compact anchors (`UC`, `FR`, `VIEW`) instead of repeating long prose across cards.
+- If two sections become semantically equivalent, keep detail in the more execution-relevant section and shorten the other.
+
 ## Output Quality Rules
 
 The generated `ui.html` should:
@@ -175,6 +184,7 @@ The generated `ui.html` should:
 3. Read `SPEC_FILE` and extract a compact prototype packet:
    - feature goal
    - actors
+   - positioning tuple (target user / core scenario / visible value)
    - key user-facing use cases
    - visible data elements
    - important flows
@@ -199,6 +209,7 @@ Before completing, validate that:
 - mobile and desktop both render reasonably
 - the output feels intentional and demo-ready
 - the artifact remains a prototype, not an implementation document
+- no major semantic statement is duplicated across hero, view cards, and review notes
 
 ## Handoff Decision
 
