@@ -46,7 +46,7 @@ get_current_branch() {
                         highest_date=$date_key
                         latest_feature=$dirname
                     fi
-                elif [[ "$dirname" =~ ^([0-9]{3})- ]]; then
+                elif [[ "$dirname" =~ ^([0-9]+)- ]]; then
                     local legacy_number=${BASH_REMATCH[1]}
                     legacy_number=$((10#$legacy_number))
                     if [[ "$highest_date" -eq 0 && "$legacy_number" -gt "$highest_legacy" ]]; then
@@ -87,7 +87,7 @@ check_feature_branch() {
     fi
 
     # Backward-compatible acceptance for existing projects.
-    if [[ "$branch_leaf" =~ ^[0-9]{3}-[a-z0-9][a-z0-9-]*$ ]]; then
+    if [[ "$branch_leaf" =~ ^[0-9]+-[a-z0-9][a-z0-9-]*$ ]]; then
         echo "[specify] Warning: legacy branch naming detected: $branch_leaf. Prefer feature-YYYYMMDD-short-name." >&2
         return 0
     fi
@@ -178,7 +178,7 @@ find_feature_dir_by_prefix() {
     fi
 
     # Extract numeric prefix from branch (e.g., "004" from "004-whatever")
-    if [[ ! "$branch_leaf" =~ ^([0-9]{3})- ]]; then
+    if [[ ! "$branch_leaf" =~ ^([0-9]+)- ]]; then
         # If branch doesn't have numeric prefix, fall back to exact match
         echo "$specs_dir/$branch_leaf"
         return

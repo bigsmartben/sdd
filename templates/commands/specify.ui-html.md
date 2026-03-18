@@ -42,6 +42,7 @@ Use `.specify/templates/ui-html-template.html` only. If the runtime template is 
 - `spec.md` remains the authoritative feature-semantics artifact.
 - `ui.html` is a derived prototype artifact only.
 - `ui.html` MUST reflect `spec.md`, not replace it.
+- Treat `spec.md` as a fact ledger for prototype derivation, especially `1.3 UI Data Dictionary (UDD)`, `3.2 UX — User Interaction Flow`, `3.4 UI — UI Element Definitions`, and `3.5 Component-Data Dependency Overview`.
 - If the prototype exposes semantic gaps or contradictions, route the repair back to `/sdd.specify` or `/sdd.clarify`.
 - Do **not** invent new requirements, actors, entities, or product flows that are not traceable to `spec.md` or current user input.
 
@@ -63,6 +64,26 @@ When `spec.md` implies a user-clickable action entry (for example: 查看/打开
 Before finalizing `ui.html`, run an internal self-check table for each action entry:
 `entryLabel | targetMeaning | targetRoute/handler | clickable(true/false)`.
 If any row has `clickable=true` with empty `targetRoute/handler`, regenerate `ui.html` before returning.
+
+## UIF + UDD Coverage Protocol (MUST)
+
+Before generating `ui.html`, build an internal coverage ledger from the selected `spec.md` sections.
+
+- Treat `3.2 UX — User Interaction Flow` as the primary interaction authority for prototype sequencing.
+- Treat `1.3 UI Data Dictionary (UDD)` as the primary authority for user-visible business data and rule-driven states.
+- Treat `3.4 UI — UI Element Definitions` and `3.5 Component-Data Dependency Overview` as the authority for view/component/data bindings when present.
+- Build an internal coverage ledger before generating `ui.html` with these minimum slices:
+  - `UC ID | selected Path IDs | selected UIF nodes | omitted Path IDs | omission reason`
+  - `UIF Node | prototype screen/view | interaction/control | feedback/state | ref: Scenario/FR`
+  - `Entity.field | prototype surface/component | displayed state | consumed rule (calculation/boundary/display) | ref: FR/Scenario`
+- Every demonstrated user interaction MUST trace back to an explicit `UIF` node. Do not simulate a business-significant user step that has no `UIF` anchor.
+- Every user-visible business datum in the prototype MUST trace back to explicit `Entity.field` rows. If a business datum cannot be traced to UDD, omit it or render it as clearly non-authoritative placeholder text.
+- If a selected `Entity.field` has null/empty, boundary, formatting, or display rules in UDD, consume those rules in the demonstrated prototype states instead of showing labels only.
+- For each selected interactive UC, demonstrate at least:
+  - one happy path,
+  - and one meaningful branch state (`alternate`, `exception`, `retry`, `recovery`, `cancel`, `timeout`, `permission`, or `duplicate`) when the spec makes that branch user-visible or acceptance-relevant.
+- If an important branch exists in `Path Inventory` but is not demonstrated interactively, keep the current flow usable and report the omission explicitly in the final output.
+- Do not collapse multiple `UIF` steps into one generic interaction when doing so would hide a user-visible decision, feedback signal, or state transition that matters to the selected path.
 
 ## Allowed Inputs
 
@@ -127,6 +148,7 @@ Use the spec to derive:
 - acceptance-relevant interaction outcomes
 
 Keep labels and terminology aligned with `spec.md`.
+Prefer explicit `UC`, `UIP`, `UIF`, `FR`, and `Entity.field` anchors in prototype review surfaces when they improve traceability without turning the artifact into a document dump.
 
 ### 5. Selective Scope
 
@@ -135,9 +157,10 @@ Do not try to prototype everything.
 Instead, cover the smallest set of screens and interactions that best represent the feature:
 
 - primary entry view
-- main happy path
-- one or more meaningful alternate/error/empty states if they matter
-- visible data presentation anchored to `Entity.field` and FR/scenario context when available
+- main happy path for each selected interactive UC
+- one meaningful alternate/error/empty/permission/timeout branch when the selected path set makes it user-visible or acceptance-relevant
+- visible data presentation anchored to `Entity.field` and FR/scenario context
+- rule-driven state evidence for selected UDD fields (for example: empty, error, disabled, warning, formatting, or recovery state)
 
 If the spec implies many views, choose the most representative subset and keep the rest implicit.
 
@@ -180,17 +203,20 @@ The generated `ui.html` should:
    - actors
    - positioning tuple (target user / core scenario / visible value)
    - key user-facing use cases
-   - visible data elements
+   - selected path inventory rows (`UIP-*`) and `UIF` nodes for the prototype surface
+   - visible data elements (`Entity.field`) and their UDD rules
    - important flows
    - visible state variations
+   - UI component/data anchors when present
    - terminology and copy anchors
-4. Decide the smallest high-value prototype surface:
+4. Build the internal coverage ledger for the selected paths, `UIF` nodes, components, and `Entity.field` rows
+5. Decide the smallest high-value prototype surface:
    - what screens/views to show
    - what interactions to simulate
    - what states must be demonstrated
-5. Generate `ui.html` using the runtime template and current prototype packet
-6. Prefer polished review fidelity over exhaustive breadth
-7. If the spec is too ambiguous to support a stable prototype, stop and report the blocker rather than inventing semantics
+6. Generate `ui.html` using the runtime template and current prototype packet
+7. Prefer polished review fidelity over exhaustive breadth
+8. If the spec is too ambiguous to support a stable prototype, stop and report the blocker rather than inventing semantics
 
 ## Validation
 
@@ -198,12 +224,17 @@ Before completing, validate that:
 
 - the prototype clearly represents the feature described in `spec.md`
 - the main flow is understandable through interaction
+- every demonstrated interaction step maps to selected `UIF` node(s)
+- each selected happy/branch path has a visible entry, transition, and user-visible outcome
+- every user-visible business datum maps to selected `Entity.field` row(s)
+- selected UDD fields consume their boundary/null/display rules in the demonstrated states
 - visible terminology stays aligned with `spec.md`
 - no unsupported feature semantics were introduced
 - mobile and desktop both render reasonably
 - the output feels intentional and demo-ready
 - the artifact remains a prototype, not an implementation document
 - no major semantic statement is duplicated across hero, view cards, and review notes
+- omitted important paths or user-visible data are explicit in the final output
 
 ## Handoff Decision
 
@@ -224,5 +255,12 @@ Report:
   - views included
   - main flow demonstrated
   - interactive states demonstrated
+- `UIF Coverage Summary`:
+  - selected UC / `UIP` paths demonstrated
+  - key `UIF` nodes surfaced through interaction
+  - omitted important paths with reason
+- `UDD Coverage Summary`:
+  - surfaced `Entity.field` anchors
+  - rule-driven states demonstrated from UDD (`empty`, `error`, `boundary`, `display`, etc.)
 - any placeholders or unresolved ambiguities left explicit
 - `Handoff Decision` with `Next Command`, `Decision Basis`, `Selected Artifact`, and `Ready/Blocked`

@@ -22,6 +22,11 @@ def test_specify_command_keeps_current_flow_and_adds_ui_html_handoff():
     assert "Treat all `$ARGUMENTS` as optional prototype direction." in ui_html
     assert ".specify/templates/ui-html-template.html" in ui_html
     assert "Generate exactly one review-ready `ui.html` interactive prototype" in ui_html
+    assert "## UIF + UDD Coverage Protocol (MUST)" in ui_html
+    assert "Every demonstrated user interaction MUST trace back to an explicit `UIF` node." in ui_html
+    assert "Every user-visible business datum in the prototype MUST trace back to explicit `Entity.field` rows." in ui_html
+    assert "`UIF Coverage Summary`" in ui_html
+    assert "`UDD Coverage Summary`" in ui_html
     assert "`Next Command`: `/sdd.clarify`" in ui_html
     assert "`/sdd.plan`" in ui_html
 
@@ -35,6 +40,8 @@ def test_spec_template_stays_unsplit_and_ui_html_template_exists():
     assert "[ui.html](ui.html)" not in spec_template
     assert "UI Preview" in ui_html_template
     assert "spec.md" in ui_html_template
+    assert "Coverage Anchors" in ui_html_template
+    assert "Entity.field" in ui_html_template
 
 
 def test_docs_and_cli_describe_optional_ui_html_command():

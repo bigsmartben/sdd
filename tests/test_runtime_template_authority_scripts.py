@@ -366,6 +366,120 @@ def test_create_new_feature_bash_switches_to_generated_branch_by_default(tmp_pat
     assert active_branch == expected_branch
 
 
+def test_create_new_feature_bash_does_not_write_spec_when_branch_switch_fails(tmp_path):
+    repo_dir = tmp_path / "repo"
+    (repo_dir / ".specify" / "templates").mkdir(parents=True)
+    (repo_dir / ".specify" / "templates" / "spec-template.md").write_text("# Spec Template\n", encoding="utf-8")
+    script = copy_bash_script(repo_dir, "create-new-feature.sh")
+
+    subprocess.run(["git", "init"], cwd=repo_dir, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo_dir, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo_dir, check=True, capture_output=True, text=True)
+    (repo_dir / "README.md").write_text("init\n", encoding="utf-8")
+    subprocess.run(["git", "add", "README.md"], cwd=repo_dir, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=repo_dir, check=True, capture_output=True, text=True)
+    default_branch = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        cwd=repo_dir,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+    subprocess.run(["git", "checkout", "-b", "123-demo-feature"], cwd=repo_dir, check=True, capture_output=True, text=True)
+    target_spec = repo_dir / "specs" / "123-demo-feature" / "spec.md"
+    target_spec.parent.mkdir(parents=True, exist_ok=True)
+    target_spec.write_text("# Existing branch spec\n", encoding="utf-8")
+    subprocess.run(["git", "add", str(target_spec)], cwd=repo_dir, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "add branch spec"], cwd=repo_dir, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "checkout", default_branch], cwd=repo_dir, check=True, capture_output=True, text=True)
+
+    target_spec.parent.mkdir(parents=True, exist_ok=True)
+    target_spec.write_text("# local conflict file\n", encoding="utf-8")
+
+    result = run_bash(
+        script,
+        repo_dir,
+        ["--json", "--number", "123", "--short-name", "demo-feature", "Build demo feature"],
+    )
+
+    assert result.returncode != 0
+    assert "Failed to switch to git branch '123-demo-feature'" in result.stderr
+    assert target_spec.read_text(encoding="utf-8") == "# local conflict file\n"
+
+
+def test_create_new_feature_bash_tracks_remote_only_branch(tmp_path):
+    remote_dir = tmp_path / "remote.git"
+    seed_dir = tmp_path / "seed"
+    repo_dir = tmp_path / "repo"
+
+    subprocess.run(["git", "init", "--bare", str(remote_dir)], check=True, capture_output=True, text=True)
+    seed_dir.mkdir()
+    subprocess.run(["git", "init"], cwd=seed_dir, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=seed_dir, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=seed_dir, check=True, capture_output=True, text=True)
+    (seed_dir / "README.md").write_text("seed\n", encoding="utf-8")
+    subprocess.run(["git", "add", "README.md"], cwd=seed_dir, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "seed"], cwd=seed_dir, check=True, capture_output=True, text=True)
+    default_branch = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        cwd=seed_dir,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    subprocess.run(["git", "remote", "add", "origin", str(remote_dir)], cwd=seed_dir, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "push", "-u", "origin", default_branch], cwd=seed_dir, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "checkout", "-b", "123-demo-feature"], cwd=seed_dir, check=True, capture_output=True, text=True)
+    branch_spec = seed_dir / "specs" / "123-demo-feature" / "spec.md"
+    branch_spec.parent.mkdir(parents=True, exist_ok=True)
+    branch_spec.write_text("# Remote branch spec\n", encoding="utf-8")
+    subprocess.run(["git", "add", str(branch_spec)], cwd=seed_dir, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "branch spec"], cwd=seed_dir, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "push", "-u", "origin", "123-demo-feature"], cwd=seed_dir, check=True, capture_output=True, text=True)
+
+    subprocess.run(["git", "clone", str(remote_dir), str(repo_dir)], check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo_dir, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo_dir, check=True, capture_output=True, text=True)
+    (repo_dir / ".specify" / "templates").mkdir(parents=True)
+    (repo_dir / ".specify" / "templates" / "spec-template.md").write_text("# Spec Template\n", encoding="utf-8")
+    script = copy_bash_script(repo_dir, "create-new-feature.sh")
+
+    branch_exists_local = subprocess.run(
+        ["git", "show-ref", "--verify", "--quiet", "refs/heads/123-demo-feature"],
+        cwd=repo_dir,
+        capture_output=True,
+        text=True,
+    )
+    assert branch_exists_local.returncode != 0
+
+    result = run_bash(
+        script,
+        repo_dir,
+        ["--json", "--number", "123", "--short-name", "demo-feature", "Build demo feature"],
+    )
+
+    assert result.returncode == 0
+    payload = json.loads(result.stdout)
+    assert payload["BRANCH_NAME"] == "123-demo-feature"
+    active_branch = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        cwd=repo_dir,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    assert active_branch == "123-demo-feature"
+    upstream = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"],
+        cwd=repo_dir,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    assert upstream == "origin/123-demo-feature"
+
+
 def test_create_new_feature_bash_normalizes_feature_prefixed_branch_to_spec_key(tmp_path):
     repo_dir = tmp_path / "repo"
     (repo_dir / ".specify" / "templates").mkdir(parents=True)
@@ -422,6 +536,42 @@ def test_check_prerequisites_bash_handles_branch_inferred_plan_file_with_spaces_
     assert payload["AVAILABLE_DOCS"] == []
 
 
+def test_check_prerequisites_bash_accepts_legacy_numeric_branch_prefix_of_any_length(tmp_path):
+    repo_dir = tmp_path / "repo"
+    feature_dir = repo_dir / "specs" / "12-demo"
+    feature_dir.mkdir(parents=True)
+    (feature_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    (feature_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    copy_bash_script(repo_dir, "common.sh")
+    script = copy_bash_script(repo_dir, "check-prerequisites.sh")
+
+    env = os.environ.copy()
+    env["SPECIFY_FEATURE"] = "12-demo"
+    result = run_bash(script, repo_dir, ["--json"], env=env)
+
+    assert result.returncode == 0
+    payload = json.loads(result.stdout)
+    assert normalize_path(payload["FEATURE_DIR"]) == normalize_path(feature_dir)
+
+
+def test_check_prerequisites_powershell_accepts_legacy_numeric_branch_prefix_of_any_length(tmp_path):
+    repo_dir = tmp_path / "repo"
+    feature_dir = repo_dir / "specs" / "12-demo"
+    feature_dir.mkdir(parents=True)
+    (feature_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    (feature_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    copy_powershell_script(repo_dir, "common.ps1")
+    script = copy_powershell_script(repo_dir, "check-prerequisites.ps1")
+
+    env = os.environ.copy()
+    env["SPECIFY_FEATURE"] = "12-demo"
+    result = run_powershell(script, repo_dir, ["-Json"], env=env)
+
+    assert result.returncode == 0
+    payload = parse_last_json_line(result.stdout)
+    assert normalize_path(payload["FEATURE_DIR"]) == normalize_path(feature_dir)
+
+
 def test_powershell_generation_scripts_remove_template_fallbacks():
     create_feature = read("scripts/powershell/create-new-feature.ps1")
     setup_plan = read("scripts/powershell/setup-plan.ps1")
@@ -433,6 +583,10 @@ def test_powershell_generation_scripts_remove_template_fallbacks():
     assert "New-Item -ItemType File -Path $specFile" not in create_feature
     assert "Copy-Item $template $specFile -Force" in create_feature
     assert "git checkout -b $branchName" in create_feature
+    assert "git checkout --track $remoteRef" in create_feature
+    assert create_feature.index("if ($hasGit)") < create_feature.index("Copy-Item $template $specFile -Force")
+    create_bash = read("scripts/bash/create-new-feature.sh")
+    assert create_bash.index("if [ \"$HAS_GIT\" = true ]; then") < create_bash.index("cp \"$TEMPLATE\" \"$SPEC_FILE\"")
     assert 'FEATURE_KEY="$BRANCH_NAME"' in read("scripts/bash/create-new-feature.sh")
     assert 'FEATURE_DIR="$SPECS_DIR/$FEATURE_KEY"' in read("scripts/bash/create-new-feature.sh")
     assert "$featureKey = $branchName" in create_feature

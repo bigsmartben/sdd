@@ -80,6 +80,7 @@ This command transforms a simple feature description (the user-prompt) into a co
 
 1. **Automatic Feature Numbering**: Scans existing specs to determine the next feature number (e.g., 001, 002, 003)
 2. **Branch Creation & Switch**: Generates a semantic branch name from your description, creates it when needed, and switches to that branch in Git repositories
+   - `/sdd.specify` is the sole branch-switch entrypoint; downstream `/sdd.*` commands stay on the active branch and use branch inference only
 3. **Template-Based Generation**: Copies and customizes the feature specification template with your requirements
 4. **Directory Structure**: Creates the proper `specs/[branch-name]/` structure for all related documents
 

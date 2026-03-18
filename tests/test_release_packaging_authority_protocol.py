@@ -30,6 +30,11 @@ EXPECTED_MARKERS = [
     "Repository-first replay trace: list consumed dependency rows",
     "Repository-first Validation Trace",
     "CRITICAL/HIGH findings MUST cite the authoritative source artifact(s)",
+    "## UIF + UDD Coverage Protocol (MUST)",
+    "Every demonstrated user interaction MUST trace back to an explicit `UIF` node.",
+    "Every user-visible business datum in the prototype MUST trace back to explicit `Entity.field` rows.",
+    "`UIF Coverage Summary`",
+    "`UDD Coverage Summary`",
 ]
 
 
