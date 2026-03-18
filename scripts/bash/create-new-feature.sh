@@ -337,14 +337,6 @@ if [ -z "$BRANCH_NAME" ]; then
         >&2 echo "[specify] Truncated to: $BRANCH_NAME (${#BRANCH_NAME} bytes)"
     fi
 
-    if [ "$HAS_GIT" = true ] && [ -z "$CURRENT_BRANCH_LEAF" ]; then
-        if ! git branch --list "$BRANCH_NAME" | grep -q .; then
-            if ! git branch "$BRANCH_NAME" >/dev/null 2>&1; then
-                >&2 echo "Error: Failed to create git branch '$BRANCH_NAME'. Please check your git configuration and try again."
-                exit 1
-            fi
-        fi
-    fi
 fi
 
 FEATURE_PREFIX="${BRANCH_NAME%%-*}"
@@ -370,6 +362,23 @@ mkdir -p "$FEATURE_DIR"
 
 SPEC_FILE="$FEATURE_DIR/spec.md"
 cp "$TEMPLATE" "$SPEC_FILE"
+
+if [ "$HAS_GIT" = true ]; then
+    CURRENT_HEAD="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+    if [ "$CURRENT_HEAD" != "$BRANCH_NAME" ]; then
+        if git show-ref --verify --quiet "refs/heads/$BRANCH_NAME"; then
+            if ! git checkout "$BRANCH_NAME" >/dev/null 2>&1; then
+                >&2 echo "Error: Failed to switch to git branch '$BRANCH_NAME'. Please check your git configuration and try again."
+                exit 1
+            fi
+        else
+            if ! git checkout -b "$BRANCH_NAME" >/dev/null 2>&1; then
+                >&2 echo "Error: Failed to create and switch to git branch '$BRANCH_NAME'. Please check your git configuration and try again."
+                exit 1
+            fi
+        fi
+    fi
+fi
 
 # Set the SPECIFY_FEATURE environment variable for the current session
 export SPECIFY_FEATURE="$BRANCH_NAME"

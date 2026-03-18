@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 # Create a new feature
-[CmdletBinding()]
+[CmdletBinding(PositionalBinding = $false)]
 param(
     [switch]$Json,
     [string]$ShortName,
@@ -302,21 +302,6 @@ if (-not $branchName) {
         Write-Warning "[specify] Truncated to: $branchName ($($branchName.Length) bytes)"
     }
 
-    if ($hasGit -and (-not $currentBranchLeaf)) {
-        $existingBranch = git branch --list $branchName 2>$null
-        if (-not $existingBranch) {
-            try {
-                git branch $branchName 2>$null | Out-Null
-                if ($LASTEXITCODE -ne 0) {
-                    Write-Error "Error: Failed to create git branch '$branchName'. Please check your git configuration and try again."
-                    exit 1
-                }
-            } catch {
-                Write-Error "Error: Failed to create git branch '$branchName'. Please check your git configuration and try again."
-                exit 1
-            }
-        }
-    }
 }
 
 $featurePrefix = ($branchName -split '-', 2)[0]
@@ -342,6 +327,47 @@ New-Item -ItemType Directory -Path $featureDir -Force | Out-Null
 
 $specFile = Join-Path $featureDir 'spec.md'
 Copy-Item $template $specFile -Force
+
+if ($hasGit) {
+    try {
+        $currentHead = git rev-parse --abbrev-ref HEAD 2>$null
+    } catch {
+        $currentHead = ''
+    }
+
+    if ($currentHead -ne $branchName) {
+        try {
+            git show-ref --verify --quiet "refs/heads/$branchName" 2>$null | Out-Null
+            $branchExists = ($LASTEXITCODE -eq 0)
+        } catch {
+            $branchExists = $false
+        }
+
+        if ($branchExists) {
+            try {
+                git checkout $branchName 2>$null | Out-Null
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Error "Error: Failed to switch to git branch '$branchName'. Please check your git configuration and try again."
+                    exit 1
+                }
+            } catch {
+                Write-Error "Error: Failed to switch to git branch '$branchName'. Please check your git configuration and try again."
+                exit 1
+            }
+        } else {
+            try {
+                git checkout -b $branchName 2>$null | Out-Null
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Error "Error: Failed to create and switch to git branch '$branchName'. Please check your git configuration and try again."
+                    exit 1
+                }
+            } catch {
+                Write-Error "Error: Failed to create and switch to git branch '$branchName'. Please check your git configuration and try again."
+                exit 1
+            }
+        }
+    }
+}
 
 # Set the SPECIFY_FEATURE environment variable for the current session
 $env:SPECIFY_FEATURE = $branchName

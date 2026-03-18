@@ -11,17 +11,20 @@
 #   -Json               Output in JSON format
 #   -RequireTasks       Require tasks.md to exist (for implementation phase)
 #   -IncludeTasks       Include tasks.md in AVAILABLE_DOCS list
-#   -TaskPreflight      Include compact tasks bootstrap packet extracted from plan.md (JSON mode only)
+#   -DataModelPreflight Include compact data-model bootstrap packet extracted from plan.md (primary /sdd.plan.data-model readiness gate, JSON mode only)
+#   -TaskPreflight      Include compact tasks bootstrap packet extracted from plan.md (primary /sdd.tasks readiness gate, JSON mode only)
+#   -ImplementPreflight Include compact implement bootstrap packet extracted from analyze-history.md (primary /sdd.implement analyze gate, JSON mode only)
 #   -PathsOnly          Only output path variables (no validation)
 #   -Help, -h           Show help message
 
-[CmdletBinding()]
+[CmdletBinding(PositionalBinding = $false)]
 param(
     [switch]$Json,
     [switch]$RequireTasks,
     [switch]$IncludeTasks,
+    [switch]$DataModelPreflight,
     [switch]$TaskPreflight,
-    [string]$PlanFile,
+    [switch]$ImplementPreflight,
     [switch]$PathsOnly,
     [switch]$Help
 )
@@ -39,8 +42,9 @@ OPTIONS:
   -Json               Output in JSON format
   -RequireTasks       Require tasks.md to exist (for implementation phase)
   -IncludeTasks       Include tasks.md in AVAILABLE_DOCS list
-  -TaskPreflight      Include compact tasks bootstrap packet extracted from plan.md (JSON mode only)
-  -PlanFile <path>    Explicit path to plan.md under repo/specs/** for planning commands
+  -DataModelPreflight Include compact data-model bootstrap packet extracted from plan.md (primary /sdd.plan.data-model readiness gate, JSON mode only)
+  -TaskPreflight      Include compact tasks bootstrap packet extracted from plan.md (primary /sdd.tasks readiness gate, JSON mode only)
+  -ImplementPreflight Include compact implement bootstrap packet extracted from analyze-history.md (primary /sdd.implement analyze gate, JSON mode only)
   -PathsOnly          Only output path variables (no prerequisite validation)
   -Help, -h           Show this help message
 
@@ -51,11 +55,14 @@ EXAMPLES:
   # Check implementation prerequisites (plan.md + tasks.md required)
   .\check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks
 
-  # Resolve planning inputs from an explicit plan.md path
-  .\check-prerequisites.ps1 -Json -PlanFile specs/20250708-parent-hanxue-channel/plan.md
+  # Extract compact data-model bootstrap packet for /sdd.plan.data-model
+  .\check-prerequisites.ps1 -Json -DataModelPreflight
 
   # Extract compact tasks bootstrap packet for /sdd.tasks
   .\check-prerequisites.ps1 -Json -TaskPreflight
+
+  # Extract compact implementation bootstrap packet for /sdd.implement
+  .\check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks -ImplementPreflight
   
   # Get feature paths only (no validation)
   .\check-prerequisites.ps1 -PathsOnly
@@ -64,22 +71,28 @@ EXAMPLES:
     exit 0
 }
 
+if ($DataModelPreflight -and -not $Json) {
+    Write-Output "ERROR: -DataModelPreflight requires -Json output mode."
+    exit 1
+}
+
 if ($TaskPreflight -and -not $Json) {
     Write-Output "ERROR: -TaskPreflight requires -Json output mode."
+    exit 1
+}
+
+if ($ImplementPreflight -and -not $Json) {
+    Write-Output "ERROR: -ImplementPreflight requires -Json output mode."
     exit 1
 }
 
 # Source common functions
 . "$PSScriptRoot/common.ps1"
 
-# Get feature paths and validate branch only when using active-feature discovery.
-if ($PlanFile) {
-    $paths = Get-FeaturePathsFromPlanFile -PlanFile $PlanFile
-} else {
-    $paths = Get-FeaturePathsEnv
-    if (-not (Test-FeatureBranch -Branch $paths.CURRENT_BRANCH -HasGit:$paths.HAS_GIT)) {
-        exit 1
-    }
+# Get feature paths and validate branch.
+$paths = Get-FeaturePathsEnv
+if (-not (Test-FeatureBranch -Branch $paths.CURRENT_BRANCH -HasGit:$paths.HAS_GIT)) {
+    exit 1
 }
 
 # If paths-only mode, output paths and exit (support combined -Json -PathsOnly)
@@ -151,6 +164,34 @@ if ($Json) {
         AVAILABLE_DOCS = $docs
     }
 
+    if ($DataModelPreflight) {
+        $payload.DATA_MODEL_BOOTSTRAP = $null
+        $helper = Join-Path (Split-Path $PSScriptRoot -Parent) 'data_model_preflight.py'
+        if (Test-Path $helper -PathType Leaf) {
+            $pythonCmd = Get-Command python3 -ErrorAction SilentlyContinue
+            if (-not $pythonCmd) {
+                $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
+            }
+
+            if ($pythonCmd) {
+                try {
+                    $dataModelBootstrapJson = & $pythonCmd.Source $helper `
+                        --feature-dir $paths.FEATURE_DIR `
+                        --plan $paths.IMPL_PLAN `
+                        --spec $paths.FEATURE_SPEC `
+                        --research $paths.RESEARCH `
+                        --data-model $paths.DATA_MODEL
+
+                    if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($dataModelBootstrapJson)) {
+                        $payload.DATA_MODEL_BOOTSTRAP = $dataModelBootstrapJson | ConvertFrom-Json
+                    }
+                } catch {
+                    $payload.DATA_MODEL_BOOTSTRAP = $null
+                }
+            }
+        }
+    }
+
     if ($TaskPreflight) {
         $payload.TASKS_BOOTSTRAP = $null
         $helper = Join-Path (Split-Path $PSScriptRoot -Parent) 'task_preflight.py'
@@ -175,6 +216,34 @@ if ($Json) {
                     }
                 } catch {
                     $payload.TASKS_BOOTSTRAP = $null
+                }
+            }
+        }
+    }
+
+    if ($ImplementPreflight) {
+        $payload.IMPLEMENT_BOOTSTRAP = $null
+        $helper = Join-Path (Split-Path $PSScriptRoot -Parent) 'implement_preflight.py'
+        if (Test-Path $helper -PathType Leaf) {
+            $pythonCmd = Get-Command python3 -ErrorAction SilentlyContinue
+            if (-not $pythonCmd) {
+                $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
+            }
+
+            if ($pythonCmd) {
+                try {
+                    $implementBootstrapJson = & $pythonCmd.Source $helper `
+                        --feature-dir $paths.FEATURE_DIR `
+                        --spec $paths.FEATURE_SPEC `
+                        --plan $paths.IMPL_PLAN `
+                        --tasks $paths.TASKS `
+                        --analyze-history (Join-Path $paths.FEATURE_DIR 'audits/analyze-history.md')
+
+                    if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($implementBootstrapJson)) {
+                        $payload.IMPLEMENT_BOOTSTRAP = $implementBootstrapJson | ConvertFrom-Json
+                    }
+                } catch {
+                    $payload.IMPLEMENT_BOOTSTRAP = $null
                 }
             }
         }

@@ -1,9 +1,9 @@
 ---
-description: Orchestrate the planning phase from an explicit or branch-derived spec.md path by generating plan.md control-plane state, Stage 0 shared context, and the full handoff queue.
+description: Orchestrate the planning phase from the current feature branch by generating plan.md control-plane state, Stage 0 shared context, and the full handoff queue.
 handoffs:
   - label: Start Research Queue
     agent: sdd.plan.research
-    prompt: Run /sdd.plan.research <path/to/plan.md> with the resolved absolute plan.md path.
+    prompt: Run /sdd.plan.research with the same active feature branch context.
     send: true
 scripts:
   sh: scripts/bash/setup-plan.sh --json
@@ -20,17 +20,8 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Argument Parsing
 
-Parse `$ARGUMENTS` in this exact order before doing any planning work:
-
-1. If present, the first positional token is `SPEC_FILE`
-2. Optional `SPEC_FILE` MUST resolve from repo root to an existing file named `spec.md`
-3. Optional `SPEC_FILE` MUST stay under `repo/specs/**`
-4. Any remaining text after removing optional `SPEC_FILE` is user planning context
-
-If `SPEC_FILE` is omitted, resolve it from current feature branch using `{SCRIPT}` defaults.
-If optional `SPEC_FILE` is present but invalid, stop immediately and report the required invocation shape:
-
-`/sdd.plan <path/to/spec.md> [technical-context...]`
+Treat all `$ARGUMENTS` as user planning context.
+Resolve `SPEC_FILE` from the current feature branch using `{SCRIPT}` defaults.
 
 ## Goal
 
@@ -56,7 +47,6 @@ Optimization target is packet-first consumption with bounded inputs per shard, n
 ## Setup
 
 Run `{SCRIPT}` once from repo root.
-If `SPEC_FILE` is present, pass `--spec-file <SPEC_FILE>`; otherwise rely on script branch-derived default.
 Parse JSON for `FEATURE_SPEC`, `IMPL_PLAN`, `SPECS_DIR`, and `BRANCH`.
 All paths must be absolute.
 
@@ -171,12 +161,12 @@ State-dependent routing belongs in runtime `Handoff Decision`, not frontmatter.
 
 Child-command selection rules are non-negotiable:
 
-- `/sdd.plan.research <path/to/plan.md>` takes the first `research` row in `Stage Queue` with status `pending`
-- `/sdd.plan.data-model <path/to/plan.md>` takes the first `data-model` row in `Stage Queue` with status `pending`
-- `/sdd.plan.test-matrix <path/to/plan.md>` takes the first `test-matrix` row in `Stage Queue` with status `pending`
-- `/sdd.plan.contract <path/to/plan.md>` takes the first `Artifact Status` row where `Unit Type = contract` and `Status = blocked`; if no blocked row exists, take the first row with `Status = pending`
+- `/sdd.plan.research` takes the first `research` row in `Stage Queue` with status `pending`
+- `/sdd.plan.data-model` takes the first `data-model` row in `Stage Queue` with status `pending`
+- `/sdd.plan.test-matrix` takes the first `test-matrix` row in `Stage Queue` with status `pending`
+- `/sdd.plan.contract` takes the first `Artifact Status` row where `Unit Type = contract` and `Status = blocked`; if no blocked row exists, take the first row with `Status = pending`
 Child commands MUST NOT scan the repository to invent the next target.
-They MUST consume queue state from the explicit `PLAN_FILE` only.
+They MUST consume queue state from the resolved `PLAN_FILE` only.
 
 ## Runtime Rules
 
@@ -192,7 +182,7 @@ They MUST consume queue state from the explicit `PLAN_FILE` only.
 
 Stop immediately when any of the following occurs:
 
-- resolved `SPEC_FILE` is invalid, outside `repo/specs/**`, not named `spec.md`, or non-existent
+- resolved branch-derived `SPEC_FILE` is missing or non-consumable
 - required repository-first canonical baseline files are missing or stale
 - constitution-level constraints block downstream planning
 - required shared bootstrap anchors cannot be stabilized from authoritative inputs
@@ -208,5 +198,5 @@ Always write or refresh `plan.md` first, then report:
 - initialized `Stage Queue`
 - initialized `Binding Projection Index` row count
 - initialized `Artifact Status` row count
-- explicit next command: `/sdd.plan.research <absolute path to plan.md>`
+- explicit next command: `/sdd.plan.research`
 - explicit handoff order: `sdd.plan.research -> sdd.plan.data-model -> sdd.plan.test-matrix -> sdd.plan.contract`

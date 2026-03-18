@@ -1,5 +1,5 @@
 ---
-description: Generate a custom requirements-quality checklist from an explicit or branch-derived plan.md path.
+description: Generate a custom requirements-quality checklist from the current feature branch plan.md.
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json
   ps: scripts/powershell/check-prerequisites.ps1 -Json
@@ -36,21 +36,13 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Argument Parsing
 
-Parse `$ARGUMENTS` in this exact order before doing any checklist work:
-
-1. If present, the first positional token is `PLAN_FILE`
-2. Optional `PLAN_FILE` MUST resolve from repo root to an existing file named `plan.md`
-3. Optional `PLAN_FILE` MUST stay under `repo/specs/**`
-4. Any remaining text after removing optional `PLAN_FILE` is checklist context input
-
-If `PLAN_FILE` is omitted, resolve it from current feature branch using `{SCRIPT}` defaults.
-If optional `PLAN_FILE` is present but invalid, stop immediately and report the required invocation shape:
-
-`/sdd.checklist <path/to/plan.md> [checklist-context...]`
+Treat all `$ARGUMENTS` as checklist context input.
+Resolve `PLAN_FILE` from current feature branch using `{SCRIPT}` defaults.
+If branch-derived `PLAN_FILE` is missing or invalid, stop immediately and report the blocker.
 
 ## Execution Steps
 
-1. **Setup (hard gate)**: Run `{SCRIPT}` from repo root. If `PLAN_FILE` is present, pass `--plan-file <PLAN_FILE>`; otherwise rely on script branch-derived default. Parse JSON for FEATURE_DIR and AVAILABLE_DOCS list.
+1. **Setup (hard gate)**: Run `{SCRIPT}` from repo root. Parse JSON for FEATURE_DIR and AVAILABLE_DOCS list.
    - Treat resolved `PLAN_FILE` as the canonical planning anchor for this run.
    - All file paths must be absolute.
    - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
@@ -242,7 +234,7 @@ If optional `PLAN_FILE` is present but invalid, stop immediately and report the 
    - Actor/timing
    - Any explicit user-specified must-have items incorporated
 
-**Important**: Each `/sdd.checklist <path/to/plan.md>` command invocation uses a short, descriptive checklist filename and either creates a new file or appends to an existing one. This allows:
+**Important**: Each `/sdd.checklist` command invocation uses a short, descriptive checklist filename and either creates a new file or appends to an existing one. This allows:
 
 - Multiple checklists of different types (e.g., `ux.md`, `test.md`, `security.md`)
 - Simple, memorable filenames that indicate checklist purpose

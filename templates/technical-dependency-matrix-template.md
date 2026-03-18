@@ -6,6 +6,7 @@
 
 Use this artifact to record 2nd/3rd-party dependency facts only.
 In-repo first-party module-to-module dependencies MUST NOT be modeled here.
+Exhaustiveness applies only after filtering out in-repo first-party module coordinates.
 
 ## Build-Manifest Detection Summary
 
@@ -24,15 +25,24 @@ Record detection outcome in deterministic priority:
 
 - Dependency facts MUST come from detected build manifests only.
 - Source-code symbols, planning artifacts, and helper docs MUST NOT be used to prove dependency declarations.
-- The dependency matrix MUST be exhaustive for detected product/runtime manifests; do not emit highlight-only subsets.
+- Before row emission, classify each dependency declaration as exactly one of:
+  - `in_repo_first_party_module`
+  - `external_second_party`
+  - `third_party`
+- Coordinates matching modules produced inside the current repository MUST be classified as `in_repo_first_party_module` and excluded from this artifact.
+- The dependency matrix MUST be exhaustive for the filtered product/runtime dependency set; do not emit highlight-only subsets.
 - Normalize `Dependency (G:A)` as:
   - Maven: `group:artifact`
   - Node/Python/Go: `ecosystem:package_or_module`
 - `Type` MUST be either `2nd` or `3rd`.
-- Classify organization-owned or organization-coordinated packages as `2nd`; external ecosystem packages as `3rd`.
+- Classify organization-owned or organization-coordinated packages not produced inside the current repository as `2nd`; external ecosystem packages as `3rd`.
 - `Version Source` MUST be one of: `direct`, `dependencyManagement`, `module-dependencyManagement`, `unresolved`.
+- `Evidence` MUST bind to the exact dependency declaration occurrence that produced the row; do not reuse the first matching artifact line in the file.
+- If the same dependency is declared multiple times in one manifest, preserve one row per declaration occurrence with distinct line refs.
+- If a dependency declaration omits a local version but resolves from module, parent, or ancestor dependency management, keep `Evidence` at the declaration site and set `Version Source` to the version provider class.
 - Tooling-only manifests that are outside the product/runtime build surface SHOULD stay in detection notes and MUST NOT displace product dependency rows.
 - Keep version divergence and `unresolved` values visible as governance signals; do not silently normalize them.
+- Mark a row `unresolved` only when its effective version cannot be resolved from the declaration, the current module, or the detected in-repo ancestor manifest chain.
 - Every material version-source mix, version divergence, or unresolved signal MUST cite manifest paths and line refs.
 
 ## Dependency Matrix
@@ -44,6 +54,13 @@ Do not collapse multiple modules, version sources, scopes, or evidence locations
 |------------------|------|---------|-------|----------------|----------------|----------|
 | [maven:group:artifact or ecosystem:package] | [2nd/3rd] | [x.y.z or `unresolved`] | [compile/runtime/test/provided/import/peer/dev/optional] | [direct/dependencyManagement/module-dependencyManagement/unresolved] | [module-a] | [manifest path + line refs] |
 
+## Signal Derivation Rules
+
+- Emit `version-source-mix` only when the same dependency has 2 or more distinct `Version Source` values across emitted rows.
+- Emit `version-divergence` only when the same dependency has 2 or more distinct effective versions across emitted rows.
+- Emit `unresolved` only when at least one emitted row has `Version Source = unresolved` or `Version = unresolved`.
+- Every `SIG-*` row MUST be derivable from emitted matrix rows only.
+
 ## Version Divergence & Unresolved Signals
 
 Record only material governance signals that downstream invocation governance must consume.
@@ -51,6 +68,13 @@ Record only material governance signals that downstream invocation governance mu
 | Signal ID | Dependency (G:A) | Signal Type | Affected Modules | Evidence | Handling Note |
 |-----------|------------------|-------------|------------------|----------|---------------|
 | [SIG-001] | [ecosystem:package] | [version-divergence / version-source-mix / unresolved] | [module-a, module-b] | [manifest paths + line refs] | [Rule impact for module invocation governance] |
+
+## Post-Generation Self-Check
+
+- Verify no emitted row uses an `Evidence` line that belongs to a different declaration occurrence of the same dependency.
+- Verify every repeated declaration occurrence keeps a distinct line ref in `Evidence`.
+- Verify every `version-divergence` signal is backed by 2 or more distinct effective versions in emitted rows.
+- Verify every `unresolved` signal references at least one emitted row whose `Version Source` or `Version` is `unresolved`.
 
 ## Boundary Notes
 

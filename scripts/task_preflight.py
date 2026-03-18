@@ -202,6 +202,22 @@ def build_execution_readiness(
             }
         )
 
+    contract_target_path_missing_rows = sorted(
+        [
+            unit["binding_row_id"]
+            for unit in unit_inventory
+            if unit["contract"]["status"] and not unit["contract"]["target_path"]
+        ]
+    )
+    if contract_target_path_missing_rows:
+        errors.append(
+            {
+                "code": "contract_target_path_missing",
+                "message": "Some contract rows have status but no target path.",
+                "details": {"binding_row_ids": contract_target_path_missing_rows},
+            }
+        )
+
     non_done_contract_rows = sorted(
         [
             unit["binding_row_id"]
@@ -356,7 +372,13 @@ def build_unit_inventory(
         }
         unit_inventory.append(unit)
 
-        if unit["contract"]["status"] == "done" and contract_exists:
+        if (
+            unit["contract"]["status"] == "done"
+            and contract_exists
+            and unit["contract"]["full_field_dictionary_present"]
+            and not unit["contract"]["has_unresolved_field_gaps"]
+            and not unit["contract"]["controller_first_violation"]
+        ):
             ready_unit_inventory.append(unit)
 
     return unit_inventory, ready_unit_inventory

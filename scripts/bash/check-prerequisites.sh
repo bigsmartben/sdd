@@ -11,12 +11,14 @@
 #   --json              Output in JSON format
 #   --require-tasks     Require tasks.md to exist (for implementation phase)
 #   --include-tasks     Include tasks.md in AVAILABLE_DOCS list
-#   --task-preflight    Include compact tasks bootstrap packet extracted from plan.md (JSON mode only)
+#   --data-model-preflight Include compact data-model bootstrap packet extracted from plan.md (primary /sdd.plan.data-model readiness gate, JSON mode only)
+#   --task-preflight    Include compact tasks bootstrap packet extracted from plan.md (primary /sdd.tasks readiness gate, JSON mode only)
+#   --implement-preflight Include compact implement bootstrap packet extracted from analyze-history.md (primary /sdd.implement analyze gate, JSON mode only)
 #   --paths-only        Only output path variables (no validation)
 #   --help, -h          Show help message
 #
 # OUTPUTS:
-#   JSON mode: {"FEATURE_DIR":"...", "AVAILABLE_DOCS":["..."]}
+#   JSON mode: {"FEATURE_DIR":"...", "AVAILABLE_DOCS":["..."], ...optional bootstrap packets...}
 #   Text mode: FEATURE_DIR:... \n AVAILABLE_DOCS: \n ✓/✗ file.md
 #   Paths only: REPO_ROOT: ... \n BRANCH: ... \n FEATURE_DIR: ... etc.
 
@@ -27,8 +29,9 @@ JSON_MODE=false
 REQUIRE_TASKS=false
 INCLUDE_TASKS=false
 TASK_PREFLIGHT=false
+IMPLEMENT_PREFLIGHT=false
+DATA_MODEL_PREFLIGHT=false
 PATHS_ONLY=false
-PLAN_FILE=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -48,17 +51,17 @@ while [[ $# -gt 0 ]]; do
             TASK_PREFLIGHT=true
             shift
             ;;
+        --data-model-preflight)
+            DATA_MODEL_PREFLIGHT=true
+            shift
+            ;;
+        --implement-preflight)
+            IMPLEMENT_PREFLIGHT=true
+            shift
+            ;;
         --paths-only)
             PATHS_ONLY=true
             shift
-            ;;
-        --plan-file)
-            if [[ $# -lt 2 ]]; then
-                echo "ERROR: --plan-file requires a path to plan.md" >&2
-                exit 1
-            fi
-            PLAN_FILE="$2"
-            shift 2
             ;;
         --help|-h)
             cat << 'EOF'
@@ -70,8 +73,9 @@ OPTIONS:
   --json              Output in JSON format
   --require-tasks     Require tasks.md to exist (for implementation phase)
   --include-tasks     Include tasks.md in AVAILABLE_DOCS list
-  --task-preflight    Include compact tasks bootstrap packet extracted from plan.md (JSON mode only)
-  --plan-file <path>  Explicit path to plan.md under repo/specs/** for planning commands
+  --data-model-preflight Include compact data-model bootstrap packet extracted from plan.md (primary /sdd.plan.data-model readiness gate, JSON mode only)
+  --task-preflight    Include compact tasks bootstrap packet extracted from plan.md (primary /sdd.tasks readiness gate, JSON mode only)
+  --implement-preflight Include compact implement bootstrap packet extracted from analyze-history.md (primary /sdd.implement analyze gate, JSON mode only)
   --paths-only        Only output path variables (no prerequisite validation)
   --help, -h          Show this help message
 
@@ -82,11 +86,14 @@ EXAMPLES:
   # Check implementation prerequisites (plan.md + tasks.md required)
   ./check-prerequisites.sh --json --require-tasks --include-tasks
 
-  # Resolve planning inputs from an explicit plan.md path
-  ./check-prerequisites.sh --json --plan-file specs/20250708-parent-hanxue-channel/plan.md
+  # Extract compact data-model bootstrap packet for /sdd.plan.data-model
+  ./check-prerequisites.sh --json --data-model-preflight
 
   # Extract compact tasks bootstrap packet for /sdd.tasks
   ./check-prerequisites.sh --json --task-preflight
+
+  # Extract compact implementation bootstrap packet for /sdd.implement
+  ./check-prerequisites.sh --json --require-tasks --include-tasks --implement-preflight
   
   # Get feature paths only (no validation)
   ./check-prerequisites.sh --paths-only
@@ -105,14 +112,9 @@ done
 SCRIPT_DIR="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
-# Get feature paths and validate branch when using active-feature discovery.
-if [[ -n "$PLAN_FILE" ]]; then
-    FEATURE_PATHS_ENV="$(get_feature_paths_from_plan_file "$PLAN_FILE")" || exit 1
-    eval "$FEATURE_PATHS_ENV"
-else
-    eval "$(get_feature_paths)"
-    check_feature_branch "$CURRENT_BRANCH" "$HAS_GIT" || exit 1
-fi
+# Get feature paths and validate branch.
+eval "$(get_feature_paths)"
+check_feature_branch "$CURRENT_BRANCH" "$HAS_GIT" || exit 1
 
 # If paths-only mode, output paths and exit (support JSON + paths-only combined)
 if $PATHS_ONLY; then
@@ -157,8 +159,18 @@ if $REQUIRE_TASKS && [[ ! -f "$TASKS" ]]; then
 fi
 
 # Task preflight requires JSON mode because it augments the JSON payload.
+if $DATA_MODEL_PREFLIGHT && ! $JSON_MODE; then
+    echo "ERROR: --data-model-preflight requires --json output mode." >&2
+    exit 1
+fi
+
 if $TASK_PREFLIGHT && ! $JSON_MODE; then
     echo "ERROR: --task-preflight requires --json output mode." >&2
+    exit 1
+fi
+
+if $IMPLEMENT_PREFLIGHT && ! $JSON_MODE; then
+    echo "ERROR: --implement-preflight requires --json output mode." >&2
     exit 1
 fi
 
@@ -186,6 +198,28 @@ if $JSON_MODE; then
     # Build JSON array of documents
     json_docs="$(json_array "${docs[@]}")"
 
+    feature_json="$(json_string "$FEATURE_DIR")"
+    json_payload="{\"FEATURE_DIR\":${feature_json},\"AVAILABLE_DOCS\":${json_docs}"
+
+    if $DATA_MODEL_PREFLIGHT; then
+        DATA_MODEL_PREFLIGHT_SCRIPT="$SCRIPT_DIR/../data_model_preflight.py"
+        data_model_bootstrap="null"
+        PYTHON_BIN="$(command -v python3 || command -v python || true)"
+        if [[ -f "$DATA_MODEL_PREFLIGHT_SCRIPT" && -n "$PYTHON_BIN" ]]; then
+            if data_model_bootstrap="$("$PYTHON_BIN" "$DATA_MODEL_PREFLIGHT_SCRIPT" \
+                --feature-dir "$FEATURE_DIR" \
+                --plan "$IMPL_PLAN" \
+                --spec "$FEATURE_SPEC" \
+                --research "$RESEARCH" \
+                --data-model "$DATA_MODEL")"; then
+                :
+            else
+                data_model_bootstrap="null"
+            fi
+        fi
+        json_payload="${json_payload},\"DATA_MODEL_BOOTSTRAP\":${data_model_bootstrap}"
+    fi
+
     if $TASK_PREFLIGHT; then
         TASK_PREFLIGHT_SCRIPT="$SCRIPT_DIR/../task_preflight.py"
         task_bootstrap="null"
@@ -203,16 +237,33 @@ if $JSON_MODE; then
                 task_bootstrap="null"
             fi
         fi
-
-        printf '{"FEATURE_DIR":%s,"AVAILABLE_DOCS":%s,"TASKS_BOOTSTRAP":%s}\n' \
-            "$(json_string "$FEATURE_DIR")" \
-            "$json_docs" \
-            "$task_bootstrap"
-    else
-        printf '{"FEATURE_DIR":%s,"AVAILABLE_DOCS":%s}\n' \
-            "$(json_string "$FEATURE_DIR")" \
-            "$json_docs"
     fi
+
+    if $IMPLEMENT_PREFLIGHT; then
+        IMPLEMENT_PREFLIGHT_SCRIPT="$SCRIPT_DIR/../implement_preflight.py"
+        implement_bootstrap="null"
+        PYTHON_BIN="$(command -v python3 || command -v python || true)"
+        if [[ -f "$IMPLEMENT_PREFLIGHT_SCRIPT" && -n "$PYTHON_BIN" ]]; then
+            if implement_bootstrap="$("$PYTHON_BIN" "$IMPLEMENT_PREFLIGHT_SCRIPT" \
+                --feature-dir "$FEATURE_DIR" \
+                --spec "$FEATURE_SPEC" \
+                --plan "$IMPL_PLAN" \
+                --tasks "$TASKS" \
+                --analyze-history "$FEATURE_DIR/audits/analyze-history.md")"; then
+                :
+            else
+                implement_bootstrap="null"
+            fi
+        fi
+        json_payload="${json_payload},\"IMPLEMENT_BOOTSTRAP\":${implement_bootstrap}"
+    fi
+
+    if $TASK_PREFLIGHT; then
+        json_payload="${json_payload},\"TASKS_BOOTSTRAP\":${task_bootstrap}"
+    fi
+
+    json_payload="${json_payload}}"
+    printf '%s\n' "$json_payload"
 else
     # Text output
     echo "FEATURE_DIR:$FEATURE_DIR"

@@ -1,9 +1,9 @@
 ---
-description: Generate the pending research.md artifact selected from an explicit or branch-derived plan.md path.
+description: Generate the pending research.md artifact selected from the current feature branch plan.md.
 handoffs:
   - label: Continue Data Model Queue
     agent: sdd.plan.data-model
-    prompt: Run /sdd.plan.data-model <path/to/plan.md> with the same absolute plan.md path.
+    prompt: Run /sdd.plan.data-model with the same active feature branch context.
     send: true
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json
@@ -20,15 +20,8 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Argument Parsing
 
-1. If present, the first positional token is `PLAN_FILE`
-2. Optional `PLAN_FILE` MUST resolve from repo root to an existing file named `plan.md`
-3. Optional `PLAN_FILE` MUST stay under `repo/specs/**`
-4. Any remaining text after removing optional `PLAN_FILE` is optional scoped user context
-
-If `PLAN_FILE` is omitted, resolve it from current feature branch using `{SCRIPT}` defaults.
-If optional `PLAN_FILE` is present but invalid, stop immediately and report the required invocation shape:
-
-`/sdd.plan.research <path/to/plan.md> [context...]`
+Treat all `$ARGUMENTS` as optional scoped user context.
+Resolve `PLAN_FILE` from the current feature branch using `{SCRIPT}` defaults.
 
 ## Goal
 
@@ -38,7 +31,7 @@ Use `.specify/templates/research-template.md` only. If the runtime template is m
 
 ## Selection Rules
 
-1. Run `{SCRIPT}` once from repo root. If `PLAN_FILE` is present, pass `--plan-file <PLAN_FILE>`; otherwise rely on script branch-derived default. Resolve `FEATURE_DIR`, `FEATURE_SPEC`, and `IMPL_PLAN`
+1. Run `{SCRIPT}` once from repo root. Resolve `FEATURE_DIR`, `FEATURE_SPEC`, and `IMPL_PLAN`
 2. Read only the resolved `IMPL_PLAN`
 3. Find the first `Stage Queue` row where:
    - `Stage ID = research`
@@ -105,7 +98,7 @@ Do not write long summaries or detailed research prose back into `PLAN_FILE`.
 
 Emit a `Handoff Decision` section in the runtime output with exactly these fields:
 
-- `Next Command`: `/sdd.plan.data-model <absolute path to plan.md>`
+- `Next Command`: `/sdd.plan.data-model`
 - `Decision Basis`: `Stage Queue` shows the selected `research` row is complete and the fixed next pending stage is `data-model`
 - `Selected Stage ID`: selected `research` stage row id
 - `Ready/Blocked`: `Ready` when the selected row is updated to `done`; otherwise `Blocked`

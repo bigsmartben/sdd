@@ -39,6 +39,9 @@ ENV/
 env/
 .venv
 
+specs/
+tmp-**/
+
 # IDE
 .vscode/
 .idea/

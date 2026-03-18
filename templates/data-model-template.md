@@ -74,6 +74,8 @@ Expand the model by describing only globally significant responsibilities and li
 ## Shared Invariants
 
 Write normative rules with stable identifiers and references. Prefer rules that downstream contracts and interface details can reuse directly.
+`INV-*` items are normative. Each `INV-*` MUST use anchor status `existing`, `extended`, or `new` with explicit repo evidence.
+If explicit repo evidence is unavailable, do not keep the statement as `INV-*`; move it to `Assumptions / Open Questions` as a forward-looking gap with `TODO(REPO_ANCHOR)`.
 
 ### INV-001: [Short invariant title]
 
@@ -81,8 +83,8 @@ Write normative rules with stable identifiers and references. Prefer rules that 
 - **Applies To**: `[Element(s) / Relationship(s)]`
 - **Rationale**: [Why this is globally required]
 - **Upstream Ref(s)**: `[spec.md#...], [research.md#...]`
-- **Anchor Status**: `[existing | extended | new | todo]`
-- **Repo Anchor(s)**: `[repo symbol if applicable]` or `TODO(REPO_ANCHOR)`
+- **Anchor Status**: `[existing | extended | new]`
+- **Repo Anchor(s)**: `[path/to/file.ext::Symbol]`
 
 ### INV-002: [Short invariant title]
 
@@ -90,8 +92,8 @@ Write normative rules with stable identifiers and references. Prefer rules that 
 - **Applies To**: `[Element(s) / Relationship(s)]`
 - **Rationale**: [Global semantic reason]
 - **Upstream Ref(s)**: `[spec.md#...], [research.md#...]`
-- **Anchor Status**: `[existing | extended | new | todo]`
-- **Repo Anchor(s)**: `[repo symbol if applicable]` or `TODO(REPO_ANCHOR)`
+- **Anchor Status**: `[existing | extended | new]`
+- **Repo Anchor(s)**: `[path/to/file.ext::Symbol]`
 
 ## Lifecycle Anchors
 
@@ -168,4 +170,5 @@ Use this final section to confirm that the backbone model is coherent, complete,
 - Ensure the model covers the shared elements, stable fields, labeled relationships, invariants, and lifecycle anchors required by `spec.md` and `research.md`.
 - Ensure the content remains backbone-only and does not expand into full DTO inventories, endpoint-by-endpoint contracts, implementation layers, persistence schema design, or interface-level sequence behavior.
 - Ensure terminology, invariants, and lifecycle definitions are consistent with downstream `contract-template.md` expectations without duplicating scope.
-- If anything is still uncertain, set `Anchor Status = todo` and record the gap with `TODO(REPO_ANCHOR)` in `Assumptions / Open Questions` or `Boundary Notes` rather than leaving backbone semantics ambiguous.
+- If anything non-normative is still uncertain, set `Anchor Status = todo` and record the gap with `TODO(REPO_ANCHOR)` in `Assumptions / Open Questions` or `Boundary Notes` rather than leaving backbone semantics ambiguous.
+- Do not use `todo` anchors for `INV-*` rules or lifecycle stable states.

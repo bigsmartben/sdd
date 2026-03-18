@@ -1,5 +1,5 @@
 ---
-description: Generate a high-value interactive HTML prototype from an explicit or branch-derived spec.md path for walkthrough, review, and interaction validation.
+description: Generate a high-value interactive HTML prototype from the current feature branch spec.md for walkthrough, review, and interaction validation.
 ---
 
 ## User Input
@@ -12,24 +12,18 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Argument Parsing
 
-1. If present, the first positional token is `SPEC_FILE`
-2. Optional `SPEC_FILE` MUST resolve from repo root to an existing file named `spec.md`
-3. Optional `SPEC_FILE` MUST stay under `repo/specs/**`
-4. Any remaining text after removing optional `SPEC_FILE` is optional prototype direction
-
-If `SPEC_FILE` is omitted, resolve it from current feature branch using these defaults:
+Treat all `$ARGUMENTS` as optional prototype direction.
+Resolve `SPEC_FILE` from current feature branch using these defaults:
 
 - `feature-YYYYMMDD-slug` -> `repo/specs/YYYYMMDD-slug/spec.md`
 - `YYYYMMDD-slug` -> `repo/specs/YYYYMMDD-slug/spec.md`
 - legacy `NNN-slug` keeps legacy prefix mapping in `repo/specs/`
 
-If optional `SPEC_FILE` is present but invalid, stop immediately and report the required invocation shape:
-
-`/sdd.specify.ui-html <path/to/spec.md> [prototype-direction...]`
+If branch-derived `SPEC_FILE` is missing or invalid, stop immediately and report the blocker.
 
 ## Goal
 
-Generate exactly one review-ready `ui.html` interactive prototype from the explicit `SPEC_FILE`.
+Generate exactly one review-ready `ui.html` interactive prototype from the resolved `SPEC_FILE`.
 
 This artifact is for:
 
@@ -216,7 +210,7 @@ Before completing, validate that:
 Emit a `Handoff Decision` section in the runtime output with exactly these fields:
 
 - `Next Command`: `/sdd.clarify`
-- `Decision Basis`: `ui.html` is a derived interactive prototype from `spec.md`; use clarification to resolve remaining ambiguity before planning, otherwise proceed to `/sdd.plan <absolute path to spec.md>`
+- `Decision Basis`: `ui.html` is a derived interactive prototype from `spec.md`; use clarification to resolve remaining ambiguity before planning, otherwise proceed to `/sdd.plan`
 - `Selected Artifact`: `ui.html`
 - `Ready/Blocked`: `Ready` when `ui.html` is written successfully; otherwise `Blocked`
 

@@ -33,6 +33,21 @@ def test_constitution_template_defines_owner_boundaries_and_terms():
     assert "Go: `go.mod`" in content
     assert "normalize `Dependency (G:A)` as" in content
     assert "`Version Source` values MUST be `direct`, `dependencyManagement`, `module-dependencyManagement`, or `unresolved`" in content
+    assert "dependency declarations MUST be classified before emission as exactly one of:" in content
+    assert "coordinates matching modules produced inside the current repository MUST be classified as `in_repo_first_party_module` and excluded from the technical dependency matrix" in content
+    assert "`Evidence` MUST bind to the exact dependency declaration occurrence that produced the row" in content
+    assert "inherited version resolution MUST keep `Evidence` at the declaration site and MUST NOT move it to the version-provider row" in content
+    assert "repeated declarations in one manifest MUST preserve one emitted row per occurrence with distinct line refs" in content
+    assert "`unresolved` is allowed only when the effective version cannot be resolved" in content
+    assert "`version-source-mix` is allowed only when 2 or more distinct `Version Source` values exist across emitted rows for the same dependency" in content
+    assert "`version-divergence` is allowed only when 2 or more distinct effective versions exist across emitted rows for the same dependency" in content
+    assert "every dependency-governance signal MUST be derivable from emitted matrix rows only" in content
+    assert "evaluate and apply in strict order: `existing` -> `extended` -> `new`" in content
+    assert "`existing` (reuse) MUST be selected first" in content
+    assert "`new` is allowed only after explicit rejection evidence for both `existing` and `extended`" in content
+    assert "generation commands (`/sdd.plan.*`) own recording the evaluation and selected strategy" in content
+    assert "`/sdd.analyze` owns compliance validation and MUST fail when `new` anchor evidence is missing" in content
+    assert "`/sdd.tasks` and `/sdd.implement` own execution blocking" in content
     assert "/sdd.analyze" in content
     assert "/sdd.tasks" in content
     assert "/sdd.implement" in content
@@ -102,11 +117,22 @@ def test_constitution_command_owns_repository_first_baseline_pipeline():
     assert "`updated`" in content
     assert "`unchanged`" in content
     assert "`deleted`" in content
-    assert "Matrix rows MUST be exhaustive for the detected product/runtime manifests; do not emit highlight-only subsets." in content
+    assert "Matrix rows MUST be exhaustive for the filtered product/runtime dependency set; do not emit highlight-only subsets." in content
     assert "Emit one row per dependency usage; do not collapse multiple modules, scopes, version sources, or evidence locations into one summary row." in content
-    assert "Classify organization-owned or organization-coordinated dependencies as `2nd`; do not default all rows to `3rd`." in content
+    assert "Classify organization-owned or organization-coordinated dependencies not produced inside the current repository as `2nd`; do not default all rows to `3rd`." in content
+    assert "Classify each dependency declaration before emission as exactly one of `in_repo_first_party_module`, `external_second_party`, or `third_party`." in content
+    assert "Build the in-repo first-party module set from detected product/runtime manifests and exclude those coordinates from emitted dependency rows." in content
+    assert "Matrix rows MUST be exhaustive for the filtered product/runtime dependency set; do not emit highlight-only subsets." in content
+    assert "Bind `Evidence` to the exact dependency declaration occurrence that produced the row; do not reuse the version-provider line as the declaration site." in content
+    assert "If the same dependency is declared multiple times in one manifest, preserve one emitted row per occurrence with distinct line refs." in content
+    assert "If version resolution is inherited, keep `Evidence` at the declaration site and set `Version Source` from the provider class." in content
+    assert "Emit `unresolved` only when the effective version cannot be resolved from the declaration, the current module, or the detected in-repo ancestor manifest chain." in content
+    assert "Emit `version-source-mix` only when 2 or more distinct `Version Source` values exist across emitted rows for the same dependency." in content
+    assert "Emit `version-divergence` only when 2 or more distinct effective versions exist across emitted rows for the same dependency." in content
     assert "Preserve version divergence, version-source-mix, and `unresolved` as governance signals" in content
     assert "Every material signal MUST cite manifest paths and line refs." in content
+    assert "Every dependency-governance signal MUST be derivable from emitted matrix rows only." in content
+    assert "Run a final self-check to confirm `Evidence` lines map to the correct declaration occurrences and every emitted signal satisfies its trigger conditions." in content
     assert "Allowed/forbidden direction tables MUST cover the concrete first-party module edges found in the target runtime repo." in content
     assert "Use concrete module-to-module rows as the primary representation; layer summaries are optional metadata only." in content
     assert "do not emit speculative future-signal rows" in content
@@ -128,19 +154,48 @@ def test_constitution_command_defines_runtime_fast_path_and_bounded_reads():
     assert "Keep runtime output concise: no unchanged-file inventories" in content
 
 
+def test_constitution_command_enforces_repo_anchor_priority_and_ownership_split():
+    content = read("templates/commands/constitution.md")
+
+    assert "Ensure `Repo-Anchor Evidence Protocol` keeps the strict strategy priority `existing -> extended -> new`." in content
+    assert "Ensure every `new` anchor policy statement includes mandatory rejection evidence requirements for `existing` and `extended`." in content
+    assert "Keep command ownership boundaries explicit for repo-anchor strategy:" in content
+    assert "`/sdd.plan.*` records strategy selection evidence" in content
+    assert "`/sdd.analyze` validates `new`-anchor evidence and fails when missing" in content
+    assert "`/sdd.tasks` and `/sdd.implement` block execution when active tuples remain unresolved or missing required strategy evidence" in content
+    assert "Repo-anchor strategy wording preserves strict priority semantics (`existing -> extended -> new`) and explicit rejection-evidence requirements for `new`." in content
+
+
 def test_repository_first_templates_require_complete_and_replayable_outputs():
     matrix = read("templates/technical-dependency-matrix-template.md")
     invocation = read("templates/module-invocation-spec-template.md")
 
-    assert "The dependency matrix MUST be exhaustive for detected product/runtime manifests; do not emit highlight-only subsets." in matrix
-    assert "Classify organization-owned or organization-coordinated packages as `2nd`; external ecosystem packages as `3rd`." in matrix
+    assert "The dependency matrix MUST be exhaustive for the filtered product/runtime dependency set; do not emit highlight-only subsets." in matrix
+    assert "Exhaustiveness applies only after filtering out in-repo first-party module coordinates." in matrix
+    assert "Before row emission, classify each dependency declaration as exactly one of:" in matrix
+    assert "Coordinates matching modules produced inside the current repository MUST be classified as `in_repo_first_party_module` and excluded from this artifact." in matrix
+    assert "Classify organization-owned or organization-coordinated packages not produced inside the current repository as `2nd`; external ecosystem packages as `3rd`." in matrix
     assert "Tooling-only manifests that are outside the product/runtime build surface SHOULD stay in detection notes" in matrix
     assert "Every material version-source mix, version divergence, or unresolved signal MUST cite manifest paths and line refs." in matrix
     assert "Emit one row per normalized dependency usage found in detected product/runtime manifests." in matrix
     assert "Do not collapse multiple modules, version sources, scopes, or evidence locations into one row." in matrix
+    assert "`Evidence` MUST bind to the exact dependency declaration occurrence that produced the row; do not reuse the first matching artifact line in the file." in matrix
+    assert "If the same dependency is declared multiple times in one manifest, preserve one row per declaration occurrence with distinct line refs." in matrix
+    assert "If a dependency declaration omits a local version but resolves from module, parent, or ancestor dependency management, keep `Evidence` at the declaration site and set `Version Source` to the version provider class." in matrix
+    assert "Mark a row `unresolved` only when its effective version cannot be resolved from the declaration, the current module, or the detected in-repo ancestor manifest chain." in matrix
     assert "| Dependency (G:A) | Type | Version | Scope | Version Source | Used By Module | Evidence |" in matrix
     assert "Used By Modules" not in matrix
+    assert "## Signal Derivation Rules" in matrix
+    assert "Emit `version-source-mix` only when the same dependency has 2 or more distinct `Version Source` values across emitted rows." in matrix
+    assert "Emit `version-divergence` only when the same dependency has 2 or more distinct effective versions across emitted rows." in matrix
+    assert "Emit `unresolved` only when at least one emitted row has `Version Source = unresolved` or `Version = unresolved`." in matrix
+    assert "Every `SIG-*` row MUST be derivable from emitted matrix rows only." in matrix
     assert "[version-divergence / version-source-mix / unresolved]" in matrix
+    assert "## Post-Generation Self-Check" in matrix
+    assert "Verify no emitted row uses an `Evidence` line that belongs to a different declaration occurrence of the same dependency." in matrix
+    assert "Verify every repeated declaration occurrence keeps a distinct line ref in `Evidence`." in matrix
+    assert "Verify every `version-divergence` signal is backed by 2 or more distinct effective versions in emitted rows." in matrix
+    assert "Verify every `unresolved` signal references at least one emitted row whose `Version Source` or `Version` is `unresolved`." in matrix
 
     assert "Allowed and forbidden direction tables MUST cover the concrete first-party module edges found in the target runtime repo." in invocation
     assert "Do not collapse unmatched edges into broad grouped rows unless every covered edge shares the same rule and rationale." in invocation
