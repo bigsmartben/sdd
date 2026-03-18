@@ -114,7 +114,15 @@ Use the **`/sdd.specify`** command to describe what you want to build. Focus on 
 /sdd.specify Build an application that can help me organize my photos in separate photo albums. Albums are grouped by date and can be re-organized by dragging and dropping on the main page. Albums are never in other nested albums. Within each album, photos are previewed in a tile-like interface.
 ```
 
-### 4. Create a planning control plane
+### 4. Generate an interactive prototype (optional)
+
+Use **`/sdd.specify.ui-html <spec.md>`** when you need an HTML interaction prototype derived from the current `spec.md` before planning:
+
+- `/sdd.specify.ui-html specs/001-photo-albums/spec.md`
+
+`spec.md` remains the authoritative feature-semantics artifact. `ui.html` is a derived review artifact only.
+
+### 5. Create a planning control plane
 
 Use the **`/sdd.plan`** command with an explicit `spec.md` path to create `plan.md` as the planning control plane. It captures Stage 0 shared context, the planning queue, and the binding projection ledger for later `sdd.plan.*` child commands.
 
@@ -122,7 +130,7 @@ Use the **`/sdd.plan`** command with an explicit `spec.md` path to create `plan.
 /sdd.plan specs/001-photo-albums/spec.md The application uses Vite with minimal number of libraries. Use vanilla HTML, CSS, and JavaScript as much as possible. Images are not uploaded anywhere and metadata is stored in a local SQLite database.
 ```
 
-### 5. Run the planning queue
+### 6. Run the planning queue
 
 Use the `sdd.plan.*` child commands to generate planning artifacts one unit at a time:
 
@@ -134,15 +142,15 @@ Use the `sdd.plan.*` child commands to generate planning artifacts one unit at a
 `plan.md` queue state is the sole authority for planning handoff decisions.
 For repeated `/sdd.plan.contract` runs, follow the runtime `Handoff Decision` output rather than any static frontmatter suggestion. Every planning command now requires its explicit file path; planning commands no longer derive their target from Git branch or `SPECIFY_FEATURE`.
 
-### 6. Break down into tasks
+### 7. Break down into tasks
 
-Use **`/sdd.tasks`** to convert approved planning artifacts into executable orchestration (`Task DAG`, `GLOBAL`, `IF-###`) without performing a unified semantic audit. This is an execution decomposition step only: it projects completed `plan`-stage design into work packages and hard-fails on missing execution anchors instead of supplementing design or writing placeholder tasks.
+Use **`/sdd.tasks <plan.md>`** to convert approved planning artifacts into executable orchestration (`Task DAG`, `GLOBAL`, `IF-###`) without performing a unified semantic audit. This is an execution decomposition step only: it projects completed `plan`-stage design into work packages and hard-fails on missing execution anchors instead of supplementing design or writing placeholder tasks.
 
 ```bash
-/sdd.tasks
+/sdd.tasks specs/001-photo-albums/plan.md
 ```
 
-### 7. Execute implementation
+### 8. Execute implementation
 
 Use **`/sdd.implement`** to execute tasks with runtime hard gates and build your feature according to the plan. Run **`/sdd.analyze`** first as the default pre-implementation audit; if no current audit exists, implementation should stop with an analyze-first blocking reminder unless you explicitly waive it.
 
@@ -326,12 +334,13 @@ Essential commands for the Spec-Driven Development workflow:
 | ----------------------- | ------------------------------------------------------------------------ |
 | `/sdd.constitution` | Create or update project governing principles and development guidelines |
 | `/sdd.specify`      | Define what you want to build (requirements and user stories)            |
+| `/sdd.specify.ui-html <spec.md>` | Generate a derived `ui.html` interaction prototype from `spec.md` |
 | `/sdd.plan <spec.md>`         | Create `plan.md` as the planning control plane and Stage 0 shared context |
 | `/sdd.plan.research <plan.md>` | Generate the queued `research.md` artifact |
 | `/sdd.plan.data-model <plan.md>` | Generate the queued `data-model.md` artifact |
 | `/sdd.plan.test-matrix <plan.md>` | Generate the queued `test-matrix.md` artifact and binding rows |
-| `/sdd.plan.contract <plan.md>` | Generate one queued contract artifact |
-| `/sdd.tasks`        | Produce executable orchestration from approved planning artifacts (no unified semantic audit) |
+| `/sdd.plan.contract <plan.md>` | Generate one queued full-field contract artifact |
+| `/sdd.tasks <plan.md>` | Produce executable orchestration from approved planning artifacts (no unified semantic audit) |
 | `/sdd.implement`    | Execute tasks with runtime hard gates (expects `/sdd.analyze` first; missing audit triggers a blocking reminder unless explicitly waived) |
 
 #### Optional Commands
@@ -342,13 +351,13 @@ Additional commands for enhanced quality and validation:
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `/sdd.clarify`   | Clarify underspecified areas (recommended before `/sdd.plan`; formerly `/quizme`) |
 | `/sdd.analyze`   | Lint-backed unified audit entrypoint: combines mechanical lint checks with cross-artifact semantic findings (traceability, drift, contradictions, and boundary violations) across `spec.md`, `plan.md`, and `tasks.md` |
-| `/sdd.checklist` | Generate standalone checklist artifacts in `checklists/*.md` as a vertical validation pass (does not backfill or redefine main-flow artifacts) |
+| `/sdd.checklist <plan.md>` | Generate standalone checklist artifacts in `checklists/*.md` as a vertical validation pass from an explicit `plan.md` input (does not backfill or redefine main-flow artifacts) |
 
 ### Environment Variables
 
 | Variable          | Description                                                                                                                                                                                                                                                                                            |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `SPECIFY_FEATURE` | Override feature detection for non-Git repositories. Set to the feature directory name (e.g., `001-photo-albums`) to work on a specific feature when not using Git branches.<br/>\*\*Planning commands use explicit file paths now, so this variable mainly affects commands that still rely on active-feature discovery such as `/sdd.clarify` or `/sdd.tasks`. |
+| `SPECIFY_FEATURE` | Override feature detection for non-Git repositories. Set to the feature directory name (e.g., `001-photo-albums`) to work on a specific feature when not using Git branches.<br/>\*\*Planning and tasking commands use explicit file paths now, so this variable mainly affects commands that still rely on active-feature discovery such as `/sdd.clarify`. |
 
 ## 📚 Core Philosophy
 
@@ -559,10 +568,10 @@ tasks for each one randomly distributed into different states of completion. Mak
 one task in each stage of completion.
 ```
 
-If you want checklist-style validation at this point, run `/sdd.checklist` as a separate vertical pass:
+Checklist validation is a post-plan vertical pass with a hard `plan.md` gate. After Step 4 creates `plan.md`, run:
 
 ```text
-/sdd.checklist
+/sdd.checklist specs/001-create-taskify/plan.md
 ```
 
 It's important to use the interaction with Claude Code as an opportunity to clarify and ask questions around the specification - **do not treat its first attempt as final**.
@@ -627,7 +636,7 @@ Run the child commands in queue order:
 /sdd.plan.contract specs/001-create-taskify/plan.md
 ```
 
-`/sdd.plan.contract` is a repeated command. Each run processes one queued unit from `plan.md`, updates that unit's status, and then emits a `Handoff Decision` derived only from the post-writeback queue state in `plan.md`. The `Handoff Decision` should include the next command with the explicit `plan.md` path.
+`/sdd.plan.contract` is a repeated command. Each run processes one queued unit from `plan.md`, updates that unit's status, and then emits a `Handoff Decision` derived only from the post-writeback queue state in `plan.md`. The generated contract is the operation-scoped interface artifact, including the authoritative `Full Field Dictionary (Operation-scoped)` used downstream. The `Handoff Decision` should include the next command with the explicit `plan.md` path.
 
 Static command frontmatter `handoffs` are advisory metadata only. They may point to one unconditional next command, but they are not the authority for state-dependent routing.
 
@@ -658,23 +667,23 @@ That's way too untargeted research. The research needs to help you solve a speci
 > [!NOTE]
 > Claude Code might be over-eager and add components that you did not ask for. Ask it to clarify the rationale and the source of the change.
 
-### **STEP 6:** Audit model and optional checklist (`/sdd.analyze`, `/sdd.checklist`)
+### **STEP 6:** Audit model and optional checklist (`/sdd.analyze`, `/sdd.checklist <plan.md>`)
 
 With the plan in place, proceed to `/sdd.tasks` as the main flow. Avoid ad hoc audit prompts here. After `/sdd.tasks`, run `/sdd.analyze` as the default pre-implementation audit pass: it combines lint-backed mechanical checks with cross-artifact semantic findings across `spec.md`, `plan.md`, and `tasks.md` (drift, contradictions, repo-anchor misuse, audit payload leakage, uncovered MUST requirements, and boundary violations).
 
-If you want checklist-style validation, run `/sdd.checklist` as a separate standalone vertical pass rather than folding checklist burden back into the main-flow artifacts.
+If you want checklist-style validation, run `/sdd.checklist <plan.md>` as a separate standalone vertical pass rather than folding checklist burden back into the main-flow artifacts.
 
 You can also ask Claude Code (if you have the [GitHub CLI](https://docs.github.com/en/github-cli/github-cli) installed) to go ahead and create a pull request from your current branch to `main` with a detailed description, to make sure that the effort is properly tracked.
 
 > [!NOTE]
 > If you suspect over-engineered decisions or cross-artifact drift before implementation, use `/sdd.analyze` as the dedicated audit step and then adjust the upstream artifacts it flags. Ensure that Claude Code follows the [constitution](.specify/memory/constitution.md) as the foundational piece that it must adhere to when refining the plan. Repo semantic anchors come from source code plus `.specify/memory/constitution.md`; helper docs and prior generated artifacts are not repo anchors.
 
-### **STEP 7:** Generate task breakdown with /sdd.tasks
+### **STEP 7:** Generate task breakdown with /sdd.tasks `<plan.md>`
 
 With the implementation plan ready (and any optional vertical checks complete), you can now break down the plan into specific, actionable tasks that can be executed in the correct order. Use the `/sdd.tasks` command to automatically generate a detailed task breakdown from your implementation plan:
 
 ```text
-/sdd.tasks
+/sdd.tasks specs/001-feature-name/plan.md
 ```
 
 This step creates a `tasks.md` file in your feature specification directory that contains:
@@ -687,7 +696,7 @@ This step creates a `tasks.md` file in your feature specification directory that
 
 `/sdd.tasks` consumes approved planning artifacts and turns them into execution orchestration. It does not reopen research, data-model, or contract design, and it does not perform the unified cross-artifact semantic audit.
 
-It should emit single-target work packages only: each task must carry one explicit path or command target plus one primary completion anchor. If required anchors are missing from `plan.md`, `contracts/`, or `test-matrix.md`, `/sdd.tasks` should stop and route back to the relevant `/sdd.plan.*` command rather than inferring new semantics or emitting `blocked`/`todo` placeholder tasks.
+It should emit single-target work packages only: each task must carry one explicit path or command target plus one primary completion anchor. If required anchors are missing from `plan.md`, `contracts/`, or `test-matrix.md`, or if a selected contract is `blocked` / missing `Full Field Dictionary (Operation-scoped)`, `/sdd.tasks` should stop and route back to the relevant `/sdd.plan.*` command rather than inferring new semantics or emitting `blocked`/`todo` placeholder tasks.
 
 For faster runs, the prerequisite script may pre-extract a compact `TASKS_BOOTSTRAP` packet from `plan.md` so `/sdd.tasks` can reuse a joined control-plane inventory instead of reparsing the planning tables during the same run.
 

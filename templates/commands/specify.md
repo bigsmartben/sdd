@@ -5,6 +5,10 @@ handoffs:
     agent: sdd.clarify
     prompt: Clarify specification requirements
     send: true
+  - label: Generate Interactive Prototype
+    agent: sdd.specify.ui-html
+    prompt: Create an interactive prototype by running /sdd.specify.ui-html <path/to/spec.md> with the explicit spec.md path produced in this step.
+    send: true
   - label: Build Technical Plan
     agent: sdd.plan
     prompt: Create a plan by running /sdd.plan <path/to/spec.md> with the explicit spec.md path produced in this step. I am building with...
@@ -74,6 +78,7 @@ Given that feature description, do this:
 
 - Any extracted actor lists, term sets, requirement drafts, or working summaries used during `/sdd.specify` are derived working views only.
 - `spec.md` becomes the authoritative feature-semantics artifact only after the current refinement/validation cycle is written successfully.
+- `ui.html` generated later by `/sdd.specify.ui-html` is a derived prototype artifact and MUST NOT override `spec.md`.
 - If clarification answers, validation rewrites, or scope edits change feature meaning, discard stale derived notes and re-derive from the current `spec.md` content before handoff.
 
 1. Follow this execution flow:
@@ -192,7 +197,7 @@ Given that feature description, do this:
         8. Update the spec by replacing each [NEEDS CLARIFICATION] marker with the user's selected or provided answer
         9. Re-run validation after all clarifications are resolved
 
-4. Report completion with branch name, spec file path, and readiness for the next phase (run `/sdd.clarify` first, then `/sdd.plan`; if user explicitly skips clarification, warn about increased downstream rework risk and then proceed). If checklist-style validation output is needed, direct users to run `/sdd.checklist` as a separate vertical command.
+4. Report completion with branch name, spec file path, and readiness for the next phase (run `/sdd.specify.ui-html <path/to/spec.md>` for an interactive prototype if needed, then `/sdd.clarify` first, then `/sdd.plan`; if user explicitly skips clarification, warn about increased downstream rework risk and then proceed). If checklist-style validation output is needed, direct users to run `/sdd.checklist <path/to/plan.md>` as a separate vertical command after `/sdd.plan`.
 
 **NOTE:** The script creates and checks out the new branch and initializes the spec file before writing.
 

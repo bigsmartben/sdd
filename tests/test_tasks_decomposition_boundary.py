@@ -11,13 +11,20 @@ def read(rel_path: str) -> str:
 def test_tasks_command_hard_fails_on_missing_execution_anchors():
     content = read("templates/commands/tasks.md")
 
+    assert "`/sdd.tasks <path/to/plan.md> [context...]`" in content
+    assert "Preflight Fast Path (Performance + Consistency)" in content
+    assert "Treat `TASKS_BOOTSTRAP.execution_readiness` as the primary preflight hard-gate source when present and parseable." in content
+    assert "If `TASKS_BOOTSTRAP.execution_readiness.ready_for_task_generation = false`, stop immediately and report blocker codes/details from `execution_readiness.errors`; do not continue into broad artifact reads." in content
+    assert "If `TASKS_BOOTSTRAP.execution_readiness.ready_for_task_generation = true`, do not recompute full control-plane hard gates by replaying whole `plan.md` tables" in content
+    assert "Run `{SCRIPT} --plan-file <PLAN_FILE>`" in content
     assert "execution decomposition step for completed `plan`-stage detailed design" in content
     assert "MUST NOT supplement design details, verification semantics, target paths, completion anchors, or dependency meaning" in content
     assert "fail fast and route back to the relevant `/sdd.plan.*` command; do not emit placeholder execution tasks" in content
     assert "Do not create `blocked`, `todo`, placeholder, or compensating execution rows" in content
     assert "Stop and route to `/sdd.plan.test-matrix` if `test-matrix.md` is missing, non-consumable, or lacks the tuple keys needed for executable verification mapping." in content
-    assert "Stop and route to `/sdd.plan.contract` if a required contract artifact/path is missing, non-consumable, or cannot be aligned to the selected binding tuple." in content
+    assert "Stop and route to `/sdd.plan.contract` if a required contract artifact/path is missing, non-consumable, cannot be aligned to the selected binding tuple, is `blocked`, or lacks `Full Field Dictionary (Operation-scoped)`." in content
     assert "treat contract `Downstream Projection Input (Required)` (`Spec Projection Slice`, `Test Projection Slice`) as the authoritative downstream execution projection" in content
+    assert "Treat contract `Full Field Dictionary (Operation-scoped)` as the authoritative upstream field-semantics source" in content
     assert "keep contract projection as execution truth for this run and emit explicit upstream writeback repair actions" in content
     assert "/sdd.plan.interface-detail" not in content
 
@@ -38,6 +45,7 @@ def test_tasks_command_uses_mechanical_single_target_decomposition_rules():
     assert "projection drift is detected (`Spec Projection Slice` or `Test Projection Slice` vs `spec.md` / `test-matrix.md`), keep contract projection semantics for this execution run" in content
     assert "emit `Upstream Alignment Repair` actions mapped to owner commands (`/sdd.specify` for spec drift, `/sdd.plan.test-matrix` for test-matrix drift)." in content
     assert "When `Boundary Anchor` and `Implementation Entry Anchor` differ, keep `Boundary Anchor` for verification/binding refs but anchor implementation tasks to the internal entry/collaborator path defined in `contracts/`." in content
+    assert "Do not supplement owner/default/validation/persisted semantics in `/sdd.tasks`" in content
     assert "Do not infer new business ordering, responsibility boundaries, or implementation strategy." in content
     assert "`GLOBAL` is limited to prerequisites shared by multiple IF units. Using `GLOBAL` as overflow for one-scope work is a hard error." in content
     assert "Do not emit `blocked`, `todo`, placeholder, or compensating tasks to represent missing upstream design anchors." in content
@@ -62,6 +70,18 @@ def test_tasks_template_requires_explicit_single_target_tasks():
     assert "Keep `Goal`, `Contract`, `Implementation Entry`, and `Primary Refs` as short execution references only." in content
     assert "If multiple operations share an `IF Scope`, keep them as separate work packages inside the same IF unit; do not merge them into a composite task." in content
     assert "`tasks.manifest.json` task IDs and dependencies must stay aligned with the `tasks.md` lines rendered from the same execution graph." in content
+    assert "`tasks.manifest.json` top-level keys MUST include `schema_version`, `generated_at`, `generated_from`, and `tasks`." in content
+    assert "`generated_from` MUST include `plan_path`, `plan_source_fingerprint`, and `contract_source_fingerprints`." in content
+
+
+def test_manifest_schema_contract_between_tasks_and_implement():
+    tasks_command = read("templates/commands/tasks.md")
+    implement_command = read("templates/commands/implement.md")
+
+    assert "Manifest top-level MUST include: `schema_version`, `generated_at`, `generated_from`, `tasks`." in tasks_command
+    assert "`generated_from` MUST include at least: `plan_path`, `plan_source_fingerprint`, `contract_source_fingerprints`." in tasks_command
+    assert "**Manifest fast path**: when manifest validation passes, treat manifest as the runtime source of truth for scheduling metadata and skip full `tasks.md` structural parsing in pre-execution gates." in implement_command
+    assert "required task keys: `task_id`, `dependencies`, `if_scope`, `refs`, `target_paths`, `completion_anchors`, `conflict_hints`, `topo_layer`, `status`" in implement_command
 
 
 def test_docs_describe_tasks_as_execution_decomposition_only():

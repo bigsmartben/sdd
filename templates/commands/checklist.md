@@ -1,5 +1,5 @@
 ---
-description: Generate a custom checklist for the current feature based on user requirements.
+description: Generate a custom requirements-quality checklist from an explicit plan.md path.
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json
   ps: scripts/powershell/check-prerequisites.ps1 -Json
@@ -34,17 +34,39 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+## Argument Parsing
+
+Parse `$ARGUMENTS` in this exact order before doing any checklist work:
+
+1. The first positional token is mandatory and is `PLAN_FILE`
+2. `PLAN_FILE` MUST resolve from repo root to an existing file named `plan.md`
+3. `PLAN_FILE` MUST stay under `repo/specs/**`
+4. Any remaining text after removing `PLAN_FILE` is checklist context input
+
+If `PLAN_FILE` is missing or invalid, stop immediately and report the required invocation:
+
+`/sdd.checklist <path/to/plan.md> [checklist-context...]`
+
 ## Execution Steps
 
-1. **Setup**: Run `{SCRIPT}` from repo root and parse JSON for FEATURE_DIR and AVAILABLE_DOCS list.
+1. **Setup (hard gate)**: Run `{SCRIPT} --plan-file <PLAN_FILE>` from repo root and parse JSON for FEATURE_DIR and AVAILABLE_DOCS list.
+   - Treat resolved `PLAN_FILE` as the canonical planning anchor for this run.
    - All file paths must be absolute.
    - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
+   - Do not use current-branch feature inference for checklist target selection.
 
-2. **Clarify intent (dynamic)**: Derive up to THREE initial contextual clarifying questions (no pre-baked catalog). They MUST:
-   - Be generated from the user's phrasing + extracted signals from spec/plan/tasks
-   - Only ask about information that materially changes checklist content
-   - Be skipped individually if already unambiguous in `$ARGUMENTS`
-   - Prefer precision over breadth
+2. **Build intent packet + clarify intent (dynamic)**:
+   - Build a compact `Checklist Intent Packet` from user text and authoritative artifacts with:
+     - candidate domains and risk signals
+     - actor/timing hypothesis
+     - depth hypothesis
+     - must-have inclusions and explicit exclusions
+     - unresolved scenario classes
+   - Then derive up to THREE initial contextual clarifying questions (no pre-baked catalog). They MUST:
+     - Be generated from the user's phrasing + extracted signals from spec/plan/tasks
+     - Only ask about information that materially changes checklist content
+     - Be skipped individually if already unambiguous in `$ARGUMENTS`
+     - Prefer precision over breadth
 
    Generation algorithm:
    1. Extract signals: feature domain keywords (e.g., auth, latency, UX, API), risk indicators ("critical", "must", "compliance"), stakeholder hints ("QA", "review", "security team"), and explicit deliverables ("a11y", "rollback", "contracts").
@@ -72,15 +94,18 @@ You **MUST** consider the user input before proceeding (if not empty).
 
    Output the questions (label Q1/Q2/Q3). After answers: if ≥2 scenario classes (Alternate / Exception / Recovery / Non-Functional domain) remain unclear, you MAY ask up to TWO more targeted follow‑ups (Q4/Q5) with a one-line justification each (e.g., "Unresolved recovery path risk"). Do not exceed five total questions. Skip escalation if user explicitly declines more.
 
-3. **Understand user request**: Combine `$ARGUMENTS` + clarifying answers:
-   - Derive checklist theme (e.g., security, review, deploy, ux)
-   - Consolidate explicit must-have items mentioned by user
-   - Map focus selections to category scaffolding
-   - Infer any missing context from spec/plan/tasks (do NOT hallucinate)
+3. **Synthesize checklist generation contract**: Combine `$ARGUMENTS` + clarifying answers into a deterministic checklist contract:
+   - Checklist theme/domain (e.g., security, review, deploy, ux)
+   - Actor + timing (author/reviewer/release gate)
+   - Depth level (lightweight/standard/formal)
+   - Focus areas mapped to category scaffolding
+   - Explicit must-have inclusions and exclusions
+   - Scenario classes in scope (Primary/Alternate/Exception/Recovery/NFR)
+   - Infer missing context from authoritative docs only (do NOT hallucinate)
 
 4. **Load feature context**: Read from FEATURE_DIR:
-   - spec.md: Feature requirements and scope
-   - plan.md (if exists): Technical details, dependencies
+   - spec.md (required): Feature requirements and scope
+   - plan.md (required; must match resolved PLAN_FILE): Technical details, dependencies
    - tasks.md (if exists): Implementation tasks
 
    **Context Loading Strategy**:
@@ -210,12 +235,13 @@ You **MUST** consider the user input before proceeding (if not empty).
 6. **Structure Reference**: Generate the checklist following the canonical template in `.specify/templates/checklist-template.md` for title, meta section, category headings, and ID formatting. This runtime template path is mandatory; if the file is missing or non-consumable, stop and report the blocker. Do not substitute `templates/checklist-template.md` or synthesize an ad hoc fallback structure.
 
 7. **Report**: Output full path to checklist file, item count, and summarize whether the run created a new file or appended to an existing one. Summarize:
+   - Resolved `PLAN_FILE`
    - Focus areas selected
    - Depth level
    - Actor/timing
    - Any explicit user-specified must-have items incorporated
 
-**Important**: Each `/sdd.checklist` command invocation uses a short, descriptive checklist filename and either creates a new file or appends to an existing one. This allows:
+**Important**: Each `/sdd.checklist <path/to/plan.md>` command invocation uses a short, descriptive checklist filename and either creates a new file or appends to an existing one. This allows:
 
 - Multiple checklists of different types (e.g., `ux.md`, `test.md`, `security.md`)
 - Simple, memorable filenames that indicate checklist purpose

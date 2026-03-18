@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>[FEATURE NAME] UI Preview</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4efe5;
+      --panel: #fffaf2;
+      --ink: #1f1d1a;
+      --muted: #6b6258;
+      --line: #d9cfbf;
+      --accent: #16624f;
+      --accent-weak: #e2f0eb;
+      --warning: #aa6b16;
+      --danger: #a33b2f;
+      --radius: 18px;
+      --shadow: 0 18px 40px rgba(31, 29, 26, 0.08);
+      font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgba(22, 98, 79, 0.12), transparent 32%),
+        linear-gradient(180deg, #f7f1e8 0%, var(--bg) 100%);
+      color: var(--ink);
+    }
+
+    .shell {
+      min-height: 100vh;
+      padding: 32px 20px 48px;
+    }
+
+    .hero,
+    .panel {
+      width: min(1100px, 100%);
+      margin: 0 auto;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 28px;
+      margin-bottom: 20px;
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      line-height: 1.05;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 64ch;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .panel {
+      padding: 24px;
+      display: grid;
+      gap: 20px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--accent-weak);
+      color: var(--accent);
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .status {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .status.default { background: var(--accent-weak); color: var(--accent); }
+    .status.empty { background: #f3ead8; color: var(--warning); }
+    .status.error { background: #f7e2df; color: var(--danger); }
+
+    .rail {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 640px) {
+      .shell { padding: 20px 14px 32px; }
+      .hero, .panel { padding: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">UI Preview</div>
+      <h1>[FEATURE NAME]</h1>
+      <p>
+        Replace this hero summary with the current review-ready UI narrative
+        derived from <code>spec.md</code>.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="grid">
+        <article class="card">
+          <h2>Primary View</h2>
+          <p>[Describe the primary screen, route, and user goal.]</p>
+          <div class="rail">
+            <span class="pill">UC-001</span>
+            <span class="pill">FR-001</span>
+            <span class="pill">VIEW-001</span>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Critical Component</h2>
+          <p>[Describe the highest-value component and its user-visible data.]</p>
+          <div class="status default">Default State</div>
+          <div class="status empty">Empty State</div>
+          <div class="status error">Error State</div>
+        </article>
+      </div>
+
+      <article class="card">
+        <h2>Interaction Notes</h2>
+        <p>[List the key interaction flow, feedback, and transition notes.]</p>
+      </article>
+
+      <article class="card">
+        <h2>Review Checklist</h2>
+        <ul>
+          <li>[Exact copy anchor]</li>
+          <li>[Responsive behavior anchor]</li>
+          <li>[Accessibility anchor]</li>
+          <li>[Loading/empty/error anchor]</li>
+        </ul>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

@@ -24,6 +24,16 @@ echo "Building release packages for $NEW_VERSION"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 AGENT_KEYS_SCRIPT="$SCRIPT_DIR/list-agent-config-keys.py"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+USE_UV_PYTHON="${USE_UV_PYTHON:-0}"
+
+run_python() {
+  if [[ "$USE_UV_PYTHON" == "1" ]]; then
+    uv run python "$@"
+  else
+    "$PYTHON_BIN" "$@"
+  fi
+}
 
 GENRELEASES_DIR=".genreleases"
 mkdir -p "$GENRELEASES_DIR"
@@ -378,7 +388,14 @@ build_variant() {
 
   (
     cd "$base_dir"
-    zip -r "../spec-kit-template-${agent}-${script}-${NEW_VERSION}.zip" .
+    if command -v zip >/dev/null 2>&1; then
+      zip -r "../spec-kit-template-${agent}-${script}-${NEW_VERSION}.zip" .
+    elif command -v tar >/dev/null 2>&1; then
+      tar -a -cf "../spec-kit-template-${agent}-${script}-${NEW_VERSION}.zip" .
+    else
+      echo "Error: neither zip nor tar is available to create release archives" >&2
+      exit 1
+    fi
   )
   echo "Created $GENRELEASES_DIR/spec-kit-template-${agent}-${script}-${NEW_VERSION}.zip"
 }
@@ -395,12 +412,12 @@ load_all_agents() {
     exit 1
   fi
 
-  if ! command -v python3 >/dev/null 2>&1; then
-    echo "Error: python3 is required to load AGENT_CONFIG keys" >&2
+  if ! run_python -c "import sys" >/dev/null 2>&1; then
+    echo "Error: configured Python runtime is not executable (PYTHON_BIN=$PYTHON_BIN, USE_UV_PYTHON=$USE_UV_PYTHON)" >&2
     exit 1
   fi
 
-  if ! helper_output=$(python3 "$AGENT_KEYS_SCRIPT"); then
+  if ! helper_output=$(run_python "$AGENT_KEYS_SCRIPT" | tr -d '\r'); then
     echo "Error: failed to load AGENT_CONFIG keys from helper script: $AGENT_KEYS_SCRIPT" >&2
     exit 1
   fi

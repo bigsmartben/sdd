@@ -628,7 +628,8 @@ class TestSkillDescriptions:
     def test_all_known_commands_have_descriptions(self):
         """All standard spec-kit commands should have enhanced descriptions."""
         expected_commands = [
-            "specify", "plan", "plan.research", "plan.data-model",
+            "specify", "specify.ui-html",
+            "plan", "plan.research", "plan.data-model",
             "plan.test-matrix", "plan.contract",
             "tasks", "implement", "analyze",
             "clarify", "constitution", "checklist", "taskstoissues",
@@ -745,6 +746,8 @@ class TestCliValidation:
         plain = re.sub(r'\x1b\[[0-9;]*m', '', result.output)
         normalized = re.sub(r"[│╭╮╰╯─]+", " ", plain)
         normalized = re.sub(r"\s+", " ", normalized)
+        assert "/sdd.specify - Create baseline specification" in normalized
+        assert "/sdd.specify.ui-html <spec.md> - Generate an interactive prototype when needed" in normalized
         assert "/sdd.plan <spec.md> - Initialize the planning control plane" in normalized
         assert "/sdd.plan.research <plan.md> - Start the planning queue" in normalized
         assert "/sdd.plan.data-model" in normalized
@@ -816,3 +819,5 @@ class TestParameterOrderingIssue:
         assert result.exit_code == 1
         assert "Invalid value for --ai-commands-dir" in result.output
         assert "--here" in result.output
+
+

@@ -93,6 +93,7 @@ If lint is unavailable or execution fails:
 Load only sections needed for semantic conclusions:
 
 - From `spec.md`: `1.1 Actors`, `1.2 System Boundary`, `1.3 UI Data Dictionary (UDD)`, `2.1 Functional Requirements Index`, `2.2 Global UX Flow Overview`, per-UC `3.1 User Story & Acceptance Scenarios`, `3.2 UX — User Interaction Flow`, `3.3 Functional Requirements`, `3.4 UI — UI Element Definitions`, `3.5 Component-Data Dependency Overview`, `N.1 Success Criteria`, `N.2 Environment Edge Cases`, and `Assumptions / Open Questions` when present.
+- From `research.md` when present: feature-local architecture, northbound placement, and module-layering decisions that constrain boundary or implementation-entry selection.
 - From `plan.md`: `Shared Context Snapshot`, `Stage Queue`, `Binding Projection Index`, `Artifact Status`, and source/output fingerprints.
 - From `tasks.md`: task IDs, scopes (`GLOBAL`, `IF-*`), DAG/dependencies, descriptions, referenced files/anchors.
 - From supporting planning artifacts (only when needed):
@@ -141,6 +142,7 @@ Mandatory explicit semantic checks (do not skip even when lint is available):
   - flag any tuple using `BA-*` as normative `Boundary Anchor`
   - flag tuple rows in normative/main validation paths when `Repo Anchor = TODO(REPO_ANCHOR)`, `Anchor Status = todo`, or `Implementation Entry Anchor Status = todo`
   - flag `test-matrix.md`, `plan.md`, or `contracts/` tuple drift where `Boundary Anchor` is not the first consumer-callable entry for the bound interaction
+  - flag `test-matrix.md`, `plan.md`, or `contracts/` tuple drift where `Boundary Anchor` / `Implementation Entry Anchor` contradict feature-local northbound placement or layering constraints stated in `research.md`
 - repo-anchor decision protocol compliance:
   - flag missing required anchor-status fields for anchored tuples:
     - `Anchor Status` in `data-model.md` and `test-matrix.md`
@@ -153,6 +155,10 @@ Mandatory explicit semantic checks (do not skip even when lint is available):
 - contract DTO drift:
   - flag contract `Request`/`Success`/`Failure` fields that drift from anchored client-entry signature surfaces or anchored request/response DTO structure
   - drift includes renaming anchored fields, flattening anchored nesting, or splitting into fields absent from anchored DTOs
+- full-field contract coverage:
+  - flag contracts missing `Full Field Dictionary (Operation-scoped)`
+  - flag contract field-dictionary rows missing `Owner Class`, `Default`, `Validation/Enum`, `Persisted`, `Used in <Operation ID>`, or `Source Anchor`
+  - flag field-dictionary drift between `contracts/` and `test-matrix.md` binding packet seeds (`Request DTO Anchor`, `Response DTO Anchor`, `State Owner Anchor(s)`)
 - contract-projection drift governance:
   - compare each contract `Spec Projection Slice` against referenced `spec.md` rows (`UC/UIF/FR/SC/EC`)
   - compare each contract `Test Projection Slice` against referenced `test-matrix.md` rows (`TM/TC`, scope, pass/failure anchors)
@@ -162,6 +168,8 @@ Mandatory explicit semantic checks (do not skip even when lint is available):
   - treat this pass as the single post-generation runtime correctness gate; require the unified contract `Runtime Correctness Check` section and required rows, while allowing per-row `ok`/`gap` status with explicit evidence
   - flag contract realization sections missing `Implementation Entry Anchor` or using `TODO(REPO_ANCHOR)` there without an explicit blocker path
   - flag sequence designs that do not reach `Implementation Entry Anchor` within the first two request hops from the consumer/client entry
+  - flag HTTP-facing sequences that bypass the controller-layer implementation entry and start directly from a downstream service/facade symbol
+  - flag HTTP-facing contracts that render `Sequence Variant B (Boundary == Entry)` or otherwise collapse controller-first entry into a downstream service/facade symbol
   - flag sequence designs with broken end-to-end continuity at declared granularity (disconnected hops, orphan participants, or broken return chains)
   - flag behavior paths that do not map to one contiguous ordered sequence step chain
   - flag cases where both contract boundary and implementation entry are repo-backed but the handoff is omitted, reversed, or implied by invented participants only
@@ -249,7 +257,7 @@ Assemble and output one decision:
 - `FAIL`: at least one blocking finding remains.
 
 When `FAIL`, provide blocker list with evidence and remediation owner command (`/sdd.constitution`, `/sdd.specify`, `/sdd.plan.*`, or `/sdd.tasks`).
-Treat the following as blocking by default: normative use of `BA-*`, normative tuple rows with unresolved `TODO(REPO_ANCHOR)`, `Anchor Status = todo`, or `Implementation Entry Anchor Status = todo`, repo-anchor decision protocol violations (missing/invalid required anchor-status fields, non-`path::symbol` repo-anchor values, invalid `extended/new` evidence), contract field drift from anchored DTOs/signatures, unresolved contract projection drift requiring upstream writeback (`/sdd.specify`, `/sdd.plan.test-matrix`), runtime correctness gaps in unified contract realization sections, lifecycle stable-state drift from anchored enum/state sources, missing/stale repository-first canonical baseline files, dependency-matrix evidence not traceable to engineering assembly facts, invocation-governance rules that drift from real module layering or ignore divergence/`unresolved` dependency governance signals, and stale planning control-plane rows where `Source Fingerprint` no longer matches current authoritative inputs.
+Treat the following as blocking by default: normative use of `BA-*`, normative tuple rows with unresolved `TODO(REPO_ANCHOR)`, `Anchor Status = todo`, or `Implementation Entry Anchor Status = todo`, repo-anchor decision protocol violations (missing/invalid required anchor-status fields, non-`path::symbol` repo-anchor values, invalid `extended/new` evidence), contracts missing `Full Field Dictionary (Operation-scoped)` or carrying unresolved key field gaps, contract field drift from anchored DTOs/signatures or `test-matrix.md` field seeds, unresolved contract projection drift requiring upstream writeback (`/sdd.specify`, `/sdd.plan.test-matrix`), controller-first HTTP entry violations including illegal `Boundary == Entry` collapse, runtime correctness gaps in unified contract realization sections, lifecycle stable-state drift from anchored enum/state sources, missing/stale repository-first canonical baseline files, dependency-matrix evidence not traceable to engineering assembly facts, invocation-governance rules that drift from real module layering or ignore divergence/`unresolved` dependency governance signals, and stale planning control-plane rows where `Source Fingerprint` no longer matches current authoritative inputs.
 
 ### 7) Next Actions
 

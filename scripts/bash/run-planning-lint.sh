@@ -23,6 +23,7 @@ Supported rule kinds:
   - file_regex_required_any
   - component_symbols_exist
   - anchor_status_allowed_values
+  - northbound_controller_required
 EOF
 }
 
@@ -213,6 +214,50 @@ validate_anchor_status_fragment() {
 
     printf -v "$__out_error_ref" '%s' ""
     return 0
+}
+
+evaluate_northbound_anchor_pair() {
+    local boundary_value="$1"
+    local entry_value="$2"
+    local boundary_http_regex="$3"
+    local boundary_forbidden_regex="$4"
+    local entry_controller_regex="$5"
+    local entry_forbidden_regex="$6"
+    local __out_detail_ref="$7"
+
+    local boundary entry
+    boundary="$(trim "$boundary_value")"
+    entry="$(trim "$entry_value")"
+
+    if [[ -z "$boundary" ]]; then
+        printf -v "$__out_detail_ref" '%s' ""
+        return 1
+    fi
+
+    if grep -qiE "$boundary_forbidden_regex" <<< "$boundary"; then
+        printf -v "$__out_detail_ref" '%s' "Boundary Anchor resolves to facade/service-style symbol while controller-first HTTP entry is required by feature layering."
+        return 0
+    fi
+
+    if grep -qiE "$boundary_http_regex" <<< "$boundary"; then
+        if [[ -z "$entry" ]]; then
+            printf -v "$__out_detail_ref" '%s' "HTTP Boundary Anchor requires an Implementation Entry Anchor that resolves to the owning controller method."
+            return 0
+        fi
+
+        if ! grep -qiE "$entry_controller_regex" <<< "$entry"; then
+            printf -v "$__out_detail_ref" '%s' "HTTP Boundary Anchor is paired with a non-controller Implementation Entry Anchor."
+            return 0
+        fi
+
+        if grep -qiE "$entry_forbidden_regex" <<< "$entry" && ! grep -qiE "$entry_controller_regex" <<< "$entry"; then
+            printf -v "$__out_detail_ref" '%s' "HTTP Boundary Anchor is paired with service/facade-style Implementation Entry Anchor instead of the owning controller method."
+            return 0
+        fi
+    fi
+
+    printf -v "$__out_detail_ref" '%s' ""
+    return 1
 }
 
 parse_args() {
@@ -527,8 +572,183 @@ while IFS=$'\t' read -r id enabled severity scope glob kind params message remed
             eval "$old_nocasematch"
             ;;
 
+        northbound_controller_required)
+            trigger_rel="$(get_param "$params" "trigger_file")"
+            [[ -z "$trigger_rel" ]] && trigger_rel="research.md"
+            trigger_regex="$(get_param "$params" "trigger_regex")"
+            boundary_http_regex="$(get_param "$params" "boundary_http_regex")"
+            boundary_forbidden_regex="$(get_param "$params" "boundary_forbidden_regex")"
+            entry_controller_regex="$(get_param "$params" "entry_controller_regex")"
+            entry_forbidden_regex="$(get_param "$params" "entry_forbidden_regex")"
+            sequence_variant_b_regex="$(get_param "$params" "sequence_variant_b_regex")"
+
+            normalized_regex=""
+            case_flag="false"
+            normalize_regex_for_grep "$trigger_regex" normalized_regex case_flag
+            trigger_regex="$normalized_regex"
+            normalize_regex_for_grep "$boundary_http_regex" normalized_regex case_flag
+            boundary_http_regex="$normalized_regex"
+            normalize_regex_for_grep "$boundary_forbidden_regex" normalized_regex case_flag
+            boundary_forbidden_regex="$normalized_regex"
+            normalize_regex_for_grep "$entry_controller_regex" normalized_regex case_flag
+            entry_controller_regex="$normalized_regex"
+            normalize_regex_for_grep "$entry_forbidden_regex" normalized_regex case_flag
+            entry_forbidden_regex="$normalized_regex"
+            normalize_regex_for_grep "$sequence_variant_b_regex" normalized_regex case_flag
+            sequence_variant_b_regex="$normalized_regex"
+
+            if [[ -z "$trigger_regex" || -z "$boundary_http_regex" || -z "$boundary_forbidden_regex" || -z "$entry_controller_regex" || -z "$entry_forbidden_regex" || -z "$sequence_variant_b_regex" ]]; then
+                add_finding "$id" "$severity" "$glob" 0 "Rule params missing required northbound-controller keys." "Fix rules TSV params for this rule."
+                continue
+            fi
+
+            trigger_file="$FEATURE_DIR/$trigger_rel"
+            if [[ ! -f "$trigger_file" ]]; then
+                continue
+            fi
+
+            if ! grep -qiE "$trigger_regex" "$trigger_file"; then
+                continue
+            fi
+
+            old_nocasematch="$(shopt -p nocasematch || true)"
+            shopt -s nocasematch
+            boundary_label_regex='^[[:space:]]*([-*][[:space:]]*)?(\*\*)?Boundary[ _-]*Anchor([[:space:]]*\([^)]*\))?(\*\*)?[[:space:]]*:[[:space:]]*(.+)$'
+            entry_label_regex='^[[:space:]]*([-*][[:space:]]*)?(\*\*)?Implementation[ _-]*Entry[ _-]*Anchor([[:space:]]*\([^)]*\))?(\*\*)?[[:space:]]*:[[:space:]]*(.+)$'
+            boundary_header_regex='^Boundary[ _-]*Anchor$'
+            entry_header_regex='^Implementation[ _-]*Entry[ _-]*Anchor$'
+
+            for file_path in "${matched_files[@]}"; do
+                rel_file="${file_path#$FEATURE_DIR/}"
+                line_no=0
+                in_table=false
+                boundary_col=-1
+                entry_col=-1
+                pending_boundary=""
+                pending_boundary_line=0
+                has_http_boundary=false
+
+                while IFS= read -r line || [[ -n "$line" ]]; do
+                    line_no=$((line_no + 1))
+
+                    if [[ "$line" =~ $boundary_label_regex ]]; then
+                        if [[ -n "$pending_boundary" ]]; then
+                            detail=""
+                            if evaluate_northbound_anchor_pair "$pending_boundary" "" "$boundary_http_regex" "$boundary_forbidden_regex" "$entry_controller_regex" "$entry_forbidden_regex" detail; then
+                                if ! grep -qiE "$boundary_forbidden_regex" <<< "$pending_boundary"; then
+                                    add_finding "$id" "$severity" "$rel_file" "$pending_boundary_line" "$message $detail" "$remediation"
+                                fi
+                            fi
+                        fi
+                        pending_boundary="${BASH_REMATCH[5]-}"
+                        pending_boundary_line=$line_no
+                        if grep -qiE "$boundary_http_regex" <<< "$pending_boundary"; then
+                            has_http_boundary=true
+                        fi
+                        detail=""
+                        if evaluate_northbound_anchor_pair "$pending_boundary" "" "$boundary_http_regex" "$boundary_forbidden_regex" "$entry_controller_regex" "$entry_forbidden_regex" detail; then
+                            if grep -qiE "$boundary_forbidden_regex" <<< "$pending_boundary"; then
+                                add_finding "$id" "$severity" "$rel_file" "$line_no" "$message $detail" "$remediation"
+                            fi
+                        fi
+                        continue
+                    fi
+
+                    if [[ "$line" =~ $entry_label_regex && -n "$pending_boundary" ]]; then
+                        entry_value="${BASH_REMATCH[5]-}"
+                        detail=""
+                        if evaluate_northbound_anchor_pair "$pending_boundary" "$entry_value" "$boundary_http_regex" "$boundary_forbidden_regex" "$entry_controller_regex" "$entry_forbidden_regex" detail; then
+                            add_finding "$id" "$severity" "$rel_file" "$pending_boundary_line" "$message $detail" "$remediation"
+                        fi
+                        pending_boundary=""
+                        pending_boundary_line=0
+                        continue
+                    fi
+
+                    if [[ "$line" =~ ^[[:space:]]*\|.*\|[[:space:]]*$ ]]; then
+                        line_trimmed="$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+                        content="${line_trimmed#|}"
+                        content="${content%|}"
+                        IFS='|' read -r -a raw_cells <<< "$content"
+                        cells=()
+                        for cell in "${raw_cells[@]}"; do
+                            cells+=("$(trim "$cell")")
+                        done
+
+                        if [[ "$in_table" == false ]]; then
+                            boundary_col=-1
+                            entry_col=-1
+                            idx=0
+                            for cell in "${cells[@]}"; do
+                                if [[ "$cell" =~ $boundary_header_regex ]]; then
+                                    boundary_col=$idx
+                                fi
+                                if [[ "$cell" =~ $entry_header_regex ]]; then
+                                    entry_col=$idx
+                                fi
+                                idx=$((idx + 1))
+                            done
+                            if [[ $boundary_col -ge 0 || $entry_col -ge 0 ]]; then
+                                in_table=true
+                            fi
+                            continue
+                        fi
+
+                        is_separator=true
+                        for cell in "${cells[@]}"; do
+                            if [[ ! "$cell" =~ ^:?-{3,}:?$ ]]; then
+                                is_separator=false
+                                break
+                            fi
+                        done
+                        if [[ "$is_separator" == true ]]; then
+                            continue
+                        fi
+
+                        if [[ $boundary_col -ge 0 && $boundary_col -lt ${#cells[@]} ]]; then
+                            boundary_value="${cells[$boundary_col]}"
+                            if grep -qiE "$boundary_http_regex" <<< "$boundary_value"; then
+                                has_http_boundary=true
+                            fi
+                            entry_value=""
+                            if [[ $entry_col -ge 0 && $entry_col -lt ${#cells[@]} ]]; then
+                                entry_value="${cells[$entry_col]}"
+                            fi
+                            detail=""
+                            if evaluate_northbound_anchor_pair "$boundary_value" "$entry_value" "$boundary_http_regex" "$boundary_forbidden_regex" "$entry_controller_regex" "$entry_forbidden_regex" detail; then
+                                add_finding "$id" "$severity" "$rel_file" "$line_no" "$message $detail" "$remediation"
+                            fi
+                        fi
+                        continue
+                    fi
+
+                    in_table=false
+                    boundary_col=-1
+                    entry_col=-1
+                done < "$file_path"
+
+                if [[ -n "$pending_boundary" ]]; then
+                    detail=""
+                    if evaluate_northbound_anchor_pair "$pending_boundary" "" "$boundary_http_regex" "$boundary_forbidden_regex" "$entry_controller_regex" "$entry_forbidden_regex" detail; then
+                        if ! grep -qiE "$boundary_forbidden_regex" <<< "$pending_boundary"; then
+                            add_finding "$id" "$severity" "$rel_file" "$pending_boundary_line" "$message $detail" "$remediation"
+                        fi
+                    fi
+                fi
+
+                if [[ "$rel_file" == contracts/* && "$has_http_boundary" == true ]]; then
+                    while IFS= read -r match_line; do
+                        [[ -z "$match_line" ]] && continue
+                        variant_line="${match_line%%:*}"
+                        add_finding "$id" "$severity" "$rel_file" "$variant_line" "$message HTTP boundary contracts must not render Sequence Variant B (Boundary == Entry)." "$remediation"
+                    done < <(grep -niE "$sequence_variant_b_regex" "$file_path" || true)
+                fi
+            done
+            eval "$old_nocasematch"
+            ;;
+
         *)
-            add_finding "$id" "$severity" "$glob" 0 "Unsupported rule kind: $kind" "Use one of: file_regex_forbidden, file_regex_required_any, component_symbols_exist, anchor_status_allowed_values."
+            add_finding "$id" "$severity" "$glob" 0 "Unsupported rule kind: $kind" "Use one of: file_regex_forbidden, file_regex_required_any, component_symbols_exist, anchor_status_allowed_values, northbound_controller_required."
             ;;
     esac
 

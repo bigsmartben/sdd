@@ -1,5 +1,5 @@
 ---
-description: Generate an executable, dependency-ordered tasks.md organized by GLOBAL and interface delivery units keyed by IF Scope as execution work packages.
+description: Generate an executable, dependency-ordered tasks.md from an explicit plan.md path, organized by GLOBAL and interface delivery units keyed by IF Scope as execution work packages.
 handoffs:
   - label: Analyze For Consistency
     agent: sdd.analyze
@@ -17,6 +17,24 @@ $ARGUMENTS
 ```
 
 You **MUST** consider the user input before proceeding (if not empty).
+
+## Argument Parsing
+
+1. Parse the first positional token from `$ARGUMENTS` as `PLAN_FILE`
+2. `PLAN_FILE` is mandatory and MUST resolve from repo root to an existing file named `plan.md`
+3. `PLAN_FILE` MUST stay under `repo/specs/**`
+4. Any remaining text after removing `PLAN_FILE` is optional scoped user context
+
+If `PLAN_FILE` is missing or invalid, stop immediately and report the required invocation:
+
+`/sdd.tasks <path/to/plan.md> [context...]`
+
+## Preflight Fast Path (Performance + Consistency)
+
+- Treat `TASKS_BOOTSTRAP.execution_readiness` as the primary preflight hard-gate source when present and parseable.
+- If `TASKS_BOOTSTRAP.execution_readiness.ready_for_task_generation = false`, stop immediately and report blocker codes/details from `execution_readiness.errors`; do not continue into broad artifact reads.
+- If `TASKS_BOOTSTRAP.execution_readiness.ready_for_task_generation = true`, do not recompute full control-plane hard gates by replaying whole `plan.md` tables; keep checks scoped to active unit tuple alignment and artifact consumability.
+- If `execution_readiness` is missing or malformed, fall back to legacy gate derivation from `required_sections`, `stage_queue`, `Binding Projection Index`, and `Artifact Status`.
 
 ## Hook Dispatch Protocol
 
@@ -62,8 +80,9 @@ Use this protocol whenever the Outline asks to execute extension hooks for a pha
 - Keep checks in this command limited to a **P0-frozen set of hard execution safety gates only**: input availability, repository-anchored tuple executability for generated tasks, DAG schedulability, and task-line completeness.
 - `/sdd.tasks` MUST NOT supplement design details, verification semantics, target paths, completion anchors, or dependency meaning that are not already traceable to authoritative upstream artifacts.
 - If required execution anchors are missing from `Binding Projection Index`, completed `Artifact Status` rows, `contracts/`, or `test-matrix.md`, fail fast and route back to the relevant `/sdd.plan.*` command; do not emit placeholder execution tasks.
-- If required downstream projection anchors are missing from a selected contract (`Downstream Projection Input (Required)`), fail fast and route back to `/sdd.plan.contract`; do not infer spec/test anchors.
+- If a selected contract is `blocked`, is missing `Full Field Dictionary (Operation-scoped)`, or is missing required downstream projection anchors (`Downstream Projection Input (Required)`), fail fast and route back to `/sdd.plan.contract`; do not infer spec/test anchors or fill field semantics locally.
 - For each active IF unit, treat contract `Downstream Projection Input (Required)` (`Spec Projection Slice`, `Test Projection Slice`) as the authoritative downstream execution projection.
+- Treat contract `Full Field Dictionary (Operation-scoped)` as the authoritative upstream field-semantics source for owner/default/validation/persisted meaning; `/sdd.tasks` MUST NOT backfill those semantics.
 - If contract projection slices conflict with `spec.md` or `test-matrix.md`, keep contract projection as execution truth for this run and emit explicit upstream writeback repair actions; do not reconcile by local semantic inference inside `/sdd.tasks`.
 - `/sdd.tasks` may fail when execution-critical inputs are missing or non-consumable, but it does **not** own coverage completeness, uncovered MUST requirement analysis, ambiguity sweeps, terminology/diagram drift detection, repo-anchor misuse audits, helper-doc leakage checks, audit hygiene checks, or cross-artifact contradiction analysis.
 - This runtime scheduling guidance is execution-only. It MUST NOT change artifact authority.
@@ -75,7 +94,7 @@ Use this protocol whenever the Outline asks to execute extension hooks for a pha
 
 ## Outline
 
-1. **Setup**: Run `{SCRIPT}` from repo root and parse `FEATURE_DIR`, `AVAILABLE_DOCS`, and `TASKS_BOOTSTRAP`. All paths must be absolute. `TASKS_BOOTSTRAP` is an optional derived run-local control-plane projection extracted from `plan.md`; treat `plan.md` as the authority if bootstrap is null, missing, or fails validation. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
+1. **Setup**: Run `{SCRIPT} --plan-file <PLAN_FILE>` from repo root and parse `FEATURE_DIR`, `AVAILABLE_DOCS`, and `TASKS_BOOTSTRAP`. All paths must be absolute. `TASKS_BOOTSTRAP` is an optional derived run-local control-plane projection extracted from `plan.md`; treat `plan.md` as the authority if bootstrap is null, missing, or fails validation. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
 2. Execute `before_tasks` hooks using the Hook Dispatch Protocol.
 
@@ -88,10 +107,12 @@ Use this protocol whenever the Outline asks to execute extension hooks for a pha
    - Keep only one active generation target at a time; carry forward only stable execution anchors (`IF Scope`, `operationId`, refs, target paths, completion anchors, predecessor edges, blockers).
    - Build run-local derived views only as needed (`tuple-index`, `global-anchor-summary`, `unit-task-cards`, `dag-seed`); never promote them to new artifact authority.
    - Prefer `TASKS_BOOTSTRAP.unit_inventory` and `TASKS_BOOTSTRAP.ready_unit_inventory` over reparsing `Binding Projection Index` / `Artifact Status` tables. Re-open `plan.md` control-plane tables only when bootstrap data is missing, invalid, or contradictory.
+   - If `TASKS_BOOTSTRAP.execution_readiness.ready_for_task_generation = true`, skip duplicate whole-table gate recomputation and proceed directly to scoped unit generation checks.
 
 4. **Load design documents (required + on-demand)**: Read from FEATURE_DIR:
    - **Required**: `plan.md`, `spec.md`, `data-model.md`, `test-matrix.md`, `contracts/`.
-   - First validate `TASKS_BOOTSTRAP.required_sections`, `TASKS_BOOTSTRAP.stage_queue`, and `TASKS_BOOTSTRAP.unit_inventory`. If valid, use them as the default bounded control-plane packet for this run.
+   - First validate `TASKS_BOOTSTRAP.required_sections`, `TASKS_BOOTSTRAP.stage_queue`, `TASKS_BOOTSTRAP.unit_inventory`, and `TASKS_BOOTSTRAP.execution_readiness`. If valid, use them as the default bounded control-plane packet for this run.
+   - If `TASKS_BOOTSTRAP.execution_readiness.ready_for_task_generation = false`, fail fast using bootstrap blocker payload and route upstream; do not run additional broad reads.
    - Consume only the slices needed for the active generation unit. Prefer section-level or row-level rereads over whole-file replay.
    - **On-demand only**: `research.md` when constraints/decisions materially affect the active unit.
    - Treat `plan.md` as the planning control plane. It MUST contain:
@@ -104,7 +125,7 @@ Use this protocol whenever the Outline asks to execute extension hooks for a pha
       - any `Stage Queue` row required for planning completion is not `done`
       - any `Artifact Status` row for `contract` remains non-`done`
    - Stop and route to `/sdd.plan.test-matrix` if `test-matrix.md` is missing, non-consumable, or lacks the tuple keys needed for executable verification mapping.
-   - Stop and route to `/sdd.plan.contract` if a required contract artifact/path is missing, non-consumable, or cannot be aligned to the selected binding tuple.
+   - Stop and route to `/sdd.plan.contract` if a required contract artifact/path is missing, non-consumable, cannot be aligned to the selected binding tuple, is `blocked`, or lacks `Full Field Dictionary (Operation-scoped)`.
 
 5. **Execute task generation workflow**:
    - Treat `plan.md` as the planning control plane and binding projection ledger; it is still a planning summary / structure guide, not as a replacement for canonical requirement, contract, model, or verification semantics.
@@ -143,11 +164,12 @@ Use this protocol whenever the Outline asks to execute extension hooks for a pha
       - Use `contracts/` as canonical interface semantics for implementation/verification task targets.
       - Resolve `contract` target paths from the completed `Artifact Status` rows in `plan.md`, then validate tuple alignment against the authoritative artifacts.
       - For the active `IF Scope`, read only matching contract slices, relevant `TM/TC` rows, relevant `data-model.md` anchors, and required `spec.md` refs.
-      - Require the selected contract to provide `Downstream Projection Input (Required)` with both `Spec Projection Slice` and `Test Projection Slice`; use these as the per-operation execution projection base.
+      - Require the selected contract to provide both `Full Field Dictionary (Operation-scoped)` and `Downstream Projection Input (Required)` with `Spec Projection Slice` plus `Test Projection Slice`; use them as the per-operation execution projection base.
       - Use `contracts/` as the authoritative realization design source for execution targeting; extract `Implementation Entry Anchor` and repo-backed participating components from the contract realization section when placing implementation tasks.
       - When `Boundary Anchor` and `Implementation Entry Anchor` differ, keep `Boundary Anchor` for verification/binding refs but anchor implementation tasks to the internal entry/collaborator path defined in `contracts/`.
       - Do not target implementation work at the external boundary alone when the contract realization section defines a narrower repo-backed internal handoff entry.
       - Consume only repository-anchored contract tuples as executable semantics; treat `TODO(REPO_ANCHOR)` or any tuple with `Anchor Status = todo` or `Implementation Entry Anchor Status = todo` as blocker/note only.
+      - Do not supplement owner/default/validation/persisted semantics in `/sdd.tasks`; consume them from `Full Field Dictionary (Operation-scoped)` only.
       - Build work packages only from the active scope's matching contract/test tuples. If multiple operations share one `IF Scope`, keep them as separate work packages rather than one composite task.
       - When projection drift is detected (`Spec Projection Slice` or `Test Projection Slice` vs `spec.md` / `test-matrix.md`), keep contract projection semantics for this execution run and emit `Upstream Alignment Repair` actions mapped to owner commands (`/sdd.specify` for spec drift, `/sdd.plan.test-matrix` for test-matrix drift).
       - Generate one IF-scoped delivery unit at a time, then compress before loading the next.
@@ -173,10 +195,13 @@ Use this protocol whenever the Outline asks to execute extension hooks for a pha
    - Treat manifest as a **machine-readable projection** of `tasks.md` execution metadata only; it MUST NOT introduce new semantics beyond authoritative artifacts
    - Project manifest data from the same run-local execution graph used to render `tasks.md`; do not re-parse the just-written markdown to construct the manifest
    - If an older manifest exists, replace it from the current run-local execution graph (do not patch incrementally from stale state)
-   - At minimum, each task entry MUST include keys: `task_id`, `dependencies`, `if_scope`, `refs`, `target_paths`, `completion_anchors`, `conflict_hints`, `status` (initialize to `pending`).
+   - Manifest top-level MUST include: `schema_version`, `generated_at`, `generated_from`, `tasks`.
+   - `generated_from` MUST include at least: `plan_path`, `plan_source_fingerprint`, `contract_source_fingerprints`.
+   - At minimum, each task entry MUST include keys: `task_id`, `dependencies`, `if_scope`, `refs`, `target_paths`, `completion_anchors`, `conflict_hints`, `topo_layer`, `status` (initialize to `pending`).
    - After write/report, invalidate run-local derived views (`tuple-index`, `global-anchor-summary`, `unit-task-cards`, `dag-seed`, execution graph cache`) so the next run rebuilds from authoritative artifacts
 
 8. **Report (Execution Summary + Analyze Handoff Only)**: Output a concise summary only:
+   - Resolved control-plane input: `PLAN_FILE`
    - Generated artifact paths: `tasks.md`, `tasks.manifest.json`
    - Total task count and count split by `GLOBAL` and each interface unit (`IF-###`)
    - DAG schedulability result (dependency-safe / blockers detected)
@@ -218,6 +243,7 @@ Additional generation constraints:
 - `GLOBAL` is limited to prerequisites shared by multiple IF units. Using `GLOBAL` as overflow for one-scope work is a hard error.
 - Repository-first projection artifacts in `.specify/memory/repository-first/` are complementary and MUST NOT replace one another (`.specify/memory/repository-first/technical-dependency-matrix.md` = dependency facts, `.specify/memory/repository-first/module-invocation-spec.md` = invocation constraints).
 - Task execution targets MUST reference anchored tuples only. `TODO(REPO_ANCHOR)` items and tuples carrying `Anchor Status = todo` or `Implementation Entry Anchor Status = todo` MUST NOT be converted into executable interface semantics, completion anchors, or implementation objectives.
+- If `Full Field Dictionary (Operation-scoped)` is missing or still carries key gaps for the selected contract, stop and route to `/sdd.plan.contract` instead of compensating locally.
 - Do not emit `blocked`, `todo`, placeholder, or compensating tasks to represent missing upstream design anchors.
 - Use deterministic refs (`operationId`, `CaseID`, `TM-*`, `TC-*`) only when they help execution or completion checking.
 - Keep Task DAG dependency-safe and minimally sufficient (avoid speculative over-constraint).
