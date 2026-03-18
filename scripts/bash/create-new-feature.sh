@@ -183,6 +183,24 @@ safe_fetch_remote_branches() {
     fi
 }
 
+find_remote_branch_ref() {
+    local branch_name="$1"
+    local remote_refs=""
+
+    remote_refs=$(git for-each-ref --format='%(refname:short)' "refs/remotes/*/$branch_name" 2>/dev/null || true)
+    if [ -z "$remote_refs" ]; then
+        return 1
+    fi
+
+    if echo "$remote_refs" | grep -qx "origin/$branch_name"; then
+        echo "origin/$branch_name"
+        return 0
+    fi
+
+    echo "$remote_refs" | head -n1
+    return 0
+}
+
 # Function to check existing branches (local and remote) and return next available number
 check_existing_branches() {
     local specs_dir="$1"
@@ -357,12 +375,6 @@ if echo "$BRANCH_NAME" | grep -qE '^feature-([0-9]{8}-[a-z0-9][a-z0-9-]*)$'; the
     FEATURE_KEY=$(echo "$BRANCH_NAME" | sed -E 's/^feature-([0-9]{8}-[a-z0-9][a-z0-9-]*)$/\1/')
 fi
 
-FEATURE_DIR="$SPECS_DIR/$FEATURE_KEY"
-mkdir -p "$FEATURE_DIR"
-
-SPEC_FILE="$FEATURE_DIR/spec.md"
-cp "$TEMPLATE" "$SPEC_FILE"
-
 if [ "$HAS_GIT" = true ]; then
     CURRENT_HEAD="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
     if [ "$CURRENT_HEAD" != "$BRANCH_NAME" ]; then
@@ -372,13 +384,28 @@ if [ "$HAS_GIT" = true ]; then
                 exit 1
             fi
         else
-            if ! git checkout -b "$BRANCH_NAME" >/dev/null 2>&1; then
-                >&2 echo "Error: Failed to create and switch to git branch '$BRANCH_NAME'. Please check your git configuration and try again."
-                exit 1
+            safe_fetch_remote_branches
+            REMOTE_REF="$(find_remote_branch_ref "$BRANCH_NAME" || true)"
+            if [ -n "$REMOTE_REF" ]; then
+                if ! git checkout --track "$REMOTE_REF" >/dev/null 2>&1; then
+                    >&2 echo "Error: Failed to switch to git branch '$BRANCH_NAME' from remote '$REMOTE_REF'. Please check your git configuration and try again."
+                    exit 1
+                fi
+            else
+                if ! git checkout -b "$BRANCH_NAME" >/dev/null 2>&1; then
+                    >&2 echo "Error: Failed to create and switch to git branch '$BRANCH_NAME'. Please check your git configuration and try again."
+                    exit 1
+                fi
             fi
         fi
     fi
 fi
+
+FEATURE_DIR="$SPECS_DIR/$FEATURE_KEY"
+mkdir -p "$FEATURE_DIR"
+
+SPEC_FILE="$FEATURE_DIR/spec.md"
+cp "$TEMPLATE" "$SPEC_FILE"
 
 # Set the SPECIFY_FEATURE environment variable for the current session
 export SPECIFY_FEATURE="$BRANCH_NAME"

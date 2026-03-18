@@ -110,6 +110,22 @@ function Get-NextBranchNumber {
         [string]$SpecsDir
     )
 
+    Invoke-SafeFetchRemoteBranches
+
+    # Get highest number from ALL branches (not just matching short name)
+    $highestBranch = Get-HighestNumberFromBranches
+
+    # Get highest number from ALL specs (not just matching short name)
+    $highestSpec = Get-HighestNumberFromSpecs -SpecsDir $SpecsDir
+
+    # Take the maximum of both
+    $maxNum = [Math]::Max($highestBranch, $highestSpec)
+
+    # Return next number
+    return $maxNum + 1
+}
+
+function Invoke-SafeFetchRemoteBranches {
     # Best-effort remote sync that avoids interactive/network hangs.
     # Behavior controls:
     # - SPECIFY_SKIP_FETCH=1        -> skip remote fetch entirely
@@ -156,24 +172,30 @@ function Get-NextBranchNumber {
             Write-Warning "[specify] git fetch skipped/failed; using local branch/spec data"
         }
     }
-
-    # Get highest number from ALL branches (not just matching short name)
-    $highestBranch = Get-HighestNumberFromBranches
-
-    # Get highest number from ALL specs (not just matching short name)
-    $highestSpec = Get-HighestNumberFromSpecs -SpecsDir $SpecsDir
-
-    # Take the maximum of both
-    $maxNum = [Math]::Max($highestBranch, $highestSpec)
-
-    # Return next number
-    return $maxNum + 1
 }
 
 function ConvertTo-CleanBranchName {
     param([string]$Name)
     
     return $Name.ToLower() -replace '[^a-z0-9]', '-' -replace '-{2,}', '-' -replace '^-', '' -replace '-$', ''
+}
+
+function Get-RemoteTrackingBranchRef {
+    param([string]$BranchName)
+
+    $refs = @(
+        git for-each-ref --format='%(refname:short)' "refs/remotes/*/$BranchName" 2>$null
+    ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+
+    if ($refs.Count -eq 0) {
+        return $null
+    }
+
+    if ($refs -contains "origin/$BranchName") {
+        return "origin/$BranchName"
+    }
+
+    return $refs[0]
 }
 $fallbackRoot = (Find-RepositoryRoot -StartDir $PSScriptRoot)
 if (-not $fallbackRoot) {
@@ -323,10 +345,6 @@ if ($branchName -match '^feature-([0-9]{8}-[a-z0-9][a-z0-9-]*)$') {
 }
 
 $featureDir = Join-Path $specsDir $featureKey
-New-Item -ItemType Directory -Path $featureDir -Force | Out-Null
-
-$specFile = Join-Path $featureDir 'spec.md'
-Copy-Item $template $specFile -Force
 
 if ($hasGit) {
     try {
@@ -355,19 +373,38 @@ if ($hasGit) {
                 exit 1
             }
         } else {
-            try {
-                git checkout -b $branchName 2>$null | Out-Null
-                if ($LASTEXITCODE -ne 0) {
+            Invoke-SafeFetchRemoteBranches
+            $remoteRef = Get-RemoteTrackingBranchRef -BranchName $branchName
+            if ($remoteRef) {
+                try {
+                    git checkout --track $remoteRef 2>$null | Out-Null
+                    if ($LASTEXITCODE -ne 0) {
+                        Write-Error "Error: Failed to switch to git branch '$branchName' from remote '$remoteRef'. Please check your git configuration and try again."
+                        exit 1
+                    }
+                } catch {
+                    Write-Error "Error: Failed to switch to git branch '$branchName' from remote '$remoteRef'. Please check your git configuration and try again."
+                    exit 1
+                }
+            } else {
+                try {
+                    git checkout -b $branchName 2>$null | Out-Null
+                    if ($LASTEXITCODE -ne 0) {
+                        Write-Error "Error: Failed to create and switch to git branch '$branchName'. Please check your git configuration and try again."
+                        exit 1
+                    }
+                } catch {
                     Write-Error "Error: Failed to create and switch to git branch '$branchName'. Please check your git configuration and try again."
                     exit 1
                 }
-            } catch {
-                Write-Error "Error: Failed to create and switch to git branch '$branchName'. Please check your git configuration and try again."
-                exit 1
             }
         }
     }
 }
+
+$specFile = Join-Path $featureDir 'spec.md'
+New-Item -ItemType Directory -Path $featureDir -Force | Out-Null
+Copy-Item $template $specFile -Force
 
 # Set the SPECIFY_FEATURE environment variable for the current session
 $env:SPECIFY_FEATURE = $branchName

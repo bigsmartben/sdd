@@ -71,6 +71,7 @@ Given that feature description, do this:
    - The JSON is provided in the terminal as output - always refer to it to get the actual content you're looking for
    - The JSON output will contain BRANCH_NAME and SPEC_FILE paths
    - In Git repositories, the script MUST ensure the active branch is `BRANCH_NAME`: if already on it, keep it; otherwise switch to it (create then switch when needed)
+   - `/sdd.specify` is the only command allowed to create/switch feature branches; downstream `/sdd.*` commands MUST stay on the already-active branch and use branch inference only
    - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot")
 
 3. Load `.specify/templates/spec-template.md` to understand required sections. This runtime template path is mandatory; if the file is missing or non-consumable, stop and report the blocker. Do not substitute `templates/spec-template.md` or any other template location.

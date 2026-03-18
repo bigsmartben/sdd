@@ -4,7 +4,6 @@ This is the latest set of releases that you can use with your agent of choice. W
 
 ## Changelog
 
+- Merge pull request #25 from bigsmartben/codex/release-v2.0.22
+- release: v2.0.22
 - chore: sync post-release templates and notes
-- release: v2.0.21
-- Merge pull request #24 from bigsmartben/codex/sync-release-notes-v2.0.20
-- docs: sync release notes for v2.0.20

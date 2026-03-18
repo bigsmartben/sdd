@@ -111,6 +111,7 @@ Use the **`/sdd.constitution`** command to create your project's governing princ
 Use the **`/sdd.specify`** command to describe what you want to build. Focus on the **what** and **why**, not the tech stack.
 
 In Git repositories, `/sdd.specify` resolves a feature branch and switches to it before writing artifacts.
+`/sdd.specify` is the only command that may create/switch branches; all downstream `/sdd.*` commands must run on the active feature branch via branch inference.
 
 ```bash
 /sdd.specify Build an application that can help me organize my photos in separate photo albums. Albums are grouped by date and can be re-organized by dragging and dropping on the main page. Albums are never in other nested albums. Within each album, photos are previewed in a tile-like interface.

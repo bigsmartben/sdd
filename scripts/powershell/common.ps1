@@ -48,7 +48,7 @@ function Get-CurrentBranch {
                     $highestDate = $dateKey
                     $latestFeature = $_.Name
                 }
-            } elseif ($_.Name -match '^(\d{3})-') {
+            } elseif ($_.Name -match '^(\d+)-') {
                 $num = [int]$matches[1]
                 if ($highestDate -eq 0 -and $num -gt $highestLegacy) {
                     $highestLegacy = $num
@@ -94,7 +94,7 @@ function Test-FeatureBranch {
     }
 
     # Backward-compatible acceptance for existing projects.
-    if ($branchLeaf -match '^[0-9]{3}-[a-z0-9][a-z0-9-]*$') {
+    if ($branchLeaf -match '^[0-9]+-[a-z0-9][a-z0-9-]*$') {
         Write-Warning "[specify] Legacy branch naming detected: $branchLeaf. Prefer feature-YYYYMMDD-short-name."
         return $true
     }
@@ -156,7 +156,7 @@ function Find-FeatureDirByPrefix {
         return (Join-Path $specsDir $matches[1])
     }
 
-    if ($branchLeaf -notmatch '^(\d{3})-') {
+    if ($branchLeaf -notmatch '^(\d+)-') {
         return (Join-Path $specsDir $branchLeaf)
     }
 
