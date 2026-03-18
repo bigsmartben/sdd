@@ -170,7 +170,7 @@ Child-command selection rules are non-negotiable:
 - `/sdd.plan.research <path/to/plan.md>` takes the first `research` row in `Stage Queue` with status `pending`
 - `/sdd.plan.data-model <path/to/plan.md>` takes the first `data-model` row in `Stage Queue` with status `pending`
 - `/sdd.plan.test-matrix <path/to/plan.md>` takes the first `test-matrix` row in `Stage Queue` with status `pending`
-- `/sdd.plan.contract <path/to/plan.md>` takes the first `Artifact Status` row where `Unit Type = contract` and `Status = pending`
+- `/sdd.plan.contract <path/to/plan.md>` takes the first `Artifact Status` row where `Unit Type = contract` and `Status = blocked`; if no blocked row exists, take the first row with `Status = pending`
 Child commands MUST NOT scan the repository to invent the next target.
 They MUST consume queue state from the explicit `PLAN_FILE` only.
 

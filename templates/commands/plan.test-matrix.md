@@ -80,7 +80,7 @@ Read only:
 When consuming allowed inputs, prefer section-level rereads over whole-file replay for the selected unit.
 
 `test-matrix.md` remains the authoritative source for verification semantics and stable tuple keys.
-`test-matrix.md` also carries the per-binding contract bootstrap packet consumed by `/sdd.plan.contract`.
+`test-matrix.md` also carries the per-binding contract seed packet consumed by `/sdd.plan.contract`.
 `PLAN_FILE` receives only a compact binding projection index and artifact queue rows derived from that matrix.
 
 ## Binding Projection Rules
@@ -88,12 +88,15 @@ When consuming allowed inputs, prefer section-level rereads over whole-file repl
 Project only stable and unique binding rows from `test-matrix.md` into `Binding Projection Index`.
 Do not copy scenario prose into `PLAN_FILE`.
 Project `Boundary Anchor` as the client-facing contract binding key only, preserving the first consumer-callable entry selected in `test-matrix.md`.
+For HTTP-facing bindings, keep the HTTP route as `Boundary Anchor` and the owning controller method as `Implementation Entry Anchor`.
+If a selected binding drifts away from controller-first HTTP placement, correct it back to `HTTP METHOD /path -> controller -> collaborator` and record the drift/blocker in the generation output rather than preserving the wrong tuple.
 Project only the minimum extra fields required to help `/sdd.plan.contract` select and validate the next unit without re-reading broad context.
-Keep DTO anchors, collaborator anchors, and other realization-detail evidence in `test-matrix.md`; do not mirror them into `PLAN_FILE`.
+Keep DTO anchors, state-owner anchors, collaborator anchors, and other realization-detail evidence in `test-matrix.md`; do not mirror them into `PLAN_FILE`.
 Apply repo-anchor decision order `existing -> extended -> new -> todo`.
 `extended` is valid only for same-entity field/state expansion.
 `new` is normative only when explicit `path::symbol` target evidence is present.
 Rows with `Boundary Anchor Status = todo` or `Implementation Entry Anchor Status = todo` remain forward-looking/non-normative and MUST NOT be projected as main-path binding rows.
+`Request DTO Anchor`, `Response DTO Anchor`, and `State Owner Anchor(s)` MAY remain `TODO(REPO_ANCHOR)` only as explicit contract-gap sources; they MUST NOT trigger a fallback back to minimal-field contract output.
 
 Required columns in each binding row:
 
@@ -113,8 +116,9 @@ Required columns in each binding row:
 
 ## Binding Contract Packet Requirements
 
-For each stable binding in `test-matrix.md`, emit a contract bootstrap packet that `/sdd.plan.contract` can consume without re-deriving the tuple from broad context.
+For each stable binding in `test-matrix.md`, emit an authoritative contract seed packet that `/sdd.plan.contract` can consume without re-deriving the tuple from broad context.
 This packet remains authoritative in `test-matrix.md`; do not mirror it in full into `PLAN_FILE`.
+The packet MUST be sufficient to seed the operation-scoped `Full Field Dictionary` in `contracts/`, even when some field anchors remain explicit gaps.
 
 Each binding packet MUST include:
 
@@ -128,6 +132,7 @@ Each binding packet MUST include:
 - `Request DTO Anchor`
 - `Response DTO Anchor`
 - `Primary Collaborator Anchor`
+- `State Owner Anchor(s)`
 - `TM ID`
 - `TC IDs`
 - `Spec Ref(s)`
@@ -136,6 +141,10 @@ Each binding packet MUST include:
 - `Edge Ref(s)`
 - `Main Pass Anchor`
 - `Branch/Failure Anchor(s)`
+
+When the selected binding is HTTP-facing, keep the first downstream service/facade symbol in `Primary Collaborator Anchor`; if the controller symbol cannot be confirmed, set `Implementation Entry Anchor = TODO(REPO_ANCHOR)` and `Implementation Entry Anchor Status = todo` rather than guessing.
+`Primary Collaborator Anchor` MAY be `N/A`, but `State Owner Anchor(s)` MUST NOT be replaced by `Primary Collaborator Anchor`.
+`State Owner Anchor(s)` MUST identify the owner classes that this operation reads, writes, projects, or uses for state/default/validation decisions.
 
 For each `BindingRowID`, initialize exactly one `Artifact Status` row:
 

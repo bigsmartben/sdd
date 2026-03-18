@@ -1,5 +1,5 @@
 ---
-description: Generate exactly one pending northbound interface design artifact selected from an explicit plan.md path.
+description: Generate exactly one blocked-or-pending northbound interface design artifact selected from an explicit plan.md path.
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json
   ps: scripts/powershell/check-prerequisites.ps1 -Json
@@ -26,13 +26,14 @@ If `PLAN_FILE` is missing or invalid, stop immediately and report the required i
 
 ## Goal
 
-Generate exactly one unified northbound interface design artifact by consuming the first pending `contract` row from `PLAN_FILE` `Artifact Status`.
+Generate exactly one unified northbound interface design artifact by consuming the first `blocked` `contract` row from `PLAN_FILE` `Artifact Status`; if none exists, consume the first `pending` row.
 This command MUST NOT generate multiple contract files in one run.
 Use `.specify/templates/contract-template.md` only. If the runtime template is missing or unreadable, stop and report the blocker instead of inferring structure from mirrors or prior generated artifacts.
 
 This unified artifact includes both:
 
-- Northbound minimal contract semantics (`UIF` + necessary `UDD` slice only)
+- Reader-oriented `Northbound Contract Summary`
+- Operation-scoped `Full Field Dictionary` as the authoritative field-level contract surface
 - Delivery-level realization design (internal handoff, sequence, UML, failure propagation, southbound dependencies)
 - Explicit downstream projection slices for execution (`spec` refs + `test` scope/anchors) used by `/sdd.tasks` and `/sdd.implement`
 
@@ -42,11 +43,14 @@ This unified artifact includes both:
 2. Read only the resolved `IMPL_PLAN`
 3. In `Artifact Status`, find the first row where:
    - `Unit Type = contract`
+   - `Status = blocked`
+4. If no blocked contract row exists, find the first row where:
+   - `Unit Type = contract`
    - `Status = pending`
-4. If no pending contract row exists, stop and report that the contract queue is complete
-5. Resolve the matching `BindingRowID` row in `Binding Projection Index`
-6. Require `test-matrix` stage row to be `done`
-7. Attempt to resolve one selected binding packet in `test-matrix.md` by the same `BindingRowID`; if absent, enter compatibility fallback mode
+5. If no pending or blocked contract row exists, stop and report that the contract queue is complete
+6. Resolve the matching `BindingRowID` row in `Binding Projection Index`
+7. Require `test-matrix` stage row to be `done`
+8. Attempt to resolve one selected binding packet in `test-matrix.md` by the same `BindingRowID`; if absent, enter compatibility fallback mode
 
 ## Plan Control-Plane Input Path (Mandatory)
 
@@ -63,25 +67,29 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 - After selection, treat the selected binding packet in `test-matrix.md` as the default semantic source for the contract run.
 - Read conditional inputs only when the selected binding packet is missing required fields for downstream projection or contract-visible behavior.
 - Read only the selected row's planning inputs and the targeted symbols/files required for that `BindingRowID`.
-- Keep repo-backed verification bounded to no more than five files in one contract run; if that cap is insufficient, keep unresolved items explicit as `todo` / `gap` instead of expanding scope.
-- If `test-matrix.md` has no `Binding Contract Packets` section or no packet matching the selected `BindingRowID`, enter compatibility fallback mode and derive a minimal packet from `Scenario Matrix` + `Verification Case Anchors` rows that match the selected binding tuple.
+- Keep repo-backed verification bounded to no more than eight files in one contract run; if that cap is insufficient, keep unresolved items explicit as `todo` / `gap` instead of expanding scope.
+- If `test-matrix.md` has no `Binding Contract Packets` section or no packet matching the selected `BindingRowID`, enter compatibility fallback mode and derive a contract seed packet from `Scenario Matrix` + `Verification Case Anchors` rows that match the selected binding tuple.
 
 ## Northbound Entry Selection (Client Entry First)
 
 - Treat this artifact as the northbound interface definition for the selected binding.
 - Select `Boundary Anchor` as the first consumer-callable entry, not an internal service/manager/mapper hop.
-- If the operation is consumer-called via HTTP, prefer `HTTP METHOD /path` and keep any controller symbol as repo anchor evidence.
+- If the operation is consumer-called via HTTP, use `HTTP METHOD /path` as `Boundary Anchor` and the owning controller method as `Implementation Entry Anchor`; downstream service/facade symbols remain collaborators.
 - If the operation is consumer-called via RPC/facade, use the anchored `Facade.method` surface.
 - If both HTTP/controller and facade symbols exist, keep the actual consumer-visible first callable entry as normative `Boundary Anchor`.
+- If an input packet or repo anchor contradicts controller-first HTTP placement, correct it to `HTTP METHOD /path -> controller -> collaborator`, record the drift, and keep the downstream symbol out of the boundary tuple.
 
 ## Unified Design Requirements
 
-- Contract scope is `UIF` semantics plus necessary `UDD` only: lock behavior-significant request/response fields, constraints, and visible outcomes; do not expand to an exhaustive payload handbook.
+- `Northbound Contract Summary` is reader-oriented only: summarize external request/response, visible outcomes, and side effects without competing with field-level contract authority.
+- `Full Field Dictionary (Operation-scoped)` is the only authoritative field-level contract surface: it MUST cover request DTO fields, response DTO fields, selected state-owner fields, and the fields directly used for reads, writes, projections, validation, defaults, or state decisions.
+- Do not delete owner fields that this operation does not use; keep them in the field dictionary with `Used in <Operation ID> = no`.
 - Realization design scope is delivery-ready: internal handoff, failure propagation, sequence closure, UML ownership, and southbound dependency chain.
 - Fill `Downstream Projection Input (Required)` with one executable slice for the selected `IF Scope` / `Operation ID`: include `spec` refs (`UC/UIF/FR/SC/EC`) and `test` refs (`Test Scope`, `TM/TC`, pass/failure anchors, command/assertion signal).
 - Sequence design MUST start from consumer/client entry and reach the internal implementation entry within the first two request hops.
 - Sequence design MUST remain end-to-end contiguous at current document granularity; no disconnected hops, orphan participants, or broken return chains.
 - Each declared behavior path MUST map to one contiguous ordered sequence step chain from trigger entry to contract-visible outcome/failure.
+- `Boundary == Entry` is valid only when the boundary and the repo-backed implementation entry are the same callable symbol; do not collapse an HTTP `controller -> service/facade` chain to the downstream symbol.
 - If `Boundary Anchor` and `Implementation Entry Anchor` resolve to the same repo-backed symbol, do not invent a handoff relay hop; reuse one participant/class in sequence and UML.
 - UML MUST cover all executable sequence participants at this document granularity.
 - Every sequence call MUST map to an owning UML method with directed caller/callee relationship.
@@ -110,7 +118,7 @@ Do not read `spec.md`, `research.md`, or `data-model.md` unless the selected bin
 
 ### Compatibility Fallback (Legacy `test-matrix.md`)
 
-If `Binding Contract Packets` is missing or no row matches the selected `BindingRowID`, keep the run unblocked by deriving a minimal compatibility packet from:
+If `Binding Contract Packets` is missing or no row matches the selected `BindingRowID`, keep the run unblocked by deriving a compatibility seed packet from:
 
 - selected `BindingRowID` row in `PLAN_FILE` `Binding Projection Index`
 - matching rows in `test-matrix.md` `Scenario Matrix`
@@ -119,8 +127,10 @@ If `Binding Contract Packets` is missing or no row matches the selected `Binding
 In compatibility fallback mode:
 
 - treat `spec.md` as allowed for missing `UC/UIF/FR/SC/EC` refs
+- treat `research.md` as allowed only for northbound/layering disambiguation
 - treat `data-model.md` as allowed only for lifecycle/invariant constraints required by the selected tuple
-- do not read `research.md`; keep fallback bounded to `PLAN_FILE` + `test-matrix.md` + conditional `spec.md`/`data-model.md` only
+- keep fallback bounded to `PLAN_FILE` + `test-matrix.md` + conditional `spec.md`/`research.md`/`data-model.md` only
+- reconstruct a field-complete contract seed; do not fall back to minimal-field contract output
 
 ### Conditional Inputs
 
@@ -136,8 +146,9 @@ Read `data-model.md` only if the selected binding packet explicitly depends on:
 - lifecycle transitions
 - state invariants
 - entity constraints required for contract-visible behavior
+- state-owner vocabulary needed to complete `Full Field Dictionary (Operation-scoped)`
 
-Do not read `research.md` in default mode for this stage.
+Read `research.md` only when northbound or layering evidence is needed to disambiguate controller-vs-service/facade entry selection.
 
 ### Repo Anchor Input Limits
 
@@ -148,6 +159,9 @@ Read only the minimum repo-backed targets required to confirm the selected bindi
 - request DTO anchor target, when present
 - response DTO anchor target, when present
 - one primary collaborator anchor, when required for contract-visible behavior
+- up to three `State Owner Anchor(s)` targets, when present
+
+When the boundary is HTTP, confirm the route-owning controller before accepting any downstream service/facade symbol as a collaborator.
 
 Do not run repository-wide discovery or broad symbol scans.
 If required evidence is still missing after reading the allowed repo-backed targets, keep the unresolved tuple forward-looking:
@@ -155,6 +169,7 @@ If required evidence is still missing after reading the allowed repo-backed targ
 - set missing anchor to `TODO(REPO_ANCHOR)`
 - set anchor status to `todo`
 - continue with explicit blocker / gap markers instead of expanding scope
+- generate `Full Field Dictionary (Operation-scoped)` with explicit gap rows instead of shrinking the contract back to a minimal field set
 
 After generation, the selected artifact under `contracts/` becomes the authoritative source for interface semantics and realization design semantics for that binding.
 `PLAN_FILE` remains queue state plus stable binding keys only.
@@ -168,6 +183,9 @@ Update only the selected contract row in `Artifact Status`:
 - `Source Fingerprint`
 - `Output Fingerprint`
 - `Blocker`
+
+Set row `Status = blocked` when `Full Field Dictionary (Operation-scoped)` still contains key gaps (missing owner, source anchor, default, validation/enum, or persisted attribution).
+Set row `Status = done` only when the field dictionary is present and key gaps are resolved.
 
 Do not modify unrelated `BindingRowID` rows.
 Do not write contract/design prose into `PLAN_FILE`.
@@ -183,8 +201,9 @@ Emit a `Handoff Decision` section in the runtime output with exactly these field
 
 Determine `Next Command` from the explicit `PLAN_FILE` state only after the selected contract row writeback:
 
-- If any `contract` rows remain `pending`, `Next Command = /sdd.plan.contract <absolute path to plan.md>`
-- Otherwise, if all required planning rows are complete, `Next Command = /sdd.tasks`
+- If any `contract` rows remain `blocked`, `Next Command = /sdd.plan.contract <absolute path to plan.md>`
+- Otherwise, if any `contract` rows remain `pending`, `Next Command = /sdd.plan.contract <absolute path to plan.md>`
+- Otherwise, if all required planning rows are complete, `Next Command = /sdd.tasks <absolute path to plan.md>`
 - Otherwise, if queue state is inconsistent with either condition, keep `Next Command` empty and set `Ready/Blocked = Blocked`
 
 `Decision Basis` MUST cite the post-writeback `Artifact Status` state and planning-complete check that produced the routing decision.

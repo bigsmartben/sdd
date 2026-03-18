@@ -40,6 +40,34 @@ require_tool() {
   fi
 }
 
+resolve_python_runtime() {
+  local candidate
+  for candidate in python3 python; do
+    if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c "import sys" >/dev/null 2>&1; then
+      PYTHON_BIN="$candidate"
+      USE_UV_PYTHON=0
+      return 0
+    fi
+  done
+
+  if command -v uv >/dev/null 2>&1 && uv run python -c "import sys" >/dev/null 2>&1; then
+    PYTHON_BIN="python3"
+    USE_UV_PYTHON=1
+    return 0
+  fi
+
+  echo "Error: no working Python runtime found (tried python3, python, uv run python)" >&2
+  exit 1
+}
+
+run_python() {
+  if [[ "${USE_UV_PYTHON:-0}" == "1" ]]; then
+    uv run python "$@"
+  else
+    "$PYTHON_BIN" "$@"
+  fi
+}
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
 if [[ -z "$REPO_ROOT" ]]; then
@@ -67,15 +95,17 @@ done
 
 require_tool bash
 require_tool git
-require_tool python3
 require_tool uv
-require_tool zip
 require_tool find
 require_tool sed
 require_tool awk
 if [[ $PUBLISH -eq 1 ]]; then
   require_tool gh
 fi
+
+resolve_python_runtime
+export PYTHON_BIN
+export USE_UV_PYTHON
 
 cd "$REPO_ROOT"
 
@@ -103,7 +133,7 @@ bash "$NOTES_SCRIPT" "$VERSION" "$PREVIOUS_TAG"
 
 echo
 echo "[4/5] Enforce full template coverage gate (all agents x sh/ps)"
-mapfile -t RELEASE_AGENTS < <(python3 "$AGENT_KEYS_SCRIPT")
+mapfile -t RELEASE_AGENTS < <(run_python "$AGENT_KEYS_SCRIPT" | tr -d '\r')
 if [[ ${#RELEASE_AGENTS[@]} -eq 0 ]]; then
   echo "Error: AGENT_CONFIG key list is empty" >&2
   exit 1
@@ -152,4 +182,3 @@ else
   echo "[5/5] Preflight complete (publish skipped)"
   echo "Run with --publish to create the GitHub release."
 fi
-

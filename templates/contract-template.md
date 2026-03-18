@@ -13,14 +13,15 @@
 This unified artifact is the single authoritative interface design unit for one binding row.
 It combines:
 
-- `Northbound Minimal Contract` (UIF + necessary UDD only)
+- `Northbound Contract Summary` (reader-oriented external summary only)
+- `Full Field Dictionary (Operation-scoped)` (the only authoritative field-level contract surface)
 - `Contract Realization Design` (delivery-level internal design needed for implementation and verification)
 
 ## Northbound Entry Rules (Normative)
 
 - Allowed normative boundary-anchor forms are exactly: HTTP `METHOD /path`, event topic `event.topic`, RPC/Façade method `Facade.method`, CLI `command`, or explicit `N/A`.
 - `Boundary Anchor` MUST represent the first client-callable entry for this interaction, not an internal service/manager/mapper hop.
-- If clients call an HTTP route directly, prefer HTTP `METHOD /path` as `Boundary Anchor`; do not skip to internal layers.
+- If clients call an HTTP route directly, use HTTP `METHOD /path` as `Boundary Anchor` and the owning controller method as `Implementation Entry Anchor`; do not skip to internal layers.
 - If clients call a stable RPC/Façade surface, use repo-backed `Facade.method` as `Boundary Anchor`.
 - If both controller/HTTP and façade exist, select the consumer-visible first callable entry as normative `Boundary Anchor`.
 - `BA-*` labels are not valid normative boundary anchors. If used, treat them as local shorthand notes only and never as authoritative binding keys.
@@ -63,10 +64,10 @@ Do not repeat full prose from `spec.md` or `test-matrix.md`; project only execut
 |----------|--------------|------------|-------|----------|------------------|--------------------------|----------------------------|
 | [IF-### or N/A] | [operationId or N/A] | [`Contract` / `Integration` / `E2E` / `Mixed`] | [TM-###] | [TC-###, TC-###] | [primary success check] | [failure/branch checks] | [test command or assertion signal] |
 
-## Northbound Minimal Contract
+## Northbound Contract Summary
 
-This section is contract-minimal by design. It is **not** an exhaustive request/response field handbook.
-Use only the necessary `UIF` + `UDD` slice required for implementation/verification closure.
+This section is a reader-oriented summary only. It is **not** the authoritative field-completeness source for this contract.
+Use it to summarize external I/O, outcomes, and visible effects without competing with the `Full Field Dictionary (Operation-scoped)`.
 
 ### External I/O Summary
 
@@ -99,17 +100,29 @@ Request / Success Output / Failure Output MUST align with that anchored signatur
 
 - [Externally visible state change, event, or notification]
 
+## Full Field Dictionary (Operation-scoped)
+
+This section is the only authoritative field-level contract surface for this operation.
+It MUST cover request DTO fields, response DTO fields, and all fields on the selected state-owner classes that this operation reads, writes, projects, validates, defaults, or uses for state decisions.
+Fields not used by this operation MUST remain listed with `Used in [operationId] = no`; do not delete them from the owner view.
+If a field cannot be fully confirmed from the selected DTO/state-owner anchors, keep the field row with an explicit gap marker rather than shrinking the contract back to a minimal field set.
+
+| Field | Owner Class | Direction | Required/Optional | Default | Validation/Enum | Persisted | Contract-visible | Used in [operationId] | Source Anchor |
+|-------|-------------|-----------|-------------------|---------|-----------------|-----------|------------------|-----------------------|---------------|
+| [fieldPath] | [RequestDTO / ResponseDTO / StateOwner] | [input / output / state / derived] | [required / optional / conditional] | [default / derivation / none / gap] | [validation rule / enum vocabulary / gap] | [yes / no / derived / gap] | [yes / no / indirect] | [yes / no] | [`path/to/file.ext::Symbol` or `TODO(REPO_ANCHOR)`] |
+
 ## Contract Realization Design
 
 ### Field Semantics
 
-List only fields that affect contract-visible behavior, validation, authorization, projection, or state transitions.
+Use this section for behavior-specific field notes only.
+`Full Field Dictionary (Operation-scoped)` owns completeness, ownership, defaulting, validation, persistence, and source-anchor traceability.
 If anchored signature surface and request/response DTOs exist, preserve that shape (field names, nesting, enum/status vocabulary).
 Field semantics may add business meaning, but must not rename anchored fields, flatten nesting, split anchored fields into new fields, or add non-anchored flow-only fields.
 
 | Field | Direction | Meaning | Required / Optional | Rules | Source |
 |-------|-----------|---------|---------------------|-------|--------|
-| [field] | [input / output / state] | [semantic meaning] | [required / optional] | [validation, invariant, projection, or mapping rule] | [contract/model/repo ref] |
+| [field] | [input / output / state] | [behavior-specific semantic note] | [required / optional] | [validation, invariant, projection, or mapping rule] | [contract/model/repo ref] |
 
 ### Behavior Paths
 
@@ -125,8 +138,10 @@ Sequence MUST start from consumer/client entry and reach `Implementation Entry A
 Sequence MUST be an end-to-end contiguous chain at this document's declared granularity: no broken hops, no orphan participants, and no disconnected request/response segments.
 Each `Behavior Paths` row MUST map to one contiguous ordered step chain from trigger entry to contract-visible outcome/failure.
 If both controller and facade exist for this operation, show both participants in order with explicit handoff.
+When the boundary is an HTTP route, the controller method is the first repo-backed participant; any service/facade hop must appear after that handoff.
 If `Boundary Anchor` and `Implementation Entry Anchor` differ, render **Sequence Variant A** and show both forward and return handoff messages explicitly.
 If `Boundary Anchor` and `Implementation Entry Anchor` resolve to the same repo-backed symbol, render **Sequence Variant B only**. In that case, MUST NOT declare a separate `Entry` participant or any boundary-to-entry handoff message.
+`Boundary == Entry` is invalid if an HTTP route is handled by a controller but the sequence starts directly from a downstream service/facade symbol.
 
 #### Sequence Variant A (Boundary != Entry)
 
@@ -262,7 +277,7 @@ All required rows in this section must be present; each row may remain `ok` or `
 | Failure consistency | Sequence failure steps map exactly to contract `Failure Output` semantics | [failure rows] | [ok / gap] |
 | State-transition legality | Every sequence step that reads/writes lifecycle state maps to a valid lifecycle transition and invariant | [data-model lifecycle + INV-*] | [ok / gap] |
 | Message callability | Every contract-visible sequence message maps to a callable boundary/collaborator operation with UML ownership | [entry surface/DTO + UML operation/responsibility] | [ok / gap] |
-| Field-ownership closure | Every contract-visible request/response field and every behavior-significant `Field Semantics` row has an explicit owning UML class/interface | [contract I/O + field semantics + UML ownership] | [ok / gap] |
+| Field-ownership closure | Every `Full Field Dictionary (Operation-scoped)` row and every behavior-significant `Field Semantics` row has an explicit owning UML class/interface | [field dictionary + field semantics + UML ownership] | [ok / gap] |
 | Sequence-participant UML closure | Every executable sequence participant appears as a UML class/interface with at least one mapped operation | [sequence participants + UML class/method refs] | [ok / gap] |
 | New-field/method call linkage | Every new field/method/call introduced in this document is explicitly marked and connected by ownership/call relationships | [new markers + UML relationships + sequence calls] | [ok / gap] |
 
@@ -275,7 +290,7 @@ All required rows in this section must be present; each row may remain `ok` or `
 
 ## Boundary Notes
 
-- Keep northbound contract semantics minimal (`UIF` + necessary `UDD` slice only).
+- Keep `Northbound Contract Summary` concise and reader-oriented; field completeness stays in `Full Field Dictionary (Operation-scoped)`.
 - Keep realization design delivery-oriented; avoid feature-wide architecture decomposition.
 - Do not use helper docs (`README.md`, `docs/**`, `specs/**`, generated artifacts) as repo semantic anchors.
 - Do not turn this artifact into an audit ledger.

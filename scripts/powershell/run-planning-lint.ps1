@@ -28,6 +28,7 @@ Supported rule kinds:
   - file_regex_required_any
   - component_symbols_exist
   - anchor_status_allowed_values
+  - northbound_controller_required
 "@
 }
 
@@ -237,6 +238,44 @@ function Test-MarkdownSeparatorRow {
     return $true
 }
 
+function Test-NorthboundAnchorPair {
+    param(
+        [string]$BoundaryValue,
+        [string]$EntryValue,
+        [string]$BoundaryHttpRegex,
+        [string]$BoundaryForbiddenRegex,
+        [string]$EntryControllerRegex,
+        [string]$EntryForbiddenRegex
+    )
+
+    $boundary = ($BoundaryValue ?? '').Trim()
+    $entry = ($EntryValue ?? '').Trim()
+
+    if ([string]::IsNullOrWhiteSpace($boundary)) {
+        return $null
+    }
+
+    if ($boundary -match $BoundaryForbiddenRegex) {
+        return 'Boundary Anchor resolves to facade/service-style symbol while controller-first HTTP entry is required by feature layering.'
+    }
+
+    if ($boundary -match $BoundaryHttpRegex) {
+        if ([string]::IsNullOrWhiteSpace($entry)) {
+            return 'HTTP Boundary Anchor requires an Implementation Entry Anchor that resolves to the owning controller method.'
+        }
+
+        if ($entry -notmatch $EntryControllerRegex) {
+            return 'HTTP Boundary Anchor is paired with a non-controller Implementation Entry Anchor.'
+        }
+
+        if (($entry -match $EntryForbiddenRegex) -and ($entry -notmatch $EntryControllerRegex)) {
+            return 'HTTP Boundary Anchor is paired with service/facade-style Implementation Entry Anchor instead of the owning controller method.'
+        }
+    }
+
+    return $null
+}
+
 if ($Help) {
     Show-Help
     exit 0
@@ -425,7 +464,7 @@ foreach ($row in $rows) {
             $headerPattern = '(?i)(Repo[ _-]*Anchor[ _-]*Status|Boundary[ _-]*Anchor[ _-]*Status|Implementation[ _-]*Entry[ _-]*Anchor[ _-]*Status|Anchor[ _-]*Status)'
 
             foreach ($file in $matched) {
-                $lines = Get-Content -Path $file.FullPath -ErrorAction Stop
+                $lines = @(Get-Content -Path $file.FullPath -ErrorAction Stop)
                 $statusColumnIndex = -1
                 $inTable = $false
 
@@ -441,7 +480,7 @@ foreach ($row in $rows) {
                         }
                     }
 
-                    $cells = Get-MarkdownCells -Line $line
+                    $cells = @(Get-MarkdownCells -Line $line)
                     if ($cells.Count -eq 0) {
                         $statusColumnIndex = -1
                         $inTable = $false
@@ -483,19 +522,194 @@ foreach ($row in $rows) {
             }
         }
 
+        'northbound_controller_required' {
+            $triggerRel = $params['trigger_file']
+            if ([string]::IsNullOrWhiteSpace($triggerRel)) {
+                $triggerRel = 'research.md'
+            }
+
+            $triggerRegex = $params['trigger_regex']
+            $boundaryHttpRegex = $params['boundary_http_regex']
+            $boundaryForbiddenRegex = $params['boundary_forbidden_regex']
+            $entryControllerRegex = $params['entry_controller_regex']
+            $entryForbiddenRegex = $params['entry_forbidden_regex']
+            $sequenceVariantBRegex = $params['sequence_variant_b_regex']
+
+            if ([string]::IsNullOrWhiteSpace($triggerRegex) -or
+                [string]::IsNullOrWhiteSpace($boundaryHttpRegex) -or
+                [string]::IsNullOrWhiteSpace($boundaryForbiddenRegex) -or
+                [string]::IsNullOrWhiteSpace($entryControllerRegex) -or
+                [string]::IsNullOrWhiteSpace($entryForbiddenRegex) -or
+                [string]::IsNullOrWhiteSpace($sequenceVariantBRegex)) {
+                Add-Finding -RuleId $row.id -Severity $row.severity -File $row.glob -Line 0 -Message 'Rule params missing required northbound-controller keys.' -Remediation 'Fix rules TSV params for this rule.'
+                continue
+            }
+
+            $triggerPath = Join-Path $featureRoot ($triggerRel -replace '/', [System.IO.Path]::DirectorySeparatorChar)
+            if (-not (Test-Path -Path $triggerPath -PathType Leaf)) {
+                continue
+            }
+
+            if (-not (Select-String -Path $triggerPath -Pattern $triggerRegex -Quiet -ErrorAction Stop)) {
+                continue
+            }
+
+            $boundaryLabelPattern = '(?i)^\s*(?:[-*]\s*)?(?:\*\*)?Boundary[ _-]*Anchor(?:\s*\([^)]*\))?(?:\*\*)?\s*:\s*(.+)$'
+            $entryLabelPattern = '(?i)^\s*(?:[-*]\s*)?(?:\*\*)?Implementation[ _-]*Entry[ _-]*Anchor(?:\s*\([^)]*\))?(?:\*\*)?\s*:\s*(.+)$'
+            $boundaryHeaderPattern = '(?i)^Boundary[ _-]*Anchor$'
+            $entryHeaderPattern = '(?i)^Implementation[ _-]*Entry[ _-]*Anchor$'
+
+            foreach ($file in $matched) {
+                $lines = @(Get-Content -Path $file.FullPath -ErrorAction Stop)
+                $pendingBoundaryValue = $null
+                $pendingBoundaryLine = 0
+                $boundaryColumnIndex = -1
+                $entryColumnIndex = -1
+                $inTable = $false
+                $hasHttpBoundary = $false
+
+                for ($i = 0; $i -lt $lines.Count; $i++) {
+                    $lineNumber = $i + 1
+                    $line = $lines[$i]
+
+                    $boundaryMatch = [regex]::Match($line, $boundaryLabelPattern)
+                    if ($boundaryMatch.Success) {
+                        if ($null -ne $pendingBoundaryValue) {
+                            $detail = Test-NorthboundAnchorPair `
+                                -BoundaryValue $pendingBoundaryValue `
+                                -EntryValue '' `
+                                -BoundaryHttpRegex $boundaryHttpRegex `
+                                -BoundaryForbiddenRegex $boundaryForbiddenRegex `
+                                -EntryControllerRegex $entryControllerRegex `
+                                -EntryForbiddenRegex $entryForbiddenRegex
+                            if ($detail -and ($pendingBoundaryValue -notmatch $boundaryForbiddenRegex)) {
+                                Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $pendingBoundaryLine -Message "$($row.message) $detail" -Remediation $row.remediation
+                            }
+                        }
+
+                        $pendingBoundaryValue = $boundaryMatch.Groups[1].Value.Trim()
+                        $pendingBoundaryLine = $lineNumber
+                        if ($pendingBoundaryValue -match $boundaryHttpRegex) {
+                            $hasHttpBoundary = $true
+                        }
+
+                        $detail = Test-NorthboundAnchorPair `
+                            -BoundaryValue $pendingBoundaryValue `
+                            -EntryValue '' `
+                            -BoundaryHttpRegex $boundaryHttpRegex `
+                            -BoundaryForbiddenRegex $boundaryForbiddenRegex `
+                            -EntryControllerRegex $entryControllerRegex `
+                            -EntryForbiddenRegex $entryForbiddenRegex
+                        if ($detail -and ($pendingBoundaryValue -match $boundaryForbiddenRegex)) {
+                            Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lineNumber -Message "$($row.message) $detail" -Remediation $row.remediation
+                        }
+                        continue
+                    }
+
+                    $entryMatch = [regex]::Match($line, $entryLabelPattern)
+                    if ($entryMatch.Success -and $null -ne $pendingBoundaryValue) {
+                        $detail = Test-NorthboundAnchorPair `
+                            -BoundaryValue $pendingBoundaryValue `
+                            -EntryValue $entryMatch.Groups[1].Value.Trim() `
+                            -BoundaryHttpRegex $boundaryHttpRegex `
+                            -BoundaryForbiddenRegex $boundaryForbiddenRegex `
+                            -EntryControllerRegex $entryControllerRegex `
+                            -EntryForbiddenRegex $entryForbiddenRegex
+                        if ($detail) {
+                            Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $pendingBoundaryLine -Message "$($row.message) $detail" -Remediation $row.remediation
+                        }
+                        $pendingBoundaryValue = $null
+                        $pendingBoundaryLine = 0
+                        continue
+                    }
+
+                    $cells = @(Get-MarkdownCells -Line $line)
+                    if ($cells.Count -eq 0) {
+                        $boundaryColumnIndex = -1
+                        $entryColumnIndex = -1
+                        $inTable = $false
+                        continue
+                    }
+
+                    if (-not $inTable) {
+                        $boundaryColumnIndex = -1
+                        $entryColumnIndex = -1
+                        for ($idx = 0; $idx -lt $cells.Count; $idx++) {
+                            if ($cells[$idx] -match $boundaryHeaderPattern) {
+                                $boundaryColumnIndex = $idx
+                            }
+                            if ($cells[$idx] -match $entryHeaderPattern) {
+                                $entryColumnIndex = $idx
+                            }
+                        }
+                        if ($boundaryColumnIndex -ge 0 -or $entryColumnIndex -ge 0) {
+                            $inTable = $true
+                        }
+                        continue
+                    }
+
+                    if (Test-MarkdownSeparatorRow -Cells $cells) {
+                        continue
+                    }
+
+                    if ($boundaryColumnIndex -ge 0 -and $boundaryColumnIndex -lt $cells.Count) {
+                        $boundaryValue = $cells[$boundaryColumnIndex]
+                        if ($boundaryValue -match $boundaryHttpRegex) {
+                            $hasHttpBoundary = $true
+                        }
+                        $entryValue = ''
+                        if ($entryColumnIndex -ge 0 -and $entryColumnIndex -lt $cells.Count) {
+                            $entryValue = $cells[$entryColumnIndex]
+                        }
+
+                        $detail = Test-NorthboundAnchorPair `
+                            -BoundaryValue $boundaryValue `
+                            -EntryValue $entryValue `
+                            -BoundaryHttpRegex $boundaryHttpRegex `
+                            -BoundaryForbiddenRegex $boundaryForbiddenRegex `
+                            -EntryControllerRegex $entryControllerRegex `
+                            -EntryForbiddenRegex $entryForbiddenRegex
+                        if ($detail) {
+                            Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lineNumber -Message "$($row.message) $detail" -Remediation $row.remediation
+                        }
+                    }
+                }
+
+                if ($null -ne $pendingBoundaryValue) {
+                    $detail = Test-NorthboundAnchorPair `
+                        -BoundaryValue $pendingBoundaryValue `
+                        -EntryValue '' `
+                        -BoundaryHttpRegex $boundaryHttpRegex `
+                        -BoundaryForbiddenRegex $boundaryForbiddenRegex `
+                        -EntryControllerRegex $entryControllerRegex `
+                        -EntryForbiddenRegex $entryForbiddenRegex
+                    if ($detail -and ($pendingBoundaryValue -notmatch $boundaryForbiddenRegex)) {
+                        Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $pendingBoundaryLine -Message "$($row.message) $detail" -Remediation $row.remediation
+                    }
+                }
+
+                if ($file.RelPath -like 'contracts/*' -and $hasHttpBoundary) {
+                    $variantHits = Select-String -Path $file.FullPath -Pattern $sequenceVariantBRegex -ErrorAction SilentlyContinue
+                    foreach ($hit in $variantHits) {
+                        Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $hit.LineNumber -Message "$($row.message) HTTP boundary contracts must not render Sequence Variant B (Boundary == Entry)." -Remediation $row.remediation
+                    }
+                }
+            }
+        }
+
         default {
-            Add-Finding -RuleId $row.id -Severity $row.severity -File $row.glob -Line 0 -Message "Unsupported rule kind: $($row.kind)" -Remediation 'Use one of: file_regex_forbidden, file_regex_required_any, component_symbols_exist, anchor_status_allowed_values.'
+            Add-Finding -RuleId $row.id -Severity $row.severity -File $row.glob -Line 0 -Message "Unsupported rule kind: $($row.kind)" -Remediation 'Use one of: file_regex_forbidden, file_regex_required_any, component_symbols_exist, anchor_status_allowed_values, northbound_controller_required.'
         }
     }
 }
 
-$payload = [ordered]@{
-    feature_dir     = $featureRoot
-    rules_total     = $rulesTotal
-    rules_evaluated = $rulesEvaluated
-    findings_total  = $findings.Count
+$payload = [PSCustomObject][ordered]@{
+    feature_dir          = $featureRoot
+    rules_total          = $rulesTotal
+    rules_evaluated      = $rulesEvaluated
+    findings_total       = [int]$findings.Count
     findings_by_severity = $severityCounts
-    findings        = @($findings)
+    findings             = @($findings.ToArray())
 }
 
 if ($Json) {

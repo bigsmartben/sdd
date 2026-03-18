@@ -34,6 +34,7 @@ def test_specify_and_plan_define_authority_vs_derived_views():
 
     assert "Authority and derivation rules" in specify
     assert "`spec.md` becomes the authoritative feature-semantics artifact" in specify
+    assert "`ui.html` generated later by `/sdd.specify.ui-html` is a derived prototype artifact" in specify
     assert ".specify/templates/spec-template.md" in specify
     assert "does **not** generate downstream planning-stage artifacts directly" in plan
     assert "`plan.md` is the sole planning control plane" in plan
@@ -107,6 +108,8 @@ def test_tasks_boundary_stays_execution_gates_only_not_comprehensive_audit():
 def test_tasks_runtime_projection_and_hook_boundaries_stay_narrow():
     tasks = read("templates/commands/tasks.md")
 
+    assert "Treat `TASKS_BOOTSTRAP.execution_readiness` as the primary preflight hard-gate source when present and parseable." in tasks
+    assert "If `TASKS_BOOTSTRAP.execution_readiness.ready_for_task_generation = true`, skip duplicate whole-table gate recomputation and proceed directly to scoped unit generation checks." in tasks
     assert "Hook dispatch here is phase-boundary execution only" in tasks
     assert "same run-local execution graph used to render `tasks.md`" in tasks
     assert "do not re-parse the just-written markdown to construct the manifest" in tasks
@@ -120,3 +123,5 @@ def test_analyze_boundary_owns_centralized_cross_artifact_audit_and_stale_gate()
     assert "owns comprehensive implementation-readiness analysis and audit responsibilities" in analyze
     assert "cross-artifact contradiction detection" in analyze
     assert "stale planning outputs where `plan.md` source fingerprints no longer match the current upstream artifact state" in analyze
+
+

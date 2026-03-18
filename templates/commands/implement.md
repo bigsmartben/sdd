@@ -89,7 +89,11 @@ Terminology note (compatibility, non-normative):
    - **Required artifact presence**: confirm `tasks.md` exists and prerequisite command output (`FEATURE_DIR`, `AVAILABLE_DOCS`) is available.
    - **Analyze-first blocking reminder**: if there is no evidence this feature has completed `/sdd.analyze` for the current `tasks.md`, stop and route the user to `/sdd.analyze` before continuing. Continue only if the user explicitly waives the audit step for this run.
    - **Manifest probe (preferred runtime source)**: check for `tasks.manifest.json` in the same directory as `tasks.md`.
-   - **Manifest validation (when present)**: validate parseability and required task keys: `task_id`, `dependencies`, `if_scope`, `refs`, `target_paths`, `completion_anchors`, `conflict_hints`, `status`.
+   - **Manifest validation (when present)**:
+     - top-level required keys: `schema_version`, `generated_at`, `generated_from`, `tasks`
+     - `generated_from` required keys: `plan_path`, `plan_source_fingerprint`, `contract_source_fingerprints`
+     - required task keys: `task_id`, `dependencies`, `if_scope`, `refs`, `target_paths`, `completion_anchors`, `conflict_hints`, `topo_layer`, `status`
+   - **Manifest fast path**: when manifest validation passes, treat manifest as the runtime source of truth for scheduling metadata and skip full `tasks.md` structural parsing in pre-execution gates.
    - **Fallback trigger**: if manifest is missing or validation fails, switch to `tasks.md` parsing for this run and report the fallback reason.
    - **`tasks.md` consumability** (fallback path): confirm `tasks.md` includes the required consumable sections:
       - `Upstream Inputs (Execution References)`
@@ -120,6 +124,7 @@ Terminology note (compatibility, non-normative):
   - Treat runtime batching notes, ready-task summaries, and local execution shortcuts as derived views only.
   - If local execution notes conflict with authoritative artifacts, use the authoritative artifact for semantics; if unresolved safely, stop and route upstream repair.
   - Treat `TODO(REPO_ANCHOR)` as forward-looking notes only; execute only repository-anchored semantics.
+  - Treat contract `Full Field Dictionary (Operation-scoped)` as the authoritative field-semantics source; do not fill missing owner/default/validation/persisted meaning during `/sdd.implement`.
   - Repository-first execution discipline:
     - dependency changes MUST be validated against `.specify/memory/repository-first/technical-dependency-matrix.md`
     - invocation-direction/layering changes MUST be validated against `.specify/memory/repository-first/module-invocation-spec.md`
@@ -168,6 +173,7 @@ Terminology note (compatibility, non-normative):
      - MUST keep original task IDs traceable (do not erase source task lineage)
      - MUST update task checkboxes and report adaptations in execution output
    - **No new normative semantics in implement**: Do not turn `TODO(REPO_ANCHOR)` into runtime semantics and do not create new external contracts, lifecycle stable states, or `INV-*` definitions during `/sdd.implement`; send unresolved semantic gaps upstream.
+   - Do not repair missing `Full Field Dictionary (Operation-scoped)` rows or invent missing field attributes during `/sdd.implement`; route those repairs to `/sdd.plan.contract`.
    - **No repository-first backfill in implement**: do not reconstruct dependency matrix facts or invocation governance rules inside `/sdd.implement`; consume upstream projections and route evidence gaps upstream.
    - **Progress signaling**: report task progress, heartbeat on quiet periods, and before/after status for long-running commands.
    - **Error handling**:

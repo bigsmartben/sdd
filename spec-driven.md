@@ -92,7 +92,7 @@ Once a feature specification exists, `/sdd.plan <spec.md>` initializes the plann
 3. **Control-Plane Initialization**: Writes `plan.md` with `Shared Context Snapshot`, `Stage Queue`, `Binding Projection Index`, and `Artifact Status`
 4. **Queue-Driven Planning**: The child commands `/sdd.plan.research <plan.md>`, `/sdd.plan.data-model <plan.md>`, `/sdd.plan.test-matrix <plan.md>`, and repeated `/sdd.plan.contract <plan.md>` generate stage artifacts one queue unit at a time
 
-### The `/sdd.tasks` Command
+### The `/sdd.tasks <plan.md>` Command
 
 After a plan is created, this command projects the completed planning-stage design set into an executable task list:
 
@@ -101,7 +101,7 @@ After a plan is created, this command projects the completed planning-stage desi
 3. **Dependency Modeling**: Builds a `Task DAG` that becomes the runtime ordering authority
 4. **Output**: Writes `tasks.md` in the feature directory, ready for execution by a Task agent
 
-`/sdd.tasks` does not supplement missing design or audit the feature end-to-end. If required execution anchors are missing, it should stop and route back to the relevant planning command instead of emitting placeholder tasks.
+`/sdd.tasks` does not supplement missing design or audit the feature end-to-end. If required execution anchors are missing, or if a selected contract is `blocked` / missing `Full Field Dictionary (Operation-scoped)`, it should stop and route back to the relevant planning command instead of emitting placeholder tasks.
 
 Before implementation, `/sdd.analyze` can be used as the dedicated audit pass to detect drift, contradictions, uncovered MUST requirements, repo-anchor misuse, and unnecessary audit/traceability overhead across `spec.md`, `plan.md`, and `tasks.md`.
 
@@ -131,6 +131,9 @@ Total: ~12 hours of documentation work
 # - Generates specs/003-chat-system/spec.md
 # - Populates it with structured requirements
 
+# Step 1b: Optionally generate an interactive prototype
+/sdd.specify.ui-html specs/003-chat-system/spec.md
+
 # Step 2: Initialize planning control plane (5 minutes)
 /sdd.plan specs/003-chat-system/spec.md WebSocket for real-time messaging, PostgreSQL for history, Redis for presence
 
@@ -141,9 +144,10 @@ Total: ~12 hours of documentation work
 /sdd.plan.contract specs/003-chat-system/plan.md
 
 # Step 3: Generate executable tasks (5 minutes)
-/sdd.tasks
+/sdd.tasks specs/003-chat-system/plan.md
 
 # This automatically creates:
+# - specs/003-chat-system/ui.html (via /sdd.specify.ui-html <spec.md>)
 # - specs/003-chat-system/plan.md
 # - specs/003-chat-system/research.md (via /sdd.plan.research <plan.md>)
 # - specs/003-chat-system/data-model.md (via /sdd.plan.data-model <plan.md>)
@@ -156,7 +160,7 @@ In 15 minutes, you have:
 
 - A complete feature specification with user stories and acceptance criteria
 - A detailed implementation plan with technology choices and rationale
-- A global data model, feature verification design, and minimum-I/O contracts
+- A global data model, feature verification design, and operation-scoped full-field contracts
 - Interface-level design artifacts and verification scenarios ready for task generation
 - A dedicated audit step before implementation
 - All documents properly versioned in a feature branch
