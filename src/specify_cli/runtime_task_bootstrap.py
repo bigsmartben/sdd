@@ -16,6 +16,7 @@ from specify_cli.runtime_common import (
     summarize_stage_queue,
     summarize_status_rows,
 )
+from specify_cli.runtime_gate_protocol import build_repository_first_gate_protocol
 
 
 TASK_BOOTSTRAP_SCHEMA_VERSION = "1.4"
@@ -27,6 +28,28 @@ TASK_SECTION_HEADINGS = (
 )
 UNRESOLVED_CONTRACT_NAME_RE = re.compile(r"<([A-Z][A-Za-z0-9]+)>")
 TASK_REQUIRED_STAGE_IDS = {"research", "test-matrix", "data-model"}
+TASK_BASELINE_CODE_TO_CATEGORY = {
+    "missing_required_sections": "missing",
+    "empty_binding_projection_index": "missing",
+    "missing_binding_contract_packet": "missing",
+    "binding_contract_packet_missing_required_fields": "missing",
+    "missing_contract_artifact_rows": "missing",
+    "missing_contract_for_binding_rows": "missing",
+    "contract_target_path_missing": "missing",
+    "done_contract_target_missing": "missing",
+    "incomplete_stage_queue": "stale",
+    "contract_rows_not_done": "stale",
+    "binding_projection_packet_drift": "stale",
+    "binding_projection_missing_required_fields": "non_traceable",
+    "contract_placeholder_names_present": "non_traceable",
+    "full_field_dictionary_missing": "non_traceable",
+    "field_dictionary_tier_missing": "non_traceable",
+    "test_projection_section_missing": "non_traceable",
+    "closure_check_section_missing": "non_traceable",
+    "closure_check_rows_missing": "non_traceable",
+    "contract_field_gap_unresolved": "non_traceable",
+    "orphan_contract_artifact_rows": "non_traceable",
+}
 
 
 def split_ref_cell(value: str) -> list[str]:
@@ -701,6 +724,13 @@ def build_task_bootstrap_payload(
         artifact_status=artifact_status,
         unit_inventory=unit_inventory,
     )
+    repository_first_gate_protocol = build_repository_first_gate_protocol(
+        gate_name="task_bootstrap",
+        readiness=execution_readiness,
+        ready_field="ready_for_task_generation",
+        code_to_category=TASK_BASELINE_CODE_TO_CATEGORY,
+        source_manifest_fingerprints=None,
+    )
 
     return {
         "schema_version": TASK_BOOTSTRAP_SCHEMA_VERSION,
@@ -725,4 +755,5 @@ def build_task_bootstrap_payload(
         "unit_inventory": unit_inventory,
         "ready_unit_inventory": ready_unit_inventory,
         "execution_readiness": execution_readiness,
+        "repository_first_gate_protocol": repository_first_gate_protocol,
     }

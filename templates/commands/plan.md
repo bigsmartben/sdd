@@ -65,6 +65,7 @@ Treat the resolved `IMPL_PLAN` as the canonical `PLAN_FILE` for all downstream p
 ## Repository-First Inputs (Mandatory)
 
 `/sdd.plan` MUST consume the canonical repository-first baseline produced by `/sdd.constitution`:
+`/sdd.plan` uses **Unified Repository-First Gate Protocol (`URFGP`)** as the shared authority for repository-first gate routing, evidence minimality, and canonical path enforcement.
 
 1. `.specify/memory/repository-first/technical-dependency-matrix.md`
 2. `.specify/memory/repository-first/module-invocation-spec.md`

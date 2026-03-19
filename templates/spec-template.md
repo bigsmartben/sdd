@@ -7,6 +7,27 @@
 
 ---
 
+## How to Use This Template *(human-first)*
+
+This template is optimized for readers who need to understand feature intent fast.
+
+### Fill Order (recommended)
+
+1. Complete `§ 1 Global Context` so scope and terminology are stable.
+2. Define `§ 2 UC Overview` and FR index before writing UC details.
+3. Expand each UC with `3.1 ~ 3.5`.
+4. Finalize `§ N Global Acceptance Criteria`.
+5. Leave `Assumptions / Open Questions` only for real blockers.
+
+### Writing Style (mandatory)
+
+- Write WHAT and WHY only; avoid implementation HOW.
+- Use testable, user-visible language.
+- Keep terms consistent across UC / FR / UIF / UDD / EC references.
+- Keep examples domain-neutral unless user input provides domain details.
+
+---
+
 ## Backbone Focus Rules *(mandatory)*
 
 Use this document to express business/design semantics only. Keep a strict backbone-first structure and avoid governance/process noise.
@@ -51,14 +72,16 @@ This section is navigation only.
 - Keep this file free from planning-stage governance payloads (for example: repo-anchor strategy states, boundary tuple keys, `Repo Anchor Role`, or contract packet schemas).
 - Do not emit cross-artifact final PASS/FAIL conclusions in `spec.md`; centralized gating belongs to `/sdd.analyze`.
 
+---
+
 ## § 1 Global Context *(mandatory)*
 
-> Write this section as a true business backbone summary, not as implementation or governance commentary.
+> Goal: establish business semantics, boundaries, and user-visible data before UC detail expansion.
 
 ### 1.1 Actors
 
 | Actor | Type | Permissions & Responsibilities (within this Spec) | Notes |
-|-------|------|----------------------------------------------------|------|
+|---|---|---|---|
 | [Primary Actor] | Human/System | [Core responsibilities] | [Optional notes] |
 | [Secondary Actor] | Human/System | [Core responsibilities] | [Optional notes] |
 
@@ -76,13 +99,14 @@ This section is navigation only.
 
 ### 1.3 UI Data Dictionary (UDD) *(mandatory for user-visible data)*
 
-> **Required rule**: For this template, you MUST define field-level UDD for all core user-visible entities.
+> **Required rule**: For this template, you MUST define field-level UDD for all core user-visible entities.  
 > **Field completeness rule (mandatory)**: For **every** `Entity.field`, you MUST explicitly provide:
 >
 > 1) business rule (`Calculation / criteria`),
 > 2) boundary/null rule (`Boundaries & null/empty rules`),
 > 3) display rule (`Display rules`),
 > 4) key path level (`Key Path`).
+>
 > Do not leave placeholders like `[TBD]`, `[same as above]`, or empty cells.
 
 #### UDD Entity: `[EntityName]`
@@ -97,18 +121,12 @@ This section is navigation only.
 
 **UDD Completion Note**:
 
-Complete each `Entity.field` row directly in the table above.
+Complete each `Entity.field` row directly in the table above.  
 If checklist-style validation is needed, generate it separately with `/sdd.checklist` as a vertical artifact in `checklists/*.md`.
 
-#### UDD Entity: `[EntityName2]`
+**Additional UDD Entities**:
 
-**Description**: [What this user-visible entity represents]  
-**Notes**: [Optional scope or usage notes]
-
-| UDD Item (Entity.field) | User-visible meaning | Calculation / criteria (business) | Boundaries & null/empty rules | Display rules | Source Type (System-backed/UI-local) | Key Path (P1/P2/P3/N/A) |
-|---|---|---|---|---|---|---|
-| `[EntityName2.fieldA]` | [Meaning shown to user] | [Business rule] | [Boundary/null rule] | [How displayed] | [Type] | [P1/P2/P3/N/A] |
-| `[EntityName2.fieldB]` | [Meaning shown to user] | [Business rule] | [Boundary/null rule] | [How displayed] | [Type] | [P1/P2/P3/N/A] |
+Repeat the same `UDD Entity` block for each additional user-visible entity.
 
 ---
 
@@ -117,14 +135,14 @@ If checklist-style validation is needed, generate it separately with `/sdd.check
 > Define the minimum UC set that closes the core user/business loop. Keep numbering consistent, but prioritize semantic completeness over numbering style.
 
 | UC ID | Use Case Description | Primary Actor | Priority | Details |
-|-------|----------------------|---------------|----------|---------|
+|---|---|---|---|---|
 | UC-001 | [Use case summary] | [Actor] | P1 | [Section link] |
 | UC-002 | [Use case summary] | [Actor] | P1/P2 | [Section link] |
 
 ### 2.1 Functional Requirements Index (FR Index) *(mandatory)*
 
 | UC ID | FR ID | Capability Statement (short) | Level | ref: Scenario(s) | Details |
-|------|------|------------------------------|------|------------------|---------|
+|---|---|---|---|---|---|
 | UC-001 | FR-001 | [Testable capability] | MUST/SHOULD/MAY | S1, S2 | [Section link] |
 | UC-001 | FR-002 | [Testable capability] | MUST/SHOULD/MAY | S2 | [Section link] |
 | UC-002 | FR-001 | [Testable capability] | MUST/SHOULD/MAY | S1 | [Section link] |
@@ -136,7 +154,7 @@ If checklist-style validation is needed, generate it separately with `/sdd.check
 #### Cross-UC Flow Scope
 
 | Flow ID | Flow Goal | Involved UCs | Entry Condition | Completion Signal | ref: FR/Scenario/EC |
-|--------|-----------|--------------|-----------------|-------------------|---------------------|
+|---|---|---|---|---|---|
 | GIF-001 | [Cross-UC flow goal] | UC-001, UC-002 | [Entry condition] | [Completion signal] | [Reference] |
 
 #### Global Main / Alternate Flow
@@ -154,14 +172,14 @@ graph TD
 #### Global Interaction Rules
 
 | Rule ID | Rule Type (interrupt / re-entry / cancel / timeout / permission / duplicate) | Rule Description | Applies To (UC/flow) | User-visible Outcome |
-|--------|-----------------------------------------------------------------------------------|------------------|----------------------|----------------------|
+|---|---|---|---|---|
 | GIR-001 | timeout | [Timeout handling rule] | [Flow/UC] | [User-visible result] |
 | GIR-002 | interrupt | [Interruption handling rule] | [Flow/UC] | [User-visible result] |
 
 #### Milestones & Outcomes
 
 | Milestone ID | Milestone Description | Ownership UC | User-visible Data Impact (`Entity.field`) | Completion Evidence |
-|-------------|------------------------|--------------|-------------------------------------------|--------------------|
+|---|---|---|---|---|
 | GM-001 | [Milestone description] | UC-001 | `[Entity.field]` | [Evidence] |
 
 ---
@@ -181,19 +199,19 @@ graph TD
 **Acceptance Scenarios**:
 
 | # | Given (Precondition) | When (Trigger) | Then (Expected Result) |
-|---|----------------------|----------------|------------------------|
+|---|---|---|---|
 | S1 | [Given] | [When] | [Then] |
 | S2 | [Given] | [When] | [Then] |
 | S3 (Exception) | [Given] | [When] | [Then] |
 
 ---
 
-### 3.2 UX — User Interaction Flow *(mandatory for interactive UCs)*
+### 3.2 UX - User Interaction Flow *(mandatory for interactive UCs)*
 
 **Preconditions**:
 
 | Dimension | State Description |
-|----------|-------------------|
+|---|---|
 | User State | [Precondition for user] |
 | System State | [Precondition for system] |
 | Data State | [Precondition for data] |
@@ -213,7 +231,7 @@ graph TD
 **Path Inventory**:
 
 | Path ID | Scenario Type (happy/alternate/exception/retry/recovery/cancel/timeout/permission/duplicate) | Start Node | End Node | Trigger / Guard | ref: Scenario/FR/EC |
-|---------|---------------------------------------------------------------------------------------------------|------------|----------|-----------------|---------------------|
+|---|---|---|---|---|---|
 | UIP-UC001-01 | happy | UIF-UC001-N01 | UIF-UC001-N02 | [Guard] | S1 / FR-001 |
 | UIP-UC001-02 | exception | UIF-UC001-D01 | UIF-UC001-E01 | [Guard] | S3 / FR-002 / EC-001 |
 
@@ -225,14 +243,14 @@ If the edge semantics differ, add `EC-005+` instead of overloading an existing e
 **Interaction Step Table**:
 
 | Step ID (UIF Node) | Actor/System | Action / Feedback | Decision / Guard | Next Step(s) | ref: Entity.field / FR / Scenario |
-|--------------------|--------------|-------------------|------------------|--------------|------------------------------------|
+|---|---|---|---|---|---|
 | UIF-UC001-N01 | System | [Action] | [Decision] | [Next] | `[Entity.field]` / FR-001 / S1 |
 | UIF-UC001-N02 | User | [Action] | [Decision] | [Next] | `[Entity.field]` / FR-001 / S1 |
 
 **Exception Paths**:
 
 | Exception ID | Trigger Step | Trigger Condition | System Response | User Perception (UI Feedback) | ref |
-|-------------|--------------|------------------|-----------------|-------------------------------|-----|
+|---|---|---|---|---|---|
 | E1 | [Step] | [Condition] | [Response] | [Feedback] | EC-001 |
 
 Reference rule:
@@ -242,7 +260,7 @@ Do not reuse one `EC-*` across unrelated retry, re-entry, permission, duplicate,
 **Postconditions**:
 
 | Outcome | Final System State |
-|---------|--------------------|
+|---|---|
 | Main flow success | [Final state] |
 | Exception E1 | [Final state] |
 
@@ -250,7 +268,7 @@ Do not reuse one `EC-*` across unrelated retry, re-entry, permission, duplicate,
 
 ### 3.3 Functional Requirements *(mandatory)*
 
-#### FR-001 — [Requirement Name] *(Level: MUST | ref: S1, S2)*
+#### FR-001 - [Requirement Name] *(Level: MUST | ref: S1, S2)*
 
 - **Capability**: System MUST [testable business capability].
 - **Given/When/Then (minimum)**:
@@ -266,7 +284,7 @@ Do not reuse one `EC-*` across unrelated retry, re-entry, permission, duplicate,
 - **Failure / edge behavior**:
   - [Failure behavior]
 
-#### FR-002 — [Requirement Name] *(Level: MUST/SHOULD/MAY | ref: Sx)*
+#### FR-002 - [Requirement Name] *(Level: MUST/SHOULD/MAY | ref: Sx)*
 
 - **Capability**: System MUST/SHOULD/MAY [testable capability].
 - **Given/When/Then (minimum)**:
@@ -281,12 +299,12 @@ Do not reuse one `EC-*` across unrelated retry, re-entry, permission, duplicate,
 
 ---
 
-### 3.4 UI — UI Element Definitions *(mandatory for user-facing UCs)*
+### 3.4 UI - UI Element Definitions *(mandatory for user-facing UCs)*
 
 #### Page / View Info
 
 | Item | Content |
-|------|---------|
+|---|---|
 | Page Title | [Title] |
 | Route Path | [Path] |
 | Entry Path | [Where user comes from] |
@@ -299,7 +317,7 @@ Do not reuse one `EC-*` across unrelated retry, re-entry, permission, duplicate,
 **Display Copy**:
 
 | State | Exact Copy |
-|------|------------|
+|---|---|
 | Default | "[Exact copy]" |
 | Empty | "[Exact copy]" |
 | Error | "[Exact copy]" |
@@ -310,11 +328,11 @@ Do not reuse one `EC-*` across unrelated retry, re-entry, permission, duplicate,
 **State Rules**:
 
 | State | Trigger Condition | Visual Treatment | Interaction |
-|------|-------------------|------------------|-------------|
+|---|---|---|---|
 | enabled | [Condition] | [Visual] | [Interaction] |
 | disabled | [Condition] | [Visual] | [Interaction] |
 
-**Triggered Behavior**: [What happens when user interacts; reference FR]  
+**Triggered Behavior**: [What happens when user interacts; reference FR]
 
 ---
 

@@ -18,8 +18,8 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 You are updating the project constitution at `.specify/memory/constitution.md`. Treat the current file as the authoritative working constitution and amend it in-place based on user intent and governance rules.
 
-**Runtime template path rule**: If `.specify/memory/constitution.md` does not exist yet, initialize it from `.specify/templates/constitution-template.md` first. If that runtime template is missing or non-consumable when initialization is required, stop and report the blocker. Do not substitute `templates/constitution-template.md` or any other template location. In the Spec Kit source repository, `templates/constitution-template.md` is the source mirror of that runtime template.
-**Source/runtime boundary rule**: Treat the target runtime repo and the Spec Kit source repo as different workspaces. In a runtime repo, operate on `.specify/memory/**` and `.specify/templates/**`. When editing the Spec Kit source repo directly, edit `templates/**`, command mirrors, scripts, and tests only; do not create, inspect, or reconcile `.specify/memory/**` as if it were runtime output.
+**Runtime template path rule**: If `.specify/memory/constitution.md` does not exist yet, initialize it from `.specify/templates/constitution-template.md` first. If that runtime template is missing or non-consumable when initialization is required, stop and report the blocker. Do not substitute `templates/constitution-template.md` or any other template location.
+**Runtime workspace rule**: This command runs against the runtime workspace only. Operate on `.specify/memory/**` and `.specify/templates/**`.
 
 Follow this execution flow:
 
@@ -59,6 +59,8 @@ Follow this execution flow:
    - Ensure Governance section lists amendment procedure, versioning policy, and compliance review expectations.
    - Ensure `Repo-Anchor Evidence Protocol` keeps the strict strategy priority `existing -> extended -> new`.
    - Ensure every `new` anchor policy statement includes mandatory rejection evidence requirements for `existing` and `extended`.
+   - Keep one named shared authority for repository-first gating: **Unified Repository-First Gate Protocol (`URFGP`)**.
+     - `/sdd.plan`, `/sdd.tasks`, `/sdd.implement`, and `/sdd.analyze` MUST reference `URFGP` instead of duplicating expanded gate prose.
    - Keep repository-first requirements lightweight and inference-friendly:
      - require concise `fact -> conclusion` reasoning notes
      - avoid turning constitution text into field-level extraction specs
@@ -67,28 +69,33 @@ Follow this execution flow:
    - Treat `.specify/memory/constitution.md` as the authoritative project-level rule source and fact source. Any summaries, extracted rule lists, or downstream restatements of constitution content are derived views only and MUST be refreshed when constitution facts change.
    - Constitution content MUST stay at long-lived rule/terminology/ownership-boundary level; do not embed mechanical lint catalog details (rule IDs, regex patterns, script flags, payload schemas).
    - Keep local CLI execution policy at constitution level; command templates and `LOCAL_EXECUTION_PROTOCOL` packets are derived execution views, not competing policy sources.
-   - Runtime template authority path is `.specify/templates/`; when editing Spec Kit source directly, use the `templates/` mirror for the same files.
+   - Runtime template authority path is `.specify/templates/`.
    - Review and refresh impacted artifact families only; avoid mechanical full-repo rewrites of unchanged downstream files.
    - Prefer targeted references over restating the same rule text across multiple downstream templates. When a downstream command or template only needs the constitution as authority, keep the downstream wording brief and aligned instead of cloning full rule prose.
    - Prefer minimal fact references in repository-first outputs: path-level references by default; line-level precision only when ambiguity/conflict requires it.
+   - Standardize repository-first output evidence format as **Repository-First Evidence Bundle (`RFEB`)** where commands emit decision evidence:
+     - `fact -> conclusion`
+     - `source_refs` (path-level refs by default; line-level precision only when ambiguity/conflict requires it)
+     - `signal_ids` (`SIG-*` when dependency-governance signals are used)
+     - `module_edge_ids` (module invocation edge identifiers/rows when invocation-governance evidence is used)
    - Keep command ownership boundaries explicit for repo-anchor strategy:
      - `/sdd.plan.*` records strategy selection evidence
      - `/sdd.analyze` validates `new`-anchor evidence and fails when missing
      - `/sdd.tasks` and `/sdd.implement` block execution when active tuples remain unresolved or missing required strategy evidence
-   - Required alignment families:
-      - Planning control plane template: Read `.specify/templates/plan-template.md` and ensure any "Constitution Check" or rules align with updated principles.
-   - Planning-stage templates: Read the planning-stage templates in `.specify/templates/` (`research-template.md`, `data-model-template.md`, `test-matrix-template.md`, and `contract-template.md`) and ensure they reflect the updated principles and stage boundaries.
-   - Feature/task templates: Read `.specify/templates/spec-template.md` for scope/requirements alignment and `.specify/templates/tasks-template.md` for principle-driven task categorization changes (for example observability, versioning, testing discipline).
-   - Execution-governance templates: When local CLI governance changes, read `.specify/templates/agent-file-template.md`, `.specify/templates/commands/tasks.md`, and `.specify/templates/commands/implement.md` and keep them aligned as derived execution guidance only.
-   - Repository-first projection templates: Read `.specify/templates/technical-dependency-matrix-template.md` and `.specify/templates/module-invocation-spec-template.md` and keep them aligned with constitution repository-first rules.
-   - Command templates: Read each command file in the active agent command directory (for example `.roo/commands/*.md`, `.claude/commands/*.md`, `.github/agents/*.agent.md`, `.gemini/commands/*.toml`); if `templates/commands/*.md` exists in this repository, review it as well. Verify no outdated references (agent-specific names like CLAUDE only) remain when generic guidance is required.
-   - Runtime guidance docs: Read any runtime guidance docs (for example `README.md`, `docs/quickstart.md`, or agent-specific guidance files if present) and update references to principles changed.
+   - Impacted alignment families (read only when the change impact map marks the family as impacted):
+      - Planning control plane template: If impacted, read `.specify/templates/plan-template.md` and ensure any "Constitution Check" or rules align with updated principles.
+   - Planning-stage templates: If impacted, read the planning-stage templates in `.specify/templates/` (`research-template.md`, `data-model-template.md`, `test-matrix-template.md`, and `contract-template.md`) and ensure they reflect the updated principles and stage boundaries.
+   - Feature/task templates: If impacted, read `.specify/templates/spec-template.md` for scope/requirements alignment and `.specify/templates/tasks-template.md` for principle-driven task categorization changes (for example observability, versioning, testing discipline).
+   - Execution-governance templates: If local CLI governance changed, read `.specify/templates/agent-file-template.md`, `.specify/templates/commands/tasks.md`, and `.specify/templates/commands/implement.md` and keep them aligned as derived execution guidance only.
+   - Repository-first projection templates: If `repo-first-affecting`, read `.specify/templates/technical-dependency-matrix-template.md` and `.specify/templates/module-invocation-spec-template.md` and keep them aligned with constitution repository-first rules.
+   - Command templates: If `template-affecting`, read only impacted command files in the active agent command directory (for example `.roo/commands/*.md`, `.claude/commands/*.md`, `.github/agents/*.agent.md`, `.gemini/commands/*.toml`). If `templates/commands/*.md` exists in this repository, treat it as mirror/reference and update only impacted files. Verify no outdated references (agent-specific names like CLAUDE only) remain when generic guidance is required.
+   - Runtime guidance docs: Read runtime guidance docs (for example `README.md`, `docs/quickstart.md`, or agent-specific guidance files if present) only when renamed principles/terms or invocation guidance text changed.
    - Runtime efficiency protocol:
      - Resolve impacted families from the change impact map first, then read/update only those families.
      - If the change is `governance-only`, skip downstream family reads unless an explicit user request asks for broader synchronization.
      - Do not run directory-wide or repository-wide exploratory scans to "double check" unaffected families.
-     - When a family is skipped, record `unchanged (not impacted)` in the Sync Impact Report.
-     - For command templates, prioritize active agent command files first; inspect mirrors (`templates/commands/*`) only when active-agent files are absent or impacted rules are generic.
+      - When a family is skipped, record `unchanged (not impacted)` in the Sync Impact Report.
+      - For command templates, prioritize active agent command files first and read/update only impacted files; inspect mirrors (`templates/commands/*`) only when active-agent files are absent.
      - Runtime guidance docs (`README.md`, `docs/quickstart.md`, agent docs) are **opt-in by trigger** only:
        - read/update only when renamed principles/terms or invocation guidance text changed
        - otherwise skip and mark `unchanged (not impacted)`

@@ -23,6 +23,7 @@ def test_plan_command_is_control_plane_only():
     assert "Stage sharding (fixed): delivery path `research -> test-matrix -> data-model`" in content
     assert "Binding sharding (fixed): `/sdd.plan.contract` consumes one `BindingRowID` row per run" in content
     assert "`contract` is not a `Stage Queue` row" in content
+    assert "Unified Repository-First Gate Protocol (`URFGP`)" in content
     assert "explicit handoff order: `sdd.plan.research -> sdd.plan.test-matrix -> sdd.plan.data-model -> sdd.plan.contract`" in content
 
 

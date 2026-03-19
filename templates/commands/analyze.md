@@ -33,6 +33,7 @@ The latest run block in `analyze-history.md` is the only authoritative analyze g
 - **Authority rule**: `/sdd.analyze` is the sole cross-artifact audit authority before implementation. It owns the final PASS/FAIL decision across mandatory core artifacts (`spec.md`, `plan.md`, `tasks.md`) and any existing planning artifacts required by the selected evidence path (`research.md`, `data-model.md`, `test-matrix.md`, `contracts/`).
 - **Stage boundary rule**: `/sdd.analyze` reports findings and remediation owners only. It MUST NOT rewrite semantic source artifacts or locally "repair" drift by mutating planning/design outputs.
 - **Gate ownership rule**: commands other than `/sdd.analyze` may emit local readiness checks, but cross-artifact final PASS/FAIL claims are valid only from this stage.
+- **Shared protocol rule**: treat **Unified Repository-First Gate Protocol (`URFGP`)** as the shared authority for repository-first gate evaluation and owner-command routing.
 
 ## Read Only
 
@@ -55,6 +56,10 @@ The latest run block in `analyze-history.md` is the only authoritative analyze g
    - matrix dependency facts plus `SIG-*` governance signals including divergence, version-source-mix, and `unresolved`
    - minimal supporting facts for conclusions (path-level default; line-level only when ambiguity/conflict requires precision)
    - invocation governance using concrete module-to-module rows as the primary representation
+   - **Repository-First Evidence Bundle (`RFEB`)** schema when persisting decision evidence:
+     - `fact -> conclusion`
+     - `source_refs`
+     - `signal_ids` and/or `module_edge_ids`
 
 ## Write Only
 
@@ -115,6 +120,7 @@ Return one compact report with:
 4. metrics summary
 5. `Gate Decision:`
 6. next actions by owner command
+7. repository-first evidence bundles (`RFEB`) for blocking findings, when applicable
 
 ## Persist Analyze History
 

@@ -7,11 +7,23 @@ from pathlib import Path
 from typing import Any
 
 from specify_cli.runtime_common import compute_sha256
+from specify_cli.runtime_gate_protocol import build_repository_first_gate_protocol
 
 
 IMPLEMENT_BOOTSTRAP_SCHEMA_VERSION = "1.0"
 RUN_BEGIN = "<!-- SDD_ANALYZE_RUN_BEGIN -->"
 RUN_END = "<!-- SDD_ANALYZE_RUN_END -->"
+IMPLEMENT_HISTORY_BEGIN = "<!-- SDD_IMPLEMENT_RUN_BEGIN -->"
+IMPLEMENT_HISTORY_END = "<!-- SDD_IMPLEMENT_RUN_END -->"
+IMPLEMENT_BASELINE_CODE_TO_CATEGORY = {
+    "missing_required_artifacts": "missing",
+    "analyze_history_missing": "missing",
+    "analyze_run_block_missing": "missing",
+    "analyze_fingerprints_missing": "missing",
+    "gate_decision_missing": "non_traceable",
+    "gate_decision_not_pass": "stale",
+    "analyze_fingerprint_mismatch": "stale",
+}
 
 
 def extract_latest_run_block(content: str) -> str | None:
@@ -183,6 +195,49 @@ def build_implement_bootstrap_payload(
         current_fingerprints=current_fingerprints,
         analyze_history_path=analyze_history_path,
     )
+    source_manifest_fingerprints = None
+    if latest_run and isinstance(latest_run.get("fingerprints"), dict):
+        source_manifest_fingerprints = {
+            "spec_sha256": str(latest_run["fingerprints"].get("spec_sha256", "")),
+            "plan_sha256": str(latest_run["fingerprints"].get("plan_sha256", "")),
+            "tasks_sha256": str(latest_run["fingerprints"].get("tasks_sha256", "")),
+        }
+    repository_first_gate_protocol = build_repository_first_gate_protocol(
+        gate_name="implement_bootstrap",
+        readiness=analyze_readiness,
+        ready_field="ready_for_implementation",
+        code_to_category=IMPLEMENT_BASELINE_CODE_TO_CATEGORY,
+        source_manifest_fingerprints=source_manifest_fingerprints,
+    )
+
+    execution_policy = {
+        "waiver_policy": {
+            "strict_mode_disallow_waive_analyze_gate": True,
+            "adaptive_mode_requires_waive_reason": True,
+        },
+        "runtime_source_policy": {
+            "strict_mode_requires_valid_tasks_manifest": True,
+            "adaptive_mode_allows_tasks_md_fallback": True,
+        },
+        "completion_anchor_policy": {
+            "required_for_completed_tasks": True,
+            "anchor_gate_script": "scripts/implement_anchor_gate.py",
+        },
+        "implement_history_policy": {
+            "required_append_only": True,
+            "run_begin": IMPLEMENT_HISTORY_BEGIN,
+            "run_end": IMPLEMENT_HISTORY_END,
+            "required_markers": [
+                "Run At (UTC):",
+                "Execution Mode:",
+                "Analyze Gate Status:",
+                "Manifest Validation:",
+                "Anchor Gate:",
+                "Completed Task IDs:",
+            ],
+            "history_path": str((feature_dir / "audits" / "implement-history.md").resolve()),
+        },
+    }
 
     return {
         "schema_version": IMPLEMENT_BOOTSTRAP_SCHEMA_VERSION,
@@ -194,4 +249,6 @@ def build_implement_bootstrap_payload(
         "current_fingerprints": current_fingerprints,
         "latest_run": latest_run,
         "analyze_readiness": analyze_readiness,
+        "repository_first_gate_protocol": repository_first_gate_protocol,
+        "execution_policy": execution_policy,
     }

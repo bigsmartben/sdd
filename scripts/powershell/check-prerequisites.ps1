@@ -280,6 +280,10 @@ if ($Json) {
         FEATURE_DIR = $paths.FEATURE_DIR
         AVAILABLE_DOCS = $docs
         LOCAL_EXECUTION_PROTOCOL = Get-LocalExecutionProtocol -HasGit:$paths.HAS_GIT
+        IMPLEMENT_ANCHOR_GATE = [ordered]@{
+            script_path = "scripts/implement_anchor_gate.py"
+            history_path = (Join-Path $paths.FEATURE_DIR "audits/implement-history.md")
+        }
     }
 
     if ($DataModelPreflight) {

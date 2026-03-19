@@ -36,6 +36,7 @@ Resolve `PLAN_FILE` from current feature branch using `{SCRIPT}` defaults.
 - **Authority rule**: `tasks.md` is authoritative only for execution decomposition and scheduling metadata. It MUST NOT override semantic authority owned by `spec.md`, `plan.md`, `data-model.md`, `test-matrix.md`, or `contracts/`.
 - **Stage boundary rule**: `/sdd.tasks` maps approved design into executable work packages only. Do not backfill planning/design artifacts, assign implementation ownership semantics such as `Repo Anchor Role`, or rewrite contract/schema semantics.
 - **Gate ownership rule**: `/sdd.tasks` may enforce run-local execution safety gates only. Cross-artifact final PASS/FAIL remains owned by `/sdd.analyze`.
+- **Shared protocol rule**: apply **Unified Repository-First Gate Protocol (`URFGP`)** as the shared authority for repository-first gate semantics and command-to-command routing.
 
 ## Read Only
 
@@ -116,6 +117,13 @@ Return a concise execution summary:
 7. Module-edge explainable evidence: list only decision-relevant invocation-governance facts in `fact -> conclusion` format (path-level refs by default; add line refs only when ambiguity/conflict requires precision)
 8. upstream alignment repair actions (if any)
 9. analyze handoff note
+
+When evidence is emitted in this report, use **Repository-First Evidence Bundle (`RFEB`)**:
+
+- `fact -> conclusion`
+- `source_refs` (path-level by default; line-level only when ambiguity/conflict requires precision)
+- `signal_ids` (`SIG-*` rows used for dependency-governance conclusions)
+- `module_edge_ids` (module invocation edge rows used for module-governance conclusions)
 
 ## Hook Dispatch Protocol
 

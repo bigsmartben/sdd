@@ -1140,6 +1140,17 @@ def test_bash_check_prerequisites_can_embed_tasks_bootstrap(tmp_path):
     assert payload["TASKS_BOOTSTRAP"]["binding_row_count"] == 1
     assert len(payload["TASKS_BOOTSTRAP"]["ready_unit_inventory"]) == 1
     assert payload["TASKS_BOOTSTRAP"]["execution_readiness"]["ready_for_task_generation"] is True
+    protocol = payload["TASKS_BOOTSTRAP"]["repository_first_gate_protocol"]
+    assert protocol["schema_version"] == "1.0"
+    assert protocol["gate_name"] == "task_bootstrap"
+    assert protocol["baseline_checks"]["missing"] == []
+    assert protocol["baseline_checks"]["stale"] == []
+    assert protocol["baseline_checks"]["non_traceable"] == []
+    freshness = protocol["baseline_freshness"]
+    assert freshness["generated_at_utc"]["status"] == "available"
+    assert isinstance(freshness["generated_at_utc"]["value"], str)
+    assert freshness["source_manifest_fingerprints"]["status"] == "unknown"
+    assert freshness["source_manifest_fingerprints"]["reason"] == "source_manifest_fingerprints_unavailable"
 
 
 def test_bash_check_prerequisites_supports_feature_prefixed_branch_default(tmp_path):
@@ -1238,6 +1249,12 @@ def test_implement_preflight_helper_reports_pass_when_latest_analyze_pass_matche
     assert payload["analyze_readiness"]["ready_for_implementation"] is True
     assert payload["analyze_readiness"]["error_count"] == 0
     assert payload["latest_run"]["gate_decision"] == "PASS"
+    assert payload["execution_policy"]["waiver_policy"]["strict_mode_disallow_waive_analyze_gate"] is True
+    assert payload["execution_policy"]["waiver_policy"]["adaptive_mode_requires_waive_reason"] is True
+    assert payload["execution_policy"]["runtime_source_policy"]["strict_mode_requires_valid_tasks_manifest"] is True
+    assert payload["execution_policy"]["completion_anchor_policy"]["required_for_completed_tasks"] is True
+    assert payload["execution_policy"]["implement_history_policy"]["run_begin"] == "<!-- SDD_IMPLEMENT_RUN_BEGIN -->"
+    assert payload["execution_policy"]["implement_history_policy"]["run_end"] == "<!-- SDD_IMPLEMENT_RUN_END -->"
 
 
 def test_implement_preflight_helper_flags_non_pass_gate(tmp_path):
@@ -1346,9 +1363,149 @@ def test_bash_check_prerequisites_can_embed_implement_bootstrap(tmp_path):
     assert "IMPLEMENT_BOOTSTRAP" in payload
     assert payload["IMPLEMENT_BOOTSTRAP"]["schema_version"] == "1.0"
     assert payload["IMPLEMENT_BOOTSTRAP"]["analyze_readiness"]["ready_for_implementation"] is True
+    protocol = payload["IMPLEMENT_BOOTSTRAP"]["repository_first_gate_protocol"]
+    assert protocol["schema_version"] == "1.0"
+    assert protocol["gate_name"] == "implement_bootstrap"
+    assert protocol["baseline_checks"]["missing"] == []
+    assert protocol["baseline_checks"]["stale"] == []
+    assert protocol["baseline_checks"]["non_traceable"] == []
+    freshness = protocol["baseline_freshness"]
+    assert freshness["generated_at_utc"]["status"] == "available"
+    assert isinstance(freshness["generated_at_utc"]["value"], str)
+    assert freshness["source_manifest_fingerprints"]["status"] == "available"
+    assert freshness["source_manifest_fingerprints"]["missing_keys"] == []
+    assert freshness["source_manifest_fingerprints"]["value"]["spec_sha256"] == payload["IMPLEMENT_BOOTSTRAP"]["latest_run"]["fingerprints"]["spec_sha256"]
+    assert freshness["source_manifest_fingerprints"]["value"]["plan_sha256"] == payload["IMPLEMENT_BOOTSTRAP"]["latest_run"]["fingerprints"]["plan_sha256"]
+    assert freshness["source_manifest_fingerprints"]["value"]["tasks_sha256"] == payload["IMPLEMENT_BOOTSTRAP"]["latest_run"]["fingerprints"]["tasks_sha256"]
+    assert "IMPLEMENT_ANCHOR_GATE" in payload
+    assert payload["IMPLEMENT_ANCHOR_GATE"]["script_path"] == "scripts/implement_anchor_gate.py"
+    assert payload["IMPLEMENT_ANCHOR_GATE"]["history_path"].replace("\\", "/").endswith(
+        "/repo/specs/20250708-demo/audits/implement-history.md"
+    )
     assert "TASKS_MANIFEST_BOOTSTRAP" in payload
     assert payload["TASKS_MANIFEST_BOOTSTRAP"]["schema_version"] == "1.0"
     assert payload["TASKS_MANIFEST_BOOTSTRAP"]["validation"]["valid"] is True
+
+
+def test_implement_anchor_gate_passes_when_completed_command_anchor_succeeds(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(feature_dir)
+    _write_tasks_and_analyze_history(feature_dir, gate_decision="PASS")
+    (feature_dir / "tasks.manifest.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "generated_at": "2026-03-19T00:00:00Z",
+                "generated_from": {
+                    "plan_path": str(feature_dir / "plan.md"),
+                    "plan_source_fingerprint": _sha256_file(feature_dir / "plan.md"),
+                    "contract_source_fingerprints": {},
+                },
+                "tasks": [
+                    {
+                        "task_id": "T100",
+                        "dependencies": [],
+                        "if_scope": "IF-001",
+                        "refs": [],
+                        "target_paths": [str(feature_dir / "tasks.md")],
+                        "completion_anchors": ["cmd:echo anchor-pass"],
+                        "conflict_hints": [],
+                        "topo_layer": 0,
+                        "status": "completed",
+                    }
+                ],
+            },
+            ensure_ascii=True,
+            separators=(",", ":"),
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "implement_anchor_gate.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--tasks",
+            str(feature_dir / "tasks.md"),
+            "--tasks-manifest",
+            str(feature_dir / "tasks.manifest.json"),
+            "--strict-non-executable",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["ready_for_task_completion_update"] is True
+    assert payload["executed_anchor_count"] == 1
+    assert payload["failed_anchor_count"] == 0
+    assert payload["validated_task_count"] == 1
+    assert payload["task_results"][0]["task_id"] == "T100"
+    assert payload["task_results"][0]["anchors"][0]["result"] == "pass"
+
+
+def test_implement_anchor_gate_fails_when_completed_command_anchor_fails(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(feature_dir)
+    _write_tasks_and_analyze_history(feature_dir, gate_decision="PASS")
+    (feature_dir / "tasks.manifest.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "generated_at": "2026-03-19T00:00:00Z",
+                "generated_from": {
+                    "plan_path": str(feature_dir / "plan.md"),
+                    "plan_source_fingerprint": _sha256_file(feature_dir / "plan.md"),
+                    "contract_source_fingerprints": {},
+                },
+                "tasks": [
+                    {
+                        "task_id": "T101",
+                        "dependencies": [],
+                        "if_scope": "IF-001",
+                        "refs": [],
+                        "target_paths": [str(feature_dir / "tasks.md")],
+                        "completion_anchors": [f"cmd:{sys.executable} -c \"import sys; sys.exit(7)\""],
+                        "conflict_hints": [],
+                        "topo_layer": 0,
+                        "status": "completed",
+                    }
+                ],
+            },
+            ensure_ascii=True,
+            separators=(",", ":"),
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "implement_anchor_gate.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--tasks",
+            str(feature_dir / "tasks.md"),
+            "--tasks-manifest",
+            str(feature_dir / "tasks.manifest.json"),
+            "--strict-non-executable",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    payload = json.loads(result.stdout)
+    assert payload["ready_for_task_completion_update"] is False
+    assert payload["executed_anchor_count"] == 1
+    assert payload["failed_anchor_count"] == 1
+    assert payload["task_results"][0]["task_id"] == "T101"
+    assert payload["task_results"][0]["anchors"][0]["result"] in ("fail", "timeout")
 
 
 def test_data_model_preflight_helper_reports_ready_when_research_done_and_data_model_pending(tmp_path):
@@ -1609,9 +1766,15 @@ def test_implement_command_prefers_implement_preflight_bootstrap():
     assert "Treat `IMPLEMENT_BOOTSTRAP.analyze_readiness` as the primary analyze hard gate." in implement_command
     assert "bounded fallback validation" in implement_command
     assert "`IMPLEMENT_BOOTSTRAP.analyze_readiness.errors` contains blockers" in implement_command
-    assert "parse `feature_dir`, `available_docs`, `local_execution_protocol`, `implement_bootstrap`, and `tasks_manifest_bootstrap`" in implement_command.lower()
+    assert "parse `feature_dir`, `available_docs`, `local_execution_protocol`, `implement_bootstrap`, `tasks_manifest_bootstrap`, and `implement_anchor_gate`" in implement_command.lower()
     assert "LOCAL_EXECUTION_PROTOCOL.repo_search.list_files_cmd" in implement_command
     assert "no local CLI trial-and-error outside `LOCAL_EXECUTION_PROTOCOL`" in implement_command
+    assert "Runtime mode is `strict` and `waive-analyze-gate` is present." in implement_command
+    assert "Runtime mode is `adaptive`, `waive-analyze-gate` is present, and waiver reason is empty." in implement_command
+    assert "Runtime mode is `strict` and `TASKS_MANIFEST_BOOTSTRAP.validation.valid != true`." in implement_command
+    assert "Completion-anchor gate returns `ready_for_task_completion_update = false`." in implement_command
+    assert "SDD_IMPLEMENT_RUN_BEGIN" in implement_command
+    assert "SDD_IMPLEMENT_RUN_END" in implement_command
 
     assert "--implement-preflight" in bash_script
     assert "LOCAL_EXECUTION_PROTOCOL" in bash_script
@@ -1619,12 +1782,14 @@ def test_implement_command_prefers_implement_preflight_bootstrap():
     assert "internal-tasks-manifest-bootstrap" in bash_script
     assert "IMPLEMENT_BOOTSTRAP" in bash_script
     assert "TASKS_MANIFEST_BOOTSTRAP" in bash_script
+    assert "IMPLEMENT_ANCHOR_GATE" in bash_script
     assert "-ImplementPreflight" in powershell_script
     assert "LOCAL_EXECUTION_PROTOCOL" in powershell_script
     assert "internal-implement-bootstrap" in powershell_script
     assert "internal-tasks-manifest-bootstrap" in powershell_script
     assert "IMPLEMENT_BOOTSTRAP" in powershell_script
     assert "TASKS_MANIFEST_BOOTSTRAP" in powershell_script
+    assert "IMPLEMENT_ANCHOR_GATE" in powershell_script
     assert '$payload.IMPLEMENT_BOOTSTRAP = $null' in powershell_script
     assert '$payload.TASKS_MANIFEST_BOOTSTRAP = $null' in powershell_script
 
