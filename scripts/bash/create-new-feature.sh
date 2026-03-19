@@ -4,7 +4,6 @@ set -e
 
 JSON_MODE=false
 SHORT_NAME=""
-BRANCH_NUMBER=""
 ARGS=()
 i=1
 while [ $i -le $# ]; do
@@ -28,31 +27,25 @@ while [ $i -le $# ]; do
             SHORT_NAME="$next_arg"
             ;;
         --number)
-            if [ $((i + 1)) -gt $# ]; then
-                echo 'Error: --number requires a value' >&2
-                exit 1
-            fi
-            i=$((i + 1))
-            next_arg="${!i}"
-            if [[ "$next_arg" == --* ]]; then
-                echo 'Error: --number requires a value' >&2
-                exit 1
-            fi
-            BRANCH_NUMBER="$next_arg"
+            echo 'Error: --number is not supported. Use unified naming: feature-YYYYMMDD-slug.' >&2
+            exit 1
             ;;
         --help|-h) 
-            echo "Usage: $0 [--json] [--short-name <name>] [--number N] <feature_description>"
+            echo "Usage: $0 [--json] [--short-name <name>] <feature_description>"
             echo ""
             echo "Options:"
             echo "  --json              Output in JSON format"
-            echo "  --short-name <name> Provide a custom short name (2-4 words) for fallback naming"
-            echo "  --number N          Specify feature number manually for fallback naming"
+            echo "  --short-name <name> Provide a custom short name (2-4 words) for branch naming"
             echo "  --help, -h          Show this help message"
             echo ""
             echo "Examples:"
             echo "  $0 'Add user authentication system' --short-name 'user-auth'"
-            echo "  $0 'Implement OAuth2 integration for API' --number 5"
+            echo "  $0 'Implement OAuth2 integration for API' --short-name 'oauth2-api'"
             exit 0
+            ;;
+        --*)
+            echo "Error: Unknown option: $arg" >&2
+            exit 1
             ;;
         *) 
             ARGS+=("$arg") 
@@ -63,7 +56,7 @@ done
 
 FEATURE_DESCRIPTION="${ARGS[*]}"
 if [ -z "$FEATURE_DESCRIPTION" ]; then
-    echo "Usage: $0 [--json] [--short-name <name>] [--number N] <feature_description>" >&2
+    echo "Usage: $0 [--json] [--short-name <name>] <feature_description>" >&2
     exit 1
 fi
 
@@ -87,50 +80,8 @@ find_repo_root() {
     return 1
 }
 
-# Function to get highest number from specs directory
-get_highest_from_specs() {
-    local specs_dir="$1"
-    local highest=0
-    
-    if [ -d "$specs_dir" ]; then
-        for dir in "$specs_dir"/*; do
-            [ -d "$dir" ] || continue
-            dirname=$(basename "$dir")
-            number=$(echo "$dirname" | grep -o '^[0-9]\+' || echo "0")
-            number=$((10#$number))
-            if [ "$number" -gt "$highest" ]; then
-                highest=$number
-            fi
-        done
-    fi
-    
-    echo "$highest"
-}
-
-# Function to get highest number from git branches
-get_highest_from_branches() {
-    local highest=0
-    
-    # Get all branches (local and remote)
-    branches=$(git branch -a 2>/dev/null || echo "")
-    
-    if [ -n "$branches" ]; then
-        while IFS= read -r branch; do
-            # Clean branch name: remove leading markers and remote prefixes
-            clean_branch=$(echo "$branch" | sed 's/^[* ]*//; s|^remotes/[^/]*/||')
-            
-            # Extract feature number if branch matches pattern ###-*
-            if echo "$clean_branch" | grep -q '^[0-9]\{3\}-'; then
-                number=$(echo "$clean_branch" | grep -o '^[0-9]\{3\}' || echo "0")
-                number=$((10#$number))
-                if [ "$number" -gt "$highest" ]; then
-                    highest=$number
-                fi
-            fi
-        done <<< "$branches"
-    fi
-    
-    echo "$highest"
+current_date_key() {
+    date +%Y%m%d
 }
 
 # Best-effort remote sync that avoids interactive/network hangs.
@@ -199,29 +150,6 @@ find_remote_branch_ref() {
 
     echo "$remote_refs" | head -n1
     return 0
-}
-
-# Function to check existing branches (local and remote) and return next available number
-check_existing_branches() {
-    local specs_dir="$1"
-
-    # Fetch all remotes to get latest branch info in a non-blocking way
-    safe_fetch_remote_branches
-
-    # Get highest number from ALL branches (not just matching short name)
-    local highest_branch=$(get_highest_from_branches)
-
-    # Get highest number from ALL specs (not just matching short name)
-    local highest_spec=$(get_highest_from_specs "$specs_dir")
-
-    # Take the maximum of both
-    local max_num=$highest_branch
-    if [ "$highest_spec" -gt "$max_num" ]; then
-        max_num=$highest_spec
-    fi
-
-    # Return next number
-    echo $((max_num + 1))
 }
 
 # Function to clean and format a branch name
@@ -320,7 +248,7 @@ if [ "$HAS_GIT" = true ]; then
     CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)
     if [ -n "$CURRENT_BRANCH" ] && [ "$CURRENT_BRANCH" != "HEAD" ]; then
         CURRENT_BRANCH_LEAF="${CURRENT_BRANCH##*/}"
-        if echo "$CURRENT_BRANCH_LEAF" | grep -qE '^feature-[0-9]{8}-[a-z0-9][a-z0-9-]*$|^[0-9]+-[a-z0-9][a-z0-9-]*$'; then
+        if echo "$CURRENT_BRANCH_LEAF" | grep -qE '^feature-[0-9]{8}-[a-z0-9][a-z0-9-]*$'; then
             BRANCH_NAME="$CURRENT_BRANCH_LEAF"
         else
             >&2 echo "[specify] Warning: current branch '$CURRENT_BRANCH' does not match 'feature-YYYYMMDD-short-name'; using fallback generated feature key"
@@ -329,26 +257,18 @@ if [ "$HAS_GIT" = true ]; then
 fi
 
 if [ -z "$BRANCH_NAME" ]; then
-    if [ -z "$BRANCH_NUMBER" ]; then
-        if [ "$HAS_GIT" = true ]; then
-            BRANCH_NUMBER=$(check_existing_branches "$SPECS_DIR")
-        else
-            HIGHEST=$(get_highest_from_specs "$SPECS_DIR")
-            BRANCH_NUMBER=$((HIGHEST + 1))
-        fi
-    fi
-
-    FEATURE_NUM=$(printf "%03d" "$((10#$BRANCH_NUMBER))")
-    BRANCH_NAME="${FEATURE_NUM}-${BRANCH_SUFFIX}"
+    FEATURE_DATE=$(current_date_key)
+    BRANCH_PREFIX="feature-${FEATURE_DATE}-"
+    BRANCH_NAME="${BRANCH_PREFIX}${BRANCH_SUFFIX}"
 
     MAX_BRANCH_LENGTH=244
     if [ ${#BRANCH_NAME} -gt $MAX_BRANCH_LENGTH ]; then
-        MAX_SUFFIX_LENGTH=$((MAX_BRANCH_LENGTH - 4))
+        MAX_SUFFIX_LENGTH=$((MAX_BRANCH_LENGTH - ${#BRANCH_PREFIX}))
         TRUNCATED_SUFFIX=$(echo "$BRANCH_SUFFIX" | cut -c1-$MAX_SUFFIX_LENGTH)
         TRUNCATED_SUFFIX=$(echo "$TRUNCATED_SUFFIX" | sed 's/-$//')
 
         ORIGINAL_BRANCH_NAME="$BRANCH_NAME"
-        BRANCH_NAME="${FEATURE_NUM}-${TRUNCATED_SUFFIX}"
+        BRANCH_NAME="${BRANCH_PREFIX}${TRUNCATED_SUFFIX}"
 
         >&2 echo "[specify] Warning: Branch name exceeded GitHub's 244-byte limit"
         >&2 echo "[specify] Original: $ORIGINAL_BRANCH_NAME (${#ORIGINAL_BRANCH_NAME} bytes)"
@@ -360,12 +280,6 @@ fi
 FEATURE_PREFIX="${BRANCH_NAME%%-*}"
 if echo "$BRANCH_NAME" | grep -qE '^feature-([0-9]{8})-'; then
     FEATURE_NUM=$(echo "$BRANCH_NAME" | sed -E 's/^feature-([0-9]{8})-.*/\1/')
-elif echo "$FEATURE_PREFIX" | grep -qE '^[0-9]+$'; then
-    if [ ${#FEATURE_PREFIX} -lt 3 ]; then
-        FEATURE_NUM=$(printf "%03d" "$((10#$FEATURE_PREFIX))")
-    else
-        FEATURE_NUM="$FEATURE_PREFIX"
-    fi
 else
     FEATURE_NUM="000"
 fi

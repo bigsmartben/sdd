@@ -4,7 +4,6 @@
 param(
     [switch]$Json,
     [string]$ShortName,
-    [int]$Number = 0,
     [switch]$Help,
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$FeatureDescription
@@ -13,23 +12,27 @@ $ErrorActionPreference = 'Stop'
 
 # Show help if requested
 if ($Help) {
-    Write-Host "Usage: ./create-new-feature.ps1 [-Json] [-ShortName <name>] [-Number N] <feature description>"
+    Write-Host "Usage: ./create-new-feature.ps1 [-Json] [-ShortName <name>] <feature description>"
     Write-Host ""
     Write-Host "Options:"
     Write-Host "  -Json               Output in JSON format"
-    Write-Host "  -ShortName <name>   Provide a custom short name (2-4 words) for fallback naming"
-    Write-Host "  -Number N           Specify feature number manually for fallback naming"
+    Write-Host "  -ShortName <name>   Provide a custom short name (2-4 words) for branch naming"
     Write-Host "  -Help               Show this help message"
     Write-Host ""
     Write-Host "Examples:"
     Write-Host "  ./create-new-feature.ps1 'Add user authentication system' -ShortName 'user-auth'"
-    Write-Host "  ./create-new-feature.ps1 'Implement OAuth2 integration for API'"
+    Write-Host "  ./create-new-feature.ps1 'Implement OAuth2 integration for API' -ShortName 'oauth2-api'"
     exit 0
 }
 
 # Check if feature description provided
 if (-not $FeatureDescription -or $FeatureDescription.Count -eq 0) {
     Write-Error "Usage: ./create-new-feature.ps1 [-Json] [-ShortName <name>] <feature description>"
+    exit 1
+}
+
+if ($FeatureDescription -contains '-Number' -or $FeatureDescription -contains '--number') {
+    Write-Error "Error: -Number/--number is not supported. Use unified naming: feature-YYYYMMDD-slug."
     exit 1
 }
 
@@ -65,64 +68,8 @@ function Find-RepositoryRoot {
     }
 }
 
-function Get-HighestNumberFromSpecs {
-    param([string]$SpecsDir)
-    
-    $highest = 0
-    if (Test-Path $SpecsDir) {
-        Get-ChildItem -Path $SpecsDir -Directory | ForEach-Object {
-            if ($_.Name -match '^(\d+)') {
-                $num = [int]$matches[1]
-                if ($num -gt $highest) { $highest = $num }
-            }
-        }
-    }
-    return $highest
-}
-
-function Get-HighestNumberFromBranches {
-    param()
-    
-    $highest = 0
-    try {
-        $branches = git branch -a 2>$null
-        if ($LASTEXITCODE -eq 0) {
-            foreach ($branch in $branches) {
-                # Clean branch name: remove leading markers and remote prefixes
-                $cleanBranch = $branch.Trim() -replace '^\*?\s+', '' -replace '^remotes/[^/]+/', ''
-                
-                # Extract feature number if branch matches pattern ###-*
-                if ($cleanBranch -match '^(\d+)-') {
-                    $num = [int]$matches[1]
-                    if ($num -gt $highest) { $highest = $num }
-                }
-            }
-        }
-    } catch {
-        # If git command fails, return 0
-        Write-Verbose "Could not check Git branches: $_"
-    }
-    return $highest
-}
-
-function Get-NextBranchNumber {
-    param(
-        [string]$SpecsDir
-    )
-
-    Invoke-SafeFetchRemoteBranches
-
-    # Get highest number from ALL branches (not just matching short name)
-    $highestBranch = Get-HighestNumberFromBranches
-
-    # Get highest number from ALL specs (not just matching short name)
-    $highestSpec = Get-HighestNumberFromSpecs -SpecsDir $SpecsDir
-
-    # Take the maximum of both
-    $maxNum = [Math]::Max($highestBranch, $highestSpec)
-
-    # Return next number
-    return $maxNum + 1
+function Get-CurrentDateKey {
+    return (Get-Date -Format 'yyyyMMdd')
 }
 
 function Invoke-SafeFetchRemoteBranches {
@@ -286,7 +233,7 @@ if ($hasGit) {
         $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
         if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($currentBranch) -and $currentBranch -ne 'HEAD') {
             $currentBranchLeaf = ($currentBranch -replace '^.*/', '')
-            if ($currentBranchLeaf -match '^feature-[0-9]{8}-[a-z0-9][a-z0-9-]*$|^\d+-[a-z0-9][a-z0-9-]*$') {
+            if ($currentBranchLeaf -match '^feature-[0-9]{8}-[a-z0-9][a-z0-9-]*$') {
                 $branchName = $currentBranchLeaf
             } else {
                 Write-Warning "[specify] Current branch '$currentBranch' does not match 'feature-YYYYMMDD-short-name'; using fallback generated feature key"
@@ -298,26 +245,19 @@ if ($hasGit) {
 }
 
 if (-not $branchName) {
-    if ($Number -eq 0) {
-        if ($hasGit) {
-            $Number = Get-NextBranchNumber -SpecsDir $specsDir
-        } else {
-            $Number = (Get-HighestNumberFromSpecs -SpecsDir $specsDir) + 1
-        }
-    }
-
-    $featureNum = ('{0:000}' -f $Number)
-    $branchName = "$featureNum-$branchSuffix"
+    $featureDate = Get-CurrentDateKey
+    $branchPrefix = "feature-$featureDate-"
+    $branchName = "$branchPrefix$branchSuffix"
 
     # GitHub enforces a 244-byte limit on branch names
     $maxBranchLength = 244
     if ($branchName.Length -gt $maxBranchLength) {
-        $maxSuffixLength = $maxBranchLength - 4
+        $maxSuffixLength = $maxBranchLength - $branchPrefix.Length
         $truncatedSuffix = $branchSuffix.Substring(0, [Math]::Min($branchSuffix.Length, $maxSuffixLength))
         $truncatedSuffix = $truncatedSuffix -replace '-$', ''
 
         $originalBranchName = $branchName
-        $branchName = "$featureNum-$truncatedSuffix"
+        $branchName = "$branchPrefix$truncatedSuffix"
 
         Write-Warning "[specify] Branch name exceeded GitHub's 244-byte limit"
         Write-Warning "[specify] Original: $originalBranchName ($($originalBranchName.Length) bytes)"
@@ -329,12 +269,6 @@ if (-not $branchName) {
 $featurePrefix = ($branchName -split '-', 2)[0]
 if ($branchName -match '^feature-([0-9]{8})-') {
     $featureNum = $matches[1]
-} elseif ($featurePrefix -match '^\d+$') {
-    if ($featurePrefix.Length -lt 3) {
-        $featureNum = ('{0:000}' -f [int]$featurePrefix)
-    } else {
-        $featureNum = $featurePrefix
-    }
 } else {
     $featureNum = '000'
 }

@@ -1,7 +1,7 @@
 # Planning Control Plane: [FEATURE]
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
+**Branch**: `[feature-YYYYMMDD-feature-name]` | **Date**: [DATE] | **Spec**: [link]
+**Input**: Feature specification from `/specs/[YYYYMMDD-feature-name]/spec.md`
 
 ## Summary
 

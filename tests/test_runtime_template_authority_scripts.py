@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 import subprocess
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -85,6 +86,7 @@ def assert_local_execution_protocol(payload: dict) -> None:
     assert set(protocol["repo_search"]) >= {"available", "tool", "list_files_cmd", "search_text_cmd"}
     assert set(protocol["repo_inspection"]) >= {"available", "status_cmd", "diff_cmd", "history_cmd"}
     assert set(protocol["python"]) >= {"available", "tool", "runner_cmd"}
+    assert "runtime_tools" in protocol
     if protocol["repo_search"]["available"]:
         assert protocol["repo_search"]["tool"] in {"rg", "git"}
         assert protocol["repo_search"]["list_files_cmd"]
@@ -94,7 +96,16 @@ def assert_local_execution_protocol(payload: dict) -> None:
         assert protocol["repo_inspection"]["diff_cmd"].startswith("git ")
         assert protocol["repo_inspection"]["history_cmd"].startswith("git ")
     if protocol["python"]["available"]:
+        assert protocol["python"]["tool"] == "specify-cli"
         assert protocol["python"]["runner_cmd"]
+        assert protocol["python"]["runner_cmd"] == "specify <internal-helper-command>"
+        assert protocol["runtime_tools"]["schema_version"] == "1.0"
+        assert [tool["tool"] for tool in protocol["runtime_tools"]["core_runtime_tools"]] == [
+            "specify-cli",
+            "git",
+            "rg",
+        ]
+        assert "node" in protocol["runtime_tools"]["excluded_runtime_families"]
 
 
 def write_runtime_plan_baselines(repo_dir: Path) -> None:
@@ -103,6 +114,10 @@ def write_runtime_plan_baselines(repo_dir: Path) -> None:
     (repo_dir / ".specify" / "memory" / "constitution.md").write_text("# Constitution\n", encoding="utf-8")
     (memory_dir / "technical-dependency-matrix.md").write_text("# Dependency Matrix\n", encoding="utf-8")
     (memory_dir / "module-invocation-spec.md").write_text("# Module Invocation\n", encoding="utf-8")
+
+
+def today_key() -> str:
+    return datetime.now().strftime("%Y%m%d")
 
 
 def test_create_new_feature_powershell_accepts_positional_feature_description(tmp_path):
@@ -124,6 +139,44 @@ def test_create_new_feature_powershell_accepts_positional_feature_description(tm
     spec_path = Path(payload["SPEC_FILE"])
     assert spec_path.exists()
     assert spec_path.read_text(encoding="utf-8") == "# Spec Template\n"
+
+
+def test_create_new_feature_powershell_rejects_number_flag(tmp_path):
+    repo_dir = tmp_path / "repo"
+    (repo_dir / ".specify" / "templates").mkdir(parents=True)
+    (repo_dir / ".specify" / "templates" / "spec-template.md").write_text("# Spec Template\n", encoding="utf-8")
+    copy_powershell_script(repo_dir, "common.ps1")
+    script = copy_powershell_script(repo_dir, "create-new-feature.ps1")
+
+    result = run_powershell(
+        script,
+        repo_dir,
+        ["-Json", "-ShortName", "demo", "-Number", "123", "Build demo feature"],
+    )
+
+    assert result.returncode != 0
+    assert "-Number/--number is not supported" in result.stderr
+
+
+def test_create_new_feature_powershell_uses_current_date_instead_of_incrementing_spec_dir_dates(tmp_path):
+    repo_dir = tmp_path / "repo"
+    (repo_dir / ".specify" / "templates").mkdir(parents=True)
+    (repo_dir / ".specify" / "templates" / "spec-template.md").write_text("# Spec Template\n", encoding="utf-8")
+    (repo_dir / "specs" / "20260328-existing-feature").mkdir(parents=True)
+    copy_powershell_script(repo_dir, "common.ps1")
+    script = copy_powershell_script(repo_dir, "create-new-feature.ps1")
+
+    result = run_powershell(
+        script,
+        repo_dir,
+        ["-Json", "-ShortName", "parent-hanxu", "Build parent hanxu flow"],
+    )
+
+    assert result.returncode == 0
+    payload = parse_last_json_line(result.stdout)
+    expected_key = f"{today_key()}-parent-hanxu"
+    assert payload["BRANCH_NAME"] == f"feature-{expected_key}"
+    assert normalize_path(payload["SPEC_FILE"]) == normalize_path(repo_dir / "specs" / expected_key / "spec.md")
 
 
 def test_setup_plan_powershell_json_output_is_pure_json(tmp_path):
@@ -386,7 +439,8 @@ def test_create_new_feature_bash_keeps_current_feature_branch(tmp_path):
     (repo_dir / "README.md").write_text("init\n", encoding="utf-8")
     subprocess.run(["git", "add", "README.md"], cwd=repo_dir, check=True, capture_output=True, text=True)
     subprocess.run(["git", "commit", "-m", "init"], cwd=repo_dir, check=True, capture_output=True, text=True)
-    subprocess.run(["git", "checkout", "-b", "123-demo-feature"], cwd=repo_dir, check=True, capture_output=True, text=True)
+    current_branch_name = "feature-20250708-demo-feature"
+    subprocess.run(["git", "checkout", "-b", current_branch_name], cwd=repo_dir, check=True, capture_output=True, text=True)
 
     before = subprocess.run(
         ["git", "rev-parse", "--abbrev-ref", "HEAD"],
@@ -404,9 +458,9 @@ def test_create_new_feature_bash_keeps_current_feature_branch(tmp_path):
 
     assert result.returncode == 0
     payload = json.loads(result.stdout)
-    assert payload["BRANCH_NAME"] == "123-demo-feature"
+    assert payload["BRANCH_NAME"] == current_branch_name
 
-    spec_path = repo_dir / "specs" / "123-demo-feature" / "spec.md"
+    spec_path = repo_dir / "specs" / "20250708-demo-feature" / "spec.md"
     assert spec_path.exists()
     assert spec_path.read_text(encoding="utf-8") == "# Spec Template\n"
 
@@ -472,8 +526,10 @@ def test_create_new_feature_bash_does_not_write_spec_when_branch_switch_fails(tm
         text=True,
     ).stdout.strip()
 
-    subprocess.run(["git", "checkout", "-b", "123-demo-feature"], cwd=repo_dir, check=True, capture_output=True, text=True)
-    target_spec = repo_dir / "specs" / "123-demo-feature" / "spec.md"
+    conflict_branch_name = f"feature-{today_key()}-demo-feature"
+    conflict_feature_key = f"{today_key()}-demo-feature"
+    subprocess.run(["git", "checkout", "-b", conflict_branch_name], cwd=repo_dir, check=True, capture_output=True, text=True)
+    target_spec = repo_dir / "specs" / conflict_feature_key / "spec.md"
     target_spec.parent.mkdir(parents=True, exist_ok=True)
     target_spec.write_text("# Existing branch spec\n", encoding="utf-8")
     subprocess.run(["git", "add", str(target_spec)], cwd=repo_dir, check=True, capture_output=True, text=True)
@@ -486,11 +542,11 @@ def test_create_new_feature_bash_does_not_write_spec_when_branch_switch_fails(tm
     result = run_bash(
         script,
         repo_dir,
-        ["--json", "--number", "123", "--short-name", "demo-feature", "Build demo feature"],
+        ["--json", "--short-name", "demo-feature", "Build demo feature"],
     )
 
     assert result.returncode != 0
-    assert "Failed to switch to git branch '123-demo-feature'" in result.stderr
+    assert f"Failed to switch to git branch '{conflict_branch_name}'" in result.stderr
     assert target_spec.read_text(encoding="utf-8") == "# local conflict file\n"
 
 
@@ -516,13 +572,15 @@ def test_create_new_feature_bash_tracks_remote_only_branch(tmp_path):
     ).stdout.strip()
     subprocess.run(["git", "remote", "add", "origin", str(remote_dir)], cwd=seed_dir, check=True, capture_output=True, text=True)
     subprocess.run(["git", "push", "-u", "origin", default_branch], cwd=seed_dir, check=True, capture_output=True, text=True)
-    subprocess.run(["git", "checkout", "-b", "123-demo-feature"], cwd=seed_dir, check=True, capture_output=True, text=True)
-    branch_spec = seed_dir / "specs" / "123-demo-feature" / "spec.md"
+    remote_branch_name = f"feature-{today_key()}-demo-feature"
+    remote_feature_key = f"{today_key()}-demo-feature"
+    subprocess.run(["git", "checkout", "-b", remote_branch_name], cwd=seed_dir, check=True, capture_output=True, text=True)
+    branch_spec = seed_dir / "specs" / remote_feature_key / "spec.md"
     branch_spec.parent.mkdir(parents=True, exist_ok=True)
     branch_spec.write_text("# Remote branch spec\n", encoding="utf-8")
     subprocess.run(["git", "add", str(branch_spec)], cwd=seed_dir, check=True, capture_output=True, text=True)
     subprocess.run(["git", "commit", "-m", "branch spec"], cwd=seed_dir, check=True, capture_output=True, text=True)
-    subprocess.run(["git", "push", "-u", "origin", "123-demo-feature"], cwd=seed_dir, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "push", "-u", "origin", remote_branch_name], cwd=seed_dir, check=True, capture_output=True, text=True)
 
     subprocess.run(["git", "clone", str(remote_dir), str(repo_dir)], check=True, capture_output=True, text=True)
     subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo_dir, check=True, capture_output=True, text=True)
@@ -532,7 +590,7 @@ def test_create_new_feature_bash_tracks_remote_only_branch(tmp_path):
     script = copy_bash_script(repo_dir, "create-new-feature.sh")
 
     branch_exists_local = subprocess.run(
-        ["git", "show-ref", "--verify", "--quiet", "refs/heads/123-demo-feature"],
+        ["git", "show-ref", "--verify", "--quiet", f"refs/heads/{remote_branch_name}"],
         cwd=repo_dir,
         capture_output=True,
         text=True,
@@ -542,12 +600,12 @@ def test_create_new_feature_bash_tracks_remote_only_branch(tmp_path):
     result = run_bash(
         script,
         repo_dir,
-        ["--json", "--number", "123", "--short-name", "demo-feature", "Build demo feature"],
+        ["--json", "--short-name", "demo-feature", "Build demo feature"],
     )
 
     assert result.returncode == 0
     payload = json.loads(result.stdout)
-    assert payload["BRANCH_NAME"] == "123-demo-feature"
+    assert payload["BRANCH_NAME"] == remote_branch_name
     active_branch = subprocess.run(
         ["git", "rev-parse", "--abbrev-ref", "HEAD"],
         cwd=repo_dir,
@@ -555,7 +613,7 @@ def test_create_new_feature_bash_tracks_remote_only_branch(tmp_path):
         capture_output=True,
         text=True,
     ).stdout.strip()
-    assert active_branch == "123-demo-feature"
+    assert active_branch == remote_branch_name
     upstream = subprocess.run(
         ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"],
         cwd=repo_dir,
@@ -563,7 +621,7 @@ def test_create_new_feature_bash_tracks_remote_only_branch(tmp_path):
         capture_output=True,
         text=True,
     ).stdout.strip()
-    assert upstream == "origin/123-demo-feature"
+    assert upstream == f"origin/{remote_branch_name}"
 
 
 def test_create_new_feature_bash_normalizes_feature_prefixed_branch_to_spec_key(tmp_path):
@@ -602,6 +660,26 @@ def test_create_new_feature_bash_normalizes_feature_prefixed_branch_to_spec_key(
     assert not (repo_dir / "specs" / "feature-20250708-parent-hanxue-channel").exists()
 
 
+def test_create_new_feature_bash_uses_current_date_instead_of_incrementing_spec_dir_dates(tmp_path):
+    repo_dir = tmp_path / "repo"
+    (repo_dir / ".specify" / "templates").mkdir(parents=True)
+    (repo_dir / ".specify" / "templates" / "spec-template.md").write_text("# Spec Template\n", encoding="utf-8")
+    (repo_dir / "specs" / "20260328-existing-feature").mkdir(parents=True)
+    script = copy_bash_script(repo_dir, "create-new-feature.sh")
+
+    result = run_bash(
+        script,
+        repo_dir,
+        ["--json", "--short-name", "parent-hanxu", "Build parent hanxu flow"],
+    )
+
+    assert result.returncode == 0
+    payload = json.loads(result.stdout)
+    expected_key = f"{today_key()}-parent-hanxu"
+    assert payload["BRANCH_NAME"] == f"feature-{expected_key}"
+    assert normalize_path(payload["SPEC_FILE"]) == normalize_path(repo_dir / "specs" / expected_key / "spec.md")
+
+
 def test_check_prerequisites_bash_handles_branch_inferred_plan_file_with_spaces_in_path(tmp_path):
     repo_dir = tmp_path / "repo"
     feature_dir = repo_dir / "specs" / "001-demo with spaces"
@@ -622,7 +700,43 @@ def test_check_prerequisites_bash_handles_branch_inferred_plan_file_with_spaces_
     assert payload["AVAILABLE_DOCS"] == []
 
 
-def test_check_prerequisites_bash_accepts_legacy_numeric_branch_prefix_of_any_length(tmp_path):
+def test_check_prerequisites_bash_resolves_legacy_three_digit_branch_by_numeric_prefix(tmp_path):
+    repo_dir = tmp_path / "repo"
+    feature_dir = repo_dir / "specs" / "001-existing-slug"
+    feature_dir.mkdir(parents=True)
+    (feature_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    (feature_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    copy_bash_script(repo_dir, "common.sh")
+    script = copy_bash_script(repo_dir, "check-prerequisites.sh")
+
+    env = os.environ.copy()
+    env["SPECIFY_FEATURE"] = "001-other-slug"
+    result = run_bash(script, repo_dir, ["--json"], env=env)
+
+    assert result.returncode == 0
+    payload = json.loads(result.stdout)
+    assert normalize_path(payload["FEATURE_DIR"]) == normalize_path(feature_dir)
+
+
+def test_check_prerequisites_powershell_resolves_legacy_three_digit_branch_by_numeric_prefix(tmp_path):
+    repo_dir = tmp_path / "repo"
+    feature_dir = repo_dir / "specs" / "001-existing-slug"
+    feature_dir.mkdir(parents=True)
+    (feature_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    (feature_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    copy_powershell_script(repo_dir, "common.ps1")
+    script = copy_powershell_script(repo_dir, "check-prerequisites.ps1")
+
+    env = os.environ.copy()
+    env["SPECIFY_FEATURE"] = "001-other-slug"
+    result = run_powershell(script, repo_dir, ["-Json"], env=env)
+
+    assert result.returncode == 0
+    payload = parse_last_json_line(result.stdout)
+    assert normalize_path(payload["FEATURE_DIR"]) == normalize_path(feature_dir)
+
+
+def test_check_prerequisites_bash_rejects_legacy_numeric_branch_prefix(tmp_path):
     repo_dir = tmp_path / "repo"
     feature_dir = repo_dir / "specs" / "12-demo"
     feature_dir.mkdir(parents=True)
@@ -635,12 +749,11 @@ def test_check_prerequisites_bash_accepts_legacy_numeric_branch_prefix_of_any_le
     env["SPECIFY_FEATURE"] = "12-demo"
     result = run_bash(script, repo_dir, ["--json"], env=env)
 
-    assert result.returncode == 0
-    payload = json.loads(result.stdout)
-    assert normalize_path(payload["FEATURE_DIR"]) == normalize_path(feature_dir)
+    assert result.returncode != 0
+    assert "Not on a feature branch" in result.stderr
 
 
-def test_check_prerequisites_powershell_accepts_legacy_numeric_branch_prefix_of_any_length(tmp_path):
+def test_check_prerequisites_powershell_rejects_legacy_numeric_branch_prefix(tmp_path):
     repo_dir = tmp_path / "repo"
     feature_dir = repo_dir / "specs" / "12-demo"
     feature_dir.mkdir(parents=True)
@@ -653,9 +766,8 @@ def test_check_prerequisites_powershell_accepts_legacy_numeric_branch_prefix_of_
     env["SPECIFY_FEATURE"] = "12-demo"
     result = run_powershell(script, repo_dir, ["-Json"], env=env)
 
-    assert result.returncode == 0
-    payload = parse_last_json_line(result.stdout)
-    assert normalize_path(payload["FEATURE_DIR"]) == normalize_path(feature_dir)
+    assert result.returncode != 0
+    assert "Not on a feature branch" in result.stderr
 
 
 def test_powershell_generation_scripts_remove_template_fallbacks():
@@ -719,4 +831,5 @@ def test_agent_template_includes_stable_local_execution_guidance():
 
     assert "## Stable Local Execution" in template
     assert "LOCAL_EXECUTION_PROTOCOL" in template
-    assert "uv run python" in template
+    assert "specify internal-task-bootstrap" in template
+    assert "constitution-defined local execution policy" in template

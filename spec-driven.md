@@ -128,11 +128,11 @@ Total: ~12 hours of documentation work
 /sdd.specify Real-time chat system with message history and user presence
 
 # This automatically:
-# - Creates branch "003-chat-system"
-# - Generates specs/003-chat-system/spec.md
+# - Creates branch "feature-20250708-chat-system"
+# - Generates specs/20250708-chat-system/spec.md
 # - Populates it with structured requirements
 
-# Step 1b: Optional sidecar command for interactive prototype (user chooses timing)
+# Step 1b: Optional sidecar command for focused interaction tool (user chooses timing)
 /sdd.specify.ui-html
 
 # Step 2: Initialize planning control plane (5 minutes)
@@ -148,13 +148,13 @@ Total: ~12 hours of documentation work
 /sdd.tasks
 
 # This workflow creates:
-# - specs/003-chat-system/plan.md
-# - specs/003-chat-system/research.md (via /sdd.plan.research)
-# - specs/003-chat-system/data-model.md (via /sdd.plan.data-model)
-# - specs/003-chat-system/test-matrix.md (via /sdd.plan.test-matrix)
-# - specs/003-chat-system/contracts/ (via repeated /sdd.plan.contract)
-# - specs/003-chat-system/tasks.md (Task list derived from the plan)
-# - specs/003-chat-system/ui.html (only when /sdd.specify.ui-html is explicitly invoked)
+# - specs/20250708-chat-system/plan.md
+# - specs/20250708-chat-system/research.md (via /sdd.plan.research)
+# - specs/20250708-chat-system/data-model.md (via /sdd.plan.data-model)
+# - specs/20250708-chat-system/test-matrix.md (via /sdd.plan.test-matrix)
+# - specs/20250708-chat-system/contracts/ (via repeated /sdd.plan.contract)
+# - specs/20250708-chat-system/tasks.md (Task list derived from the plan)
+# - specs/20250708-chat-system/ui.html (only when /sdd.specify.ui-html is explicitly invoked)
 ```
 
 In 15 minutes, you have:

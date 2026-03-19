@@ -31,30 +31,27 @@ function Get-CurrentBranch {
         # Git command failed
     }
     
-    # For non-git repos, try to find the latest feature directory.
-    # Prefer date-based naming (YYYYMMDD-slug), then fallback to legacy NNN-slug.
+    # For non-git repos, try to find the latest date-keyed feature directory.
     $repoRoot = Get-RepoRoot
     $specsDir = Join-Path $repoRoot "specs"
     
     if (Test-Path $specsDir) {
+        $featureDirs = @()
         $latestFeature = ""
         $highestDate = 0
-        $highestLegacy = 0
-        
         Get-ChildItem -Path $specsDir -Directory | ForEach-Object {
+            $featureDirs += $_.Name
             if ($_.Name -match '^(\d{8})-') {
                 $dateKey = [int64]$matches[1]
                 if ($dateKey -gt $highestDate) {
                     $highestDate = $dateKey
                     $latestFeature = $_.Name
                 }
-            } elseif ($_.Name -match '^(\d+)-') {
-                $num = [int]$matches[1]
-                if ($highestDate -eq 0 -and $num -gt $highestLegacy) {
-                    $highestLegacy = $num
-                    $latestFeature = $_.Name
-                }
             }
+        }
+
+        if ($featureDirs.Count -eq 1) {
+            return $featureDirs[0]
         }
         
         if ($latestFeature) {
@@ -83,28 +80,32 @@ function Test-FeatureBranch {
     
     # For non-git repos, we can't enforce branch naming but still provide output
     if (-not $HasGit) {
+        if (
+            $Branch -match '^[0-9]+-[a-z0-9][a-z0-9-]*$' -and
+            $Branch -notmatch '^[0-9]{8}-[a-z0-9][a-z0-9-]*$' -and
+            $Branch -notmatch '^[0-9]{3}-[a-z0-9][a-z0-9-]*$'
+        ) {
+            [Console]::Error.WriteLine("ERROR: Not on a feature branch. Current branch: $Branch")
+            [Console]::Error.WriteLine("Feature branches should be named like: feature-20250708-parent-hanxue-channel")
+            return $false
+        }
         Write-Warning "[specify] Warning: Git repository not detected; skipped branch validation"
         return $true
     }
     
     $branchLeaf = Split-Path -Leaf $Branch
 
-    if ($branchLeaf -match '^feature-[0-9]{8}-[a-z0-9][a-z0-9-]*$') {
+    if (
+        $branchLeaf -match '^feature-[0-9]{8}-[a-z0-9][a-z0-9-]*$' -or
+        $branchLeaf -match '^[0-9]{8}-[a-z0-9][a-z0-9-]*$' -or
+        $branchLeaf -match '^[0-9]{3}-[a-z0-9][a-z0-9-]*$'
+    ) {
         return $true
     }
 
-    # Backward-compatible acceptance for existing projects.
-    if ($branchLeaf -match '^[0-9]+-[a-z0-9][a-z0-9-]*$') {
-        Write-Warning "[specify] Legacy branch naming detected: $branchLeaf. Prefer feature-YYYYMMDD-short-name."
-        return $true
-    }
-
-    if ($branchLeaf -notmatch '^[0-9]{8}-[a-z0-9][a-z0-9-]*$') {
-        [Console]::Error.WriteLine("ERROR: Not on a feature branch. Current branch: $Branch")
-        [Console]::Error.WriteLine("Feature branches should be named like: feature-20250708-parent-hanxue-channel")
-        return $false
-    }
-    return $true
+    [Console]::Error.WriteLine("ERROR: Not on a feature branch. Current branch: $Branch")
+    [Console]::Error.WriteLine("Feature branches should be named like: feature-20250708-parent-hanxue-channel")
+    return $false
 }
 
 function Get-FeatureDir {
@@ -156,30 +157,27 @@ function Find-FeatureDirByPrefix {
         return (Join-Path $specsDir $matches[1])
     }
 
-    if ($branchLeaf -notmatch '^(\d+)-') {
-        return (Join-Path $specsDir $branchLeaf)
+    # Legacy compatibility: allow 3-digit feature branches to map by numeric prefix.
+    if ($branchLeaf -match '^([0-9]{3})-') {
+        $prefix = $matches[1]
+        $matchingDirs = @()
+        if (Test-Path $specsDir) {
+            $matchingDirs = @(
+                Get-ChildItem -Path $specsDir -Directory -Filter "$prefix-*" |
+                    ForEach-Object { $_.Name }
+            )
+        }
+
+        if ($matchingDirs.Count -eq 1) {
+            return (Join-Path $specsDir $matchingDirs[0])
+        }
+
+        if ($matchingDirs.Count -gt 1) {
+            [Console]::Error.WriteLine("ERROR: Multiple spec directories found with prefix '$prefix': $($matchingDirs -join ' ')")
+            [Console]::Error.WriteLine('Please ensure only one spec directory exists per numeric prefix.')
+        }
     }
 
-    $prefix = $matches[1]
-    $matchingDirs = @()
-
-    if (Test-Path $specsDir) {
-        $matchingDirs = @(
-            Get-ChildItem -Path $specsDir -Directory -Filter "$prefix-*" |
-                ForEach-Object { $_.Name }
-        )
-    }
-
-    if ($matchingDirs.Count -eq 0) {
-        return (Join-Path $specsDir $branchLeaf)
-    }
-
-    if ($matchingDirs.Count -eq 1) {
-        return (Join-Path $specsDir $matchingDirs[0])
-    }
-
-    [Console]::Error.WriteLine("ERROR: Multiple spec directories found with prefix '$prefix': $($matchingDirs -join ' ')")
-    [Console]::Error.WriteLine('Please ensure only one spec directory exists per numeric prefix.')
     return (Join-Path $specsDir $branchLeaf)
 }
 

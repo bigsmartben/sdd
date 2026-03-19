@@ -10,6 +10,30 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
+def _env_with_specify_shim(repo_dir: Path) -> dict[str, str]:
+    shim_dir = repo_dir / ".test-bin"
+    shim_dir.mkdir(parents=True, exist_ok=True)
+
+    python_exe = Path(sys.executable).as_posix()
+    if len(python_exe) >= 3 and python_exe[1:3] == ":/":
+        python_exe = f"/mnt/{python_exe[0].lower()}{python_exe[2:]}"
+    shim_path = shim_dir / "specify"
+    with shim_path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(
+            "#!/usr/bin/env bash\n"
+            f""""{python_exe}" -c 'import sys, specify_cli; sys.argv[0] = "specify"; specify_cli.main()' "$@"\n"""
+        )
+    shim_path.chmod(0o755)
+
+    env = os.environ.copy()
+    env["PATH"] = f"{shim_dir}{os.pathsep}{env['PATH']}"
+    shim_posix = shim_path.as_posix()
+    if len(shim_posix) >= 3 and shim_posix[1:3] == ":/":
+        shim_posix = f"/mnt/{shim_posix[0].lower()}{shim_posix[2:]}"
+    env["SDD_SPECIFY_CMD"] = shim_posix
+    return env
+
+
 def _write_minimal_feature(
     feature_dir: Path,
     contract_text: str | None = None,
@@ -752,14 +776,14 @@ def test_bash_check_prerequisites_can_embed_tasks_bootstrap(tmp_path):
     shutil.copy2(REPO_ROOT / "scripts" / "task_preflight.py", repo_dir / "scripts" / "task_preflight.py")
     (scripts_bash / "check-prerequisites.sh").chmod(0o755)
 
-    feature_dir = repo_dir / "specs" / "001-demo"
+    feature_dir = repo_dir / "specs" / "20250708-demo"
     _write_minimal_feature(feature_dir)
 
     subprocess.run(["git", "init"], cwd=repo_dir, capture_output=True, check=True)
-    subprocess.run(["git", "checkout", "-b", "001-demo"], cwd=repo_dir, capture_output=True, check=True)
+    subprocess.run(["git", "checkout", "-b", "feature-20250708-demo"], cwd=repo_dir, capture_output=True, check=True)
 
-    env = os.environ.copy()
-    env["SPECIFY_FEATURE"] = "001-demo"
+    env = _env_with_specify_shim(repo_dir)
+    env["SPECIFY_FEATURE"] = "feature-20250708-demo"
 
     result = subprocess.run(
         ["bash", "scripts/bash/check-prerequisites.sh", "--json", "--task-preflight"],
@@ -773,7 +797,7 @@ def test_bash_check_prerequisites_can_embed_tasks_bootstrap(tmp_path):
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
 
-    assert payload["FEATURE_DIR"].replace("\\", "/").endswith("/repo/specs/001-demo")
+    assert payload["FEATURE_DIR"].replace("\\", "/").endswith("/repo/specs/20250708-demo")
     assert "TASKS_BOOTSTRAP" in payload
     assert payload["TASKS_BOOTSTRAP"]["binding_row_count"] == 1
     assert len(payload["TASKS_BOOTSTRAP"]["ready_unit_inventory"]) == 1
@@ -796,7 +820,7 @@ def test_bash_check_prerequisites_supports_feature_prefixed_branch_default(tmp_p
     subprocess.run(["git", "init"], cwd=repo_dir, capture_output=True, check=True)
     subprocess.run(["git", "checkout", "-b", "feature-20250708-parent-hanxue-channel"], cwd=repo_dir, capture_output=True, check=True)
 
-    env = os.environ.copy()
+    env = _env_with_specify_shim(repo_dir)
     env["SPECIFY_FEATURE"] = "feature-20250708-parent-hanxue-channel"
 
     result = subprocess.run(
@@ -824,10 +848,10 @@ def test_bash_check_prerequisites_task_preflight_uses_branch_inferred_plan_file(
     shutil.copy2(REPO_ROOT / "scripts" / "task_preflight.py", repo_dir / "scripts" / "task_preflight.py")
     (scripts_bash / "check-prerequisites.sh").chmod(0o755)
 
-    feature_dir = repo_dir / "specs" / "001-demo"
+    feature_dir = repo_dir / "specs" / "20250708-demo"
     _write_minimal_feature(feature_dir)
-    env = os.environ.copy()
-    env["SPECIFY_FEATURE"] = "001-demo"
+    env = _env_with_specify_shim(repo_dir)
+    env["SPECIFY_FEATURE"] = "feature-20250708-demo"
 
     result = subprocess.run(
         ["bash", "scripts/bash/check-prerequisites.sh", "--json", "--task-preflight"],
@@ -840,7 +864,7 @@ def test_bash_check_prerequisites_task_preflight_uses_branch_inferred_plan_file(
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["FEATURE_DIR"].replace("\\", "/").endswith("/repo/specs/001-demo")
+    assert payload["FEATURE_DIR"].replace("\\", "/").endswith("/repo/specs/20250708-demo")
     assert payload["TASKS_BOOTSTRAP"]["schema_version"] == "1.2"
     assert payload["TASKS_BOOTSTRAP"]["execution_readiness"]["ready_for_task_generation"] is True
 
@@ -952,15 +976,15 @@ def test_bash_check_prerequisites_can_embed_implement_bootstrap(tmp_path):
     shutil.copy2(REPO_ROOT / "scripts" / "implement_preflight.py", repo_dir / "scripts" / "implement_preflight.py")
     (scripts_bash / "check-prerequisites.sh").chmod(0o755)
 
-    feature_dir = repo_dir / "specs" / "001-demo"
+    feature_dir = repo_dir / "specs" / "20250708-demo"
     _write_minimal_feature(feature_dir)
     _write_tasks_and_analyze_history(feature_dir, gate_decision="PASS")
 
     subprocess.run(["git", "init"], cwd=repo_dir, capture_output=True, check=True)
-    subprocess.run(["git", "checkout", "-b", "001-demo"], cwd=repo_dir, capture_output=True, check=True)
+    subprocess.run(["git", "checkout", "-b", "feature-20250708-demo"], cwd=repo_dir, capture_output=True, check=True)
 
-    env = os.environ.copy()
-    env["SPECIFY_FEATURE"] = "001-demo"
+    env = _env_with_specify_shim(repo_dir)
+    env["SPECIFY_FEATURE"] = "feature-20250708-demo"
 
     result = subprocess.run(
         [
@@ -980,7 +1004,7 @@ def test_bash_check_prerequisites_can_embed_implement_bootstrap(tmp_path):
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["FEATURE_DIR"].replace("\\", "/").endswith("/repo/specs/001-demo")
+    assert payload["FEATURE_DIR"].replace("\\", "/").endswith("/repo/specs/20250708-demo")
     assert "IMPLEMENT_BOOTSTRAP" in payload
     assert payload["IMPLEMENT_BOOTSTRAP"]["schema_version"] == "1.0"
     assert payload["IMPLEMENT_BOOTSTRAP"]["analyze_readiness"]["ready_for_implementation"] is True
@@ -1101,14 +1125,14 @@ def test_bash_check_prerequisites_can_embed_data_model_bootstrap(tmp_path):
     shutil.copy2(REPO_ROOT / "scripts" / "data_model_preflight.py", repo_dir / "scripts" / "data_model_preflight.py")
     (scripts_bash / "check-prerequisites.sh").chmod(0o755)
 
-    feature_dir = repo_dir / "specs" / "001-demo"
+    feature_dir = repo_dir / "specs" / "20250708-demo"
     _write_data_model_feature(feature_dir)
 
     subprocess.run(["git", "init"], cwd=repo_dir, capture_output=True, check=True)
-    subprocess.run(["git", "checkout", "-b", "001-demo"], cwd=repo_dir, capture_output=True, check=True)
+    subprocess.run(["git", "checkout", "-b", "feature-20250708-demo"], cwd=repo_dir, capture_output=True, check=True)
 
-    env = os.environ.copy()
-    env["SPECIFY_FEATURE"] = "001-demo"
+    env = _env_with_specify_shim(repo_dir)
+    env["SPECIFY_FEATURE"] = "feature-20250708-demo"
 
     result = subprocess.run(
         ["bash", "scripts/bash/check-prerequisites.sh", "--json", "--data-model-preflight"],
@@ -1121,7 +1145,7 @@ def test_bash_check_prerequisites_can_embed_data_model_bootstrap(tmp_path):
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["FEATURE_DIR"].replace("\\", "/").endswith("/repo/specs/001-demo")
+    assert payload["FEATURE_DIR"].replace("\\", "/").endswith("/repo/specs/20250708-demo")
     assert "DATA_MODEL_BOOTSTRAP" in payload
     assert payload["DATA_MODEL_BOOTSTRAP"]["schema_version"] == "1.1"
     assert payload["DATA_MODEL_BOOTSTRAP"]["generation_readiness"]["ready_for_generation"] is True
@@ -1156,8 +1180,12 @@ def test_tasks_command_prefers_task_preflight_bootstrap():
     assert "LOCAL_EXECUTION_PROTOCOL" in readme
 
     assert "LOCAL_EXECUTION_PROTOCOL" in bash_script
+    assert "internal-task-bootstrap" in bash_script
+    assert '"runtime_tools":' in bash_script
     assert "-TaskPreflight" in powershell_script
     assert "LOCAL_EXECUTION_PROTOCOL" in powershell_script
+    assert "internal-task-bootstrap" in powershell_script
+    assert "runtime_tools = $runtimeTools" in powershell_script
     assert "TASKS_BOOTSTRAP" in powershell_script
     assert '$payload.TASKS_BOOTSTRAP = $null' in powershell_script
 
@@ -1178,9 +1206,11 @@ def test_implement_command_prefers_implement_preflight_bootstrap():
 
     assert "--implement-preflight" in bash_script
     assert "LOCAL_EXECUTION_PROTOCOL" in bash_script
+    assert "internal-implement-bootstrap" in bash_script
     assert "IMPLEMENT_BOOTSTRAP" in bash_script
     assert "-ImplementPreflight" in powershell_script
     assert "LOCAL_EXECUTION_PROTOCOL" in powershell_script
+    assert "internal-implement-bootstrap" in powershell_script
     assert "IMPLEMENT_BOOTSTRAP" in powershell_script
     assert '$payload.IMPLEMENT_BOOTSTRAP = $null' in powershell_script
 
@@ -1200,7 +1230,9 @@ def test_data_model_command_prefers_data_model_preflight_bootstrap():
     assert "`DATA_MODEL_BOOTSTRAP.generation_readiness.errors` contains blockers" in data_model_command
 
     assert "--data-model-preflight" in bash_script
+    assert "internal-data-model-bootstrap" in bash_script
     assert "DATA_MODEL_BOOTSTRAP" in bash_script
     assert "-DataModelPreflight" in powershell_script
+    assert "internal-data-model-bootstrap" in powershell_script
     assert "DATA_MODEL_BOOTSTRAP" in powershell_script
     assert '$payload.DATA_MODEL_BOOTSTRAP = $null' in powershell_script

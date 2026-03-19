@@ -18,7 +18,7 @@ Usage: run-planning-lint.ps1 -FeatureDir <abs-path> -Rules <abs-path> [-Json] [-
 Run planning mechanical lint checks from a TSV rules catalog.
 
 Options:
-  -FeatureDir <abs-path>    Absolute path to feature directory (e.g. /repo/specs/001-feature)
+  -FeatureDir <abs-path>    Absolute path to feature directory (e.g. /repo/specs/20250708-feature)
   -Rules <abs-path>         Absolute path to rules TSV catalog
   -Json                     Output machine-readable JSON
   -Help                     Show this help message

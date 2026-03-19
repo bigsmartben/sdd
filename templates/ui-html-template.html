@@ -268,6 +268,47 @@
         min-height: 520px;
       }
     }
+
+    @media (max-width: 640px) {
+      .tool-stage {
+        min-height: auto;
+      }
+
+      .tool-stage::before {
+        display: none;
+      }
+
+      .loop-grid {
+        min-height: auto;
+        padding: 8px 0 0;
+        gap: 12px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-areas:
+          "context action"
+          "core core"
+          "result feedback";
+        place-items: stretch;
+        align-items: stretch;
+      }
+
+      .loop-node {
+        position: static;
+        width: auto;
+        min-height: 0;
+      }
+
+      .node-context { grid-area: context; }
+      .node-action { grid-area: action; }
+      .node-feedback { grid-area: feedback; }
+      .node-result { grid-area: result; }
+
+      .loop-core {
+        grid-area: core;
+        justify-self: center;
+        width: min(220px, 72vw);
+      }
+    }
   </style>
 </head>
 <body>

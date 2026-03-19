@@ -54,6 +54,11 @@ import ssl
 import truststore
 from datetime import datetime, timezone
 
+from .runtime_data_model_bootstrap import build_data_model_bootstrap_payload
+from .runtime_implement_bootstrap import build_implement_bootstrap_payload
+from .runtime_task_bootstrap import build_task_bootstrap_payload
+from .runtime_tools import runtime_tools_manifest
+
 ssl_context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 client = httpx.Client(verify=ssl_context)
 
@@ -1130,7 +1135,7 @@ DEFAULT_SKILLS_DIR = ".agents/skills"
 # Enhanced descriptions for each SDD command skill
 SKILL_DESCRIPTIONS = {
     "specify": "Create or update feature specifications from natural language descriptions. Use when starting new features or refining requirements. Generates spec.md with user stories, functional requirements, and acceptance criteria following spec-driven development methodology.",
-    "specify.ui-html": "Generate the derived ui.html interactive prototype artifact from the current feature branch spec.md. This is an optional sidecar command; invoke `/sdd.specify.ui-html` only when you want a reviewable interaction prototype without changing spec.md authority.",
+    "specify.ui-html": "Generate the derived ui.html focused interaction tool artifact from the current feature branch spec.md. This is an optional sidecar command; invoke `/sdd.specify.ui-html` only when you want a reviewable interaction tool without changing spec.md authority.",
     "plan": "Initialize the planning control plane from the current feature branch spec.md path. Use `/sdd.plan ...` after creating a spec to produce plan.md with Stage 0 shared context, queue state, and binding projection tracking for the /sdd.plan.* child commands.",
     "plan.research": "Generate the queued research.md artifact selected from the current feature branch plan.md. Use `/sdd.plan.research` after /sdd.plan to resolve the first pending research unit and emit the next runtime handoff decision.",
     "plan.data-model": "Generate the queued data-model.md artifact selected from the current feature branch plan.md. Use `/sdd.plan.data-model` after /sdd.plan.research to produce one backbone data model unit and emit the next runtime handoff decision.",
@@ -1751,7 +1756,7 @@ def init(
 
     steps_lines.append(f"   2.1 [cyan]/{COMMAND_NAMESPACE}.constitution[/] - Establish project principles")
     steps_lines.append(f"   2.2 [cyan]/{COMMAND_NAMESPACE}.specify[/] - Create baseline specification")
-    steps_lines.append(f"   2.3 [cyan]/{COMMAND_NAMESPACE}.specify.ui-html[/] - Optional sidecar command; generate an interactive prototype when needed")
+    steps_lines.append(f"   2.3 [cyan]/{COMMAND_NAMESPACE}.specify.ui-html[/] - Optional sidecar command; generate a focused interaction tool when needed")
     steps_lines.append(f"   2.4 [cyan]/{COMMAND_NAMESPACE}.plan[/] - Initialize the planning control plane")
     steps_lines.append(f"   2.5 [cyan]/{COMMAND_NAMESPACE}.plan.research[/] - Start the planning queue")
     steps_lines.append(f"   2.6 Follow runtime Handoff Decision through [cyan]/{COMMAND_NAMESPACE}.plan.data-model[/], [cyan]/{COMMAND_NAMESPACE}.plan.test-matrix[/], and repeated [cyan]/{COMMAND_NAMESPACE}.plan.contract[/]")
@@ -1895,6 +1900,22 @@ def version():
     console.print()
 
 
+def _normalize_runtime_path_arg(value: str) -> str:
+    """Normalize shell-emitted path arguments for the local platform."""
+    if os.name == "nt" and value.startswith("/mnt/") and len(value) > 7 and value[5].isalpha() and value[6] == "/":
+        return f"{value[5].upper()}:{value[6:]}"
+    return value
+
+
+def _emit_internal_payload(payload: dict) -> None:
+    json.dump(payload, sys.stdout, ensure_ascii=True, separators=(",", ":"))
+    sys.stdout.write("\n")
+
+
+def _normalized_path(value: str) -> Path:
+    return Path(_normalize_runtime_path_arg(value)).resolve()
+
+
 @app.command(
     "internal-run-python",
     hidden=True,
@@ -1902,19 +1923,82 @@ def version():
 )
 def internal_run_python(
     ctx: typer.Context,
-    script: Path = typer.Option(
+    script: str = typer.Option(
         ...,
         "--script",
-        exists=True,
-        dir_okay=False,
-        readable=True,
-        resolve_path=True,
         help="Repository helper script to execute with the specify-cli runtime.",
     ),
 ):
     """Run a repository helper script with the specify-cli Python runtime."""
-    result = subprocess.run([sys.executable, str(script), *ctx.args])
+    normalized_script = _normalize_runtime_path_arg(script)
+    normalized_args = [_normalize_runtime_path_arg(arg) for arg in ctx.args]
+    result = subprocess.run([sys.executable, normalized_script, *normalized_args])
     raise typer.Exit(result.returncode)
+
+
+@app.command("internal-runtime-tools", hidden=True)
+def internal_runtime_tools() -> None:
+    """Emit the packaged SDD core runtime tool manifest."""
+    _emit_internal_payload(runtime_tools_manifest())
+
+
+@app.command("internal-data-model-bootstrap", hidden=True)
+def internal_data_model_bootstrap(
+    feature_dir: str = typer.Option(..., "--feature-dir"),
+    plan: str = typer.Option(..., "--plan"),
+    spec: str = typer.Option(..., "--spec"),
+    research: str = typer.Option(..., "--research"),
+    data_model: str = typer.Option(..., "--data-model"),
+) -> None:
+    """Emit the packaged data-model bootstrap payload."""
+    payload = build_data_model_bootstrap_payload(
+        feature_dir=_normalized_path(feature_dir),
+        plan_path=_normalized_path(plan),
+        spec_path=_normalized_path(spec),
+        research_path=_normalized_path(research),
+        data_model_path=_normalized_path(data_model),
+    )
+    _emit_internal_payload(payload)
+
+
+@app.command("internal-task-bootstrap", hidden=True)
+def internal_task_bootstrap(
+    feature_dir: str = typer.Option(..., "--feature-dir"),
+    plan: str = typer.Option(..., "--plan"),
+    spec: str = typer.Option(..., "--spec"),
+    data_model: str = typer.Option(..., "--data-model"),
+    test_matrix: str = typer.Option(..., "--test-matrix"),
+    contracts_dir: str = typer.Option(..., "--contracts-dir"),
+) -> None:
+    """Emit the packaged task bootstrap payload."""
+    payload = build_task_bootstrap_payload(
+        feature_dir=_normalized_path(feature_dir),
+        plan_path=_normalized_path(plan),
+        spec_path=_normalized_path(spec),
+        data_model_path=_normalized_path(data_model),
+        test_matrix_path=_normalized_path(test_matrix),
+        contracts_dir=_normalized_path(contracts_dir),
+    )
+    _emit_internal_payload(payload)
+
+
+@app.command("internal-implement-bootstrap", hidden=True)
+def internal_implement_bootstrap(
+    feature_dir: str = typer.Option(..., "--feature-dir"),
+    spec: str = typer.Option(..., "--spec"),
+    plan: str = typer.Option(..., "--plan"),
+    tasks: str = typer.Option(..., "--tasks"),
+    analyze_history: str = typer.Option(..., "--analyze-history"),
+) -> None:
+    """Emit the packaged implement bootstrap payload."""
+    payload = build_implement_bootstrap_payload(
+        feature_dir=_normalized_path(feature_dir),
+        spec_path=_normalized_path(spec),
+        plan_path=_normalized_path(plan),
+        tasks_path=_normalized_path(tasks),
+        analyze_history_path=_normalized_path(analyze_history),
+    )
+    _emit_internal_payload(payload)
 
 
 # ===== Extension Commands =====

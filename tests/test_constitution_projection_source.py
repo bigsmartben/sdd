@@ -40,9 +40,14 @@ def test_constitution_template_defines_owner_boundaries_and_terms():
     assert "/sdd.analyze" in content
     assert "/sdd.tasks" in content
     assert "/sdd.implement" in content
+    assert "## Local Execution Protocol Governance" in content
+    assert "SSOT for local execution rules" in content
+    assert "`specify-cli` tool runtime" in content
+    assert "MUST NOT install missing tools, mutate `PATH`, or switch" in content
     assert "Writing guidance only; do not surface this scaffold in the runtime constitution:" in content
     assert content.index("## Terminology & Boundary Definitions") < content.index("### Repo-Anchor Evidence Protocol")
     assert content.index("### Repo-Anchor Evidence Protocol") < content.index("## State Machine Applicability Gate")
+    assert content.index("## State Machine Applicability Gate") < content.index("## Local Execution Protocol Governance")
 
 
 def test_constitution_command_blocks_lint_detail_embedding_and_dual_authority_expansion():
@@ -59,6 +64,7 @@ def test_constitution_command_groups_alignment_work_and_avoids_redundant_restate
 
     assert "Review and refresh impacted artifact families only; avoid mechanical full-repo rewrites of unchanged downstream files." in content
     assert "Prefer targeted references over restating the same rule text across multiple downstream templates." in content
+    assert "command templates and `LOCAL_EXECUTION_PROTOCOL` packets are derived execution views" in content
     assert "Keep this report delta-oriented; do not restate unchanged template inventories or canonical baseline details beyond status." in content
     assert "reference the Sync Impact Report instead of restating it" in content
 

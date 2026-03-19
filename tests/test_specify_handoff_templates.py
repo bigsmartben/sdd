@@ -54,6 +54,12 @@ def test_spec_template_stays_unsplit_and_ui_html_template_exists():
     assert "Next Action" in ui_html_template
     assert "who is trying to complete what" in ui_html_template
     assert "proves spec.md's intended outcome" in ui_html_template
+    assert "grid-template-areas:" in ui_html_template
+    assert '"context action"' in ui_html_template
+    assert ".tool-stage::before" in ui_html_template
+    assert "@media (max-width: 640px)" in ui_html_template
+    assert "position: static;" in ui_html_template
+    assert 'grid-template-areas:' in ui_html_template
 
 
 def test_spec_and_commands_require_semantically_aligned_edge_case_refs():
@@ -79,10 +85,13 @@ def test_docs_and_cli_describe_optional_ui_html_command():
     assert "/sdd.specify.ui <spec.md>" not in readme
 
     assert "/sdd.specify.ui-html" in spec_driven
+    assert "focused interaction tool" in spec_driven
     assert "/sdd.specify.srs" not in spec_driven
     assert "/sdd.specify.ui specs/003-chat-system/spec.md" not in spec_driven
 
-    assert '"specify.ui-html": "Generate the derived ui.html interactive prototype artifact from the current feature branch spec.md. This is an optional sidecar command' in cli_init
+    assert "focused interaction tool" in readme
+    assert '"specify.ui-html": "Generate the derived ui.html focused interaction tool artifact from the current feature branch spec.md. This is an optional sidecar command' in cli_init
     assert '"specify.srs"' not in cli_init
     assert '"specify.ui": "Generate the derived ui.md artifact' not in cli_init
+    assert "generate a focused interaction tool when needed" in cli_init
     assert '/{COMMAND_NAMESPACE}.specify.ui-html[/]' in cli_init

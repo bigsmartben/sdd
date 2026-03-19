@@ -4,7 +4,7 @@ description: "Interface-delivery-oriented execution orchestration template for f
 
 # Tasks: [FEATURE NAME]
 
-**Input**: Upstream design artifacts from `/specs/[###-feature-name]/`
+**Input**: Upstream design artifacts from `/specs/[YYYYMMDD-feature-name]/`
 **Outputs**: `tasks.md` (this document), `tasks.manifest.json` (machine-readable sidecar projection)
 
 ## 1) Document Purpose

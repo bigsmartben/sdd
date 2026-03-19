@@ -137,14 +137,14 @@ class TestCursorFrontmatterIntegration:
 
         # Create a feature branch so CURRENT_BRANCH detection works
         subprocess.run(
-            ["git", "checkout", "-b", "001-test-feature"],
+            ["git", "checkout", "-b", "feature-20250708-test-feature"],
             cwd=str(repo),
             capture_output=True,
             check=True,
         )
 
         # Create a spec so the script detects the feature
-        spec_dir = repo / "specs" / "001-test-feature"
+        spec_dir = repo / "specs" / "20250708-test-feature"
         spec_dir.mkdir(parents=True)
         (spec_dir / "plan.md").write_text(
             "# Test Feature Plan\n\n"

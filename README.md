@@ -117,9 +117,9 @@ In Git repositories, `/sdd.specify` resolves a feature branch and switches to it
 /sdd.specify Build an application that can help me organize my photos in separate photo albums. Albums are grouped by date and can be re-organized by dragging and dropping on the main page. Albums are never in other nested albums. Within each album, photos are previewed in a tile-like interface.
 ```
 
-### 4. Generate an interactive prototype (optional)
+### 4. Generate a focused interaction tool (optional)
 
-Use **`/sdd.specify.ui-html`** as an optional sidecar command when you need an HTML interaction prototype derived from the current feature branch `spec.md`. Trigger it at your chosen time after `/sdd.specify`.
+Use **`/sdd.specify.ui-html`** as an optional sidecar command when you need an HTML focused interaction tool derived from the current feature branch `spec.md`. Trigger it at your chosen time after `/sdd.specify`.
 
 `spec.md` remains the authoritative feature-semantics artifact. `ui.html` is a derived review artifact only.
 
@@ -335,7 +335,7 @@ Essential commands for the Spec-Driven Development workflow:
 | ----------------------- | ------------------------------------------------------------------------ |
 | `/sdd.constitution` | Create or update project governing principles and development guidelines |
 | `/sdd.specify`      | Define what you want to build (requirements and user stories)            |
-| `/sdd.specify.ui-html` | Optional sidecar command: generate a derived `ui.html` interaction prototype from active feature `spec.md` when needed |
+| `/sdd.specify.ui-html` | Optional sidecar command: generate a derived `ui.html` focused interaction tool from active feature `spec.md` when needed |
 | `/sdd.plan`         | Create `plan.md` as the planning control plane and Stage 0 shared context |
 | `/sdd.plan.research` | Generate the queued `research.md` artifact |
 | `/sdd.plan.data-model` | Generate the queued `data-model.md` artifact |
@@ -358,7 +358,7 @@ Additional commands for enhanced quality and validation:
 
 | Variable          | Description                                                                                                                                                                                                                                                                                            |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `SPECIFY_FEATURE` | Override feature detection for non-Git repositories. Set to the feature directory name (e.g., `001-photo-albums`) to work on a specific feature when not using Git branches. |
+| `SPECIFY_FEATURE` | Override feature detection for non-Git repositories. Set to the feature directory name (e.g., `20250708-photo-albums`) to work on a specific feature when not using Git branches. |
 
 ## 📚 Core Philosophy
 
@@ -519,7 +519,7 @@ delete any comments that you made, but you can't delete comments anybody else ma
 
 After this prompt is entered, you should see Claude Code kick off the planning and spec drafting process. Claude Code will also trigger some of the built-in scripts to set up the repository.
 
-Once this step is completed, you should have a new branch created (e.g., `001-create-taskify`), as well as a new specification in the `specs/001-create-taskify` directory.
+Once this step is completed, you should have a new branch created (e.g., `feature-20250708-create-taskify`), as well as a new specification in the `specs/20250708-create-taskify` directory.
 
 The produced specification should contain a set of user stories and functional requirements, as defined in the template.
 
@@ -536,7 +536,7 @@ At this stage, your project folder contents should resemble the following:
     │  ├── setup-plan.sh
     │  └── update-claude-md.sh
     ├── specs
-    │  └── 001-create-taskify
+    │  └── 20250708-create-taskify
     │      └── spec.md
     └── templates
         ├── contract-template.md
@@ -619,7 +619,7 @@ The directory tree after `/sdd.plan` will resemble this:
     └── tasks-template.md
 
 specs/
-└── 001-create-taskify
+└── 20250708-create-taskify
     ├── plan.md
     └── spec.md
 ```
@@ -701,7 +701,7 @@ This step creates a `tasks.md` file in your feature specification directory that
 It should emit single-target work packages only: each task must carry one explicit path or command target plus one primary completion anchor. If required anchors are missing from `plan.md`, `contracts/`, or `test-matrix.md`, or if a selected contract is `blocked`, `/sdd.tasks` should stop and route back to the relevant `/sdd.plan.*` command rather than inferring new semantics or emitting `blocked`/`todo` placeholder tasks. Non-fatal contract hygiene issues (for example missing `Full Field Dictionary (Operation-scoped)` or tuple packet drift) should surface as preflight warnings and be routed as explicit upstream repair actions without hard-blocking task generation.
 
 For faster runs, the prerequisite script may pre-extract a compact `TASKS_BOOTSTRAP` packet from `plan.md` so `/sdd.tasks` can reuse a joined control-plane inventory instead of reparsing the planning tables during the same run.
-The same prerequisite payload also emits a `LOCAL_EXECUTION_PROTOCOL` packet for stable local tooling selection (for example: prefer `rg` for repo search, `git` for repo inspection, and `uv run python` when that runner is available) so execution-phase commands do not spend time guessing equivalent CLIs.
+The same prerequisite payload also emits a `LOCAL_EXECUTION_PROTOCOL` packet as a run-local projection of constitution-defined execution policy. Its packaged SDD core runtime inventory is intentionally narrow: `specify-cli`, `git`, and `rg`. SDD-owned helpers run through explicit `specify-cli` entrypoints such as `specify internal-task-bootstrap`, `specify internal-data-model-bootstrap`, and `specify internal-implement-bootstrap` so execution-phase commands do not spend time guessing equivalent CLIs.
 
 Run `/sdd.analyze` after `/sdd.tasks` as the default pre-implementation audit pass for repo-anchor misuse, audit payload leakage, drift, contradictions, boundary violations, uncovered MUST requirements, and other cross-artifact issues.
 
@@ -716,7 +716,7 @@ Once ready, use the `/sdd.implement` command to execute your implementation plan
 ```
 
 The `/sdd.implement` command is execution plus runtime hard gates. It is not the unified semantic audit step; by default it requires current `/sdd.analyze` evidence with `Gate Decision: PASS` for the current task artifacts.
-It should also reuse the emitted `LOCAL_EXECUTION_PROTOCOL` and repo-backed task anchors for local commands instead of trial-and-error across search tools, package managers, or Python runners.
+It should also reuse the emitted `LOCAL_EXECUTION_PROTOCOL` and repo-backed task anchors for local commands instead of trial-and-error across search tools, package managers, or Python runners. SDD-owned helpers should run through packaged `specify-cli` internal commands rather than user-managed interpreters or repo-local `uv run python`.
 Current analyze-pass evidence is read from the latest run block in `FEATURE_DIR/audits/analyze-history.md`; missing evidence, stale fingerprint mismatches, or `Gate Decision: FAIL` should block implementation unless the run includes an explicit analyze-gate waiver.
 
 The `/sdd.implement` command will:

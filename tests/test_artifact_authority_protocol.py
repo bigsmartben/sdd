@@ -51,6 +51,8 @@ def test_tasks_implement_and_analyze_use_compact_contract_sections():
     assert "`TASKS_BOOTSTRAP.execution_readiness.errors` contains blockers" in tasks
     assert "Active executable tuples select `new` repo anchors but lack explicit rejection evidence for `existing` and `extended`" in tasks
     assert "LOCAL_EXECUTION_PROTOCOL" in tasks
+    assert "LOCAL_EXECUTION_PROTOCOL.python.runner_cmd" in tasks
+    assert "LOCAL_EXECUTION_PROTOCOL.runtime_tools" in tasks
     assert "Repository-first explainable evidence" in tasks
     assert "Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`" in tasks
 
@@ -59,6 +61,8 @@ def test_tasks_implement_and_analyze_use_compact_contract_sections():
     assert "waive-analyze-gate" in implement
     assert "`IMPLEMENT_BOOTSTRAP.analyze_readiness.errors` contains blockers" in implement
     assert "LOCAL_EXECUTION_PROTOCOL" in implement
+    assert "LOCAL_EXECUTION_PROTOCOL.python.runner_cmd" in implement
+    assert "LOCAL_EXECUTION_PROTOCOL.runtime_tools" in implement
     assert "no bypass of repo-anchor strategy priority (`existing -> extended -> new`)" in implement
     assert "Read `plan.md` only as control-plane context (`Shared Context Snapshot`, `Stage Queue`, `Artifact Status`, `Binding Projection Index`)" in implement
     assert "Repository-first Validation Trace" in implement
@@ -83,6 +87,9 @@ def test_constitution_declares_repo_anchor_whitelist_and_blacklist():
     assert "evaluate and apply in strict order: `existing` -> `extended` -> `new`" in constitution
     assert ".specify/memory/repository-first/technical-dependency-matrix.md" in constitution
     assert ".specify/memory/repository-first/module-invocation-spec.md" in constitution
+    assert "## Local Execution Protocol Governance" in constitution
+    assert "LOCAL_EXECUTION_PROTOCOL" in constitution
+    assert "`specify-cli` tool runtime" in constitution
 
 
 def test_tasks_runtime_projection_and_hook_boundaries_stay_narrow():

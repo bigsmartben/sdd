@@ -13,7 +13,7 @@ Usage: run-planning-lint.sh --feature-dir <abs-path> --rules <abs-path> [--json]
 Run planning mechanical lint checks from a TSV rules catalog.
 
 Options:
-  --feature-dir <abs-path>   Absolute path to feature directory (e.g. /repo/specs/001-feature)
+  --feature-dir <abs-path>   Absolute path to feature directory (e.g. /repo/specs/20250708-feature)
   --rules <abs-path>         Absolute path to rules TSV catalog
   --json                     Output machine-readable JSON
   --help                     Show this help message

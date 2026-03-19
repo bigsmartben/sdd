@@ -747,7 +747,7 @@ class TestCliValidation:
         normalized = re.sub(r"[│╭╮╰╯─]+", " ", plain)
         normalized = re.sub(r"\s+", " ", normalized)
         assert "/sdd.specify - Create baseline specification" in normalized
-        assert "/sdd.specify.ui-html - Optional sidecar command; generate an interactive prototype when needed" in normalized
+        assert "/sdd.specify.ui-html - Optional sidecar command; generate a focused interaction tool when needed" in normalized
         assert "/sdd.plan - Initialize the planning control plane" in normalized
         assert "/sdd.plan.research - Start the planning queue" in normalized
         assert "/sdd.plan.data-model" in normalized

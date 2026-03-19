@@ -39,7 +39,13 @@ function Get-LocalExecutionProtocol {
 
     $hasRipgrep = [bool](Get-Command rg -ErrorAction SilentlyContinue)
     $hasGitCli = [bool](Get-Command git -ErrorAction SilentlyContinue)
-    $hasSpecify = [bool](Get-Command specify -ErrorAction SilentlyContinue)
+    $specifyOverride = $env:SDD_SPECIFY_CMD
+    $hasSpecify = $false
+    if (-not [string]::IsNullOrWhiteSpace($specifyOverride)) {
+        $hasSpecify = Test-Path $specifyOverride -PathType Leaf
+    } else {
+        $hasSpecify = [bool](Get-Command specify -ErrorAction SilentlyContinue)
+    }
 
     $repoSearch = [ordered]@{
         available = $false
@@ -78,10 +84,26 @@ function Get-LocalExecutionProtocol {
         tool = 'unavailable'
         runner_cmd = ''
     }
+    $runtimeTools = $null
     if ($hasSpecify) {
-        $python.available = $true
-        $python.tool = 'specify-cli'
-        $python.runner_cmd = 'specify internal-run-python --script <repo-python-helper>'
+        $specifyCmd = if (-not [string]::IsNullOrWhiteSpace($specifyOverride)) {
+            $specifyOverride
+        } else {
+            (Get-Command specify -ErrorAction SilentlyContinue).Source
+        }
+        if (-not [string]::IsNullOrWhiteSpace($specifyCmd)) {
+            try {
+                $runtimeToolsJson = & $specifyCmd internal-runtime-tools
+                if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($runtimeToolsJson)) {
+                    $runtimeTools = $runtimeToolsJson | ConvertFrom-Json
+                    $python.available = $true
+                    $python.tool = 'specify-cli'
+                    $python.runner_cmd = 'specify <internal-helper-command>'
+                }
+            } catch {
+                $runtimeTools = $null
+            }
+        }
     }
 
     return [ordered]@{
@@ -94,6 +116,7 @@ function Get-LocalExecutionProtocol {
         repo_search = $repoSearch
         repo_inspection = $repoInspection
         python = $python
+        runtime_tools = $runtimeTools
     }
 }
 
@@ -233,11 +256,10 @@ if ($Json) {
 
     if ($DataModelPreflight) {
         $payload.DATA_MODEL_BOOTSTRAP = $null
-        $helper = Join-Path (Split-Path $PSScriptRoot -Parent) 'data_model_preflight.py'
-        $specifyCmd = Get-Command specify -ErrorAction SilentlyContinue
-        if ((Test-Path $helper -PathType Leaf) -and $specifyCmd) {
+        $specifyCmd = if (-not [string]::IsNullOrWhiteSpace($env:SDD_SPECIFY_CMD)) { $env:SDD_SPECIFY_CMD } else { (Get-Command specify -ErrorAction SilentlyContinue).Source }
+        if (-not [string]::IsNullOrWhiteSpace($specifyCmd)) {
             try {
-                $dataModelBootstrapJson = & $specifyCmd.Source internal-run-python --script $helper `
+                $dataModelBootstrapJson = & $specifyCmd internal-data-model-bootstrap `
                     --feature-dir $paths.FEATURE_DIR `
                     --plan $paths.IMPL_PLAN `
                     --spec $paths.FEATURE_SPEC `
@@ -255,11 +277,10 @@ if ($Json) {
 
     if ($TaskPreflight) {
         $payload.TASKS_BOOTSTRAP = $null
-        $helper = Join-Path (Split-Path $PSScriptRoot -Parent) 'task_preflight.py'
-        $specifyCmd = Get-Command specify -ErrorAction SilentlyContinue
-        if ((Test-Path $helper -PathType Leaf) -and $specifyCmd) {
+        $specifyCmd = if (-not [string]::IsNullOrWhiteSpace($env:SDD_SPECIFY_CMD)) { $env:SDD_SPECIFY_CMD } else { (Get-Command specify -ErrorAction SilentlyContinue).Source }
+        if (-not [string]::IsNullOrWhiteSpace($specifyCmd)) {
             try {
-                $taskBootstrapJson = & $specifyCmd.Source internal-run-python --script $helper `
+                $taskBootstrapJson = & $specifyCmd internal-task-bootstrap `
                     --feature-dir $paths.FEATURE_DIR `
                     --plan $paths.IMPL_PLAN `
                     --spec $paths.FEATURE_SPEC `
@@ -278,11 +299,10 @@ if ($Json) {
 
     if ($ImplementPreflight) {
         $payload.IMPLEMENT_BOOTSTRAP = $null
-        $helper = Join-Path (Split-Path $PSScriptRoot -Parent) 'implement_preflight.py'
-        $specifyCmd = Get-Command specify -ErrorAction SilentlyContinue
-        if ((Test-Path $helper -PathType Leaf) -and $specifyCmd) {
+        $specifyCmd = if (-not [string]::IsNullOrWhiteSpace($env:SDD_SPECIFY_CMD)) { $env:SDD_SPECIFY_CMD } else { (Get-Command specify -ErrorAction SilentlyContinue).Source }
+        if (-not [string]::IsNullOrWhiteSpace($specifyCmd)) {
             try {
-                $implementBootstrapJson = & $specifyCmd.Source internal-run-python --script $helper `
+                $implementBootstrapJson = & $specifyCmd internal-implement-bootstrap `
                     --feature-dir $paths.FEATURE_DIR `
                     --spec $paths.FEATURE_SPEC `
                     --plan $paths.IMPL_PLAN `

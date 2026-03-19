@@ -33,6 +33,27 @@ IMPLEMENT_PREFLIGHT=false
 DATA_MODEL_PREFLIGHT=false
 PATHS_ONLY=false
 
+resolve_specify_cmd() {
+    local repo_shim="$SCRIPT_DIR/../../.test-bin/specify"
+    if [[ -x "$repo_shim" ]]; then
+        printf '%s' "$repo_shim"
+        return 0
+    fi
+    if [[ -n "${SDD_SPECIFY_CMD:-}" ]]; then
+        printf '%s' "$SDD_SPECIFY_CMD"
+        return 0
+    fi
+    if command -v specify >/dev/null 2>&1; then
+        printf 'specify'
+        return 0
+    fi
+    if command -v specify.exe >/dev/null 2>&1; then
+        printf 'specify.exe'
+        return 0
+    fi
+    return 1
+}
+
 build_local_execution_protocol_json() {
     local search_available=false
     local search_tool="unavailable"
@@ -64,10 +85,16 @@ build_local_execution_protocol_json() {
     local python_available=false
     local python_tool="unavailable"
     local python_runner_cmd=""
-    if command -v specify >/dev/null 2>&1; then
-        python_available=true
-        python_tool="specify-cli"
-        python_runner_cmd="specify internal-run-python --script <repo-python-helper>"
+    local specify_cmd=""
+    local runtime_tools="null"
+    if specify_cmd="$(resolve_specify_cmd)"; then
+        if runtime_tools="$("$specify_cmd" internal-runtime-tools 2>/dev/null)"; then
+            python_available=true
+            python_tool="specify-cli"
+            python_runner_cmd="specify <internal-helper-command>"
+        else
+            runtime_tools="null"
+        fi
     fi
 
     local rules_json
@@ -90,10 +117,11 @@ build_local_execution_protocol_json() {
         "$(json_string "$status_cmd")" \
         "$(json_string "$diff_cmd")" \
         "$(json_string "$history_cmd")"
-    printf '"python":{"available":%s,"tool":%s,"runner_cmd":%s}' \
+    printf '"python":{"available":%s,"tool":%s,"runner_cmd":%s},' \
         "$python_available" \
         "$(json_string "$python_tool")" \
         "$(json_string "$python_runner_cmd")"
+    printf '"runtime_tools":%s' "$runtime_tools"
     printf '}'
 }
 
@@ -262,16 +290,15 @@ if $JSON_MODE; then
     # Build JSON array of documents
     json_docs="$(json_array "${docs[@]}")"
     local_execution_protocol="$(build_local_execution_protocol_json)"
+    SPECIFY_CMD="$(resolve_specify_cmd || true)"
 
     feature_json="$(json_string "$FEATURE_DIR")"
     json_payload="{\"FEATURE_DIR\":${feature_json},\"AVAILABLE_DOCS\":${json_docs},\"LOCAL_EXECUTION_PROTOCOL\":${local_execution_protocol}"
 
     if $DATA_MODEL_PREFLIGHT; then
-        DATA_MODEL_PREFLIGHT_SCRIPT="$SCRIPT_DIR/../data_model_preflight.py"
         data_model_bootstrap="null"
-        PYTHON_BIN="$(command -v python3 || command -v python || true)"
-        if [[ -f "$DATA_MODEL_PREFLIGHT_SCRIPT" ]] && command -v specify >/dev/null 2>&1; then
-            if data_model_bootstrap="$(specify internal-run-python --script "$DATA_MODEL_PREFLIGHT_SCRIPT" \
+        if [[ -n "$SPECIFY_CMD" ]]; then
+            if data_model_bootstrap="$("$SPECIFY_CMD" internal-data-model-bootstrap \
                 --feature-dir "$FEATURE_DIR" \
                 --plan "$IMPL_PLAN" \
                 --spec "$FEATURE_SPEC" \
@@ -286,10 +313,9 @@ if $JSON_MODE; then
     fi
 
     if $TASK_PREFLIGHT; then
-        TASK_PREFLIGHT_SCRIPT="$SCRIPT_DIR/../task_preflight.py"
         task_bootstrap="null"
-        if [[ -f "$TASK_PREFLIGHT_SCRIPT" ]] && command -v specify >/dev/null 2>&1; then
-            if task_bootstrap="$(specify internal-run-python --script "$TASK_PREFLIGHT_SCRIPT" \
+        if [[ -n "$SPECIFY_CMD" ]]; then
+            if task_bootstrap="$("$SPECIFY_CMD" internal-task-bootstrap \
                 --feature-dir "$FEATURE_DIR" \
                 --plan "$IMPL_PLAN" \
                 --spec "$FEATURE_SPEC" \
@@ -304,10 +330,9 @@ if $JSON_MODE; then
     fi
 
     if $IMPLEMENT_PREFLIGHT; then
-        IMPLEMENT_PREFLIGHT_SCRIPT="$SCRIPT_DIR/../implement_preflight.py"
         implement_bootstrap="null"
-        if [[ -f "$IMPLEMENT_PREFLIGHT_SCRIPT" ]] && command -v specify >/dev/null 2>&1; then
-            if implement_bootstrap="$(specify internal-run-python --script "$IMPLEMENT_PREFLIGHT_SCRIPT" \
+        if [[ -n "$SPECIFY_CMD" ]]; then
+            if implement_bootstrap="$("$SPECIFY_CMD" internal-implement-bootstrap \
                 --feature-dir "$FEATURE_DIR" \
                 --spec "$FEATURE_SPEC" \
                 --plan "$IMPL_PLAN" \
