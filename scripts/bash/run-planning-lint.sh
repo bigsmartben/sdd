@@ -359,6 +359,15 @@ normalize_markdown_scalar() {
     printf '%s' "$(trim "$value")"
 }
 
+normalize_markdown_list_cell() {
+    local value
+    value="$(normalize_markdown_scalar "$1")"
+    value="${value#[}"
+    value="${value%]}"
+    value="$(echo "$value" | sed 's/[[:space:]]*,[[:space:]]*/,/g;s/^[[:space:]]*//;s/[[:space:]]*$//')"
+    printf '%s' "$value"
+}
+
 extract_anchor_status_token() {
     local raw normalized token
     raw="$1"
@@ -1008,8 +1017,6 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                 rel_file="${file_path#$FEATURE_DIR/}"
                 current_section=""
                 in_table=false
-                boundary_status_idx=-1
-                entry_status_idx=-1
                 line_no=0
 
                 while IFS= read -r line || [[ -n "$line" ]]; do
@@ -1018,8 +1025,6 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                     if [[ "$line" =~ ^##[[:space:]]+(.+)$ ]]; then
                         current_section="$(trim "${BASH_REMATCH[1]}")"
                         in_table=false
-                        boundary_status_idx=-1
-                        entry_status_idx=-1
                         continue
                     fi
 
@@ -1031,56 +1036,22 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                         cells=("${MARKDOWN_CELLS[@]}")
 
                         if [[ "$in_table" == false ]]; then
-                            boundary_status_idx=-1
-                            entry_status_idx=-1
-                            idx=0
+                            in_table=true
                             for cell in "${cells[@]}"; do
-                                if [[ "$cell" == "Boundary Anchor Status" ]]; then
-                                    boundary_status_idx=$idx
-                                fi
-                                if [[ "$cell" == "Implementation Entry Anchor Status" ]]; then
-                                    entry_status_idx=$idx
-                                fi
-                                idx=$((idx + 1))
+                                case "$cell" in
+                                    "Boundary Anchor"|"Implementation Entry Anchor"|"Boundary Anchor Status"|"Implementation Entry Anchor Status"|"Request DTO Anchor"|"Response DTO Anchor"|"Primary Collaborator Anchor"|"State Owner Anchor(s)"|"Repo Anchor"|"Repo Anchor Role"|"Boundary Anchor Strategy Evidence"|"Implementation Entry Anchor Strategy Evidence"|"Lifecycle Ref(s)"|"Invariant Ref(s)"|"Main Pass Anchor"|"Branch/Failure Anchor(s)")
+                                        add_finding "$id" "$severity" "$rel_file" "$line_no" "$message" "$remediation"
+                                        break
+                                        ;;
+                                esac
                             done
-                            if [[ $boundary_status_idx -ge 0 || $entry_status_idx -ge 0 ]]; then
-                                in_table=true
-                            fi
                             continue
                         fi
 
-                        is_separator=true
-                        for cell in "${cells[@]}"; do
-                            if [[ ! "$cell" =~ ^:?-{3,}:?$ ]]; then
-                                is_separator=false
-                                break
-                            fi
-                        done
-                        if [[ "$is_separator" == true ]]; then
-                            continue
-                        fi
-
-                        has_todo=false
-                        if [[ $boundary_status_idx -ge 0 && $boundary_status_idx -lt ${#cells[@]} ]]; then
-                            if grep -qiE '(^|[^A-Za-z])todo([^A-Za-z]|$)' <<< "${cells[$boundary_status_idx]}"; then
-                                has_todo=true
-                            fi
-                        fi
-                        if [[ $entry_status_idx -ge 0 && $entry_status_idx -lt ${#cells[@]} ]]; then
-                            if grep -qiE '(^|[^A-Za-z])todo([^A-Za-z]|$)' <<< "${cells[$entry_status_idx]}"; then
-                                has_todo=true
-                            fi
-                        fi
-
-                        if [[ "$has_todo" == true ]]; then
-                            add_finding "$id" "$severity" "$rel_file" "$line_no" "$message" "$remediation"
-                        fi
                         continue
                     fi
 
                     in_table=false
-                    boundary_status_idx=-1
-                    entry_status_idx=-1
                 done < "$file_path"
             done
             ;;
@@ -1095,27 +1066,33 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                     continue
                 fi
 
-                declare -A plan_boundary=()
-                declare -A plan_entry=()
-                declare -A plan_boundary_status=()
-                declare -A plan_entry_status=()
                 declare -A plan_line=()
-                declare -A artifact_target=()
-                declare -A packet_boundary=()
-                declare -A packet_entry=()
-                declare -A packet_boundary_status=()
-                declare -A packet_entry_status=()
+                declare -A plan_operation=()
+                declare -A plan_if_scope=()
+                declare -A plan_tm=()
+                declare -A plan_tc=()
+                declare -A plan_uif=()
+                declare -A plan_udd=()
+                declare -A plan_test_scope=()
+                declare -A packet_operation=()
+                declare -A packet_if_scope=()
+                declare -A packet_tm=()
+                declare -A packet_tc=()
+                declare -A packet_uif=()
+                declare -A packet_udd=()
+                declare -A packet_test_scope=()
                 declare -A packet_line=()
 
                 current_section=""
                 in_table=false
                 binding_row_idx=-1
-                boundary_idx=-1
-                entry_idx=-1
-                boundary_status_idx=-1
-                entry_status_idx=-1
-                unit_type_idx=-1
-                target_path_idx=-1
+                operation_idx=-1
+                if_scope_idx=-1
+                tm_idx=-1
+                tc_idx=-1
+                uif_path_idx=-1
+                udd_ref_idx=-1
+                test_scope_idx=-1
                 line_no=0
 
                 while IFS= read -r line || [[ -n "$line" ]]; do
@@ -1125,28 +1102,30 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                         current_section="$(trim "${BASH_REMATCH[1]}")"
                         in_table=false
                         binding_row_idx=-1
-                        boundary_idx=-1
-                        entry_idx=-1
-                        boundary_status_idx=-1
-                        entry_status_idx=-1
-                        unit_type_idx=-1
-                        target_path_idx=-1
+                        operation_idx=-1
+                        if_scope_idx=-1
+                        tm_idx=-1
+                        tc_idx=-1
+                        uif_path_idx=-1
+                        udd_ref_idx=-1
+                        test_scope_idx=-1
                         continue
                     fi
 
-                    if [[ "$current_section" != "Binding Projection Index" && "$current_section" != "Artifact Status" ]]; then
+                    if [[ "$current_section" != "Binding Projection Index" ]]; then
                         continue
                     fi
 
                     if ! parse_markdown_cells "$line"; then
                         in_table=false
                         binding_row_idx=-1
-                        boundary_idx=-1
-                        entry_idx=-1
-                        boundary_status_idx=-1
-                        entry_status_idx=-1
-                        unit_type_idx=-1
-                        target_path_idx=-1
+                        operation_idx=-1
+                        if_scope_idx=-1
+                        tm_idx=-1
+                        tc_idx=-1
+                        uif_path_idx=-1
+                        udd_ref_idx=-1
+                        test_scope_idx=-1
                         continue
                     fi
 
@@ -1154,12 +1133,13 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
 
                     if [[ "$in_table" == false ]]; then
                         binding_row_idx=-1
-                        boundary_idx=-1
-                        entry_idx=-1
-                        boundary_status_idx=-1
-                        entry_status_idx=-1
-                        unit_type_idx=-1
-                        target_path_idx=-1
+                        operation_idx=-1
+                        if_scope_idx=-1
+                        tm_idx=-1
+                        tc_idx=-1
+                        uif_path_idx=-1
+                        udd_ref_idx=-1
+                        test_scope_idx=-1
 
                         idx=0
                         for cell in "${cells[@]}"; do
@@ -1167,36 +1147,33 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                                 "BindingRowID")
                                     binding_row_idx=$idx
                                     ;;
-                                "Boundary Anchor")
-                                    boundary_idx=$idx
+                                "Operation ID")
+                                    operation_idx=$idx
                                     ;;
-                                "Implementation Entry Anchor")
-                                    entry_idx=$idx
+                                "IF ID / IF Scope")
+                                    if_scope_idx=$idx
                                     ;;
-                                "Boundary Anchor Status")
-                                    boundary_status_idx=$idx
+                                "TM ID")
+                                    tm_idx=$idx
                                     ;;
-                                "Implementation Entry Anchor Status")
-                                    entry_status_idx=$idx
+                                "TC IDs")
+                                    tc_idx=$idx
                                     ;;
-                                "Unit Type")
-                                    unit_type_idx=$idx
+                                "UIF Path Ref(s)")
+                                    uif_path_idx=$idx
                                     ;;
-                                "Target Path")
-                                    target_path_idx=$idx
+                                "UDD Ref(s)")
+                                    udd_ref_idx=$idx
+                                    ;;
+                                "Test Scope")
+                                    test_scope_idx=$idx
                                     ;;
                             esac
                             idx=$((idx + 1))
                         done
 
-                        if [[ "$current_section" == "Binding Projection Index" ]]; then
-                            if [[ $binding_row_idx -ge 0 ]]; then
-                                in_table=true
-                            fi
-                        else
-                            if [[ $binding_row_idx -ge 0 && $unit_type_idx -ge 0 && $target_path_idx -ge 0 ]]; then
-                                in_table=true
-                            fi
+                        if [[ $binding_row_idx -ge 0 ]]; then
+                            in_table=true
                         fi
                         continue
                     fi
@@ -1219,34 +1196,40 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                     binding_id="$(normalize_markdown_scalar "${cells[$binding_row_idx]}")"
                     [[ -z "$binding_id" ]] && continue
 
-                    if [[ "$current_section" == "Binding Projection Index" ]]; then
-                        plan_line["$binding_id"]=$line_no
-                        if [[ $boundary_idx -ge 0 && $boundary_idx -lt ${#cells[@]} ]]; then
-                            plan_boundary["$binding_id"]="$(normalize_markdown_scalar "${cells[$boundary_idx]}")"
-                        fi
-                        if [[ $entry_idx -ge 0 && $entry_idx -lt ${#cells[@]} ]]; then
-                            plan_entry["$binding_id"]="$(normalize_markdown_scalar "${cells[$entry_idx]}")"
-                        fi
-                        if [[ $boundary_status_idx -ge 0 && $boundary_status_idx -lt ${#cells[@]} ]]; then
-                            plan_boundary_status["$binding_id"]="$(extract_anchor_status_token "${cells[$boundary_status_idx]}")"
-                        fi
-                        if [[ $entry_status_idx -ge 0 && $entry_status_idx -lt ${#cells[@]} ]]; then
-                            plan_entry_status["$binding_id"]="$(extract_anchor_status_token "${cells[$entry_status_idx]}")"
-                        fi
-                    else
-                        if [[ $unit_type_idx -lt ${#cells[@]} ]] && [[ "$(normalize_markdown_scalar "${cells[$unit_type_idx]}")" == "contract" ]]; then
-                            artifact_target["$binding_id"]="$(normalize_markdown_scalar "${cells[$target_path_idx]}")"
-                        fi
+                    plan_line["$binding_id"]=$line_no
+                    if [[ $operation_idx -ge 0 && $operation_idx -lt ${#cells[@]} ]]; then
+                        plan_operation["$binding_id"]="$(normalize_markdown_scalar "${cells[$operation_idx]}")"
+                    fi
+                    if [[ $if_scope_idx -ge 0 && $if_scope_idx -lt ${#cells[@]} ]]; then
+                        plan_if_scope["$binding_id"]="$(normalize_markdown_scalar "${cells[$if_scope_idx]}")"
+                    fi
+                    if [[ $tm_idx -ge 0 && $tm_idx -lt ${#cells[@]} ]]; then
+                        plan_tm["$binding_id"]="$(normalize_markdown_scalar "${cells[$tm_idx]}")"
+                    fi
+                    if [[ $tc_idx -ge 0 && $tc_idx -lt ${#cells[@]} ]]; then
+                        plan_tc["$binding_id"]="$(normalize_markdown_list_cell "${cells[$tc_idx]}")"
+                    fi
+                    if [[ $uif_path_idx -ge 0 && $uif_path_idx -lt ${#cells[@]} ]]; then
+                        plan_uif["$binding_id"]="$(normalize_markdown_list_cell "${cells[$uif_path_idx]}")"
+                    fi
+                    if [[ $udd_ref_idx -ge 0 && $udd_ref_idx -lt ${#cells[@]} ]]; then
+                        plan_udd["$binding_id"]="$(normalize_markdown_list_cell "${cells[$udd_ref_idx]}")"
+                    fi
+                    if [[ $test_scope_idx -ge 0 && $test_scope_idx -lt ${#cells[@]} ]]; then
+                        plan_test_scope["$binding_id"]="$(normalize_markdown_scalar "${cells[$test_scope_idx]}")"
                     fi
                 done < "$file_path"
 
                 current_section=""
                 in_table=false
                 binding_row_idx=-1
-                boundary_idx=-1
-                entry_idx=-1
-                boundary_status_idx=-1
-                entry_status_idx=-1
+                operation_idx=-1
+                if_scope_idx=-1
+                tm_idx=-1
+                tc_idx=-1
+                uif_path_idx=-1
+                udd_ref_idx=-1
+                test_scope_idx=-1
                 line_no=0
 
                 while IFS= read -r line || [[ -n "$line" ]]; do
@@ -1256,10 +1239,13 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                         current_section="$(trim "${BASH_REMATCH[1]}")"
                         in_table=false
                         binding_row_idx=-1
-                        boundary_idx=-1
-                        entry_idx=-1
-                        boundary_status_idx=-1
-                        entry_status_idx=-1
+                        operation_idx=-1
+                        if_scope_idx=-1
+                        tm_idx=-1
+                        tc_idx=-1
+                        uif_path_idx=-1
+                        udd_ref_idx=-1
+                        test_scope_idx=-1
                         continue
                     fi
 
@@ -1270,10 +1256,13 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                     if ! parse_markdown_cells "$line"; then
                         in_table=false
                         binding_row_idx=-1
-                        boundary_idx=-1
-                        entry_idx=-1
-                        boundary_status_idx=-1
-                        entry_status_idx=-1
+                        operation_idx=-1
+                        if_scope_idx=-1
+                        tm_idx=-1
+                        tc_idx=-1
+                        uif_path_idx=-1
+                        udd_ref_idx=-1
+                        test_scope_idx=-1
                         continue
                     fi
 
@@ -1281,10 +1270,13 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
 
                     if [[ "$in_table" == false ]]; then
                         binding_row_idx=-1
-                        boundary_idx=-1
-                        entry_idx=-1
-                        boundary_status_idx=-1
-                        entry_status_idx=-1
+                        operation_idx=-1
+                        if_scope_idx=-1
+                        tm_idx=-1
+                        tc_idx=-1
+                        uif_path_idx=-1
+                        udd_ref_idx=-1
+                        test_scope_idx=-1
 
                         idx=0
                         for cell in "${cells[@]}"; do
@@ -1292,17 +1284,26 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                                 "BindingRowID")
                                     binding_row_idx=$idx
                                     ;;
-                                "Boundary Anchor")
-                                    boundary_idx=$idx
+                                "Operation ID")
+                                    operation_idx=$idx
                                     ;;
-                                "Implementation Entry Anchor")
-                                    entry_idx=$idx
+                                "IF Scope")
+                                    if_scope_idx=$idx
                                     ;;
-                                "Boundary Anchor Status")
-                                    boundary_status_idx=$idx
+                                "TM ID")
+                                    tm_idx=$idx
                                     ;;
-                                "Implementation Entry Anchor Status")
-                                    entry_status_idx=$idx
+                                "TC IDs")
+                                    tc_idx=$idx
+                                    ;;
+                                "UIF Path Ref(s)")
+                                    uif_path_idx=$idx
+                                    ;;
+                                "UDD Ref(s)")
+                                    udd_ref_idx=$idx
+                                    ;;
+                                "Test Scope")
+                                    test_scope_idx=$idx
                                     ;;
                             esac
                             idx=$((idx + 1))
@@ -1332,17 +1333,26 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                     [[ -z "$binding_id" ]] && continue
 
                     packet_line["$binding_id"]=$line_no
-                    if [[ $boundary_idx -ge 0 && $boundary_idx -lt ${#cells[@]} ]]; then
-                        packet_boundary["$binding_id"]="$(normalize_markdown_scalar "${cells[$boundary_idx]}")"
+                    if [[ $operation_idx -ge 0 && $operation_idx -lt ${#cells[@]} ]]; then
+                        packet_operation["$binding_id"]="$(normalize_markdown_scalar "${cells[$operation_idx]}")"
                     fi
-                    if [[ $entry_idx -ge 0 && $entry_idx -lt ${#cells[@]} ]]; then
-                        packet_entry["$binding_id"]="$(normalize_markdown_scalar "${cells[$entry_idx]}")"
+                    if [[ $if_scope_idx -ge 0 && $if_scope_idx -lt ${#cells[@]} ]]; then
+                        packet_if_scope["$binding_id"]="$(normalize_markdown_scalar "${cells[$if_scope_idx]}")"
                     fi
-                    if [[ $boundary_status_idx -ge 0 && $boundary_status_idx -lt ${#cells[@]} ]]; then
-                        packet_boundary_status["$binding_id"]="$(extract_anchor_status_token "${cells[$boundary_status_idx]}")"
+                    if [[ $tm_idx -ge 0 && $tm_idx -lt ${#cells[@]} ]]; then
+                        packet_tm["$binding_id"]="$(normalize_markdown_scalar "${cells[$tm_idx]}")"
                     fi
-                    if [[ $entry_status_idx -ge 0 && $entry_status_idx -lt ${#cells[@]} ]]; then
-                        packet_entry_status["$binding_id"]="$(extract_anchor_status_token "${cells[$entry_status_idx]}")"
+                    if [[ $tc_idx -ge 0 && $tc_idx -lt ${#cells[@]} ]]; then
+                        packet_tc["$binding_id"]="$(normalize_markdown_list_cell "${cells[$tc_idx]}")"
+                    fi
+                    if [[ $uif_path_idx -ge 0 && $uif_path_idx -lt ${#cells[@]} ]]; then
+                        packet_uif["$binding_id"]="$(normalize_markdown_list_cell "${cells[$uif_path_idx]}")"
+                    fi
+                    if [[ $udd_ref_idx -ge 0 && $udd_ref_idx -lt ${#cells[@]} ]]; then
+                        packet_udd["$binding_id"]="$(normalize_markdown_list_cell "${cells[$udd_ref_idx]}")"
+                    fi
+                    if [[ $test_scope_idx -ge 0 && $test_scope_idx -lt ${#cells[@]} ]]; then
+                        packet_test_scope["$binding_id"]="$(normalize_markdown_scalar "${cells[$test_scope_idx]}")"
                     fi
                 done < "$test_matrix_path"
 
@@ -1352,8 +1362,8 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                         continue
                     fi
 
-                    if [[ "${plan_boundary[$binding_id]:-}" != "${packet_boundary[$binding_id]:-}" || "${plan_entry[$binding_id]:-}" != "${packet_entry[$binding_id]:-}" || "${plan_boundary_status[$binding_id]:-}" != "${packet_boundary_status[$binding_id]:-}" || "${plan_entry_status[$binding_id]:-}" != "${packet_entry_status[$binding_id]:-}" ]]; then
-                        add_finding "$id" "$severity" "$rel_file" "${plan_line[$binding_id]}" "$message BindingRowID $binding_id differs from `test-matrix.md` `Binding Contract Packets` for boundary/entry tuple fields." "$remediation"
+                    if [[ "${plan_operation[$binding_id]:-}" != "${packet_operation[$binding_id]:-}" || "${plan_if_scope[$binding_id]:-}" != "${packet_if_scope[$binding_id]:-}" || "${plan_tm[$binding_id]:-}" != "${packet_tm[$binding_id]:-}" || "${plan_tc[$binding_id]:-}" != "${packet_tc[$binding_id]:-}" || "${plan_uif[$binding_id]:-}" != "${packet_uif[$binding_id]:-}" || "${plan_udd[$binding_id]:-}" != "${packet_udd[$binding_id]:-}" || "${plan_test_scope[$binding_id]:-}" != "${packet_test_scope[$binding_id]:-}" ]]; then
+                        add_finding "$id" "$severity" "$rel_file" "${plan_line[$binding_id]}" "$message BindingRowID $binding_id differs from `test-matrix.md` `Binding Contract Packets` for minimal projection fields." "$remediation"
                     fi
 
                 done

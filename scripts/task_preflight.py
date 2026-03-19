@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Extract a compact task-generation bootstrap packet from plan.md.
-
-This script precomputes the minimum control-plane inventory needed by
-`/sdd.tasks` so the model can consume a small JSON packet instead of
-re-reading and re-joining `plan.md` tables during task generation.
-"""
+"""Extract a compact task-generation bootstrap packet from plan.md."""
 
 from __future__ import annotations
 
@@ -24,13 +19,8 @@ SECTION_HEADINGS = (
     "Artifact Status",
 )
 
-BOOTSTRAP_SCHEMA_VERSION = "1.2"
+BOOTSTRAP_SCHEMA_VERSION = "1.4"
 PLACEHOLDER_TOKEN_RE = re.compile(r"^\[[^\]]+\]$")
-ENTRY_ANCHOR_LABEL_RE = re.compile(
-    r"(?im)^\s*(?:[-*]\s*)?\*\*Implementation[ _-]*Entry[ _-]*Anchor(?:\s*\([^)]*\))?\*\*:\s*(.+?)\s*$"
-)
-NON_CONTROLLER_ENTRY_RE = re.compile(r"(?i)(service|facade|manager|repository|dao|mapper)")
-ANCHOR_STATUS_VALUES = {"existing", "extended", "new", "todo"}
 UNRESOLVED_CONTRACT_NAME_RE = re.compile(r"<([A-Z][A-Za-z0-9]+)>")
 TASK_REQUIRED_STAGE_IDS = {"research", "test-matrix", "data-model"}
 
@@ -39,7 +29,7 @@ def is_placeholder_token(value: str) -> bool:
     return bool(PLACEHOLDER_TOKEN_RE.fullmatch(clean_cell(value)))
 
 
-def inspect_contract_artifact(contract_path_abs: str, boundary_anchor: str) -> dict[str, Any]:
+def inspect_contract_artifact(contract_path_abs: str) -> dict[str, Any]:
     inspection = {
         "full_field_dictionary_present": False,
         "field_dictionary_tier_present": False,
@@ -47,7 +37,6 @@ def inspect_contract_artifact(contract_path_abs: str, boundary_anchor: str) -> d
         "runtime_seed_boundary_drift_check_present": False,
         "runtime_field_dictionary_tiering_check_present": False,
         "has_unresolved_field_gaps": False,
-        "controller_first_violation": False,
         "placeholder_names_present": False,
         "placeholder_names": [],
     }
@@ -64,22 +53,13 @@ def inspect_contract_artifact(contract_path_abs: str, boundary_anchor: str) -> d
     inspection["seed_tuple_boundary_section_present"] = "## Seed Tuple vs Repo-Confirmed Boundary" in content
     inspection["runtime_seed_boundary_drift_check_present"] = "Seed-vs-repo boundary drift classification" in content
     inspection["runtime_field_dictionary_tiering_check_present"] = "Field-dictionary tiering" in content
-    inspection["has_unresolved_field_gaps"] = "TODO(REPO_ANCHOR)" in content or re.search(r"(?i)\|\s*gap\s*\|", content) is not None
+    inspection["has_unresolved_field_gaps"] = "TODO(REPO_ANCHOR)" in content or re.search(
+        r"(?i)\|\s*gap\s*\|",
+        content,
+    ) is not None
     placeholder_names = sorted(set(UNRESOLVED_CONTRACT_NAME_RE.findall(content)))
     inspection["placeholder_names_present"] = bool(placeholder_names)
     inspection["placeholder_names"] = placeholder_names
-    if boundary_anchor.startswith("HTTP "):
-        entry_match = ENTRY_ANCHOR_LABEL_RE.search(content)
-        entry_anchor = clean_cell(entry_match.group(1)) if entry_match else ""
-        entry_anchor_lower = entry_anchor.lower()
-        inspection["controller_first_violation"] = (
-            entry_anchor_lower.startswith("http ")
-            or (
-                bool(NON_CONTROLLER_ENTRY_RE.search(entry_anchor_lower))
-                and "controller" not in entry_anchor_lower
-                and "todo(repo_anchor)" not in entry_anchor_lower
-            )
-        )
     return inspection
 
 
@@ -141,21 +121,16 @@ def split_csv_cell(value: str) -> list[str]:
     return [item.strip() for item in text.split(",") if item.strip()]
 
 
+def split_ref_cell(value: str) -> list[str]:
+    return split_csv_cell(value)
+
+
 def extract_section(document: str, heading: str) -> str | None:
     pattern = rf"^## {re.escape(heading)}\n(.*?)(?=^## |\Z)"
     match = re.search(pattern, document, flags=re.MULTILINE | re.DOTALL)
     if not match:
         return None
     return match.group(1).strip()
-
-
-def normalize_anchor_status(value: str) -> str:
-    return clean_cell(value).lower()
-
-
-def has_required_strategy_evidence(value: str) -> bool:
-    text = clean_cell(value).lower()
-    return "existing" in text and "extended" in text
 
 
 def is_active_status(status: str) -> bool:
@@ -195,29 +170,30 @@ def parse_markdown_table(section: str | None) -> list[dict[str, str]]:
     return rows
 
 
-def load_binding_contract_packets(test_matrix_path: Path) -> dict[str, dict[str, str]]:
+def load_binding_contract_packets(test_matrix_path: Path) -> dict[str, dict[str, Any]]:
     if not test_matrix_path.is_file():
         return {}
 
     document = test_matrix_path.read_text(encoding="utf-8")
     packet_rows = parse_markdown_table(extract_section(document, "Binding Contract Packets"))
-    packets: dict[str, dict[str, str]] = {}
+    packets: dict[str, dict[str, Any]] = {}
     for row in packet_rows:
         binding_row_id = clean_cell(row.get("BindingRowID", ""))
         if not binding_row_id:
             continue
         packets[binding_row_id] = {
             "binding_row_id": binding_row_id,
-            "boundary_anchor": clean_cell(row.get("Boundary Anchor", "")),
-            "boundary_anchor_status": normalize_anchor_status(row.get("Boundary Anchor Status", "")),
-            "implementation_entry_anchor": clean_cell(row.get("Implementation Entry Anchor", "")),
-            "implementation_entry_anchor_status": normalize_anchor_status(
-                row.get("Implementation Entry Anchor Status", "")
-            ),
-            "boundary_anchor_strategy_evidence": clean_cell(row.get("Boundary Anchor Strategy Evidence", "")),
-            "implementation_entry_anchor_strategy_evidence": clean_cell(
-                row.get("Implementation Entry Anchor Strategy Evidence", "")
-            ),
+            "operation_id": clean_cell(row.get("Operation ID", "")),
+            "if_scope": clean_cell(row.get("IF Scope", "")),
+            "uif_path_refs": split_ref_cell(row.get("UIF Path Ref(s)", "")),
+            "udd_refs": split_ref_cell(row.get("UDD Ref(s)", "")),
+            "tm_id": clean_cell(row.get("TM ID", "")),
+            "tc_ids": split_ref_cell(row.get("TC IDs", "")),
+            "test_scope": clean_cell(row.get("Test Scope", "")),
+            "spec_refs": split_ref_cell(row.get("Spec Ref(s)", "")),
+            "scenario_refs": split_ref_cell(row.get("Scenario Ref(s)", "")),
+            "success_refs": split_ref_cell(row.get("Success Ref(s)", "")),
+            "edge_refs": split_ref_cell(row.get("Edge Ref(s)", "")),
         }
     return packets
 
@@ -304,41 +280,8 @@ def build_execution_readiness(
         errors.append(
             {
                 "code": "binding_projection_missing_required_fields",
-                "message": "Some binding rows are missing required tuple projection fields.",
+                "message": "Some binding rows are missing required binding-projection fields.",
                 "details": {"rows": binding_projection_missing_required_fields},
-            }
-        )
-
-    invalid_anchor_status_rows = sorted(
-        [
-            {"binding_row_id": unit["binding_row_id"], "statuses": unit["invalid_anchor_statuses"]}
-            for unit in unit_inventory
-            if unit["invalid_anchor_statuses"]
-        ],
-        key=lambda item: item["binding_row_id"],
-    )
-    if invalid_anchor_status_rows:
-        errors.append(
-            {
-                "code": "invalid_anchor_status",
-                "message": "Some binding rows use invalid anchor status values.",
-                "details": {"rows": invalid_anchor_status_rows},
-            }
-        )
-
-    todo_anchor_status_rows = sorted(
-        [
-            unit["binding_row_id"]
-            for unit in unit_inventory
-            if unit["boundary_anchor_status"] == "todo" or unit["implementation_entry_anchor_status"] == "todo"
-        ]
-    )
-    if todo_anchor_status_rows:
-        errors.append(
-            {
-                "code": "todo_anchor_status_blocker",
-                "message": "Some binding rows still carry forward-looking todo anchor statuses.",
-                "details": {"binding_row_ids": todo_anchor_status_rows},
             }
         )
 
@@ -354,11 +297,28 @@ def build_execution_readiness(
             }
         )
 
+    incomplete_binding_packet_rows = sorted(
+        [
+            {"binding_row_id": unit["binding_row_id"], "fields": unit["missing_binding_packet_fields"]}
+            for unit in unit_inventory
+            if unit["binding_packet"]["present"] and unit["missing_binding_packet_fields"]
+        ],
+        key=lambda item: item["binding_row_id"],
+    )
+    if incomplete_binding_packet_rows:
+        warnings.append(
+            {
+                "code": "binding_contract_packet_missing_required_fields",
+                "message": "Some binding packets are missing required minimal projection fields.",
+                "details": {"rows": incomplete_binding_packet_rows},
+            }
+        )
+
     binding_projection_packet_drift_rows = sorted(
         [
             unit["binding_row_id"]
             for unit in unit_inventory
-            if unit["binding_packet"]["present"] and unit["binding_packet"]["has_tuple_drift"]
+            if unit["binding_packet"]["present"] and unit["binding_packet"]["has_projection_drift"]
         ]
     )
     if binding_projection_packet_drift_rows:
@@ -367,23 +327,6 @@ def build_execution_readiness(
                 "code": "binding_projection_packet_drift",
                 "message": "Some binding rows drift from their authoritative Binding Contract Packets.",
                 "details": {"binding_row_ids": binding_projection_packet_drift_rows},
-            }
-        )
-
-    new_anchor_strategy_evidence_missing_rows = sorted(
-        [
-            {"binding_row_id": unit["binding_row_id"], "anchors": unit["missing_new_anchor_strategy_evidence"]}
-            for unit in unit_inventory
-            if unit["missing_new_anchor_strategy_evidence"]
-        ],
-        key=lambda item: item["binding_row_id"],
-    )
-    if new_anchor_strategy_evidence_missing_rows:
-        errors.append(
-            {
-                "code": "new_anchor_strategy_evidence_missing",
-                "message": "Some executable tuples select `new` anchors without explicit rejection evidence for `existing` and `extended`.",
-                "details": {"rows": new_anchor_strategy_evidence_missing_rows},
             }
         )
 
@@ -588,24 +531,6 @@ def build_execution_readiness(
             }
         )
 
-    controller_first_violation_rows = sorted(
-        [
-            unit["binding_row_id"]
-            for unit in unit_inventory
-            if unit["contract"]["status"] == "done"
-            and unit["contract"]["exists"]
-            and unit["contract"]["controller_first_violation"]
-        ]
-    )
-    if controller_first_violation_rows:
-        warnings.append(
-            {
-                "code": "controller_first_violation",
-                "message": "Some HTTP contract rows violate controller-first boundary rules.",
-                "details": {"binding_row_ids": controller_first_violation_rows},
-            }
-        )
-
     known_binding_ids = {row["binding_row_id"] for row in binding_projection_index if row.get("binding_row_id")}
     orphan_contract_rows = sorted(
         [
@@ -636,7 +561,7 @@ def build_unit_inventory(
     binding_rows: list[dict[str, str]],
     artifact_rows: list[dict[str, str]],
     feature_dir: Path,
-    binding_packets: dict[str, dict[str, str]],
+    binding_packets: dict[str, dict[str, Any]],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     artifacts_by_binding: dict[str, dict[str, dict[str, str]]] = {}
     for row in artifact_rows:
@@ -654,78 +579,95 @@ def build_unit_inventory(
         contract_row = artifacts_by_binding.get(binding_row_id, {}).get("contract", {})
         contract_target_path_abs = resolve_target_path(feature_dir, contract_row.get("Target Path", ""))
         contract_exists = bool(contract_target_path_abs) and Path(contract_target_path_abs).is_file()
-        contract_inspection = inspect_contract_artifact(contract_target_path_abs, clean_cell(row.get("Boundary Anchor", "")))
-        boundary_anchor = clean_cell(row.get("Boundary Anchor", ""))
-        implementation_entry_anchor = clean_cell(row.get("Implementation Entry Anchor", ""))
-        boundary_anchor_status = normalize_anchor_status(row.get("Boundary Anchor Status", ""))
-        implementation_entry_anchor_status = normalize_anchor_status(row.get("Implementation Entry Anchor Status", ""))
+        contract_inspection = inspect_contract_artifact(contract_target_path_abs)
+
+        uc_id = clean_cell(row.get("UC ID", ""))
+        uif_id = clean_cell(row.get("UIF ID", ""))
+        fr_id = clean_cell(row.get("FR ID", ""))
+        if_scope = clean_cell(row.get("IF ID / IF Scope", ""))
+        tm_id = clean_cell(row.get("TM ID", ""))
+        tc_ids = split_ref_cell(row.get("TC IDs", ""))
+        operation_id = clean_cell(row.get("Operation ID", ""))
+        uif_path_refs = split_ref_cell(row.get("UIF Path Ref(s)", ""))
+        udd_refs = split_ref_cell(row.get("UDD Ref(s)", ""))
         test_scope = clean_cell(row.get("Test Scope", ""))
         packet = binding_packets.get(binding_row_id, {})
 
         missing_binding_projection_fields = [
             field_name
             for field_name, field_value in (
-                ("IF ID / IF Scope", clean_cell(row.get("IF ID / IF Scope", ""))),
-                ("TM ID", clean_cell(row.get("TM ID", ""))),
-                ("TC IDs", clean_cell(row.get("TC IDs", ""))),
-                ("Operation ID", clean_cell(row.get("Operation ID", ""))),
-                ("Boundary Anchor", boundary_anchor),
-                ("Implementation Entry Anchor", implementation_entry_anchor),
-                ("Boundary Anchor Status", boundary_anchor_status),
-                ("Implementation Entry Anchor Status", implementation_entry_anchor_status),
+                ("UC ID", uc_id),
+                ("UIF ID", uif_id),
+                ("FR ID", fr_id),
+                ("IF ID / IF Scope", if_scope),
+                ("TM ID", tm_id),
+                ("TC IDs", tc_ids),
+                ("Operation ID", operation_id),
+                ("UIF Path Ref(s)", uif_path_refs),
+                ("UDD Ref(s)", udd_refs),
                 ("Test Scope", test_scope),
             )
             if not field_value
         ]
-        invalid_anchor_statuses = [
-            field_name
+
+        missing_binding_packet_fields = []
+        if packet:
             for field_name, field_value in (
-                ("Boundary Anchor Status", boundary_anchor_status),
-                ("Implementation Entry Anchor Status", implementation_entry_anchor_status),
+                ("Operation ID", packet.get("operation_id", "")),
+                ("IF Scope", packet.get("if_scope", "")),
+                ("UIF Path Ref(s)", packet.get("uif_path_refs", [])),
+                ("UDD Ref(s)", packet.get("udd_refs", [])),
+                ("TM ID", packet.get("tm_id", "")),
+                ("TC IDs", packet.get("tc_ids", [])),
+                ("Test Scope", packet.get("test_scope", "")),
+                ("Spec Ref(s)", packet.get("spec_refs", [])),
+                ("Scenario Ref(s)", packet.get("scenario_refs", [])),
+                ("Success Ref(s)", packet.get("success_refs", [])),
+                ("Edge Ref(s)", packet.get("edge_refs", [])),
+            ):
+                if not field_value:
+                    missing_binding_packet_fields.append(field_name)
+
+        has_projection_drift = bool(packet) and any(
+            (
+                operation_id != packet.get("operation_id", ""),
+                if_scope != packet.get("if_scope", ""),
+                tm_id != packet.get("tm_id", ""),
+                tc_ids != packet.get("tc_ids", []),
+                uif_path_refs != packet.get("uif_path_refs", []),
+                udd_refs != packet.get("udd_refs", []),
+                test_scope != packet.get("test_scope", ""),
             )
-            if field_value and field_value not in ANCHOR_STATUS_VALUES
-        ]
-        tuple_drift_checks = (
-            boundary_anchor != packet.get("boundary_anchor", ""),
-            boundary_anchor_status != packet.get("boundary_anchor_status", ""),
-            implementation_entry_anchor != packet.get("implementation_entry_anchor", ""),
-            implementation_entry_anchor_status != packet.get("implementation_entry_anchor_status", ""),
         )
-        missing_new_anchor_strategy_evidence = []
-        if boundary_anchor_status == "new" and not has_required_strategy_evidence(
-            packet.get("boundary_anchor_strategy_evidence", "")
-        ):
-            missing_new_anchor_strategy_evidence.append("boundary_anchor")
-        if implementation_entry_anchor_status == "new" and not has_required_strategy_evidence(
-            packet.get("implementation_entry_anchor_strategy_evidence", "")
-        ):
-            missing_new_anchor_strategy_evidence.append("implementation_entry_anchor")
 
         unit = {
             "binding_row_id": binding_row_id,
-            "if_scope": clean_cell(row.get("IF ID / IF Scope", "")),
-            "operation_id": clean_cell(row.get("Operation ID", "")),
-            "tm_id": clean_cell(row.get("TM ID", "")),
-            "tc_ids": split_csv_cell(row.get("TC IDs", "")),
-            "boundary_anchor": boundary_anchor,
-            "implementation_entry_anchor": implementation_entry_anchor,
-            "boundary_anchor_status": boundary_anchor_status,
-            "implementation_entry_anchor_status": implementation_entry_anchor_status,
+            "uc_id": uc_id,
+            "uif_id": uif_id,
+            "fr_id": fr_id,
+            "if_scope": if_scope,
+            "operation_id": operation_id,
+            "tm_id": tm_id,
+            "tc_ids": tc_ids,
+            "uif_path_refs": uif_path_refs,
+            "udd_refs": udd_refs,
             "test_scope": test_scope,
             "missing_binding_projection_fields": missing_binding_projection_fields,
-            "invalid_anchor_statuses": invalid_anchor_statuses,
-            "missing_new_anchor_strategy_evidence": missing_new_anchor_strategy_evidence,
+            "missing_binding_packet_fields": missing_binding_packet_fields,
             "binding_packet": {
                 "present": bool(packet),
-                "boundary_anchor": packet.get("boundary_anchor", ""),
-                "boundary_anchor_status": packet.get("boundary_anchor_status", ""),
-                "implementation_entry_anchor": packet.get("implementation_entry_anchor", ""),
-                "implementation_entry_anchor_status": packet.get("implementation_entry_anchor_status", ""),
-                "boundary_anchor_strategy_evidence": packet.get("boundary_anchor_strategy_evidence", ""),
-                "implementation_entry_anchor_strategy_evidence": packet.get(
-                    "implementation_entry_anchor_strategy_evidence", ""
-                ),
-                "has_tuple_drift": bool(packet) and any(tuple_drift_checks),
+                "operation_id": packet.get("operation_id", ""),
+                "if_scope": packet.get("if_scope", ""),
+                "uif_path_refs": packet.get("uif_path_refs", []),
+                "udd_refs": packet.get("udd_refs", []),
+                "tm_id": packet.get("tm_id", ""),
+                "tc_ids": packet.get("tc_ids", []),
+                "test_scope": packet.get("test_scope", ""),
+                "spec_refs": packet.get("spec_refs", []),
+                "scenario_refs": packet.get("scenario_refs", []),
+                "success_refs": packet.get("success_refs", []),
+                "edge_refs": packet.get("edge_refs", []),
+                "has_projection_drift": has_projection_drift,
             },
             "contract": {
                 "status": clean_cell(contract_row.get("Status", "")),
@@ -742,7 +684,6 @@ def build_unit_inventory(
                     "runtime_field_dictionary_tiering_check_present"
                 ],
                 "has_unresolved_field_gaps": contract_inspection["has_unresolved_field_gaps"],
-                "controller_first_violation": contract_inspection["controller_first_violation"],
                 "placeholder_names_present": contract_inspection["placeholder_names_present"],
                 "placeholder_names": contract_inspection["placeholder_names"],
             },
@@ -751,12 +692,9 @@ def build_unit_inventory(
 
         if (
             not missing_binding_projection_fields
-            and not invalid_anchor_statuses
-            and not missing_new_anchor_strategy_evidence
             and packet
-            and not unit["binding_packet"]["has_tuple_drift"]
-            and boundary_anchor_status != "todo"
-            and implementation_entry_anchor_status != "todo"
+            and not missing_binding_packet_fields
+            and not has_projection_drift
             and unit["contract"]["status"] == "done"
             and contract_exists
             and unit["contract"]["full_field_dictionary_present"]
@@ -765,7 +703,6 @@ def build_unit_inventory(
             and unit["contract"]["runtime_seed_boundary_drift_check_present"]
             and unit["contract"]["runtime_field_dictionary_tiering_check_present"]
             and not unit["contract"]["has_unresolved_field_gaps"]
-            and not unit["contract"]["controller_first_violation"]
             and not unit["contract"]["placeholder_names_present"]
         ):
             ready_unit_inventory.append(unit)
@@ -816,16 +753,15 @@ def main(argv: list[str] | None = None) -> int:
     binding_projection_index = [
         {
             "binding_row_id": clean_cell(row.get("BindingRowID", "")),
+            "uc_id": clean_cell(row.get("UC ID", "")),
+            "uif_id": clean_cell(row.get("UIF ID", "")),
+            "fr_id": clean_cell(row.get("FR ID", "")),
             "if_scope": clean_cell(row.get("IF ID / IF Scope", "")),
-            "operation_id": clean_cell(row.get("Operation ID", "")),
             "tm_id": clean_cell(row.get("TM ID", "")),
-            "tc_ids": split_csv_cell(row.get("TC IDs", "")),
-            "boundary_anchor": clean_cell(row.get("Boundary Anchor", "")),
-            "implementation_entry_anchor": clean_cell(row.get("Implementation Entry Anchor", "")),
-            "boundary_anchor_status": normalize_anchor_status(row.get("Boundary Anchor Status", "")),
-            "implementation_entry_anchor_status": normalize_anchor_status(
-                row.get("Implementation Entry Anchor Status", "")
-            ),
+            "tc_ids": split_ref_cell(row.get("TC IDs", "")),
+            "operation_id": clean_cell(row.get("Operation ID", "")),
+            "uif_path_refs": split_ref_cell(row.get("UIF Path Ref(s)", "")),
+            "udd_refs": split_ref_cell(row.get("UDD Ref(s)", "")),
             "test_scope": clean_cell(row.get("Test Scope", "")),
         }
         for row in binding_rows

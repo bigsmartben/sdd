@@ -1,235 +1,234 @@
 # Data Model: [FEATURE]
 
-**Stage**: Stage 1 Data Model
-**Inputs**: `spec.md`, `research.md`
+**Stage**: Stage 3 Shared Semantic Alignment
+**Inputs**: `spec.md`, `test-matrix.md` (`Binding Contract Packets` required; `Scenario Matrix` / `Verification Case Anchors` when needed)
 
-Use this artifact to define the reusable global backbone model for planning outputs. It should explain what shared domain elements exist, how they relate, which rules and lifecycle anchors govern them, and what downstream authors must treat as globally stable. The content must be concrete enough to support downstream `contracts/` authoring while remaining backbone-only.
+Use this artifact to align the shared semantic backbone consumed by multiple `BindingRowID` values. This file is authoritative for shared semantic elements and downstream reuse constraints. It is not an interface predesign artifact.
 
-## Model Overview
-
-Use this section to establish the overall shape of the model before filling in details.
+## Alignment Scope
 
 ### This file should answer
 
-- What shared domain elements and vocabulary must remain consistent across operations
-- What full spec-scoped backbone semantics set downstream stages are allowed to project from
-- Which globally stable fields, relationships, and derivations form the backbone model
-- What cross-operation invariants and lifecycle anchors downstream artifacts must respect
-- Which core classes/interfaces should appear in the backbone UML
+- Which user-visible data semantics are shared across bindings instead of being owned by one interface contract
+- Which entities, value objects, projections, lifecycle semantics, invariants, and policies need stable naming and ownership
+- Which owner/source/lifecycle decisions downstream `contract` runs must reuse instead of reinventing
+- Which `BindingRowID` values consume each shared semantic element
 
 ### This file defines
 
-- The full spec-scoped backbone semantics set for this feature
-- Core classes/interfaces only where stable owners or reusable contract boundaries exist
-- Shared domain elements and vocabulary reused across operations
-- Backbone ownership/composition/projection/derivation/dependency relationships
-- State-ownership closure for globally stable projections, derivations, counters, and lifecycle guards
-- Cross-operation invariants in normative rule form (`INV-###`)
-- Aggregate/entity lifecycle anchors needed for global semantic consistency, corrected and traced with repo anchors
-- Core UML classes/interfaces with globally stable fields and labeled relationships
+- Shared semantic elements that are stable and reusable across downstream contracts
+- Owner/source alignment for shared fields, projections, and derived semantics
+- Shared field vocabulary at semantic level only
+- Shared lifecycle and invariant vocabulary when it is reused across bindings or globally stable
+- Contract-facing reuse constraints for each `BindingRowID`
+- Repo-first landing decisions for any final semantic owner, lifecycle owner, or UML/class node that this artifact materializes
+- Explicit `new` shared classes when `existing` and `extended` cannot safely close a confirmed shared semantic
 
 ### This file does not define
 
-- Full DTO field inventories or per-operation request/response payload details
-- Implementation-layer decomposition (service/repository/module/class internals)
-- Persistence schema/table/index mappings
-- Operation-local behavior flows, sequence-level logic, or verification matrix design
-- Operation-scoped controller/service/DTO/class naming closure or detailed contract field closure
+- HTTP routes, controller/service/facade naming, or repository interface placement
+- Full request/response field dictionaries
+- Operation-scoped DTO/command/result models
+- Single-binding local validation details
+- Realization-level collaborator chains or sequence design
 
-Downstream `test-matrix.md` and `contracts/` MAY refine operation-scoped VO/DTO/field mappings from the backbone elements and owners declared here, but they MUST NOT mint new globally stable model concepts outside this boundary.
+Landing rule:
 
-## Domain Inventory
+- `spec.md` + `test-matrix.md` define the shared semantics to align.
+- Repo-first (`existing -> extended -> new`) governs how any final semantic owner, lifecycle owner, or UML/class node lands in the repository-facing model.
+- If `existing` and `extended` cannot safely close a confirmed shared semantic, this artifact MUST choose `new`.
+- `gap` is reserved for genuine input/evidence blockers, not for unresolved ownership of an already-confirmed shared semantic.
 
-List only elements that carry shared planning semantics. Capture only globally stable fields here.
-Derive semantics from `spec.md` + `research.md`; use repo anchors only for naming/lifecycle correction and traceability.
-If a stable projection/derivation depends on owner classes or owner fields that downstream stages must read, write, project, validate, or default, declare that owner here or keep the gap non-normative.
-For each row, mark anchor role explicitly so target semantics and current repo evidence are not conflated.
+Selection rule:
 
-| Domain Element | Kind | Anchor Status (`existing`\|`extended`\|`new`\|`todo`) | Repo Anchor | Anchor Role (`owner`\|`state-source`\|`projection-source`\|`carrier`\|`partial-lineage`) | Upstream Ref(s) | Global Responsibility | Globally Stable Fields Only |
-|----------------|------|--------------------------------------------------------|-------------|------------------------------------------------------------------------------------------------------|-----------------|-----------------------|-----------------------------|
-| `[OrderAggregate]` | `Aggregate` | `existing` | ``src/domain/order.py::OrderAggregate`` | `owner` | `[spec.md#FR-001]` | [Backbone responsibility shared across operations] | `[id, customerId, status, version]` |
-| `[OrderAggregate.statusHistory]` | `Aggregate Field` | `extended` | ``src/domain/order.py::OrderAggregate.statusHistory`` | `owner` | `[research.md#R-001]` | [Same-entity lifecycle trace extension] | `[statusHistory]` |
-| `[OrderSnapshotView]` | `Projection / View` | `new` | ``src/projection/order_snapshot.py::OrderSnapshotView`` | `projection-source` | `[spec.md#FR-004]` | [Shared read-model responsibility] | `[orderId, state, updatedAt]` |
-| `[PendingModelGap]` | `Projection / View` | `todo` | `TODO(REPO_ANCHOR)` | `carrier` | `[spec.md#FR-009]` | [Deferred anchor resolution] | `[deferredField]` |
+- If a semantic is used by two or more `BindingRowID` values, include it here by default.
+- If a semantic is used by only one `BindingRowID`, leave it to `/sdd.plan.contract` unless it is a globally stable business object, stable projection, or stable lifecycle that downstream contracts must not redefine independently.
 
-## Backbone Structure
+## Semantic Backbone Summary
 
-Expand the model by describing only globally significant responsibilities and links. Group by backbone domain area or subdomain.
+Summarize the shared semantic domains fixed in this run and name the `BindingRowID` values that consume them.
 
-### [Backbone Group / Subdomain A]
+| Semantic Domain | Why It Is Shared | Primary Spec / UDD Ref(s) | Consumed By BindingRowID(s) | Notes |
+|-----------------|------------------|---------------------------|-----------------------------|-------|
+| [Conversation closure semantics] | [Shared across feedback, summary, and thread-detail bindings] | [UDD-001, FR-004] | [BR-001, BR-003, BR-004] | [Short summary] |
 
-- **Composition**: `[AggregateA]` composes `[EntityA1, EntityA2]` because [global ownership boundary].
-- **Ownership**: `[AggregateA]` owns lifecycle authority for `[EntityA1]`; external modules must not mutate `[stateField]` directly.
-- **Projection**: `[ProjectionA]` is derived from `[AggregateA]` via [shared projection rule].
-- **Dependency**: `[AggregateA]` depends on `[PolicyA Interface]` for [cross-operation decision semantics].
+## Shared Semantic Class Model
 
-### [Backbone Group / Subdomain B]
-
-- **Derivation**: `[DerivedValueB]` is computed from `[StableFieldX, StableFieldY]` under [global rule].
-- **Association**: `[AggregateB]` references `[AggregateA]` by `[stableIdentifier]` only (no deep embedding).
-- **Boundary rule**: [What can/cannot cross this group boundary at backbone level].
-
-## State Ownership Closure
-
-Use this section to close the model around projections, derivations, counters, role labels, and lifecycle guards that downstream artifacts will rely on.
-Every globally stable derived/projection semantic above MUST cite the owner class/field/state that sustains it.
-If downstream `test-matrix.md` or `contracts/` would need to introduce a new state owner or owner field to explain a shared semantic, treat that as a Stage 1 model gap and route back to `/sdd.plan.data-model` instead of inventing the model later.
-
-| Shared Semantic | Owner Class / Field / State | Why This Owner Is Globally Stable | Downstream Dependents |
-|-----------------|-----------------------------|-----------------------------------|-----------------------|
-| `[UnreadBadge]` | `[ConversationThread.unreadCount, ConversationMessage.readState]` | [Projection/derivation depends on these owners across operations] | `[test-matrix.md, contracts/]` |
-| `[ClosureFeedbackVisibility]` | `[ConversationThread.status, ConversationClosure.feedbackResult]` | [Lifecycle gate / projection depends on these owners] | `[test-matrix.md, contracts/]` |
-
-## Repo Anchor Decision Protocol
-
-- Model semantics come from `spec.md` + `research.md`; repo anchors are correction/traceability evidence only.
-- For every anchor decision, apply strict order: `existing -> extended -> new`.
-- `extended` is valid only when the anchor already owns the same business identity and most globally stable fields/states.
-- `new` is normative only when explicit `path::symbol` target evidence is provided.
-- Transport wrappers, request/response DTOs, controller params, and context carriers are not normative same-entity anchors unless they already own materially aligned identity, lifecycle, and stable fields.
-- Every normative `new` anchor MUST include explicit rejection evidence for both `existing` and `extended`, plus required upstream synchronization actions.
-- `todo` remains forward-looking and non-normative.
-- `INV-*` rules and lifecycle stable states MUST NOT depend on `todo` anchors.
-- Stable lifecycle states MUST align to repo-backed enum/state vocabulary when anchor status is `existing`, `extended`, or `new`.
-- UI phases (page steps, flow nodes, confirmation stages) are not aggregate lifecycle states and MUST NOT be promoted into lifecycle anchors.
-
-## New Anchor Evidence
-
-Record one row for every `new` anchor used in normative content.
-Planned-but-missing files/symbols are not sufficient evidence for normative `new`; if the target repo-backed file cannot be confirmed, downgrade the item to `todo` and move it out of normative sections.
-
-| Candidate Anchor | Why `existing` Fails | Why `extended` Fails / Is Unsafe | Target `path::symbol` | Owner Fit | Required Upstream Synchronization |
-|------------------|----------------------|----------------------------------|-----------------------|-----------|-----------------------------------|
-| `[ConversationThread.status]` | [Existing enum does not cover the required lifecycle semantics] | [Additive extension would overload an unrelated owner/vocabulary] | `[path/to/file.ext::Symbol]` | [Why this target is the owner boundary and nearby symbols are only carriers/partial lineage] | [Where downstream implementation must converge] |
-
-## Shared Invariants
-
-Write normative rules with stable identifiers and references. Prefer rules that downstream contracts and interface details can reuse directly.
-`INV-*` items are normative. Each `INV-*` MUST use anchor status `existing`, `extended`, or `new` with explicit repo evidence.
-If explicit repo evidence is unavailable, do not keep the statement as `INV-*`; move it to `Assumptions / Open Questions` as a forward-looking gap with `TODO(REPO_ANCHOR)`.
-
-### INV-001: [Short invariant title]
-
-- **Rule**: [Normative statement using MUST / MUST NOT / MAY]
-- **Applies To**: `[Element(s) / Relationship(s)]`
-- **Rationale**: [Why this is globally required]
-- **Upstream Ref(s)**: `[spec.md#...], [research.md#...]`
-- **Anchor Status**: `[existing | extended | new]`
-- **Repo Anchor(s)**: `[path/to/file.ext::Symbol]`
-
-### INV-002: [Short invariant title]
-
-- **Rule**: [Normative statement]
-- **Applies To**: `[Element(s) / Relationship(s)]`
-- **Rationale**: [Global semantic reason]
-- **Upstream Ref(s)**: `[spec.md#...], [research.md#...]`
-- **Anchor Status**: `[existing | extended | new]`
-- **Repo Anchor(s)**: `[path/to/file.ext::Symbol]`
-
-## Lifecycle Anchors
-
-Describe each globally shared lifecycle as its own section. Include only states and transitions that must remain stable across planning outputs.
-Before writing a lifecycle section, read repo-backed enum definitions, status/state fields, and mapper status values.
-Apply anchor decision order `existing -> extended -> new`.
-Stable states MUST come from anchors with status `existing`, `extended`, or `new`; UI phases/page steps/flow nodes are not aggregate lifecycle states.
-When a lifecycle uses `extended`, keep `Stable states` in the anchored vocabulary and record any business-term mapping outside the normative state list.
-Apply the constitution state-machine applicability rule per lifecycle:
-
-- Count distinct stable states as `N`.
-- Count unique effective transitions as `T`.
-- If `N > 3` or `T >= 2N`, the lifecycle MUST include a full FSM package: transition table, transition pseudocode, and state diagram.
-- Otherwise the lifecycle MUST stay lightweight: state field definition, allowed transitions, forbidden transitions, and key invariants only.
-- If a full FSM is still used below threshold, record explicit justification in the lifecycle section.
-
-### Lifecycle: [Aggregate / Entity Name]
-
-- **Anchor Status**: [`existing` | `extended` | `new` | `todo`]
-- **Repo Anchor(s)**: [`path/to/file.ext::EnumOrStateField`] or `TODO(REPO_ANCHOR)`
-- **State field**: `[anchored status/state field name]`
-- **Applicability Assessment**:
-  - `N = [stable-state-count]`
-  - `T = [effective-transition-count]`
-  - `Required Model = [Full FSM | Lightweight State Model]`
-  - `Below-threshold Full FSM Justification = [required only when Full FSM is used below threshold]`
-- **Stable states**: `[must match anchored enum/status vocabulary]`
-- **Allowed transitions**:
-  - `[Draft -> Active]` on [event/condition]
-  - `[Active -> Suspended]` on [event/condition]
-- **Forbidden transitions**:
-  - `[Closed -> Active]` (forbidden because [global reason])
-  - `[Draft -> Closed]` unless [explicit global exception]
-- **Full FSM Package**: [required only when `Required Model = Full FSM`]
-  - **Transition table**: [transition rows]
-  - **Transition pseudocode**: [state-change rules]
-  - **State diagram**: [mermaid or equivalent]
-- **Lightweight State Model Notes**: [required only when `Required Model = Lightweight State Model`]
-
-### Lifecycle: [Second Aggregate / Entity Name]
-
-- **Anchor Status**: [`existing` | `extended` | `new` | `todo`]
-- **Repo Anchor(s)**: [`path/to/file.ext::EnumOrStateField`] or `TODO(REPO_ANCHOR)`
-- **State field**: `[anchored status/state field name]`
-- **Applicability Assessment**:
-  - `N = [stable-state-count]`
-  - `T = [effective-transition-count]`
-  - `Required Model = [Full FSM | Lightweight State Model]`
-  - `Below-threshold Full FSM Justification = [required only when Full FSM is used below threshold]`
-- **Stable states**: `[must match anchored enum/status vocabulary]`
-- **Allowed transitions**:
-  - `[StateA -> StateB]` on [event/condition]
-- **Forbidden transitions**:
-  - `[StateC -> StateA]` (forbidden because [global reason])
-- **Full FSM Package**: [required only when `Required Model = Full FSM`]
-  - **Transition table**: [transition rows]
-  - **Transition pseudocode**: [state-change rules]
-  - **State diagram**: [mermaid or equivalent]
-- **Lightweight State Model Notes**: [required only when `Required Model = Lightweight State Model`]
-
-## Backbone UML
-
-Show core classes/interfaces plus globally stable fields and labeled relationships. Keep the diagram aligned with the sections above rather than introducing new model elements here.
-This diagram describes the target backbone model, not a claim that matching implementation classes already exist.
+This is the primary reader view. Render the final shared classes, value objects, projections, policies, and ownership relationships as Mermaid UML.
+Every class or relationship shown here MUST be backed by `Shared Semantic Elements`, owner/source closure, and repo-first landing decisions later in the document.
 
 ```mermaid
 classDiagram
-    class AggregateA {
-        +id: UUID
-        +status: AggregateAStatus
-        +version: int
+    class ConversationThread {
+        +threadId
+        +status
+        +unreadCount
     }
 
-    class EntityA1 {
-        +id: UUID
-        +state: EntityState
+    class ClosureLifecycle {
+        <<lifecycle>>
+        +state
     }
 
-    class ProjectionA {
-        +aggregateAId: UUID
-        +status: AggregateAStatus
-        +updatedAt: Instant
+    class UnreadBadge {
+        <<projection>>
+        +count
     }
 
-    class PolicyA {
-        <<interface>>
-        +evaluate(input): Decision
+    class ClosurePolicy {
+        <<policy>>
     }
 
-    AggregateA *-- EntityA1 : composes
-    ProjectionA ..> AggregateA : projects-from
-    AggregateA ..> PolicyA : depends-on
+    ConversationThread --> ClosureLifecycle : owns
+    ConversationThread --> UnreadBadge : projects
+    ConversationThread ..> ClosurePolicy : constrained-by
 ```
 
-## Assumptions / Open Questions
+Rendering rules:
 
-- [Capture unresolved semantic items here using `TODO(REPO_ANCHOR)` and mark as `forward-looking`; do not treat them as globally stable semantics]
+- Prioritize shared classes and relationships only; do not draw operation-scoped DTOs or collaborator chains.
+- Every node should map to one shared semantic element or one final semantic owner/lifecycle owner chosen in this stage.
+- If `existing` and `extended` are insufficient for a confirmed shared semantic, introduce the required `new` class here and close it in the supporting tables below.
+- Use concise field lists that expose only globally stable semantics needed by downstream contracts.
 
-## Model Closure
+## Shared Lifecycle State Machines
 
-Use this final section to confirm that the backbone model is coherent, complete, and ready for downstream reuse.
+This is the second primary reader view. For every shared or globally stable lifecycle, present the state owner, stable states, and an explicit transition table before any supporting detail.
+If no shared lifecycle exists, keep the section with an explicit `N/A` note instead of omitting it.
 
-- Ensure the model covers the shared elements, stable fields, labeled relationships, invariants, and lifecycle anchors required by `spec.md` and `research.md`.
-- Ensure globally stable projections/derivations are closed over declared owner classes/fields/states so downstream stages do not need to invent new state owners.
-- Ensure the content remains backbone-only and does not expand into full DTO inventories, endpoint-by-endpoint contracts, implementation layers, persistence schema design, or interface-level sequence behavior.
-- Ensure terminology, invariants, and lifecycle definitions are consistent with downstream `contract-template.md` expectations without duplicating scope.
-- If anything non-normative is still uncertain, set `Anchor Status = todo` and record the gap with `TODO(REPO_ANCHOR)` in `Assumptions / Open Questions` or `Boundary Notes` rather than leaving backbone semantics ambiguous.
-- Do not use `todo` anchors for `INV-*` rules or lifecycle stable states.
+### Lifecycle Summary
+
+| Lifecycle Ref | State Owner | Stable States | Invariant Ref(s) | Consumed By BindingRowID(s) | Required Model |
+|---------------|-------------|---------------|------------------|-----------------------------|----------------|
+| [LC-001] | [ConversationThread.status] | [`Open`, `Closing`, `Closed`] | [INV-001, INV-002] | [BR-002, BR-003] | [`Lightweight` or `Full FSM`] |
+
+### State Transition Table
+
+| Lifecycle Ref | From State | Trigger / Condition | To State | Transition Type | Notes / Invariant Ref(s) | Consumed By BindingRowID(s) |
+|---------------|------------|---------------------|----------|-----------------|--------------------------|-----------------------------|
+| [LC-001] | [`Open`] | [close requested] | [`Closing`] | `allowed` | [INV-001] | [BR-002, BR-003] |
+| [LC-001] | [`Closing`] | [closure completed] | [`Closed`] | `allowed` | [INV-001, INV-002] | [BR-002, BR-003] |
+| [LC-001] | [`Closed`] | [reopen request] | [`Open`] | `forbidden` | [INV-002] | [BR-003] |
+
+### State Diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> Open
+    Open --> Closing: close requested
+    Closing --> Closed: closure completed
+```
+
+Lifecycle rules:
+
+- Apply the constitution lifecycle policy per shared lifecycle.
+- Count distinct stable states as `N`.
+- Count unique effective transitions as `T`.
+- If `N > 3` or `T >= 2N`, include a full FSM package: transition table, transition pseudocode, and state diagram.
+- Otherwise keep the lifecycle lightweight, but still include the transition table because it is a primary reader view.
+- Forbidden transitions must be explicit either in the transition table or as a compact forbidden-transition list.
+
+## Shared Semantic Elements
+
+This is the primary shared-semantic backbone table.
+
+| DM ID | Kind | Name | Business Meaning | Primary UDD Ref(s) | Primary Spec Ref(s) | Consumed By BindingRowID(s) | Status |
+|-------|------|------|------------------|--------------------|---------------------|-----------------------------|--------|
+| DM-001 | `entity` | [ConversationThread] | [Shared user-visible thread object] | [UDD-001] | [FR-001, UIF-001] | [BR-001, BR-002] | `defined` |
+| DM-002 | `projection` | [UnreadBadge] | [Shared unread-count projection] | [UDD-003] | [FR-003] | [BR-001, BR-004] | `defined` |
+| DM-003 | `lifecycle` | [ClosureLifecycle] | [Stable thread closure lifecycle vocabulary] | [UDD-002] | [FR-004, FR-005] | [BR-002] | `defined` |
+
+Rules:
+
+- `Kind` MUST be one of `entity | value-object | projection | lifecycle | invariant | policy`.
+- Keep `Status = gap` only when authoritative input or evidence is missing and the stage is blocked from closing the semantic safely.
+- Do not add operation-scoped request/response types or single-binding helper concepts here.
+- If a row is materialized as a final class, semantic owner, lifecycle owner, or UML node, its landing MUST follow repo-first `existing -> extended -> new`.
+- Do not introduce a new design-only class when an `existing` or `extended` landing already closes the shared semantic safely.
+- If a confirmed shared semantic cannot land as `existing` or `extended`, introduce the required `new` class/owner/lifecycle here instead of deferring the decision.
+
+## Owner / Source Alignment
+
+Use this section to decide who owns the semantic and whether it is authoritative, derived, or projected. Downstream contracts must reuse this alignment instead of inventing separate ownership.
+
+| Semantic Ref | Owner Class / Semantic Owner | Source Type | Source Ref(s) | Consumed Field / Concept | Consumed By BindingRowID(s) | Notes |
+|--------------|------------------------------|-------------|---------------|--------------------------|-----------------------------|-------|
+| [DM-002] | [ConversationThread.unreadCount] | `derived` | [UDD-003, FR-003] | [Unread badge count] | [BR-001, BR-004] | [Explain derivation owner] |
+| [DM-003] | [ConversationThread.status] | `authoritative` | [UDD-002, FR-004] | [Closure state] | [BR-002] | [Explain why this owner is stable] |
+
+Rules:
+
+- `Source Type` MUST be one of `authoritative | derived | projected`.
+- Every shared projection, derivation, counter, badge, role label, or lifecycle guard MUST identify the owner class/field/state that sustains it.
+- Owner/source for confirmed shared semantics MUST be closed in this stage; use `gap` only when required input/evidence is genuinely missing.
+- Owner/source rows that become final semantic owners in UML/class output MUST use repo-first landing instead of floating free from the codebase.
+
+## Shared Field Vocabulary
+
+Define only the shared field semantics that downstream contracts must reuse. This is not a full contract field dictionary.
+
+| Field Ref | Semantic Owner | Meaning | Primary UDD Ref(s) | Required Semantics | Null / Boundary Rule | Shared By BindingRowID(s) |
+|-----------|----------------|---------|--------------------|--------------------|----------------------|---------------------------|
+| [FIELD-001] | [ConversationThread.status] | [User-visible thread state] | [UDD-002] | [Must use stable closure vocabulary] | [Never null after creation] | [BR-001, BR-002] |
+| [FIELD-002] | [ConversationThread.unreadCount] | [Unread badge count] | [UDD-003] | [Derived from message read state] | [Defaults to `0`] | [BR-001, BR-004] |
+
+Rules:
+
+- Include only fields whose semantics are shared across bindings or globally stable.
+- Capture vocabulary, meaning, nullability, and boundary rules only.
+- Leave complete request/response expansion to `/sdd.plan.contract`.
+
+## Lifecycle And Invariant Support
+
+Use this section for supporting notes that explain or justify the primary lifecycle views above.
+Do not repeat the main transition table unless additional detail is necessary.
+
+### Lifecycle Notes
+
+- [Explain why this lifecycle is shared across the listed `BindingRowID` values]
+- [Record `N`, `T`, and why the lifecycle is `Lightweight` or `Full FSM`]
+- [Record any forbidden-transition rationale or business-term mapping not obvious from the transition table]
+
+### Invariant Details
+
+#### INV-001: [Short invariant title]
+
+- **Rule**: [Normative statement using MUST / MUST NOT / MAY]
+- **Applies To**: [DM / field / lifecycle refs]
+- **Rationale**: [Why this invariant must stay shared]
+- **Primary Spec / UDD Ref(s)**: [FR-004, UDD-002]
+- **Consumed By BindingRowID(s)**: [BR-002, BR-003]
+
+#### INV-002: [Short invariant title]
+
+- **Rule**: [Normative statement]
+- **Applies To**: [DM / field / lifecycle refs]
+- **Rationale**: [Shared semantic reason]
+- **Primary Spec / UDD Ref(s)**: [FR-005, UDD-002]
+- **Consumed By BindingRowID(s)**: [BR-003]
+
+## Downstream Contract Constraints
+
+This is the direct handoff surface for `/sdd.plan.contract`.
+
+| BindingRowID | Required Shared Semantic Ref(s) | Constraint Type | Contract Impact |
+|--------------|---------------------------------|-----------------|-----------------|
+| [BR-001] | [DM-001, FIELD-002] | `owner` | [Contract must reuse shared owner/source for unread projection instead of inventing local ownership] |
+| [BR-002] | [DM-003, LC-001, INV-001] | `lifecycle` | [Contract must reuse stable closure lifecycle vocabulary and transition legality] |
+| [BR-003] | [DM-002, INV-002] | `projection` | [Contract must project shared derived semantic without renaming the concept] |
+
+Rules:
+
+- `Constraint Type` MUST be one of `owner | source | lifecycle | invariant | projection`.
+- Every `BindingRowID` that depends on a shared semantic MUST be listed here.
+- Use this section to tell `/sdd.plan.contract` what must be reused, not to design the contract itself.
+
+## Alignment Closure
+
+- Ensure `Shared Semantic Elements` and `Downstream Contract Constraints` are both present and internally consistent.
+- Ensure every shared element is backed by `UDD` / spec refs and consuming `BindingRowID` rows.
+- Ensure owner/source alignment closes over every shared projection or derived semantic so downstream contracts do not invent missing owners.
+- Ensure lifecycle/invariant content appears only when the vocabulary is shared or globally stable.
+- Ensure any final semantic owner, lifecycle owner, or UML/class node follows repo-first landing order `existing -> extended -> new`.
+- Ensure confirmed shared semantics end with a closed landing decision; when `existing` and `extended` are insufficient, materialize the required `new` class/owner/lifecycle here.
+- Use `Status = gap` only when the stage is blocked by missing authoritative input or missing landing evidence, not as a fallback for unresolved ownership.

@@ -25,10 +25,9 @@ def _write_feature_fixture(
     packet_entry_status: str = "existing",
     include_research_trigger: bool = False,
     plan_feature_status: str = "planning-in-progress",
-    plan_boundary_anchor: str = "HTTP GET /demo",
-    plan_entry_anchor: str = "src/web/demo_controller.py::DemoController.handle",
-    plan_boundary_status: str = "existing",
-    plan_entry_status: str = "existing",
+    plan_uif_path_refs: str = "[UIF-Path-001]",
+    plan_udd_refs: str = "[UDD-001]",
+    plan_test_scope: str = "Integration",
 ) -> Path:
     feature_dir = tmp_path / "feature"
     (feature_dir / "contracts").mkdir(parents=True)
@@ -89,9 +88,9 @@ def _write_feature_fixture(
                 "",
                 "## Binding Contract Packets",
                 "",
-                "| BindingRowID | Operation ID | IF Scope | Boundary Anchor | Boundary Anchor Status | Implementation Entry Anchor | Implementation Entry Anchor Status | Request DTO Anchor | Response DTO Anchor | Primary Collaborator Anchor | State Owner Anchor(s) | TM ID | TC IDs | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) | Lifecycle Ref(s) | Invariant Ref(s) | Main Pass Anchor | Branch/Failure Anchor(s) |",
-                "|--------------|--------------|----------|-----------------|------------------------|-----------------------------|------------------------------------|--------------------|--------------------|-----------------------------|-----------------------|-------|--------|-------------|-----------------|----------------|-------------|------------------|------------------|------------------|--------------------------|",
-                f"| BR-001 | demoOp | IF-001 | {packet_boundary_anchor} | {packet_boundary_status} | {packet_entry_anchor} | {packet_entry_status} | N/A | src/app/demo.py::DemoResponse | N/A | [src/domain/demo.py::DemoAggregate] | TM-001 | [TC-001] | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] | [Lifecycle: DemoAggregate] | [INV-001] | happy path | retry path |",
+                "| BindingRowID | Operation ID | IF Scope | UIF Path Ref(s) | UDD Ref(s) | Boundary Anchor | Boundary Anchor Status | Implementation Entry Anchor | Implementation Entry Anchor Status | Request DTO Anchor | Response DTO Anchor | Primary Collaborator Anchor | State Owner Anchor(s) | TM ID | TC IDs | Test Scope | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) | Lifecycle Ref(s) | Invariant Ref(s) | Main Pass Anchor | Branch/Failure Anchor(s) |",
+                "|--------------|--------------|----------|-----------------|------------|-----------------|------------------------|-----------------------------|------------------------------------|--------------------|--------------------|-----------------------------|-----------------------|-------|--------|------------|-------------|-----------------|----------------|-------------|------------------|------------------|------------------|--------------------------|",
+                f"| BR-001 | demoOp | IF-001 | [UIF-Path-001] | [UDD-001] | {packet_boundary_anchor} | {packet_boundary_status} | {packet_entry_anchor} | {packet_entry_status} | N/A | src/app/demo.py::DemoResponse | N/A | [src/domain/demo.py::DemoAggregate] | TM-001 | [TC-001] | Integration | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] | [Lifecycle: DemoAggregate] | [INV-001] | happy path | retry path |",
             ]
         ),
         encoding="utf-8",
@@ -186,9 +185,9 @@ def _write_feature_fixture(
                 "",
                 "## Binding Projection Index",
                 "",
-                "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | Boundary Anchor | Implementation Entry Anchor | Boundary Anchor Status | Implementation Entry Anchor Status | Test Scope |",
-                "|--------------|-------|--------|-------|------------------|-------|--------|--------------|-----------------|-----------------------------|------------------------|------------------------------------|------------|",
-                f"| BR-001 | UC-001 | UIF-001 | FR-001 | IF-001 | TM-001 | TC-001 | demoOp | {plan_boundary_anchor} | {plan_entry_anchor} | {plan_boundary_status} | {plan_entry_status} | Integration |",
+                "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | UIF Path Ref(s) | UDD Ref(s) | Test Scope |",
+                "|--------------|-------|--------|-------|------------------|-------|--------|--------------|-----------------|------------|------------|",
+                f"| BR-001 | UC-001 | UIF-001 | FR-001 | IF-001 | TM-001 | TC-001 | demoOp | {plan_uif_path_refs} | {plan_udd_refs} | {plan_test_scope} |",
                 "",
                 "## Artifact Status",
                 "",
@@ -201,12 +200,6 @@ def _write_feature_fixture(
                 "- `/sdd.plan` initializes this file and starts the queue.",
                 "- `/sdd.plan.contract` advances `Artifact Status` one row at a time.",
                 "- `/sdd.tasks` starts only after all required stage and artifact rows are `done`.",
-                "",
-                "## Complexity Tracking",
-                "",
-                "| Violation | Why Needed | Simpler Alternative Rejected Because |",
-                "|-----------|------------|-------------------------------------|",
-                "| none | n/a | n/a |",
             ]
         ),
         encoding="utf-8",
@@ -405,7 +398,6 @@ def test_northbound_rule_accepts_escaped_pipe_in_boundary_anchor_cells_bash(tmp_
         contract_boundary_anchor=r"HTTP GET /demo\|v2",
         test_matrix_boundary_anchor=r"HTTP GET /demo\|v2",
         packet_boundary_anchor=r"HTTP GET /demo\|v2",
-        plan_boundary_anchor=r"HTTP GET /demo\|v2",
     )
     payload = _run_planning_lint(feature_dir)
     assert not any(f["rule_id"] == "PLN-NB-001" for f in payload["findings"])
@@ -418,7 +410,6 @@ def test_northbound_rule_accepts_escaped_pipe_in_boundary_anchor_cells_powershel
         contract_boundary_anchor=r"HTTP GET /demo\|v2",
         test_matrix_boundary_anchor=r"HTTP GET /demo\|v2",
         packet_boundary_anchor=r"HTTP GET /demo\|v2",
-        plan_boundary_anchor=r"HTTP GET /demo\|v2",
     )
     payload = _run_planning_lint_powershell(feature_dir)
     assert not any(f["rule_id"] == "PLN-NB-001" for f in payload["findings"])
@@ -433,8 +424,7 @@ def test_binding_tuple_projection_sync_accepts_aligned_artifacts(tmp_path: Path)
 def test_binding_tuple_projection_sync_flags_plan_projection_drift(tmp_path: Path):
     feature_dir = _write_feature_fixture(
         tmp_path,
-        plan_entry_status="new",
-        packet_entry_status="existing",
+        plan_udd_refs="[UDD-999]",
     )
     payload = _run_planning_lint(feature_dir)
     assert payload["findings_total"] > 0
@@ -480,7 +470,6 @@ def test_repo_anchor_paths_must_resolve_to_real_files_in_powershell(tmp_path: Pa
     [
         ("## Summary", "PLN-CP-001"),
         ("## Handoff Protocol", "PLN-CP-002"),
-        ("## Complexity Tracking", "PLN-CP-003"),
     ],
 )
 def test_plan_required_sections_are_enforced(section_marker: str, rule_id: str, tmp_path: Path):
@@ -502,7 +491,7 @@ def test_plan_required_sections_accept_crlf_line_endings(tmp_path: Path):
 
     payload = _run_planning_lint(feature_dir)
     assert not any(
-        f["rule_id"] in {"PLN-CP-001", "PLN-CP-002", "PLN-CP-003"}
+        f["rule_id"] in {"PLN-CP-001", "PLN-CP-002"}
         for f in payload["findings"]
     )
 
@@ -514,8 +503,16 @@ def test_plan_status_must_match_stage_and_artifact_progress(tmp_path: Path):
     assert any(f["rule_id"] == "PLN-CP-004" for f in payload["findings"])
 
 
-def test_binding_projection_index_rejects_todo_anchor_status_rows(tmp_path: Path):
-    feature_dir = _write_feature_fixture(tmp_path, plan_boundary_status="todo")
+def test_binding_projection_index_rejects_contract_design_columns(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    plan = feature_dir / "plan.md"
+    plan.write_text(
+        plan.read_text(encoding="utf-8").replace(
+            "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | UIF Path Ref(s) | UDD Ref(s) | Test Scope |",
+            "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | UIF Path Ref(s) | UDD Ref(s) | Boundary Anchor | Test Scope |",
+        ),
+        encoding="utf-8",
+    )
     payload = _run_planning_lint(feature_dir)
     assert payload["findings_total"] > 0
     assert any(f["rule_id"] == "PLN-BP-001" for f in payload["findings"])

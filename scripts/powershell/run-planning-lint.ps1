@@ -315,6 +315,28 @@ function Normalize-MarkdownScalar {
     return (($Value.Trim()) -replace '`', '').Trim()
 }
 
+function Normalize-MarkdownListCell {
+    param([string]$Value)
+
+    $normalized = Normalize-MarkdownScalar -Value $Value
+    if ($normalized.StartsWith('[') -and $normalized.EndsWith(']')) {
+        $normalized = $normalized.Substring(1, $normalized.Length - 2)
+    }
+
+    if ([string]::IsNullOrWhiteSpace($normalized)) {
+        return ''
+    }
+
+    $parts = @()
+    foreach ($item in ($normalized -split ',')) {
+        $trimmed = $item.Trim()
+        if (-not [string]::IsNullOrWhiteSpace($trimmed)) {
+            $parts += $trimmed
+        }
+    }
+    return ($parts -join ',')
+}
+
 function Get-AnchorStatusToken {
     param([string]$Value)
 
@@ -332,17 +354,17 @@ function Get-PlanBindingTupleData {
     param([string]$Path)
 
     $rows = @{}
-    $targets = @{}
     $lines = @(Get-Content -Path $Path -ErrorAction Stop)
     $currentSection = ''
     $inTable = $false
     $bindingRowIndex = -1
-    $boundaryIndex = -1
-    $entryIndex = -1
-    $boundaryStatusIndex = -1
-    $entryStatusIndex = -1
-    $unitTypeIndex = -1
-    $targetPathIndex = -1
+    $operationIndex = -1
+    $ifScopeIndex = -1
+    $tmIndex = -1
+    $tcIndex = -1
+    $uifPathIndex = -1
+    $uddRefIndex = -1
+    $testScopeIndex = -1
 
     for ($i = 0; $i -lt $lines.Count; $i++) {
         $line = $lines[$i]
@@ -353,125 +375,17 @@ function Get-PlanBindingTupleData {
             $currentSection = $headingMatch.Groups[1].Value.Trim()
             $inTable = $false
             $bindingRowIndex = -1
-            $boundaryIndex = -1
-            $entryIndex = -1
-            $boundaryStatusIndex = -1
-            $entryStatusIndex = -1
-            $unitTypeIndex = -1
-            $targetPathIndex = -1
+            $operationIndex = -1
+            $ifScopeIndex = -1
+            $tmIndex = -1
+            $tcIndex = -1
+            $uifPathIndex = -1
+            $uddRefIndex = -1
+            $testScopeIndex = -1
             continue
         }
 
-        if ($currentSection -notin @('Binding Projection Index', 'Artifact Status')) {
-            continue
-        }
-
-        $cells = @(Get-MarkdownCells -Line $line)
-        if ($cells.Count -eq 0) {
-            $inTable = $false
-            $bindingRowIndex = -1
-            $boundaryIndex = -1
-            $entryIndex = -1
-            $boundaryStatusIndex = -1
-            $entryStatusIndex = -1
-            $unitTypeIndex = -1
-            $targetPathIndex = -1
-            continue
-        }
-
-        if (-not $inTable) {
-            $bindingRowIndex = -1
-            $boundaryIndex = -1
-            $entryIndex = -1
-            $boundaryStatusIndex = -1
-            $entryStatusIndex = -1
-            $unitTypeIndex = -1
-            $targetPathIndex = -1
-
-            for ($idx = 0; $idx -lt $cells.Count; $idx++) {
-                switch ($cells[$idx]) {
-                    'BindingRowID' { $bindingRowIndex = $idx }
-                    'Boundary Anchor' { $boundaryIndex = $idx }
-                    'Implementation Entry Anchor' { $entryIndex = $idx }
-                    'Boundary Anchor Status' { $boundaryStatusIndex = $idx }
-                    'Implementation Entry Anchor Status' { $entryStatusIndex = $idx }
-                    'Unit Type' { $unitTypeIndex = $idx }
-                    'Target Path' { $targetPathIndex = $idx }
-                }
-            }
-
-            if ($currentSection -eq 'Binding Projection Index') {
-                if ($bindingRowIndex -ge 0) {
-                    $inTable = $true
-                }
-            } elseif ($bindingRowIndex -ge 0 -and $unitTypeIndex -ge 0 -and $targetPathIndex -ge 0) {
-                $inTable = $true
-            }
-            continue
-        }
-
-        if (Test-MarkdownSeparatorRow -Cells $cells) {
-            continue
-        }
-
-        if ($bindingRowIndex -lt 0 -or $bindingRowIndex -ge $cells.Count) {
-            continue
-        }
-
-        $bindingId = Normalize-MarkdownScalar -Value $cells[$bindingRowIndex]
-        if ([string]::IsNullOrWhiteSpace($bindingId)) {
-            continue
-        }
-
-        if ($currentSection -eq 'Binding Projection Index') {
-            $rows[$bindingId] = [PSCustomObject]@{
-                Line           = $lineNumber
-                Boundary       = if ($boundaryIndex -ge 0 -and $boundaryIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$boundaryIndex] } else { '' }
-                Entry          = if ($entryIndex -ge 0 -and $entryIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$entryIndex] } else { '' }
-                BoundaryStatus = if ($boundaryStatusIndex -ge 0 -and $boundaryStatusIndex -lt $cells.Count) { Get-AnchorStatusToken -Value $cells[$boundaryStatusIndex] } else { '' }
-                EntryStatus    = if ($entryStatusIndex -ge 0 -and $entryStatusIndex -lt $cells.Count) { Get-AnchorStatusToken -Value $cells[$entryStatusIndex] } else { '' }
-            }
-        } elseif ($unitTypeIndex -lt $cells.Count -and (Normalize-MarkdownScalar -Value $cells[$unitTypeIndex]) -eq 'contract') {
-            $targets[$bindingId] = Normalize-MarkdownScalar -Value $cells[$targetPathIndex]
-        }
-    }
-
-    return [PSCustomObject]@{
-        Rows    = $rows
-        Targets = $targets
-    }
-}
-
-function Get-TestMatrixBindingPackets {
-    param([string]$Path)
-
-    $rows = @{}
-    $lines = @(Get-Content -Path $Path -ErrorAction Stop)
-    $currentSection = ''
-    $inTable = $false
-    $bindingRowIndex = -1
-    $boundaryIndex = -1
-    $entryIndex = -1
-    $boundaryStatusIndex = -1
-    $entryStatusIndex = -1
-
-    for ($i = 0; $i -lt $lines.Count; $i++) {
-        $line = $lines[$i]
-        $lineNumber = $i + 1
-        $trimmed = $line.Trim()
-        $headingMatch = [regex]::Match($trimmed, '^##\s+(.+)$')
-        if ($headingMatch.Success) {
-            $currentSection = $headingMatch.Groups[1].Value.Trim()
-            $inTable = $false
-            $bindingRowIndex = -1
-            $boundaryIndex = -1
-            $entryIndex = -1
-            $boundaryStatusIndex = -1
-            $entryStatusIndex = -1
-            continue
-        }
-
-        if ($currentSection -ne 'Binding Contract Packets') {
+        if ($currentSection -ne 'Binding Projection Index') {
             continue
         }
 
@@ -479,27 +393,36 @@ function Get-TestMatrixBindingPackets {
         if ($cells.Count -eq 0) {
             $inTable = $false
             $bindingRowIndex = -1
-            $boundaryIndex = -1
-            $entryIndex = -1
-            $boundaryStatusIndex = -1
-            $entryStatusIndex = -1
+            $operationIndex = -1
+            $ifScopeIndex = -1
+            $tmIndex = -1
+            $tcIndex = -1
+            $uifPathIndex = -1
+            $uddRefIndex = -1
+            $testScopeIndex = -1
             continue
         }
 
         if (-not $inTable) {
             $bindingRowIndex = -1
-            $boundaryIndex = -1
-            $entryIndex = -1
-            $boundaryStatusIndex = -1
-            $entryStatusIndex = -1
+            $operationIndex = -1
+            $ifScopeIndex = -1
+            $tmIndex = -1
+            $tcIndex = -1
+            $uifPathIndex = -1
+            $uddRefIndex = -1
+            $testScopeIndex = -1
 
             for ($idx = 0; $idx -lt $cells.Count; $idx++) {
                 switch ($cells[$idx]) {
                     'BindingRowID' { $bindingRowIndex = $idx }
-                    'Boundary Anchor' { $boundaryIndex = $idx }
-                    'Implementation Entry Anchor' { $entryIndex = $idx }
-                    'Boundary Anchor Status' { $boundaryStatusIndex = $idx }
-                    'Implementation Entry Anchor Status' { $entryStatusIndex = $idx }
+                    'Operation ID' { $operationIndex = $idx }
+                    'IF ID / IF Scope' { $ifScopeIndex = $idx }
+                    'TM ID' { $tmIndex = $idx }
+                    'TC IDs' { $tcIndex = $idx }
+                    'UIF Path Ref(s)' { $uifPathIndex = $idx }
+                    'UDD Ref(s)' { $uddRefIndex = $idx }
+                    'Test Scope' { $testScopeIndex = $idx }
                 }
             }
 
@@ -523,11 +446,124 @@ function Get-TestMatrixBindingPackets {
         }
 
         $rows[$bindingId] = [PSCustomObject]@{
-            Line           = $lineNumber
-            Boundary       = if ($boundaryIndex -ge 0 -and $boundaryIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$boundaryIndex] } else { '' }
-            Entry          = if ($entryIndex -ge 0 -and $entryIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$entryIndex] } else { '' }
-            BoundaryStatus = if ($boundaryStatusIndex -ge 0 -and $boundaryStatusIndex -lt $cells.Count) { Get-AnchorStatusToken -Value $cells[$boundaryStatusIndex] } else { '' }
-            EntryStatus    = if ($entryStatusIndex -ge 0 -and $entryStatusIndex -lt $cells.Count) { Get-AnchorStatusToken -Value $cells[$entryStatusIndex] } else { '' }
+            Line       = $lineNumber
+            Operation  = if ($operationIndex -ge 0 -and $operationIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$operationIndex] } else { '' }
+            IfScope    = if ($ifScopeIndex -ge 0 -and $ifScopeIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$ifScopeIndex] } else { '' }
+            TmId       = if ($tmIndex -ge 0 -and $tmIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$tmIndex] } else { '' }
+            TcIds      = if ($tcIndex -ge 0 -and $tcIndex -lt $cells.Count) { Normalize-MarkdownListCell -Value $cells[$tcIndex] } else { '' }
+            UifPathRefs = if ($uifPathIndex -ge 0 -and $uifPathIndex -lt $cells.Count) { Normalize-MarkdownListCell -Value $cells[$uifPathIndex] } else { '' }
+            UddRefs    = if ($uddRefIndex -ge 0 -and $uddRefIndex -lt $cells.Count) { Normalize-MarkdownListCell -Value $cells[$uddRefIndex] } else { '' }
+            TestScope  = if ($testScopeIndex -ge 0 -and $testScopeIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$testScopeIndex] } else { '' }
+        }
+    }
+
+    return [PSCustomObject]@{ Rows = $rows }
+}
+
+function Get-TestMatrixBindingPackets {
+    param([string]$Path)
+
+    $rows = @{}
+    $lines = @(Get-Content -Path $Path -ErrorAction Stop)
+    $currentSection = ''
+    $inTable = $false
+    $bindingRowIndex = -1
+    $operationIndex = -1
+    $ifScopeIndex = -1
+    $tmIndex = -1
+    $tcIndex = -1
+    $uifPathIndex = -1
+    $uddRefIndex = -1
+    $testScopeIndex = -1
+
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        $line = $lines[$i]
+        $lineNumber = $i + 1
+        $trimmed = $line.Trim()
+        $headingMatch = [regex]::Match($trimmed, '^##\s+(.+)$')
+        if ($headingMatch.Success) {
+            $currentSection = $headingMatch.Groups[1].Value.Trim()
+            $inTable = $false
+            $bindingRowIndex = -1
+            $operationIndex = -1
+            $ifScopeIndex = -1
+            $tmIndex = -1
+            $tcIndex = -1
+            $uifPathIndex = -1
+            $uddRefIndex = -1
+            $testScopeIndex = -1
+            continue
+        }
+
+        if ($currentSection -ne 'Binding Contract Packets') {
+            continue
+        }
+
+        $cells = @(Get-MarkdownCells -Line $line)
+        if ($cells.Count -eq 0) {
+            $inTable = $false
+            $bindingRowIndex = -1
+            $operationIndex = -1
+            $ifScopeIndex = -1
+            $tmIndex = -1
+            $tcIndex = -1
+            $uifPathIndex = -1
+            $uddRefIndex = -1
+            $testScopeIndex = -1
+            continue
+        }
+
+        if (-not $inTable) {
+            $bindingRowIndex = -1
+            $operationIndex = -1
+            $ifScopeIndex = -1
+            $tmIndex = -1
+            $tcIndex = -1
+            $uifPathIndex = -1
+            $uddRefIndex = -1
+            $testScopeIndex = -1
+
+            for ($idx = 0; $idx -lt $cells.Count; $idx++) {
+                switch ($cells[$idx]) {
+                    'BindingRowID' { $bindingRowIndex = $idx }
+                    'Operation ID' { $operationIndex = $idx }
+                    'IF Scope' { $ifScopeIndex = $idx }
+                    'TM ID' { $tmIndex = $idx }
+                    'TC IDs' { $tcIndex = $idx }
+                    'UIF Path Ref(s)' { $uifPathIndex = $idx }
+                    'UDD Ref(s)' { $uddRefIndex = $idx }
+                    'Test Scope' { $testScopeIndex = $idx }
+                }
+            }
+
+            if ($bindingRowIndex -ge 0) {
+                $inTable = $true
+            }
+            continue
+        }
+
+        if (Test-MarkdownSeparatorRow -Cells $cells) {
+            continue
+        }
+
+        if ($bindingRowIndex -lt 0 -or $bindingRowIndex -ge $cells.Count) {
+            continue
+        }
+
+        $bindingId = Normalize-MarkdownScalar -Value $cells[$bindingRowIndex]
+        if ([string]::IsNullOrWhiteSpace($bindingId)) {
+            continue
+        }
+
+        $rows[$bindingId] = [PSCustomObject]@{
+            Line        = $lineNumber
+            Operation   = if ($operationIndex -ge 0 -and $operationIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$operationIndex] } else { '' }
+            IfScope     = if ($ifScopeIndex -ge 0 -and $ifScopeIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$ifScopeIndex] } else { '' }
+            TmId        = if ($tmIndex -ge 0 -and $tmIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$tmIndex] } else { '' }
+            TcIds       = if ($tcIndex -ge 0 -and $tcIndex -lt $cells.Count) { Normalize-MarkdownListCell -Value $cells[$tcIndex] } else { '' }
+            UifPathRefs = if ($uifPathIndex -ge 0 -and $uifPathIndex -lt $cells.Count) { Normalize-MarkdownListCell -Value $cells[$uifPathIndex] } else { '' }
+            UddRefs     = if ($uddRefIndex -ge 0 -and $uddRefIndex -lt $cells.Count) { Normalize-MarkdownListCell -Value $cells[$uddRefIndex] } else { '' }
+            TestScope   = if ($testScopeIndex -ge 0 -and $testScopeIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$testScopeIndex] } else { '' }
         }
     }
 
@@ -1209,8 +1245,6 @@ foreach ($row in $rows) {
                 $lines = @(Get-Content -Path $file.FullPath -ErrorAction Stop)
                 $currentSection = ''
                 $inTable = $false
-                $boundaryStatusIndex = -1
-                $entryStatusIndex = -1
 
                 for ($i = 0; $i -lt $lines.Count; $i++) {
                     $lineNumber = $i + 1
@@ -1221,8 +1255,6 @@ foreach ($row in $rows) {
                     if ($headingMatch.Success) {
                         $currentSection = $headingMatch.Groups[1].Value.Trim()
                         $inTable = $false
-                        $boundaryStatusIndex = -1
-                        $entryStatusIndex = -1
                         continue
                     }
 
@@ -1233,46 +1265,35 @@ foreach ($row in $rows) {
                     $cells = @(Get-MarkdownCells -Line $line)
                     if ($cells.Count -eq 0) {
                         $inTable = $false
-                        $boundaryStatusIndex = -1
-                        $entryStatusIndex = -1
                         continue
                     }
 
                     if (-not $inTable) {
-                        $boundaryStatusIndex = -1
-                        $entryStatusIndex = -1
-                        for ($idx = 0; $idx -lt $cells.Count; $idx++) {
-                            if ($cells[$idx] -eq 'Boundary Anchor Status') {
-                                $boundaryStatusIndex = $idx
+                        $inTable = $true
+                        foreach ($cell in $cells) {
+                            if ($cell -in @(
+                                'Boundary Anchor',
+                                'Implementation Entry Anchor',
+                                'Boundary Anchor Status',
+                                'Implementation Entry Anchor Status',
+                                'Request DTO Anchor',
+                                'Response DTO Anchor',
+                                'Primary Collaborator Anchor',
+                                'State Owner Anchor(s)',
+                                'Repo Anchor',
+                                'Repo Anchor Role',
+                                'Boundary Anchor Strategy Evidence',
+                                'Implementation Entry Anchor Strategy Evidence',
+                                'Lifecycle Ref(s)',
+                                'Invariant Ref(s)',
+                                'Main Pass Anchor',
+                                'Branch/Failure Anchor(s)'
+                            )) {
+                                Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lineNumber -Message $row.message -Remediation $row.remediation
+                                break
                             }
-                            if ($cells[$idx] -eq 'Implementation Entry Anchor Status') {
-                                $entryStatusIndex = $idx
-                            }
-                        }
-                        if ($boundaryStatusIndex -ge 0 -or $entryStatusIndex -ge 0) {
-                            $inTable = $true
                         }
                         continue
-                    }
-
-                    if (Test-MarkdownSeparatorRow -Cells $cells) {
-                        continue
-                    }
-
-                    $hasTodo = $false
-                    if ($boundaryStatusIndex -ge 0 -and $boundaryStatusIndex -lt $cells.Count) {
-                        if ($cells[$boundaryStatusIndex].ToLowerInvariant() -match '(^|[^a-z])todo([^a-z]|$)') {
-                            $hasTodo = $true
-                        }
-                    }
-                    if ($entryStatusIndex -ge 0 -and $entryStatusIndex -lt $cells.Count) {
-                        if ($cells[$entryStatusIndex].ToLowerInvariant() -match '(^|[^a-z])todo([^a-z]|$)') {
-                            $hasTodo = $true
-                        }
-                    }
-
-                    if ($hasTodo) {
-                        Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lineNumber -Message $row.message -Remediation $row.remediation
                     }
                 }
             }
@@ -1297,8 +1318,8 @@ foreach ($row in $rows) {
                     }
 
                     $packetRow = $packetRows[$bindingId]
-                    if ($planRow.Boundary -ne $packetRow.Boundary -or $planRow.Entry -ne $packetRow.Entry -or $planRow.BoundaryStatus -ne $packetRow.BoundaryStatus -or $planRow.EntryStatus -ne $packetRow.EntryStatus) {
-                        Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $planRow.Line -Message "$($row.message) BindingRowID $bindingId differs from `test-matrix.md` `Binding Contract Packets` for boundary/entry tuple fields." -Remediation $row.remediation
+                    if ($planRow.Operation -ne $packetRow.Operation -or $planRow.IfScope -ne $packetRow.IfScope -or $planRow.TmId -ne $packetRow.TmId -or $planRow.TcIds -ne $packetRow.TcIds -or $planRow.UifPathRefs -ne $packetRow.UifPathRefs -or $planRow.UddRefs -ne $packetRow.UddRefs -or $planRow.TestScope -ne $packetRow.TestScope) {
+                        Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $planRow.Line -Message "$($row.message) BindingRowID $bindingId differs from `test-matrix.md` `Binding Contract Packets` for minimal projection fields." -Remediation $row.remediation
                     }
 
                 }

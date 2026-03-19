@@ -81,15 +81,44 @@ Before generating `ui.html`, build an internal coverage ledger from the selected
   - `UIF Node | prototype screen/view | interaction/control | feedback/state | ref: Scenario/FR`
   - `Entity.field | user-visible interaction moment | displayed completion/content | consumed rule (calculation/boundary/display) | ref: FR/Scenario`
 - Every demonstrated user interaction MUST trace back to an explicit `UIF` node. Do not simulate a business-significant user step that has no `UIF` anchor.
+- The prototype should visibly dedicate a primary review surface to the selected `UIF` path/node progression so engineering can replay the user-perspective operation flow step by step.
 - Do not render the full UDD inventory, raw field tables, or exhaustive `Entity.field` lists as visible prototype content unless `spec.md` explicitly defines such a screen.
 - Only surface the subset of completed `Entity.field` rows needed to make the selected interaction understandable from the user's point of view.
 - Every business-significant datum that appears inside the demonstrated interaction MUST trace back to explicit completed `Entity.field` rows. If it cannot be traced to UDD, omit it or render it as clearly non-authoritative placeholder text.
 - If a selected completed `Entity.field` row has null/empty, boundary, formatting, or display rules in UDD, consume those rules in the demonstrated prototype states instead of showing labels only.
+- The prototype should visibly dedicate a peer review surface to step-level `UDD` feedback so reviewers can see what the user perceives after each important `UIF` action or branch.
 - For each selected interactive UC, demonstrate at least:
   - one happy path,
   - and one meaningful branch state (`alternate`, `exception`, `retry`, `recovery`, `cancel`, `timeout`, `permission`, or `duplicate`) when the spec makes that branch user-visible or acceptance-relevant.
 - If an important branch exists in `Path Inventory` but is not demonstrated interactively, keep the current flow usable and report the omission explicitly in the final output.
 - Do not collapse multiple `UIF` steps into one generic interaction when doing so would hide a user-visible decision, feedback signal, or state transition that matters to the selected path.
+
+## Deterministic Prototype Selection Protocol (MUST)
+
+Use deterministic selection rules before writing `ui.html`.
+
+- If user input explicitly names `UC`, `UIP`, `UIF`, or `Entity.field` refs, use exactly those refs as prototype scope. Do not widen scope unless the user explicitly asks for broader coverage.
+- Otherwise, choose exactly one primary walkthrough by this priority order:
+  1. the first `happy` or primary-success `UIP-*` row in spec order that has explicit user-visible completion semantics
+  2. if multiple rows qualify, prefer the one whose selected `UIF` nodes surface completed `Entity.field` rows with explicit UDD rules
+  3. if still tied, keep the first qualifying row in spec order
+- Choose at most one branch walkthrough unless the user explicitly asks for more:
+  1. select the first acceptance-relevant branch attached to the same `UC` / path family in spec order
+  2. if no same-family branch exists, omit branch walkthrough and report the omission explicitly
+- Select `UIF` nodes deterministically:
+  - include the selected path's entry, primary action, immediate feedback, and completion nodes in spec order
+  - include only the minimum additional branch/recovery nodes needed to explain the chosen alternate or failure state
+  - do not merge multiple path families into one synthetic `UIF` sequence
+- Select `Entity.field` rows deterministically:
+  - include only user-visible fields directly perceived at the selected `UIF` nodes
+  - include fields for entry context, immediate feedback, completion/result, and selected branch feedback only
+  - if multiple fields qualify at the same interaction moment, keep spec order
+  - if an entity exposes many fields, keep the minimum subset needed to explain what changed for the user
+- Map review surfaces deterministically:
+  - `UIF Interaction View` MUST enumerate the selected `UIF` nodes in execution order
+  - `UDD-backed View State` MUST map each selected `UIF` node to the user-visible feedback or state change the user perceives at that step
+  - `Primary Tool Loop` MUST derive from the selected primary walkthrough only
+- If any required tie cannot be broken using explicit refs, spec order, or completed UDD evidence, stop and report the blocker instead of choosing heuristically.
 
 ## Allowed Inputs
 
@@ -182,11 +211,13 @@ Instead, cover the smallest set of screens and interactions that best represent 
 - one meaningful alternate/error/empty/permission/timeout branch when the selected path set makes it user-visible or acceptance-relevant
 - visible data presentation anchored to the completed `Entity.field` subset needed by the selected interaction and FR/scenario context
 - rule-driven state evidence for selected UDD fields (for example: empty, error, disabled, warning, formatting, or recovery state)
+- one explicit `UIF Interaction View` that shows the operation path in user terms
+- one explicit `UDD-backed View State` that shows per-step feedback/result in user-visible terms
 
 When the interaction reaches a completion/result moment, show the completed UDD-backed content where the user would actually perceive it instead of listing UDD rows separately.
 Default to keeping the user in the same tool shell while the content, mode, or state changes around the main interaction loop.
 
-If the spec implies many views, choose the most representative subset and keep the rest implicit.
+If the spec implies many views, keep only the views required by the deterministic primary walkthrough and selected branch; keep the rest implicit.
 
 ### 6. Safe Placeholder Policy
 
@@ -235,14 +266,20 @@ The generated `ui.html` should:
    - visible state variations
    - UI component/data anchors when present
    - terminology and copy anchors
-4. Build the internal coverage ledger for the selected paths, `UIF` nodes, components, and `Entity.field` rows
-5. Decide the smallest high-value prototype surface:
+4. Apply the deterministic prototype selection protocol and lock:
+   - primary `UIP-*` walkthrough
+   - optional same-family branch walkthrough
+   - selected `UIF` nodes in execution order
+   - selected `Entity.field` rows in spec order
+5. Build the internal coverage ledger for the locked paths, `UIF` nodes, components, and `Entity.field` rows
+6. Decide the smallest high-value prototype surface from the locked walkthrough:
    - what single dominant tool surface to show
    - what interactions to simulate
    - what states must be demonstrated
-6. Generate `ui.html` using the runtime template and current prototype packet
-7. Prefer polished review fidelity over exhaustive breadth
-8. If the spec is too ambiguous to support a stable prototype, stop and report the blocker rather than inventing semantics
+   - how `UIF Interaction View` and `UDD-backed View State` expose the same step order
+7. Generate `ui.html` using the runtime template and locked prototype packet
+8. Prefer polished review fidelity over exhaustive breadth
+9. If the spec is too ambiguous to support a stable prototype, stop and report the blocker rather than inventing semantics
 
 ## Validation
 
@@ -252,11 +289,17 @@ Before completing, validate that:
 - the main flow is understandable through interaction
 - the deliverable reads as a focused interaction tool with one dominant primary loop
 - the core expression sentence from `spec.md` is obvious from the tool intent, main action, feedback, and completion content without reading supporting notes
+- the selected primary walkthrough follows explicit user-scoped refs or the deterministic priority order above
+- the selected branch walkthrough follows explicit user-scoped refs or the deterministic same-family branch rule above
 - every demonstrated interaction step maps to selected `UIF` node(s)
 - each selected happy/branch path has a visible entry, transition, and user-visible outcome
+- the generated surface makes `UIF` operation flow legible to engineering without reading supporting notes first
+- `UIF Interaction View` enumerates the selected `UIF` nodes in execution order
 - the prototype does not dump the full UDD inventory as visible content unless the spec explicitly requires it
 - every business-significant datum surfaced in the demonstrated interaction maps to selected completed `Entity.field` row(s)
 - selected UDD fields consume their boundary/null/display rules in the demonstrated states
+- the generated surface makes step-level `UDD` feedback legible to engineering as the user would perceive it
+- `UDD-backed View State` maps each selected `UIF` node to its visible feedback or state change without mixing unrelated fields
 - any traceability cues shown in `ui.html` stay secondary to the user-visible interaction and completion content
 - visible terminology stays aligned with `spec.md`
 - no unsupported feature semantics were introduced
@@ -287,6 +330,12 @@ Report:
   - views included
   - main flow demonstrated
   - interactive states demonstrated
+- `Deterministic Selection Summary`:
+  - selection mode (`explicit refs` or `spec-order deterministic`)
+  - primary `UIP` walkthrough selected
+  - branch walkthrough selected or omitted
+  - selected `UIF` nodes in order
+  - selected `Entity.field` rows in order
 - `UIF Coverage Summary`:
   - selected UC / `UIP` paths demonstrated
   - key `UIF` nodes surfaced through interaction

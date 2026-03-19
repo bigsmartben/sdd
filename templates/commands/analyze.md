@@ -80,10 +80,11 @@ Mandatory stale-row routing:
 - stale `test-matrix` or missing binding rows -> `/sdd.plan.test-matrix`
 - stale `contract` -> `/sdd.plan.contract`
 
-Tuple drift routing:
+Projection drift routing:
 
-- if `Binding Projection Index` differs from the selected `Binding Contract Packets` row for the same `BindingRowID`, route `/sdd.plan.test-matrix` to repair the upstream tuple seed.
-- if a generated contract tuple differs from the upstream selected packet for the same `BindingRowID`, treat it as contract projection drift: repair the upstream owner first (`/sdd.plan.test-matrix` or `/sdd.plan.data-model`), then regenerate `/sdd.plan.contract`.
+- if `Binding Projection Index` differs from the selected `Binding Contract Packets` row for the same `BindingRowID`, route `/sdd.plan.test-matrix` to repair the upstream binding projection
+- if a generated contract contradicts the selected packet or selected `data-model` constraints for the same `BindingRowID`, treat it as contract projection drift and repair the upstream owner first (`/sdd.plan.test-matrix` for binding projection errors, `/sdd.plan.data-model` for shared semantic errors), then regenerate `/sdd.plan.contract`
+- if the generated contract only differs in inferred boundary/entry/DTO/collaborator realization while remaining consistent with binding projection and shared semantic constraints, treat it as contract-stage design output rather than upstream drift
 
 CRITICAL/HIGH findings MUST cite the authoritative source artifact(s) with concise supporting facts.
 
@@ -96,7 +97,7 @@ Output exactly one decision:
 
 When `FAIL`, include blocker list with supporting facts and remediation owner command (`/sdd.constitution`, `/sdd.specify`, `/sdd.plan.*`, or `/sdd.tasks`).
 
-Default blocking classes include unresolved normative anchors (`BA-*`, `TODO(REPO_ANCHOR)`, `Anchor Status = todo`, `Implementation Entry Anchor Status = todo`), unresolved placeholder class/type labels in contract artifacts, missing `Full Field Dictionary (Operation-scoped)`, unresolved contract projection drift, upstream tuple-seed drift across `plan.md` / `test-matrix.md`, controller-first violations, repository-first baseline gaps, and stale control-plane fingerprints.
+Default blocking classes include unresolved normative anchors (`BA-*`, `TODO(REPO_ANCHOR)`, `Anchor Status = todo`, `Implementation Entry Anchor Status = todo`), unresolved placeholder class/type labels in contract artifacts, missing `Full Field Dictionary (Operation-scoped)`, unresolved contract projection drift, upstream binding-projection drift across `plan.md` / `test-matrix.md`, controller-first violations, repository-first baseline gaps, and stale control-plane fingerprints.
 
 Additional blocking requirement: any active tuple selecting `new` anchors without explicit rejection evidence for both `existing` and `extended` is `FAIL` and must route to the relevant `/sdd.plan.*` owner command.
 

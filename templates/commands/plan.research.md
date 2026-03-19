@@ -31,8 +31,8 @@ Use `.specify/templates/research-template.md` only. If the runtime template is m
 
 ## Selection Rules
 
-1. Run `{SCRIPT}` once from repo root. Resolve `FEATURE_DIR`, `FEATURE_SPEC`, and `IMPL_PLAN`
-2. Read only the resolved `IMPL_PLAN`
+1. Run `{SCRIPT}` once from repo root. Resolve `FEATURE_DIR` and planning preflight context.
+2. Resolve `PLAN_FILE` as `<FEATURE_DIR>/plan.md` and `FEATURE_SPEC` as `<FEATURE_DIR>/spec.md`; read only the resolved `PLAN_FILE`
 3. Find the first `Stage Queue` row where:
    - `Stage ID = research`
    - `Status = pending`

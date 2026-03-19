@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 
-BOOTSTRAP_SCHEMA_VERSION = "1.1"
+BOOTSTRAP_SCHEMA_VERSION = "1.2"
 SECTION_HEADINGS = (
     "Shared Context Snapshot",
     "Stage Queue",
@@ -163,9 +163,11 @@ def build_generation_readiness(
     *,
     missing_sections: list[str],
     spec_path: Path,
+    test_matrix_path: Path,
     research_path: Path,
     data_model_path: Path,
     research_stage: dict[str, Any] | None,
+    test_matrix_stage: dict[str, Any] | None,
     selected_stage: dict[str, Any] | None,
 ) -> dict[str, Any]:
     errors: list[dict[str, Any]] = []
@@ -189,31 +191,60 @@ def build_generation_readiness(
             }
         )
 
-    if not research_path.is_file():
+    if not test_matrix_path.is_file():
         errors.append(
             {
+                "code": "test_matrix_missing",
+                "message": "test-matrix.md is missing for the selected feature.",
+                "details": {"path": str(test_matrix_path)},
+            }
+        )
+
+    if not research_path.is_file():
+        warnings.append(
+            {
                 "code": "research_artifact_missing",
-                "message": "research.md is missing for the selected feature.",
+                "message": "research.md is missing for the selected feature; continuing because it is optional clarification input.",
                 "details": {"path": str(research_path)},
             }
         )
 
     if research_stage is None:
-        errors.append(
+        warnings.append(
             {
                 "code": "research_stage_missing",
-                "message": "Stage Queue does not contain a research row.",
+                "message": "Stage Queue does not contain a research row; continuing because research is optional for /sdd.plan.data-model.",
                 "details": {},
             }
         )
     elif research_stage["status"] != "done":
-        errors.append(
+        warnings.append(
             {
                 "code": "research_stage_not_done",
-                "message": "Research prerequisite is not done.",
+                "message": "Research stage is not done; continuing because research is optional clarification input.",
                 "details": {
                     "status": research_stage["status"],
                     "blocker": research_stage["blocker"],
+                },
+            }
+        )
+
+    if test_matrix_stage is None:
+        errors.append(
+            {
+                "code": "test_matrix_stage_missing",
+                "message": "Stage Queue does not contain a test-matrix row.",
+                "details": {},
+            }
+        )
+    elif test_matrix_stage["status"] != "done":
+        errors.append(
+            {
+                "code": "test_matrix_stage_not_done",
+                "message": "test-matrix prerequisite is not done.",
+                "details": {
+                    "status": test_matrix_stage["status"],
+                    "blocker": test_matrix_stage["blocker"],
                 },
             }
         )
@@ -282,6 +313,10 @@ def main(argv: list[str] | None = None) -> int:
         feature_dir,
         next((row for row in stage_rows if clean_cell(row.get("Stage ID", "")) == "research"), None),
     )
+    test_matrix_stage = build_stage_row(
+        feature_dir,
+        next((row for row in stage_rows if clean_cell(row.get("Stage ID", "")) == "test-matrix"), None),
+    )
     selected_stage = build_stage_row(
         feature_dir,
         next(
@@ -295,9 +330,16 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
 
+    test_matrix_path = (
+        Path(test_matrix_stage["output_path_abs"])
+        if test_matrix_stage and test_matrix_stage["output_path_abs"]
+        else feature_dir / "test-matrix.md"
+    )
+
     current_fingerprints = {
         "plan_sha256": compute_sha256(plan_path),
         "spec_sha256": compute_sha256(spec_path),
+        "test_matrix_sha256": compute_sha256(test_matrix_path),
         "research_sha256": compute_sha256(research_path),
         "data_model_sha256": compute_sha256(data_model_path),
     }
@@ -305,9 +347,11 @@ def main(argv: list[str] | None = None) -> int:
     generation_readiness = build_generation_readiness(
         missing_sections=missing_sections,
         spec_path=spec_path,
+        test_matrix_path=test_matrix_path,
         research_path=research_path,
         data_model_path=data_model_path,
         research_stage=research_stage,
+        test_matrix_stage=test_matrix_stage,
         selected_stage=selected_stage,
     )
 
@@ -316,11 +360,13 @@ def main(argv: list[str] | None = None) -> int:
         "feature_dir": str(feature_dir),
         "plan_path": str(plan_path),
         "spec_path": str(spec_path),
+        "test_matrix_path": str(test_matrix_path),
         "research_path": str(research_path),
         "data_model_path": str(data_model_path),
         "required_sections": required_sections,
         "current_fingerprints": current_fingerprints,
         "research_stage": research_stage,
+        "test_matrix_stage": test_matrix_stage,
         "selected_stage": selected_stage,
         "repo_anchor_policy": {
             "decision_order": ["existing", "extended", "new"],

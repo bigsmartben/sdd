@@ -5,12 +5,11 @@
 
 ## Summary
 
-[Short summary of the feature and why the planning queue exists]
+[Short summary of the feature and why this control plane exists]
 
-`plan.md` is the planning control plane for this feature.
-It is authoritative for planning queue state, binding-projection rows, and source/output fingerprints only.
-It is derived for planning semantics and MUST NOT supersede `research.md`, `data-model.md`, `test-matrix.md`, or `contracts/`.
-This stage reports local orchestration readiness only; cross-artifact final PASS/FAIL belongs to `/sdd.analyze`.
+`plan.md` exists only to initialize and maintain the planning control plane for this feature.
+It is the orchestration authority for queue state, binding projection, and artifact execution status.
+It is not a semantic authority and MUST NOT supersede `spec.md`, `research.md`, `test-matrix.md`, `data-model.md`, or `contracts/`.
 
 ## Shared Context Snapshot
 
@@ -28,7 +27,10 @@ Do not place stage prose, audit payload, or execution logs here.
 - Actors: [stable actor references only]
 - In Scope: [stable scope bullets only]
 - Out of Scope: [stable scope bullets only]
+- Stable UC / UIF / FR Scope: [stable ids only]
+- Constitution constraints: [only constraints that affect every downstream stage]
 - Shared blockers: [only blockers that affect multiple planning stages]
+- Must-read anchors: [shared upstream anchors only]
 
 ### Repository-First Consumption Slice
 
@@ -48,15 +50,16 @@ Rules:
 - Queue order is fixed.
 - Child commands take the first matching `pending` row only.
 - `data-model` is the fixed shared-semantic alignment row after `test-matrix`; complete it before entering `contract`.
+- `contract` is not a stage row; it is a per-binding artifact queue unit selected from `Artifact Status`.
 - Do not add prose summaries into this table.
 
 ## Binding Projection Index
 
 Initialize empty until `test-matrix.md` creates stable rows.
-Project stable binding keys only; do not copy narrative scenario text.
+Project stable binding keys only; do not copy scenario text or contract-design conclusions.
 
-| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | Boundary Anchor | Implementation Entry Anchor | Boundary Anchor Status | Implementation Entry Anchor Status | Test Scope |
-|--------------|-------|--------|-------|------------------|-------|--------|--------------|-----------------|-----------------------------|------------------------|------------------------------------|------------|
+| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | UIF Path Ref(s) | UDD Ref(s) | Test Scope |
+|--------------|-------|--------|-------|------------------|-------|--------|--------------|-----------------|------------|------------|
 <!-- Keep table body empty until /sdd.plan.test-matrix projects stable binding rows. -->
 
 Rules:
@@ -64,9 +67,9 @@ Rules:
 - Each row must be uniquely identifiable.
 - `BindingRowID` is the plan-local identifier for one stable binding row projected from `test-matrix.md`.
 - `Binding Projection Index` is a projection ledger only.
-- `Boundary Anchor` is the client-facing contract binding key projected from `test-matrix.md`; it is not the internal implementation handoff anchor.
-- `Implementation Entry Anchor`, `Boundary Anchor Status`, `Implementation Entry Anchor Status`, and `Test Scope` are compact bootstrap fields only; DTO anchors, collaborator anchors, and realization-detail evidence remain authoritative in `test-matrix.md`.
-- Keep this index aligned only from `/sdd.plan.test-matrix`; if tuple stability changes later, repair upstream and regenerate the projection instead of letting downstream commands rewrite it.
+- Keep only the minimal selection and scheduling fields needed for downstream `plan.contract` and `plan.data-model`.
+- `Boundary Anchor`, `Implementation Entry Anchor`, anchor statuses, DTO anchors, collaborator anchors, lifecycle refs, invariant refs, and realization design remain downstream responsibilities.
+- Keep this index aligned only from `/sdd.plan.test-matrix`; if binding meaning changes later, repair upstream and regenerate the projection instead of letting downstream commands rewrite it.
 - If a stable key is not confirmed, keep it out of the index.
 
 ## Artifact Status
@@ -85,15 +88,9 @@ Rules:
 
 ## Handoff Protocol
 
-- `/sdd.plan` initializes this file and starts the queue.
-- `/sdd.plan.research`, `/sdd.plan.data-model`, and `/sdd.plan.test-matrix` advance `Stage Queue`.
+- `/sdd.plan` initializes `Shared Context Snapshot`, `Stage Queue`, and the empty downstream ledgers.
+- `/sdd.plan.research` advances `research`.
+- `/sdd.plan.test-matrix` advances `test-matrix` and initializes `Binding Projection Index` plus `Artifact Status`.
+- `/sdd.plan.data-model` advances `data-model` and may update contract-readiness blockers/fingerprints only.
 - `/sdd.plan.contract` advances `Artifact Status` one row at a time.
-- `/sdd.tasks` starts only after all required stage and artifact rows are `done`.
-
-## Complexity Tracking
-
-> Fill only if constitution check has violations that must be justified.
-
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| [e.g., extra service boundary] | [reason] | [why simpler option failed] |
+- `/sdd.tasks` starts only after `research`, `test-matrix`, `data-model`, and all required `contract` rows are `done`.

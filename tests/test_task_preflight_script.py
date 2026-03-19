@@ -56,9 +56,9 @@ def _write_minimal_feature(
 
 ## Binding Contract Packets
 
-| BindingRowID | Operation ID | IF Scope | Boundary Anchor | Boundary Anchor Status | Boundary Anchor Strategy Evidence | Implementation Entry Anchor | Implementation Entry Anchor Status | Implementation Entry Anchor Strategy Evidence | Request DTO Anchor | Response DTO Anchor | Primary Collaborator Anchor | TM ID | TC IDs | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) | Main Pass Anchor | Branch/Failure Anchor(s) |
-|--------------|--------------|----------|-----------------|------------------------|-----------------------------------|-----------------------------|------------------------------------|-----------------------------------------------|--------------------|--------------------|-----------------------------|-------|--------|-------------|-----------------|----------------|-------------|------------------|--------------------------|
-| BindingRowID-001 | createTask | IF-001 | HTTP POST /tasks | {boundary_anchor_status} | {boundary_anchor_strategy_evidence} | {implementation_entry_anchor} | {implementation_entry_anchor_status} | {implementation_entry_anchor_strategy_evidence} | src/app/contracts.py::CreateTaskRequest | src/app/contracts.py::CreateTaskResponse | src/app/task_service.py::TaskService.create_task | TM-001 | [TC-001, TC-002] | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] | TC-001 pass | TC-002 fail |
+| BindingRowID | Operation ID | IF Scope | UIF Path Ref(s) | UDD Ref(s) | Boundary Anchor | Boundary Anchor Status | Boundary Anchor Strategy Evidence | Implementation Entry Anchor | Implementation Entry Anchor Status | Implementation Entry Anchor Strategy Evidence | Request DTO Anchor | Response DTO Anchor | Primary Collaborator Anchor | TM ID | TC IDs | Test Scope | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) | Main Pass Anchor | Branch/Failure Anchor(s) |
+|--------------|--------------|----------|-----------------|------------|-----------------|------------------------|-----------------------------------|-----------------------------|------------------------------------|-----------------------------------------------|--------------------|--------------------|-----------------------------|-------|--------|------------|-------------|-----------------|----------------|-------------|------------------|--------------------------|
+| BindingRowID-001 | createTask | IF-001 | [UIF-Path-001] | [UDD-001] | HTTP POST /tasks | {boundary_anchor_status} | {boundary_anchor_strategy_evidence} | {implementation_entry_anchor} | {implementation_entry_anchor_status} | {implementation_entry_anchor_strategy_evidence} | src/app/contracts.py::CreateTaskRequest | src/app/contracts.py::CreateTaskResponse | src/app/task_service.py::TaskService.create_task | TM-001 | [TC-001, TC-002] | {test_scope} | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] | TC-001 pass | TC-002 fail |
 """,
             encoding="utf-8",
         )
@@ -108,14 +108,14 @@ def _write_minimal_feature(
 | Stage ID | Command | Required Inputs | Output Path | Status | Source Fingerprint | Output Fingerprint | Blocker |
 |----------|---------|-----------------|-------------|--------|--------------------|--------------------|---------|
 | research | `/sdd.plan.research` | `plan.md` | `research.md` | done | a | b | [none] |
-| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | done | a | b | [none] |
 | test-matrix | `/sdd.plan.test-matrix` | `plan.md` | `test-matrix.md` | done | a | b | [none] |
+| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | done | a | b | [none] |
 
 ## Binding Projection Index
 
-| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | Boundary Anchor | Implementation Entry Anchor | Boundary Anchor Status | Implementation Entry Anchor Status | Test Scope |
-|--------------|-------|--------|-------|------------------|-------|--------|--------------|-----------------|-----------------------------|------------------------|------------------------------------|------------|
-| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | TM-001 | TC-001, TC-002 | createTask | HTTP POST /tasks | {implementation_entry_anchor} | {boundary_anchor_status} | {implementation_entry_anchor_status} | {test_scope} |
+| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | UIF Path Ref(s) | UDD Ref(s) | Test Scope |
+|--------------|-------|--------|-------|------------------|-------|--------|--------------|-----------------|------------|------------|
+| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | TM-001 | TC-001, TC-002 | createTask | [UIF-Path-001] | [UDD-001] | {test_scope} |
 
 ## Artifact Status
 
@@ -161,14 +161,18 @@ def _write_data_model_feature(
     feature_dir: Path,
     *,
     research_status: str = "done",
+    test_matrix_status: str = "done",
     data_model_status: str = "pending",
     include_spec: bool = True,
+    include_test_matrix: bool = True,
     include_research: bool = True,
     include_data_model: bool = False,
 ) -> None:
     feature_dir.mkdir(parents=True, exist_ok=True)
     if include_spec:
         (feature_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    if include_test_matrix:
+        (feature_dir / "test-matrix.md").write_text("# Test Matrix\n\n## Binding Contract Packets\n", encoding="utf-8")
     if include_research:
         (feature_dir / "research.md").write_text("# Research\n", encoding="utf-8")
     if include_data_model:
@@ -186,8 +190,8 @@ def _write_data_model_feature(
 | Stage ID | Command | Required Inputs | Output Path | Status | Source Fingerprint | Output Fingerprint | Blocker |
 |----------|---------|-----------------|-------------|--------|--------------------|--------------------|---------|
 | research | `/sdd.plan.research` | `plan.md`, `spec.md` | `research.md` | {research_status} | a | b | [none] |
-| data-model | `/sdd.plan.data-model` | `plan.md`, `spec.md`, `research.md` | `data-model.md` | {data_model_status} | a | b | [none] |
- | test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md` | `test-matrix.md` | pending | a | b | [none] |
+| test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md` | `test-matrix.md` | {test_matrix_status} | a | b | [none] |
+| data-model | `/sdd.plan.data-model` | `plan.md`, `spec.md`, `test-matrix.md` | `data-model.md` | {data_model_status} | a | b | [none] |
 """,
         encoding="utf-8",
     )
@@ -222,7 +226,7 @@ def test_task_preflight_helper_emits_contract_unit_inventory(tmp_path):
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
 
-    assert payload["schema_version"] == "1.2"
+    assert payload["schema_version"] == "1.4"
     assert payload["required_sections"]["stage_queue"] is True
     assert payload["incomplete_stage_ids"] == []
     assert payload["stage_queue_status_summary"]["done"] == 3
@@ -236,11 +240,10 @@ def test_task_preflight_helper_emits_contract_unit_inventory(tmp_path):
     assert unit["binding_row_id"] == "BindingRowID-001"
     assert unit["operation_id"] == "createTask"
     assert unit["if_scope"] == "IF-001"
-    assert unit["implementation_entry_anchor"] == "src/app/tasks_controller.py::TasksController.create_task"
-    assert unit["boundary_anchor_status"] == "existing"
-    assert unit["implementation_entry_anchor_status"] == "existing"
+    assert unit["uif_path_refs"] == ["UIF-Path-001"]
+    assert unit["udd_refs"] == ["UDD-001"]
     assert unit["binding_packet"]["present"] is True
-    assert unit["binding_packet"]["has_tuple_drift"] is False
+    assert unit["binding_packet"]["has_projection_drift"] is False
     assert unit["contract"]["target_path"] == "contracts/create-task.md"
     assert unit["contract"]["exists"] is True
     assert unit["contract"]["full_field_dictionary_present"] is True
@@ -249,7 +252,6 @@ def test_task_preflight_helper_emits_contract_unit_inventory(tmp_path):
     assert unit["contract"]["runtime_seed_boundary_drift_check_present"] is True
     assert unit["contract"]["runtime_field_dictionary_tiering_check_present"] is True
     assert unit["contract"]["has_unresolved_field_gaps"] is False
-    assert unit["contract"]["controller_first_violation"] is False
     assert "interface_detail" not in unit
 
 
@@ -661,7 +663,7 @@ def test_task_preflight_helper_warns_http_controller_first_violation(tmp_path):
     assert payload["ready_unit_inventory"] == []
     assert payload["execution_readiness"]["ready_for_task_generation"] is True
     warning_codes = [entry["code"] for entry in payload["execution_readiness"]["warnings"]]
-    assert "controller_first_violation" in warning_codes
+    assert "controller_first_violation" not in warning_codes
 
 
 def test_task_preflight_helper_blocks_unresolved_contract_placeholder_names(tmp_path):
@@ -729,8 +731,8 @@ def test_task_preflight_helper_flags_missing_binding_projection_tuple_fields(tmp
     plan_text = plan_path.read_text(encoding="utf-8")
     plan_path.write_text(
         plan_text.replace(
-            "| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | TM-001 | TC-001, TC-002 | createTask | HTTP POST /tasks | src/app/tasks_controller.py::TasksController.create_task | existing | existing | Integration |",
-            "| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | TM-001 | TC-001, TC-002 | createTask | HTTP POST /tasks |  | existing |  |  |",
+            "| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | TM-001 | TC-001, TC-002 | createTask | [UIF-Path-001] | [UDD-001] | Integration |",
+            "| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | TM-001 | TC-001, TC-002 | createTask |  |  | Integration |",
         ),
         encoding="utf-8",
     )
@@ -797,7 +799,7 @@ def test_task_preflight_helper_warns_missing_binding_contract_packet(tmp_path):
     assert "missing_binding_contract_packet" in warning_codes
 
 
-def test_task_preflight_helper_flags_missing_new_anchor_strategy_evidence(tmp_path):
+def test_task_preflight_helper_ignores_anchor_strategy_evidence_in_projection_readiness(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
     _write_minimal_feature(
         feature_dir,
@@ -831,9 +833,9 @@ def test_task_preflight_helper_flags_missing_new_anchor_strategy_evidence(tmp_pa
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["execution_readiness"]["ready_for_task_generation"] is False
+    assert payload["execution_readiness"]["ready_for_task_generation"] is True
     error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
-    assert "new_anchor_strategy_evidence_missing" in error_codes
+    assert "new_anchor_strategy_evidence_missing" not in error_codes
 
 
 def test_task_preflight_helper_ignores_template_placeholder_binding_rows(tmp_path):
@@ -851,14 +853,14 @@ def test_task_preflight_helper_ignores_template_placeholder_binding_rows(tmp_pat
 | Stage ID | Command | Required Inputs | Output Path | Status | Source Fingerprint | Output Fingerprint | Blocker |
 |----------|---------|-----------------|-------------|--------|--------------------|--------------------|---------|
 | research | `/sdd.plan.research` | `plan.md` | `research.md` | done | a | b | [none] |
-| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | done | a | b | [none] |
 | test-matrix | `/sdd.plan.test-matrix` | `plan.md` | `test-matrix.md` | done | a | b | [none] |
+| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | done | a | b | [none] |
 
 ## Binding Projection Index
 
-| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | Boundary Anchor | Implementation Entry Anchor | Boundary Anchor Status | Implementation Entry Anchor Status | Test Scope |
-|--------------|-------|--------|-------|------------------|-------|--------|--------------|-----------------|-----------------------------|------------------------|------------------------------------|------------|
-| [BindingRowID-001] | [UC-001] | [UIF-001] | [FR-001] | [IF-001] | [TM-001] | [TC-001, TC-002] | [createTask] | [HTTP POST /tasks] | [src/app/tasks_controller.py::TasksController.create_task] | [existing] | [existing] | [Integration] |
+| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | UIF Path Ref(s) | UDD Ref(s) | Test Scope |
+|--------------|-------|--------|-------|------------------|-------|--------|--------------|-----------------|------------|------------|
+| [BindingRowID-001] | [UC-001] | [UIF-001] | [FR-001] | [IF-001] | [TM-001] | [TC-001, TC-002] | [createTask] | [UIF-Path-001] | [UDD-001] | [Integration] |
 
 ## Artifact Status
 
@@ -1082,7 +1084,7 @@ def test_bash_check_prerequisites_task_preflight_uses_branch_inferred_plan_file(
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert payload["FEATURE_DIR"].replace("\\", "/").endswith("/repo/specs/20250708-demo")
-    assert payload["TASKS_BOOTSTRAP"]["schema_version"] == "1.2"
+    assert payload["TASKS_BOOTSTRAP"]["schema_version"] == "1.4"
     assert payload["TASKS_BOOTSTRAP"]["execution_readiness"]["ready_for_task_generation"] is True
 
 
@@ -1253,7 +1255,7 @@ def test_data_model_preflight_helper_reports_ready_when_research_done_and_data_m
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["schema_version"] == "1.1"
+    assert payload["schema_version"] == "1.2"
     assert payload["state_machine_policy"]["full_fsm_rule"] == "N > 3 or T >= 2N"
     assert payload["state_machine_policy"]["full_fsm_required_components"] == [
         "transition_table",
@@ -1263,14 +1265,16 @@ def test_data_model_preflight_helper_reports_ready_when_research_done_and_data_m
     assert payload["required_sections"]["shared_context_snapshot"] is True
     assert payload["required_sections"]["stage_queue"] is True
     assert payload["research_stage"]["status"] == "done"
+    assert payload["test_matrix_stage"]["status"] == "done"
     assert payload["selected_stage"]["stage_id"] == "data-model"
     assert payload["selected_stage"]["status"] == "pending"
+    assert payload["test_matrix_path"].endswith("test-matrix.md")
     assert payload["generation_readiness"]["ready_for_generation"] is True
     assert payload["generation_readiness"]["error_count"] == 0
     assert payload["repo_anchor_policy"]["decision_order"] == ["existing", "extended", "new"]
 
 
-def test_data_model_preflight_helper_flags_research_not_done(tmp_path):
+def test_data_model_preflight_helper_warns_research_not_done(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
     _write_data_model_feature(feature_dir, research_status="pending")
 
@@ -1296,9 +1300,71 @@ def test_data_model_preflight_helper_flags_research_not_done(tmp_path):
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
+    assert payload["generation_readiness"]["ready_for_generation"] is True
+    warning_codes = [entry["code"] for entry in payload["generation_readiness"]["warnings"]]
+    assert "research_stage_not_done" in warning_codes
+
+
+def test_data_model_preflight_helper_flags_test_matrix_not_done(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_data_model_feature(feature_dir, test_matrix_status="pending")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "data_model_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--research",
+            str(feature_dir / "research.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
     assert payload["generation_readiness"]["ready_for_generation"] is False
     error_codes = [entry["code"] for entry in payload["generation_readiness"]["errors"]]
-    assert "research_stage_not_done" in error_codes
+    assert "test_matrix_stage_not_done" in error_codes
+
+
+def test_data_model_preflight_helper_flags_missing_test_matrix_artifact(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_data_model_feature(feature_dir, include_test_matrix=False)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "data_model_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--research",
+            str(feature_dir / "research.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["generation_readiness"]["ready_for_generation"] is False
+    error_codes = [entry["code"] for entry in payload["generation_readiness"]["errors"]]
+    assert "test_matrix_missing" in error_codes
 
 
 def test_data_model_preflight_helper_flags_missing_pending_data_model_row(tmp_path):
@@ -1364,7 +1430,7 @@ def test_bash_check_prerequisites_can_embed_data_model_bootstrap(tmp_path):
     payload = json.loads(result.stdout)
     assert payload["FEATURE_DIR"].replace("\\", "/").endswith("/repo/specs/20250708-demo")
     assert "DATA_MODEL_BOOTSTRAP" in payload
-    assert payload["DATA_MODEL_BOOTSTRAP"]["schema_version"] == "1.1"
+    assert payload["DATA_MODEL_BOOTSTRAP"]["schema_version"] == "1.2"
     assert payload["DATA_MODEL_BOOTSTRAP"]["generation_readiness"]["ready_for_generation"] is True
 
 
@@ -1439,12 +1505,12 @@ def test_data_model_command_prefers_data_model_preflight_bootstrap():
 
     assert "scripts/bash/check-prerequisites.sh --json --data-model-preflight" in data_model_command
     assert "scripts/powershell/check-prerequisites.ps1 -Json -DataModelPreflight" in data_model_command
-    assert "Treat `DATA_MODEL_BOOTSTRAP.generation_readiness` as the primary hard gate." in data_model_command
+    assert "Treat `DATA_MODEL_BOOTSTRAP.generation_readiness` as the primary queue/readiness gate" in data_model_command
     assert "reuse the selected stage row" in data_model_command
-    assert "resolved `plan.md` / `spec.md` / `research.md` / `data-model.md` paths" in data_model_command
+    assert "resolved `plan.md` / `spec.md` / `test-matrix.md` / `data-model.md` paths" in data_model_command
     assert "`DATA_MODEL_BOOTSTRAP.state_machine_policy`" in data_model_command
     assert "If `N > 3` or `T >= 2N`, emit a full FSM package" in data_model_command
-    assert "`DATA_MODEL_BOOTSTRAP.generation_readiness.errors` contains blockers" in data_model_command
+    assert "If `DATA_MODEL_BOOTSTRAP` is missing, malformed, or contradictory" in data_model_command
 
     assert "--data-model-preflight" in bash_script
     assert "internal-data-model-bootstrap" in bash_script
