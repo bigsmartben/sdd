@@ -1138,8 +1138,8 @@ SKILL_DESCRIPTIONS = {
     "specify.ui-html": "Generate the derived ui.html focused interaction tool artifact from the current feature branch spec.md. This is an optional sidecar command; invoke `/sdd.specify.ui-html` only when you want a reviewable interaction tool without changing spec.md authority.",
     "plan": "Initialize the planning control plane from the current feature branch spec.md path. Use `/sdd.plan ...` after creating a spec to produce plan.md with Stage 0 shared context, queue state, and binding projection tracking for the /sdd.plan.* child commands.",
     "plan.research": "Generate the queued research.md artifact selected from the current feature branch plan.md. Use `/sdd.plan.research` after /sdd.plan to resolve the first pending research unit and emit the next runtime handoff decision.",
-    "plan.data-model": "Generate the queued data-model.md artifact selected from the current feature branch plan.md. Use `/sdd.plan.data-model` after /sdd.plan.research to produce one backbone data model unit and emit the next runtime handoff decision.",
-    "plan.test-matrix": "Generate the queued test-matrix.md artifact selected from the current feature branch plan.md. Use `/sdd.plan.test-matrix` after /sdd.plan.data-model to seed binding rows and emit the next runtime handoff decision.",
+    "plan.data-model": "Generate the queued data-model.md artifact selected from the current feature branch plan.md. Use `/sdd.plan.data-model` after /sdd.plan.test-matrix to produce one backbone data model unit and emit the next runtime handoff decision.",
+    "plan.test-matrix": "Generate the queued test-matrix.md artifact selected from the current feature branch plan.md. Use `/sdd.plan.test-matrix` after /sdd.plan.research to seed binding rows from spec.md and hand off to /sdd.plan.data-model.",
     "plan.contract": "Generate one queued full-field contract artifact from the current feature branch plan.md. Use `/sdd.plan.contract` until the runtime Handoff Decision advances planning to /sdd.tasks.",
     "tasks": "Break down approved planning artifacts into actionable task lists. Use `/sdd.tasks` after the planning queue is complete to create a structured task breakdown organized by GLOBAL and IF-### scopes with a Task DAG for dependency-safe execution.",
     "implement": "Execute all tasks from the task breakdown to build the feature. Requires current /sdd.analyze PASS evidence by default; missing/stale/FAIL is blocked unless explicitly waived for that run.",
@@ -1759,7 +1759,7 @@ def init(
     steps_lines.append(f"   2.3 [cyan]/{COMMAND_NAMESPACE}.specify.ui-html[/] - Optional sidecar command; generate a focused interaction tool when needed")
     steps_lines.append(f"   2.4 [cyan]/{COMMAND_NAMESPACE}.plan[/] - Initialize the planning control plane")
     steps_lines.append(f"   2.5 [cyan]/{COMMAND_NAMESPACE}.plan.research[/] - Start the planning queue")
-    steps_lines.append(f"   2.6 Follow runtime Handoff Decision through [cyan]/{COMMAND_NAMESPACE}.plan.data-model[/], [cyan]/{COMMAND_NAMESPACE}.plan.test-matrix[/], and repeated [cyan]/{COMMAND_NAMESPACE}.plan.contract[/]")
+    steps_lines.append(f"   2.6 Follow runtime Handoff Decision through [cyan]/{COMMAND_NAMESPACE}.plan.test-matrix[/], [cyan]/{COMMAND_NAMESPACE}.plan.data-model[/], and repeated [cyan]/{COMMAND_NAMESPACE}.plan.contract[/]")
     steps_lines.append(f"   2.7 [cyan]/{COMMAND_NAMESPACE}.tasks[/] - Generate actionable tasks")
     steps_lines.append(f"   2.8 [cyan]/{COMMAND_NAMESPACE}.analyze[/] - Run the default pre-implementation audit")
     steps_lines.append(f"   2.9 [cyan]/{COMMAND_NAMESPACE}.implement[/] - Execute implementation (requires fresh analyze PASS by default)")

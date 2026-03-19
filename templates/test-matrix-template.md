@@ -1,7 +1,7 @@
 # Feature Verification Design: [FEATURE]
 
 **Stage**: Stage 2 Feature Verification Design
-**Inputs**: `spec.md`, `research.md`, bounded repo evidence
+**Inputs**: `spec.md`
 
 Use this artifact to define scenario-oriented software test design for the feature. Cover main, branch, exception, and degraded behavior without turning the document into an audit ledger.
 Keep the matrix minimal-but-sufficient: merge pure permutations with identical observable outcomes, and add a new row only when path semantics, preconditions, or expected outcomes materially differ.
@@ -13,14 +13,7 @@ Keep the matrix minimal-but-sufficient: merge pure permutations with identical o
 - [Verification goals and observability signals for each path family]
 - [How the selected strategy seeds downstream `Binding Contract Packets` and bounded contract reads]
 - [How `spec.md` scenarios are translated into verifiable paths]
-- [Which repo-confirmed interface bindings make each path executable in the current repository]
-- [Which shared semantics are already upstream-defined and therefore must stay explicit rather than re-derived here]
-
-## Repo Evidence Guidance (Binding Only)
-
-- Use repo evidence to confirm interface bindings only: boundary entry, implementation entry, request/response DTO anchors, and first-hop collaborator anchors.
-- Keep repo reads bounded to the selected binding slice; do not use Stage 2 to close shared class modeling, owner closure, field closure, lifecycle design, or invariant authoring.
-- If interface realism depends on a missing shared-semantic class, owner/source, lifecycle, or invariant, route the gap back to `data-model.md` instead of widening this artifact.
+- [Which spec-declared interface bindings make each path executable]
 
 ## Stable Binding Keys (Required)
 
@@ -28,10 +21,10 @@ Keep the matrix minimal-but-sufficient: merge pure permutations with identical o
 - For every scenario/case row, populate `Operation ID`, `Boundary Anchor`, `IF Scope`, `Repo Anchor`, `Repo Anchor Role`, and `Anchor Status` (use explicit `N/A` when not interface-scoped).
 - `Boundary Anchor` is normative only when it is one of: HTTP `METHOD /path`, `event.topic`, RPC/Façade method, CLI command, or explicit `N/A`.
 - `Boundary Anchor` MUST identify the first consumer-callable entry used for contract binding; do not project internal service/manager/mapper handoff symbols here.
-- `Operation ID` captures feature-level operation semantics; multiple `Operation ID` values MAY share the same repo-confirmed `Boundary Anchor`.
-- `Repo Anchor` is supporting evidence only and MUST NOT replace or redefine `Boundary Anchor`.
+- `Operation ID` captures feature-level operation semantics; multiple `Operation ID` values MAY share the same spec-declared `Boundary Anchor`.
+- `Repo Anchor` is optional traceability context only and MUST NOT replace or redefine `Boundary Anchor`.
 - If the consumer enters through HTTP, prefer `HTTP METHOD /path`; if the consumer enters through a stable RPC/Façade surface, use `Facade.method`.
-- A normative `Boundary Anchor` MUST be repo-confirmed when a consumer-callable entry exists in allowed bounded reads; do not replace confirmed HTTP/controller entries with abstract facade operation names.
+- A normative `Boundary Anchor` MUST be explicitly consumer-callable in spec context; do not replace declared HTTP/controller entries with abstract facade operation names.
 - `BA-*` labels are invalid as normative boundary anchors and may appear only as non-normative helper labels.
 - Apply repo-anchor decision order `existing -> extended -> new`.
 - `extended` is valid only for same-entity field/state expansion.
@@ -43,7 +36,7 @@ Keep the matrix minimal-but-sufficient: merge pure permutations with identical o
 - `Implementation Entry Anchor` is allowed only in `Binding Contract Packets` as a contract-seed field for `/sdd.plan.contract`.
 - For HTTP-facing bindings, `Boundary Anchor` MUST stay `HTTP METHOD /path`, `Implementation Entry Anchor` MUST stay the owning controller method, and downstream service/facade symbols MUST remain collaborators only.
 - `Request DTO Anchor` and `Response DTO Anchor` MAY remain `TODO(REPO_ANCHOR)` only as explicit contract gap sources; they MUST NOT trigger a fallback back to minimal-field contract output.
-- Do not invent new shared-semantic classes, owners, fields, or lifecycle vocabulary here; if verification semantics need them, route the gap back to `data-model.md`.
+- Do not define shared-semantic ownership/classes/lifecycle vocabulary here; keep this artifact focused on spec-driven verification tuples.
 - Main-path verification binding MUST use tuples with `Anchor Status = existing|extended|new`. Rows with `Anchor Status = todo` MUST NOT enter primary verification path rows.
 
 ## Scenario Matrix
@@ -69,6 +62,29 @@ When either anchor status is `new`, the packet MUST carry concise strategy evide
 |--------------|--------------|----------|-----------------|------------------------|-----------------------------------|-----------------------------|------------------------------------|-----------------------------------------------|--------------------|--------------------|-----------------------------|-------|--------|-------------|-----------------|----------------|-------------|------------------|--------------------------|
 | BR-001 | [operationId or N/A] | [IF-### or N/A] | [HTTP `METHOD /path` \| `event.topic` \| `Facade.method` \| `cli command` \| `N/A`] | [`existing` \| `extended` \| `new` \| `todo`] | [`existing: ...; extended: ...` or `N/A`] | [`path/to/file.ext::Symbol` or `TODO(REPO_ANCHOR)`] | [`existing` \| `extended` \| `new` \| `todo`] | [`existing: ...; extended: ...` or `N/A`] | [`path/to/file.ext::Symbol` or `N/A` or `TODO(REPO_ANCHOR)`] | [`path/to/file.ext::Symbol` or `N/A` or `TODO(REPO_ANCHOR)`] | [`path/to/file.ext::Symbol` or `N/A` or `TODO(REPO_ANCHOR)`] | [TM-001] | [TC-001, TC-002] | [UC / UIF / FR refs] | [SC / scenario refs] | [success refs] | [edge / EC refs] | [primary success check] | [branch or failure checks] |
 
+### Packet Field Semantics (Mandatory)
+
+- `BindingRowID`: unique stable packet id; must map 1:1 to one downstream contract unit
+- `Operation ID`: operation token carried from spec path semantics
+- `IF Scope`: interface scope token (`IF-###` or `N/A`) aligned to the operation
+- `Boundary Anchor`: client-facing boundary token used as contract binding key
+- `Boundary Anchor Status`: strategy status for boundary token only (`existing|extended|new|todo`)
+- `Boundary Anchor Strategy Evidence`: mandatory when boundary status is `new`
+- `Implementation Entry Anchor`: realization handoff entry token (`path::symbol` or `TODO(REPO_ANCHOR)`)
+- `Implementation Entry Anchor Status`: independent strategy status for implementation entry (`existing|extended|new|todo`)
+- `Implementation Entry Anchor Strategy Evidence`: mandatory when implementation-entry status is `new`
+- `Request DTO Anchor`: request payload anchor used by downstream contract (`path::symbol`, `N/A`, or `TODO(REPO_ANCHOR)`)
+- `Response DTO Anchor`: response payload anchor used by downstream contract (`path::symbol`, `N/A`, or `TODO(REPO_ANCHOR)`)
+- `Primary Collaborator Anchor`: first mandatory collaborator anchor (`path::symbol` or `N/A`)
+- `TM ID`: owning scenario-matrix row id
+- `TC IDs`: ordered verification-case ids linked to the same packet
+- `Spec Ref(s)`: explicit `UC/UIF/FR` references proving spec traceability
+- `Scenario Ref(s)`: scenario references that materialize the tuple
+- `Success Ref(s)`: success-path references proving main expected behavior
+- `Edge Ref(s)`: edge/failure references proving non-happy paths
+- `Main Pass Anchor`: canonical success assertion/check id
+- `Branch/Failure Anchor(s)`: canonical branch/failure assertion/check ids
+
 ## Boundary Notes
 
 - Keep this artifact in the planning flow as feature-level test design only.
@@ -83,4 +99,4 @@ When either anchor status is `new`, the packet MUST carry concise strategy evide
 - `Primary Collaborator Anchor` MAY be `N/A`, but it MUST NOT be used to disguise an unknown boundary or implementation entry.
 - Contract-seed coverage is operation-scoped and bounded: it identifies request/response surfaces, collaborator surfaces, and test anchors the contract must preserve without duplicating the full field dictionary.
 - Treat `BA-*` as non-normative shorthand only; never use it as a normative tuple key.
-- Do not redefine contract fields, interface internals, audit tables, or traceability ledgers here.
+- Do not redefine contract fields, interface internals, audit tables, traceability ledgers, or shared-semantic ownership here.

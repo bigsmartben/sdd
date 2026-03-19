@@ -98,8 +98,8 @@ Do not write long summaries or detailed research prose back into `PLAN_FILE`.
 
 Emit a `Handoff Decision` section in the runtime output with exactly these fields:
 
-- `Next Command`: `/sdd.plan.test-matrix` by default; route `/sdd.plan.data-model` only when the selected research output leaves an explicit shared-semantic alignment blocker that must be closed before Stage 2
-- `Decision Basis`: default planning flow continues to `test-matrix`; only explicit shared-semantic blockers reroute to `data-model`
+- `Next Command`: `/sdd.plan.test-matrix`
+- `Decision Basis`: `test-matrix` consumes `spec.md` as its semantic source and does not depend on `research.md` output to proceed
 - `Selected Stage ID`: selected `research` stage row id
 - `Ready/Blocked`: `Ready` when the selected row is updated to `done`; otherwise `Blocked`
 

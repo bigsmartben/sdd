@@ -20,9 +20,9 @@ def test_plan_command_is_control_plane_only():
     assert "does **not** generate downstream planning-stage artifacts directly" in content
     assert "Treat all `$ARGUMENTS` as user planning context." in content
     assert "Planning Sharding Model (Mandatory)" in content
-    assert "Stage sharding (fixed): default delivery path `research -> test-matrix -> contract`; `data-model` remains a queued on-demand shared-semantic alignment shard" in content
+    assert "Stage sharding (fixed): delivery path `research -> test-matrix -> data-model -> contract`" in content
     assert "Binding sharding (fixed): `/sdd.plan.contract` consumes one `BindingRowID` row per run" in content
-    assert "explicit handoff order: default `sdd.plan.research -> sdd.plan.test-matrix -> sdd.plan.contract`; insert `sdd.plan.data-model` only when a queued blocker explicitly requires shared-semantic alignment" in content
+    assert "explicit handoff order: `sdd.plan.research -> sdd.plan.test-matrix -> sdd.plan.data-model -> sdd.plan.contract`" in content
 
 
 def test_plan_child_commands_are_contract_only():
@@ -67,7 +67,7 @@ def test_plan_and_test_matrix_templates_precompute_contract_bootstrap_inputs():
 
     assert "contract seed packet" in test_matrix_command
     assert "Do not read `research.md` in this stage." not in test_matrix_command
-    assert "## Repo Evidence Guidance (Binding Only)" in test_matrix_command
+    assert "Read only:" in test_matrix_command
     assert "- `Implementation Entry Anchor`" in test_matrix_command
     assert "- `Boundary Anchor Status`" in test_matrix_command
     assert "- `Implementation Entry Anchor Status`" in test_matrix_command
@@ -77,7 +77,7 @@ def test_plan_and_test_matrix_templates_precompute_contract_bootstrap_inputs():
 
     assert "## Binding Contract Packets" in test_matrix_template
     assert "authoritative per-binding contract seed packet consumed by `/sdd.plan.contract`" in test_matrix_template
-    assert "## Repo Evidence Guidance (Binding Only)" in test_matrix_template
+    assert "**Inputs**: `spec.md`" in test_matrix_template
     assert "MUST NOT be added to `Scenario Matrix` or `Verification Case Anchors` tuple keys" in test_matrix_template
     assert "| BindingRowID | Operation ID | IF Scope | Boundary Anchor | Boundary Anchor Status |" in test_matrix_template
     assert "Implementation Entry Anchor" in test_matrix_template
@@ -137,17 +137,17 @@ def test_research_data_model_and_test_matrix_are_packet_first():
     assert "Every selected `new` anchor in normative content MUST record:" in data_model
     assert "A planned-but-missing file path is not sufficient evidence for normative `new`" in data_model
     assert "downstream `test-matrix.md` and `contracts/` MUST NOT invent missing state owners or owner fields" in data_model
-    assert "- `Next Command`: `/sdd.plan.test-matrix`" in data_model
-    assert "refresh Stage 2 binding packets before any contract generation or regeneration" in data_model
+    assert "- `Next Command`: `/sdd.plan.contract`" in data_model
+    assert "continue contract generation directly without rerunning `test-matrix`" in data_model
 
     assert "Stage Packet (Test-Matrix Unit)" in test_matrix
     assert "Use this packet as the default context for generation and binding projection." in test_matrix
     assert "coverage scope, path decomposition, verification goals, observability signals, and the contract seed packets" in test_matrix
     assert "prefer section-level rereads over whole-file replay for the selected unit" in test_matrix
-    assert "Do not require `data-model` to be `done` before Stage 2" in test_matrix
-    assert "Use bounded repo evidence only to confirm interface bindings that the current repository can already support" in test_matrix
-    assert "Do not introduce new shared-semantic classes, owners, fields, lifecycle vocabulary, or invariants here" in test_matrix
-    assert "send the issue back to `/sdd.plan.data-model` instead of widening Stage 2 scope" in test_matrix
+    assert "Do not require `research` or `data-model` rows to be `done` before this stage" in test_matrix
+    assert "Do not consume `research.md` or `data-model.md` semantics in this stage." in test_matrix
+    assert "Do not perform shared-semantic class/owner/lifecycle modeling in this stage; keep Stage 2 focused on spec-driven verification semantics and binding projection." in test_matrix
+    assert "if a binding packet cannot be closed from `spec.md` and selected plan-row context" in test_matrix
     assert "`Boundary Anchor Strategy Evidence`" in test_matrix
     assert "`Implementation Entry Anchor Strategy Evidence`" in test_matrix
 
@@ -203,13 +203,11 @@ def test_data_model_template_requires_new_anchor_evidence_and_owner_closure():
 def test_test_matrix_template_forbids_backfilling_missing_stage_one_model():
     content = read("templates/test-matrix-template.md")
 
+    assert "**Inputs**: `spec.md`" in content
     assert "[Coverage scope: which spec paths must be verified and why]" in content
     assert "[How the selected strategy seeds downstream `Binding Contract Packets` and bounded contract reads]" in content
-    assert "## Repo Evidence Guidance (Binding Only)" in content
     assert "/sdd.plan.contract` MUST consume these tuple keys verbatim and MUST NOT redefine them." in content
-    assert "[Which repo-confirmed interface bindings make each path executable in the current repository]" in content
-    assert "Do not invent new shared-semantic classes, owners, fields, or lifecycle vocabulary here" in content
-    assert "If interface realism depends on a missing shared-semantic class, owner/source, lifecycle, or invariant, route the gap back to `data-model.md` instead of widening this artifact." in content
+    assert "[Which spec-declared interface bindings make each path executable]" in content
 
 
 def test_tasks_command_uses_contract_as_realization_source():

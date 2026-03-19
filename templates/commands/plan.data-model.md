@@ -38,7 +38,7 @@ Use `.specify/templates/data-model-template.md` only. If the runtime template is
 2. Treat `DATA_MODEL_BOOTSTRAP.generation_readiness` as the primary hard gate.
 3. If `DATA_MODEL_BOOTSTRAP.generation_readiness.ready_for_generation = true`, reuse the selected stage row, resolved `plan.md` / `spec.md` / `research.md` / `data-model.md` paths, and `state_machine_policy` from `DATA_MODEL_BOOTSTRAP`; do not rescan for alternate pending rows.
 4. If `DATA_MODEL_BOOTSTRAP` is missing, malformed, or contradictory, perform one bounded fallback validation from `plan.md` control-plane fields plus current `spec.md` / `research.md` availability.
-5. In fallback mode only, read the resolved `IMPL_PLAN`, find the first `Stage Queue` row where `Stage ID = data-model` and `Status = pending`, require the `research` row to be `done`, and stop on any blocker.
+5. In fallback mode only, read the resolved `IMPL_PLAN`, find the first `Stage Queue` row where `Stage ID = data-model` and `Status = pending`, require the `test-matrix` row to be `done`, and stop on any blocker.
 
 ## Stage Packet (Data-Model Unit)
 
@@ -142,20 +142,18 @@ If bounded reads are insufficient, keep unresolved lifecycle/invariant evidence 
 
 ## Required Writeback
 
-After generating `data-model.md`, update the selected `Stage Queue` row only:
+After generating `data-model.md`, update only:
 
-- `Status`
-- `Output Path`
-- `Source Fingerprint`
-- `Output Fingerprint`
-- `Blocker`
+- selected `data-model` stage row `Status`, `Output Path`, `Source Fingerprint`, `Output Fingerprint`, `Blocker`
+- affected `Artifact Status` rows only when alignment output changes contract-scoped readiness; keep writeback minimal to status/fingerprint/blocker fields
+- do not rewrite `Binding Projection Index` tuple keys or re-open `test-matrix` rows for this alignment path
 
 ## Handoff Decision
 
 Emit a `Handoff Decision` section in the runtime output with exactly these fields:
 
-- `Next Command`: `/sdd.plan.test-matrix`
-- `Decision Basis`: once shared semantics are aligned, refresh Stage 2 binding packets before any contract generation or regeneration
+- `Next Command`: `/sdd.plan.contract`
+- `Decision Basis`: Stage 2 binding packets remain authoritative for this alignment path; once shared semantics are aligned, continue contract generation directly without rerunning `test-matrix`
 - `Selected Stage ID`: selected `data-model` stage row id
 - `Ready/Blocked`: `Ready` when the selected row is updated to `done`; otherwise `Blocked`
 

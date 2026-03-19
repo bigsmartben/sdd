@@ -187,7 +187,7 @@ def _write_data_model_feature(
 |----------|---------|-----------------|-------------|--------|--------------------|--------------------|---------|
 | research | `/sdd.plan.research` | `plan.md`, `spec.md` | `research.md` | {research_status} | a | b | [none] |
 | data-model | `/sdd.plan.data-model` | `plan.md`, `spec.md`, `research.md` | `data-model.md` | {data_model_status} | a | b | [none] |
-| test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md`, `research.md`, bounded repo evidence | `test-matrix.md` | pending | a | b | [none] |
+ | test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md` | `test-matrix.md` | pending | a | b | [none] |
 """,
         encoding="utf-8",
     )
@@ -406,7 +406,7 @@ def test_task_preflight_helper_surfaces_incomplete_stage_queue_blocker(tmp_path)
     assert "incomplete_stage_queue" in error_codes
 
 
-def test_task_preflight_helper_allows_pending_data_model_stage(tmp_path):
+def test_task_preflight_helper_requires_pending_data_model_stage(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
     _write_minimal_feature(feature_dir)
 
@@ -444,13 +444,13 @@ def test_task_preflight_helper_allows_pending_data_model_stage(tmp_path):
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["data_model_required"] is False
-    assert payload["required_stage_ids_for_tasks"] == ["research", "test-matrix"]
-    assert payload["incomplete_stage_ids"] == []
-    assert payload["execution_readiness"]["ready_for_task_generation"] is True
+    assert payload["data_model_required"] is True
+    assert payload["required_stage_ids_for_tasks"] == ["data-model", "research", "test-matrix"]
+    assert payload["incomplete_stage_ids"] == ["data-model"]
+    assert payload["execution_readiness"]["ready_for_task_generation"] is False
 
 
-def test_task_preflight_helper_requires_pending_data_model_when_shared_alignment_is_explicit(tmp_path):
+def test_task_preflight_helper_ignores_data_model_blocker_when_stage_is_done(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
     _write_minimal_feature(feature_dir)
 
@@ -459,7 +459,7 @@ def test_task_preflight_helper_requires_pending_data_model_when_shared_alignment
     plan_path.write_text(
         plan_text.replace(
             "| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | done | a | b | [none] |",
-            "| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | pending | a | b | shared_semantic_alignment_required |",
+            "| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | done | a | b | shared_semantic_alignment_required |",
         ),
         encoding="utf-8",
     )
@@ -490,10 +490,8 @@ def test_task_preflight_helper_requires_pending_data_model_when_shared_alignment
     payload = json.loads(result.stdout)
     assert payload["data_model_required"] is True
     assert payload["required_stage_ids_for_tasks"] == ["data-model", "research", "test-matrix"]
-    assert payload["incomplete_stage_ids"] == ["data-model"]
-    assert payload["execution_readiness"]["ready_for_task_generation"] is False
-    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
-    assert "incomplete_stage_queue" in error_codes
+    assert payload["incomplete_stage_ids"] == []
+    assert payload["execution_readiness"]["ready_for_task_generation"] is True
 
 
 def test_task_preflight_helper_warns_missing_full_field_dictionary(tmp_path):

@@ -31,8 +31,7 @@ ENTRY_ANCHOR_LABEL_RE = re.compile(
 NON_CONTROLLER_ENTRY_RE = re.compile(r"(?i)(service|facade|manager|repository|dao|mapper)")
 ANCHOR_STATUS_VALUES = {"existing", "extended", "new", "todo"}
 UNRESOLVED_CONTRACT_NAME_RE = re.compile(r"<([A-Z][A-Za-z0-9]+)>")
-TASK_REQUIRED_STAGE_IDS = {"research", "test-matrix"}
-SHARED_SEMANTIC_ALIGNMENT_BLOCKER_CODE = "shared_semantic_alignment_required"
+TASK_REQUIRED_STAGE_IDS = {"research", "test-matrix", "data-model"}
 
 
 def normalize_anchor_status(value: str) -> str:
@@ -44,29 +43,8 @@ def has_required_strategy_evidence(value: str) -> bool:
     return "existing" in text and "extended" in text
 
 
-def has_shared_semantic_alignment_blocker(value: str) -> bool:
-    return SHARED_SEMANTIC_ALIGNMENT_BLOCKER_CODE in clean_cell(value).lower()
-
-
 def is_active_status(status: str) -> bool:
     return clean_cell(status).lower() != "done"
-
-
-def requires_data_model_alignment(
-    stage_queue: list[dict[str, str]],
-    artifact_status: list[dict[str, str]],
-) -> bool:
-    stage_signal = any(
-        is_active_status(row.get("status", ""))
-        and has_shared_semantic_alignment_blocker(row.get("blocker", ""))
-        for row in stage_queue
-    )
-    artifact_signal = any(
-        is_active_status(row.get("status", ""))
-        and has_shared_semantic_alignment_blocker(row.get("blocker", ""))
-        for row in artifact_status
-    )
-    return stage_signal or artifact_signal
 
 
 def load_binding_contract_packets(test_matrix_path: Path) -> dict[str, dict[str, str]]:
@@ -630,10 +608,8 @@ def build_task_bootstrap_payload(
         for row in artifact_rows
     ]
 
-    data_model_required = requires_data_model_alignment(stage_queue, artifact_status)
     required_stage_ids = set(TASK_REQUIRED_STAGE_IDS)
-    if data_model_required:
-        required_stage_ids.add("data-model")
+    data_model_required = "data-model" in required_stage_ids
 
     incomplete_stage_ids = normalize_stage_ids(
         [
