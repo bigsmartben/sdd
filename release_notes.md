@@ -4,6 +4,7 @@ This is the latest set of releases that you can use with your agent of choice. W
 
 ## Changelog
 
+- Prepare v2.0.27 release and align bootstrap metadata
 - Revert implement anchor gate and simplify preflight gating
 - Remove implement execution policy from bootstrap payload
 - Harden implement gates with anchor checks and protocol evidence
@@ -14,6 +15,4 @@ This is the latest set of releases that you can use with your agent of choice. W
 - Align task bootstrap and handoff rules with semantic blockers
 - Align planning flow and block unresolved contract placeholders
 - Align planning templates with repo anchor governance
-- chore: prepare v2.0.26 release
-- Align runtime bootstraps and templates across bash and powershell
-- Route helper scripts through specify-cli and refine ui-html guidance
+
