@@ -75,10 +75,12 @@ Before generating `ui.html`, build an internal coverage ledger from the selected
 - Build an internal coverage ledger before generating `ui.html` with these minimum slices:
   - `UC ID | selected Path IDs | selected UIF nodes | omitted Path IDs | omission reason`
   - `UIF Node | prototype screen/view | interaction/control | feedback/state | ref: Scenario/FR`
-  - `Entity.field | prototype surface/component | displayed state | consumed rule (calculation/boundary/display) | ref: FR/Scenario`
+  - `Entity.field | user-visible interaction moment | displayed completion/content | consumed rule (calculation/boundary/display) | ref: FR/Scenario`
 - Every demonstrated user interaction MUST trace back to an explicit `UIF` node. Do not simulate a business-significant user step that has no `UIF` anchor.
-- Every user-visible business datum in the prototype MUST trace back to explicit `Entity.field` rows. If a business datum cannot be traced to UDD, omit it or render it as clearly non-authoritative placeholder text.
-- If a selected `Entity.field` has null/empty, boundary, formatting, or display rules in UDD, consume those rules in the demonstrated prototype states instead of showing labels only.
+- Do not render the full UDD inventory, raw field tables, or exhaustive `Entity.field` lists as visible prototype content unless `spec.md` explicitly defines such a screen.
+- Only surface the subset of completed `Entity.field` rows needed to make the selected interaction understandable from the user's point of view.
+- Every business-significant datum that appears inside the demonstrated interaction MUST trace back to explicit completed `Entity.field` rows. If it cannot be traced to UDD, omit it or render it as clearly non-authoritative placeholder text.
+- If a selected completed `Entity.field` row has null/empty, boundary, formatting, or display rules in UDD, consume those rules in the demonstrated prototype states instead of showing labels only.
 - For each selected interactive UC, demonstrate at least:
   - one happy path,
   - and one meaningful branch state (`alternate`, `exception`, `retry`, `recovery`, `cancel`, `timeout`, `permission`, or `duplicate`) when the spec makes that branch user-visible or acceptance-relevant.
@@ -148,7 +150,8 @@ Use the spec to derive:
 - acceptance-relevant interaction outcomes
 
 Keep labels and terminology aligned with `spec.md`.
-Prefer explicit `UC`, `UIP`, `UIF`, `FR`, and `Entity.field` anchors in prototype review surfaces when they improve traceability without turning the artifact into a document dump.
+Prefer explicit `UC`, `UIP`, `UIF`, `FR`, and `Entity.field` anchors in lightweight review surfaces only when they improve traceability without turning the artifact into a document dump or replacing user-facing content.
+If traceability markers are shown in `ui.html`, keep them secondary and compact. Do not make IDs, coverage ledgers, or audit-style badges the dominant visible content of the prototype.
 
 ### 5. Selective Scope
 
@@ -159,8 +162,10 @@ Instead, cover the smallest set of screens and interactions that best represent 
 - primary entry view
 - main happy path for each selected interactive UC
 - one meaningful alternate/error/empty/permission/timeout branch when the selected path set makes it user-visible or acceptance-relevant
-- visible data presentation anchored to `Entity.field` and FR/scenario context
+- visible data presentation anchored to the completed `Entity.field` subset needed by the selected interaction and FR/scenario context
 - rule-driven state evidence for selected UDD fields (for example: empty, error, disabled, warning, formatting, or recovery state)
+
+When the interaction reaches a completion/result moment, show the completed UDD-backed content where the user would actually perceive it instead of listing UDD rows separately.
 
 If the spec implies many views, choose the most representative subset and keep the rest implicit.
 
@@ -204,7 +209,7 @@ The generated `ui.html` should:
    - positioning tuple (target user / core scenario / visible value)
    - key user-facing use cases
    - selected path inventory rows (`UIP-*`) and `UIF` nodes for the prototype surface
-   - visible data elements (`Entity.field`) and their UDD rules
+   - the completed visible data elements (`Entity.field`) and their UDD rules that the selected interaction actually surfaces
    - important flows
    - visible state variations
    - UI component/data anchors when present
@@ -226,8 +231,10 @@ Before completing, validate that:
 - the main flow is understandable through interaction
 - every demonstrated interaction step maps to selected `UIF` node(s)
 - each selected happy/branch path has a visible entry, transition, and user-visible outcome
-- every user-visible business datum maps to selected `Entity.field` row(s)
+- the prototype does not dump the full UDD inventory as visible content unless the spec explicitly requires it
+- every business-significant datum surfaced in the demonstrated interaction maps to selected completed `Entity.field` row(s)
 - selected UDD fields consume their boundary/null/display rules in the demonstrated states
+- any traceability cues shown in `ui.html` stay secondary to the user-visible interaction and completion content
 - visible terminology stays aligned with `spec.md`
 - no unsupported feature semantics were introduced
 - mobile and desktop both render reasonably
@@ -260,7 +267,8 @@ Report:
   - key `UIF` nodes surfaced through interaction
   - omitted important paths with reason
 - `UDD Coverage Summary`:
-  - surfaced `Entity.field` anchors
+  - surfaced completed `Entity.field` anchors through interaction
   - rule-driven states demonstrated from UDD (`empty`, `error`, `boundary`, `display`, etc.)
+  - omitted UDD areas intentionally left out because they are not needed for the selected interaction
 - any placeholders or unresolved ambiguities left explicit
 - `Handoff Decision` with `Next Command`, `Decision Basis`, `Selected Artifact`, and `Ready/Blocked`

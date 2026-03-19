@@ -25,7 +25,9 @@ def test_specify_command_keeps_current_flow_and_treats_ui_html_as_optional_sidec
     assert "Generate exactly one review-ready `ui.html` interactive prototype" in ui_html
     assert "## UIF + UDD Coverage Protocol (MUST)" in ui_html
     assert "Every demonstrated user interaction MUST trace back to an explicit `UIF` node." in ui_html
-    assert "Every user-visible business datum in the prototype MUST trace back to explicit `Entity.field` rows." in ui_html
+    assert "Only surface the subset of completed `Entity.field` rows needed to make the selected interaction understandable from the user's point of view." in ui_html
+    assert "Every business-significant datum that appears inside the demonstrated interaction MUST trace back to explicit completed `Entity.field` rows." in ui_html
+    assert "Do not make IDs, coverage ledgers, or audit-style badges the dominant visible content of the prototype." in ui_html
     assert "`UIF Coverage Summary`" in ui_html
     assert "`UDD Coverage Summary`" in ui_html
     assert "`Next Command`: `/sdd.clarify`" in ui_html
@@ -41,8 +43,10 @@ def test_spec_template_stays_unsplit_and_ui_html_template_exists():
     assert "[ui.html](ui.html)" not in spec_template
     assert "UI Preview" in ui_html_template
     assert "spec.md" in ui_html_template
-    assert "Coverage Anchors" in ui_html_template
-    assert "Entity.field" in ui_html_template
+    assert "User-Visible Completion" in ui_html_template
+    assert "Completed State" in ui_html_template
+    assert "Entry Context" in ui_html_template
+    assert "Visible Outcome" in ui_html_template
 
 
 def test_spec_and_commands_require_semantically_aligned_edge_case_refs():

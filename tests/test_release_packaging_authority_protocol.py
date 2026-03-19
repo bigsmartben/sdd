@@ -32,7 +32,9 @@ EXPECTED_MARKERS = [
     "CRITICAL/HIGH findings MUST cite the authoritative source artifact(s)",
     "## UIF + UDD Coverage Protocol (MUST)",
     "Every demonstrated user interaction MUST trace back to an explicit `UIF` node.",
-    "Every user-visible business datum in the prototype MUST trace back to explicit `Entity.field` rows.",
+    "Only surface the subset of completed `Entity.field` rows needed to make the selected interaction understandable from the user's point of view.",
+    "Every business-significant datum that appears inside the demonstrated interaction MUST trace back to explicit completed `Entity.field` rows.",
+    "Do not make IDs, coverage ledgers, or audit-style badges the dominant visible content of the prototype.",
     "`UIF Coverage Summary`",
     "`UDD Coverage Summary`",
 ]
