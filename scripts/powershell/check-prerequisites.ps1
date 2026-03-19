@@ -32,6 +32,19 @@ param(
 $ErrorActionPreference = 'Stop'
 
 function Resolve-SpecifyCommand {
+    $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+    $repoShimDir = Join-Path $repoRoot '.test-bin'
+    $repoShimCandidates = @(
+        (Join-Path $repoShimDir 'specify'),
+        (Join-Path $repoShimDir 'specify.cmd'),
+        (Join-Path $repoShimDir 'specify.exe')
+    )
+    foreach ($candidate in $repoShimCandidates) {
+        if (Test-Path $candidate -PathType Leaf) {
+            return (Resolve-Path $candidate).Path
+        }
+    }
+
     $override = $env:SDD_SPECIFY_CMD
     if (-not [string]::IsNullOrWhiteSpace($override)) {
         if (Test-Path $override -PathType Leaf) {
@@ -207,6 +220,7 @@ if ($PathsOnly) {
             FEATURE_SPEC = $paths.FEATURE_SPEC
             IMPL_PLAN    = $paths.IMPL_PLAN
             TASKS        = $paths.TASKS
+            TASKS_MANIFEST = $paths.TASKS_MANIFEST
         } | ConvertTo-Json -Compress
     } else {
         Write-Output "REPO_ROOT: $($paths.REPO_ROOT)"
@@ -215,6 +229,7 @@ if ($PathsOnly) {
         Write-Output "FEATURE_SPEC: $($paths.FEATURE_SPEC)"
         Write-Output "IMPL_PLAN: $($paths.IMPL_PLAN)"
         Write-Output "TASKS: $($paths.TASKS)"
+        Write-Output "TASKS_MANIFEST: $($paths.TASKS_MANIFEST)"
     }
     exit 0
 }
@@ -312,6 +327,7 @@ if ($Json) {
 
     if ($ImplementPreflight) {
         $payload.IMPLEMENT_BOOTSTRAP = $null
+        $payload.TASKS_MANIFEST_BOOTSTRAP = $null
         $specifyCmd = Resolve-SpecifyCommand
         if (-not [string]::IsNullOrWhiteSpace($specifyCmd)) {
             try {
@@ -325,8 +341,19 @@ if ($Json) {
                 if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($implementBootstrapJson)) {
                     $payload.IMPLEMENT_BOOTSTRAP = $implementBootstrapJson | ConvertFrom-Json
                 }
+
+                $tasksManifestBootstrapJson = & $specifyCmd internal-tasks-manifest-bootstrap `
+                    --feature-dir $paths.FEATURE_DIR `
+                    --plan $paths.IMPL_PLAN `
+                    --tasks $paths.TASKS `
+                    --tasks-manifest $paths.TASKS_MANIFEST
+
+                if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($tasksManifestBootstrapJson)) {
+                    $payload.TASKS_MANIFEST_BOOTSTRAP = $tasksManifestBootstrapJson | ConvertFrom-Json
+                }
             } catch {
                 $payload.IMPLEMENT_BOOTSTRAP = $null
+                $payload.TASKS_MANIFEST_BOOTSTRAP = $null
             }
         }
     }

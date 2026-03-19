@@ -89,6 +89,7 @@ Stop immediately when any condition holds:
 5. Required canonical repository-first evidence for affected scope is missing, stale, or non-traceable.
 6. Active executable tuples select `new` repo anchors but lack explicit rejection evidence for `existing` and `extended` in authoritative upstream artifacts.
 7. Required repository discovery is blocked because `LOCAL_EXECUTION_PROTOCOL.repo_search.available = false`.
+8. Any selected `contract` row is missing `Full Field Dictionary (Operation-scoped)` or drifts from authoritative `Binding Contract Packets` for the same `BindingRowID`.
 
 Hard execution safety gates in this command are limited to:
 
@@ -97,6 +98,7 @@ Hard execution safety gates in this command are limited to:
 - repo-anchor strategy evidence completeness for executable tuples
 - DAG schedulability
 - task-line completeness
+- selected-contract field-dictionary completeness and binding-packet projection stability
 
 `/sdd.tasks` does **not** own comprehensive audit concerns (coverage completeness, ambiguity sweeps, contradiction analysis). Route those to `/sdd.analyze`.
 Do not claim cross-artifact final PASS/FAIL in this stage.

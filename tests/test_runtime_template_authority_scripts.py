@@ -447,6 +447,44 @@ def test_check_prerequisites_powershell_accepts_command_name_override_for_specif
     ]
 
 
+def test_check_prerequisites_powershell_prefers_repo_local_specify_shim(tmp_path):
+    repo_dir = tmp_path / "repo"
+    feature_dir = repo_dir / "specs" / "001-demo"
+    feature_dir.mkdir(parents=True)
+    (feature_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    (feature_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    copy_powershell_script(repo_dir, "common.ps1")
+    script = copy_powershell_script(repo_dir, "check-prerequisites.ps1")
+
+    shim_dir = repo_dir / ".test-bin"
+    shim_dir.mkdir(parents=True)
+    (shim_dir / "specify.cmd").write_text(
+        "@echo off\n"
+        "if \"%1\"==\"internal-runtime-tools\" (\n"
+        "  echo {\"schema_version\":\"1.0\",\"core_runtime_tools\":[{\"tool\":\"specify-cli\"},{\"tool\":\"git\"},{\"tool\":\"rg\"}],\"excluded_runtime_families\":[\"node\"]}\n"
+        "  exit /b 0\n"
+        ")\n"
+        "exit /b 1\n",
+        encoding="utf-8",
+    )
+
+    env = os.environ.copy()
+    env["SPECIFY_FEATURE"] = "001-demo"
+    env.pop("SDD_SPECIFY_CMD", None)
+    result = run_powershell(script, repo_dir, ["-Json"], env=env)
+
+    assert result.returncode == 0
+    payload = parse_last_json_line(result.stdout)
+    protocol = payload["LOCAL_EXECUTION_PROTOCOL"]
+    assert protocol["python"]["available"] is True
+    assert protocol["python"]["tool"] == "specify-cli"
+    assert [tool["tool"] for tool in protocol["runtime_tools"]["core_runtime_tools"]] == [
+        "specify-cli",
+        "git",
+        "rg",
+    ]
+
+
 def test_setup_plan_bash_handles_branch_inferred_spec_file_with_spaces_in_path(tmp_path):
     repo_dir = tmp_path / "repo"
     (repo_dir / ".specify" / "templates").mkdir(parents=True)

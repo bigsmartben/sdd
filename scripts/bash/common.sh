@@ -153,6 +153,7 @@ emit_feature_paths() {
     printf 'FEATURE_SPEC=%q\n' "$feature_spec"
     printf 'IMPL_PLAN=%q\n' "$impl_plan"
     printf 'TASKS=%q\n' "$feature_dir/tasks.md"
+    printf 'TASKS_MANIFEST=%q\n' "$feature_dir/tasks.manifest.json"
     printf 'RESEARCH=%q\n' "$feature_dir/research.md"
     printf 'DATA_MODEL=%q\n' "$feature_dir/data-model.md"
     printf 'TEST_MATRIX=%q\n' "$feature_dir/test-matrix.md"

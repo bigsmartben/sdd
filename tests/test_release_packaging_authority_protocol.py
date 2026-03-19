@@ -4,6 +4,8 @@ import os
 import re
 import shutil
 import subprocess
+import tarfile
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -114,6 +116,24 @@ def _assert_packaged_authority_markers(tmp_path: Path, agents: list[str], suffix
             assert marker in combined_text, f"missing authority marker for {agent}: {marker}"
 
 
+def _read_text_from_archive(archive: Path, suffix: str) -> str:
+    if archive.suffix == ".whl":
+        with zipfile.ZipFile(archive) as zf:
+            for name in zf.namelist():
+                if name.endswith(suffix):
+                    return zf.read(name).decode("utf-8")
+        return ""
+
+    with tarfile.open(archive, "r:*") as tf:
+        for member in tf.getmembers():
+            if member.isfile() and member.name.endswith(suffix):
+                extracted = tf.extractfile(member)
+                if extracted is None:
+                    continue
+                return extracted.read().decode("utf-8")
+    return ""
+
+
 @requires_packaging_tools
 def test_bash_release_packaging_carries_authority_protocol_into_all_agent_outputs(tmp_path: Path):
     _prepare_packaging_fixture(tmp_path)
@@ -182,3 +202,34 @@ def test_powershell_release_packaging_carries_authority_protocol_into_all_agent_
     )
 
     _assert_packaged_authority_markers(tmp_path, agents, "sh")
+
+
+def test_wheel_target_force_includes_authority_assets():
+    pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert '[tool.hatch.build.targets.wheel.force-include]' in pyproject
+    assert '"templates" = "templates"' in pyproject
+
+
+def test_dist_archives_carry_authority_protocol_markers_when_present():
+    dist_dir = REPO_ROOT / "dist"
+    pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r'^version\s*=\s*"([^"]+)"', pyproject, flags=re.MULTILINE)
+    assert match is not None
+    version = match.group(1)
+
+    archives = sorted(dist_dir.glob(f"specify_cli-{version}*.whl")) + sorted(dist_dir.glob(f"specify_cli-{version}*.tar.gz"))
+    if not archives:
+        pytest.skip("dist artifacts are unavailable")
+
+    for archive in archives:
+        analyze = _read_text_from_archive(archive, "templates/commands/analyze.md")
+        plan = _read_text_from_archive(archive, "templates/commands/plan.md")
+        specify = _read_text_from_archive(archive, "templates/commands/specify.md")
+
+        assert analyze, f"missing templates/commands/analyze.md in {archive.name}"
+        assert plan, f"missing templates/commands/plan.md in {archive.name}"
+        assert specify, f"missing templates/commands/specify.md in {archive.name}"
+
+        assert "centralized audit entry and single concentrated audit step before `/sdd.implement`" in analyze
+        assert "Stage sharding (fixed): delivery path `research -> test-matrix -> data-model`" in plan
+        assert "spec.md` becomes the authoritative feature-semantics artifact" in specify

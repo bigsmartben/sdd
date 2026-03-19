@@ -67,12 +67,6 @@ def _write_minimal_feature(
     if contract_text is None:
         contract_text = """# Contract
 
-## Seed Tuple vs Repo-Confirmed Boundary
-
-| BindingRowID | Operation ID | IF Scope | Seed Boundary Anchor | Repo-Confirmed Boundary Entry | Drift Type | Contract Handling Strategy | Upstream Route Required |
-|--------------|--------------|----------|----------------------|-------------------------------|------------|----------------------------|-------------------------|
-| BR-001 | createTask | IF-001 | HTTP POST /tasks | HTTP POST /tasks | none | Keep controller-first tuple and align contract entry anchor to controller method | none |
-
 ## Resolved Class Inventory (Required)
 
 | Role | Concrete Name | Resolution | Source / Evidence | Notes |
@@ -87,17 +81,31 @@ def _write_minimal_feature(
 |-------|-------------|-----------------|-----------|-------------------|---------|-----------------|-----------|------------------|--------------------|---------------|
 | taskId | CreateTaskResponse | operation-critical | output | required | none | uuid | no | yes | yes | `src/app/contracts.py::CreateTaskResponse.taskId` |
 
-## Runtime Correctness Check
+## Test Projection
 
-| Runtime Check Item | Required Evidence | Anchor | Status |
-|--------------------|-------------------|--------|--------|
-| Seed-vs-repo boundary drift classification | Seed tuple drift row exists and is explicit | BR-001 tuple | ok |
-| Field-dictionary tiering | Dictionary tier column exists and operation-critical rows lead | Field dictionary rows | ok |
+### Test Projection Slice
+
+| IF Scope | Operation ID | Test Scope | TM ID | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
+|----------|--------------|------------|-------|----------|------------------|--------------------------|----------------------------|
+| IF-001 | createTask | Integration | TM-001 | TC-001, TC-002 | task create success | task create failure | pytest -k createTask |
+
+## Closure Check
+
+| Check Item | Required Evidence | Status |
+|------------|-------------------|--------|
+| Interface-definition closure | request/response surface + full field dictionary + shared semantic reuse are all present | ok |
+| UML closure | class diagram and two-party package relations both present and consistent with sequence | ok |
+| Sequence closure | success/failure paths include mandatory second-party, third-party, and middleware calls | ok |
+| Test closure | `TM/TC`, pass/failure anchors, and command/assertion signal are present | ok |
 """
     (feature_dir / "contracts" / "create-task.md").write_text(contract_text, encoding="utf-8")
 
     (feature_dir / "plan.md").write_text(
         f"""# Planning Control Plane: Demo
+
+## Summary
+
+Demo planning control plane.
 
 ## Shared Context Snapshot
 
@@ -122,6 +130,12 @@ def _write_minimal_feature(
 | BindingRowID | Unit Type | Target Path | Status | Source Fingerprint | Output Fingerprint | Blocker |
 |--------------|-----------|-------------|--------|--------------------|--------------------|---------|
 | BindingRowID-001 | contract | `contracts/create-task.md` | {contract_status} | a | b | [none] |
+
+## Handoff Protocol
+
+- `/sdd.plan` initializes this file.
+- `/sdd.plan.contract` advances one contract row at a time.
+- `/sdd.tasks` starts only after required rows are done.
 """,
         encoding="utf-8",
     )
@@ -140,6 +154,36 @@ def _write_tasks_and_analyze_history(feature_dir: Path, gate_decision: str = "PA
     spec_sha = _sha256_file(feature_dir / "spec.md")
     plan_sha = _sha256_file(feature_dir / "plan.md")
     tasks_sha = _sha256_file(feature_dir / "tasks.md")
+
+    (feature_dir / "tasks.manifest.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "generated_at": "2026-03-18T00:00:00Z",
+                "generated_from": {
+                    "plan_path": str(feature_dir / "plan.md"),
+                    "plan_source_fingerprint": plan_sha,
+                    "contract_source_fingerprints": {},
+                },
+                "tasks": [
+                    {
+                        "task_id": "T001",
+                        "dependencies": [],
+                        "if_scope": "GLOBAL",
+                        "refs": [],
+                        "target_paths": [str(feature_dir / "tasks.md")],
+                        "completion_anchors": ["tasks-md-updated"],
+                        "conflict_hints": [],
+                        "topo_layer": 0,
+                        "status": "pending",
+                    }
+                ],
+            },
+            ensure_ascii=True,
+            separators=(",", ":"),
+        ),
+        encoding="utf-8",
+    )
 
     if mismatched_hashes:
         spec_sha = "0" * 64
@@ -181,6 +225,10 @@ def _write_data_model_feature(
     (feature_dir / "plan.md").write_text(
         f"""# Planning Control Plane: Demo
 
+## Summary
+
+Demo planning control plane.
+
 ## Shared Context Snapshot
 
 - Feature: Demo
@@ -192,6 +240,21 @@ def _write_data_model_feature(
 | research | `/sdd.plan.research` | `plan.md`, `spec.md` | `research.md` | {research_status} | a | b | [none] |
 | test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md` | `test-matrix.md` | {test_matrix_status} | a | b | [none] |
 | data-model | `/sdd.plan.data-model` | `plan.md`, `spec.md`, `test-matrix.md` | `data-model.md` | {data_model_status} | a | b | [none] |
+
+## Binding Projection Index
+
+| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | UIF Path Ref(s) | UDD Ref(s) | Test Scope |
+|--------------|-------|--------|-------|------------------|-------|--------|--------------|-----------------|------------|------------|
+
+## Artifact Status
+
+| BindingRowID | Unit Type | Target Path | Status | Source Fingerprint | Output Fingerprint | Blocker |
+|--------------|-----------|-------------|--------|--------------------|--------------------|---------|
+
+## Handoff Protocol
+
+- `/sdd.plan` initializes this file.
+- `/sdd.plan.data-model` advances the data-model row.
 """,
         encoding="utf-8",
     )
@@ -227,7 +290,9 @@ def test_task_preflight_helper_emits_contract_unit_inventory(tmp_path):
     payload = json.loads(result.stdout)
 
     assert payload["schema_version"] == "1.4"
+    assert payload["required_sections"]["summary"] is True
     assert payload["required_sections"]["stage_queue"] is True
+    assert payload["required_sections"]["handoff_protocol"] is True
     assert payload["incomplete_stage_ids"] == []
     assert payload["stage_queue_status_summary"]["done"] == 3
     assert payload["binding_row_count"] == 1
@@ -248,9 +313,12 @@ def test_task_preflight_helper_emits_contract_unit_inventory(tmp_path):
     assert unit["contract"]["exists"] is True
     assert unit["contract"]["full_field_dictionary_present"] is True
     assert unit["contract"]["field_dictionary_tier_present"] is True
-    assert unit["contract"]["seed_tuple_boundary_section_present"] is True
-    assert unit["contract"]["runtime_seed_boundary_drift_check_present"] is True
-    assert unit["contract"]["runtime_field_dictionary_tiering_check_present"] is True
+    assert unit["contract"]["test_projection_section_present"] is True
+    assert unit["contract"]["closure_check_section_present"] is True
+    assert unit["contract"]["interface_definition_closure_check_present"] is True
+    assert unit["contract"]["uml_closure_check_present"] is True
+    assert unit["contract"]["sequence_closure_check_present"] is True
+    assert unit["contract"]["test_closure_check_present"] is True
     assert unit["contract"]["has_unresolved_field_gaps"] is False
     assert "interface_detail" not in unit
 
@@ -496,7 +564,7 @@ def test_task_preflight_helper_ignores_data_model_blocker_when_stage_is_done(tmp
     assert payload["execution_readiness"]["ready_for_task_generation"] is True
 
 
-def test_task_preflight_helper_warns_missing_full_field_dictionary(tmp_path):
+def test_task_preflight_helper_blocks_missing_full_field_dictionary(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
     _write_minimal_feature(feature_dir, contract_text="# Contract\n")
 
@@ -525,9 +593,9 @@ def test_task_preflight_helper_warns_missing_full_field_dictionary(tmp_path):
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert payload["ready_unit_inventory"] == []
-    assert payload["execution_readiness"]["ready_for_task_generation"] is True
-    warning_codes = [entry["code"] for entry in payload["execution_readiness"]["warnings"]]
-    assert "full_field_dictionary_missing" in warning_codes
+    assert payload["execution_readiness"]["ready_for_task_generation"] is False
+    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
+    assert "full_field_dictionary_missing" in error_codes
 
 
 def test_task_preflight_helper_warns_missing_contract_governance_markers(tmp_path):
@@ -572,9 +640,9 @@ def test_task_preflight_helper_warns_missing_contract_governance_markers(tmp_pat
     assert payload["execution_readiness"]["ready_for_task_generation"] is True
     warning_codes = [entry["code"] for entry in payload["execution_readiness"]["warnings"]]
     assert "field_dictionary_tier_missing" in warning_codes
-    assert "seed_tuple_boundary_section_missing" in warning_codes
-    assert "runtime_seed_boundary_drift_check_missing" in warning_codes
-    assert "runtime_field_dictionary_tiering_check_missing" in warning_codes
+    assert "test_projection_section_missing" in warning_codes
+    assert "closure_check_section_missing" in warning_codes
+    assert "closure_check_rows_missing" in warning_codes
 
 
 def test_task_preflight_helper_warns_unresolved_contract_field_gaps(tmp_path):
@@ -684,12 +752,22 @@ def test_task_preflight_helper_blocks_unresolved_contract_placeholder_names(tmp_
 |-------|-------------|-----------------|-----------|-------------------|---------|-----------------|-----------|------------------|--------------------|---------------|
 | taskId | CreateTaskResponse | operation-critical | output | required | none | uuid | no | yes | yes | `src/app/contracts.py::CreateTaskResponse.taskId` |
 
-## Runtime Correctness Check
+## Test Projection
 
-| Runtime Check Item | Required Evidence | Anchor | Status |
-|--------------------|-------------------|--------|--------|
-| Seed-vs-repo boundary drift classification | Seed tuple drift row exists and is explicit | BR-001 tuple | ok |
-| Field-dictionary tiering | Dictionary tier column exists and operation-critical rows lead | Field dictionary rows | ok |
+### Test Projection Slice
+
+| IF Scope | Operation ID | Test Scope | TM ID | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
+|----------|--------------|------------|-------|----------|------------------|--------------------------|----------------------------|
+| IF-001 | createTask | Integration | TM-001 | TC-001, TC-002 | task create success | task create failure | pytest -k createTask |
+
+## Closure Check
+
+| Check Item | Required Evidence | Status |
+|------------|-------------------|--------|
+| Interface-definition closure | request/response surface + full field dictionary + shared semantic reuse are all present | ok |
+| UML closure | class diagram and two-party package relations both present and consistent with sequence | ok |
+| Sequence closure | success/failure paths include mandatory second-party, third-party, and middleware calls | ok |
+| Test closure | `TM/TC`, pass/failure anchors, and command/assertion signal are present | ok |
 """,
     )
 
@@ -797,6 +875,47 @@ def test_task_preflight_helper_warns_missing_binding_contract_packet(tmp_path):
     assert payload["execution_readiness"]["ready_for_task_generation"] is True
     warning_codes = [entry["code"] for entry in payload["execution_readiness"]["warnings"]]
     assert "missing_binding_contract_packet" in warning_codes
+
+
+def test_task_preflight_helper_blocks_binding_projection_packet_drift(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(feature_dir)
+
+    plan_path = feature_dir / "plan.md"
+    plan_text = plan_path.read_text(encoding="utf-8")
+    plan_path.write_text(
+        plan_text.replace("| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | TM-001 | TC-001, TC-002 | createTask | [UIF-Path-001] | [UDD-001] | Integration |",
+                          "| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | TM-001 | TC-001, TC-002 | createTaskV2 | [UIF-Path-001] | [UDD-001] | Integration |"),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "task_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+            "--test-matrix",
+            str(feature_dir / "test-matrix.md"),
+            "--contracts-dir",
+            str(feature_dir / "contracts"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["execution_readiness"]["ready_for_task_generation"] is False
+    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
+    assert "binding_projection_packet_drift" in error_codes
 
 
 def test_task_preflight_helper_ignores_anchor_strategy_evidence_in_projection_readiness(tmp_path):
@@ -1227,6 +1346,9 @@ def test_bash_check_prerequisites_can_embed_implement_bootstrap(tmp_path):
     assert "IMPLEMENT_BOOTSTRAP" in payload
     assert payload["IMPLEMENT_BOOTSTRAP"]["schema_version"] == "1.0"
     assert payload["IMPLEMENT_BOOTSTRAP"]["analyze_readiness"]["ready_for_implementation"] is True
+    assert "TASKS_MANIFEST_BOOTSTRAP" in payload
+    assert payload["TASKS_MANIFEST_BOOTSTRAP"]["schema_version"] == "1.0"
+    assert payload["TASKS_MANIFEST_BOOTSTRAP"]["validation"]["valid"] is True
 
 
 def test_data_model_preflight_helper_reports_ready_when_research_done_and_data_model_pending(tmp_path):
@@ -1262,8 +1384,12 @@ def test_data_model_preflight_helper_reports_ready_when_research_done_and_data_m
         "transition_pseudocode",
         "state_diagram",
     ]
+    assert payload["required_sections"]["summary"] is True
     assert payload["required_sections"]["shared_context_snapshot"] is True
     assert payload["required_sections"]["stage_queue"] is True
+    assert payload["required_sections"]["binding_projection_index"] is True
+    assert payload["required_sections"]["artifact_status"] is True
+    assert payload["required_sections"]["handoff_protocol"] is True
     assert payload["research_stage"]["status"] == "done"
     assert payload["test_matrix_stage"]["status"] == "done"
     assert payload["selected_stage"]["stage_id"] == "data-model"
@@ -1483,19 +1609,24 @@ def test_implement_command_prefers_implement_preflight_bootstrap():
     assert "Treat `IMPLEMENT_BOOTSTRAP.analyze_readiness` as the primary analyze hard gate." in implement_command
     assert "bounded fallback validation" in implement_command
     assert "`IMPLEMENT_BOOTSTRAP.analyze_readiness.errors` contains blockers" in implement_command
-    assert "parse `feature_dir`, `available_docs`, `local_execution_protocol`, and `implement_bootstrap`" in implement_command.lower()
+    assert "parse `feature_dir`, `available_docs`, `local_execution_protocol`, `implement_bootstrap`, and `tasks_manifest_bootstrap`" in implement_command.lower()
     assert "LOCAL_EXECUTION_PROTOCOL.repo_search.list_files_cmd" in implement_command
     assert "no local CLI trial-and-error outside `LOCAL_EXECUTION_PROTOCOL`" in implement_command
 
     assert "--implement-preflight" in bash_script
     assert "LOCAL_EXECUTION_PROTOCOL" in bash_script
     assert "internal-implement-bootstrap" in bash_script
+    assert "internal-tasks-manifest-bootstrap" in bash_script
     assert "IMPLEMENT_BOOTSTRAP" in bash_script
+    assert "TASKS_MANIFEST_BOOTSTRAP" in bash_script
     assert "-ImplementPreflight" in powershell_script
     assert "LOCAL_EXECUTION_PROTOCOL" in powershell_script
     assert "internal-implement-bootstrap" in powershell_script
+    assert "internal-tasks-manifest-bootstrap" in powershell_script
     assert "IMPLEMENT_BOOTSTRAP" in powershell_script
+    assert "TASKS_MANIFEST_BOOTSTRAP" in powershell_script
     assert '$payload.IMPLEMENT_BOOTSTRAP = $null' in powershell_script
+    assert '$payload.TASKS_MANIFEST_BOOTSTRAP = $null' in powershell_script
 
 
 def test_data_model_command_prefers_data_model_preflight_bootstrap():

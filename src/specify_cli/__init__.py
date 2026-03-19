@@ -13,12 +13,12 @@
 Specify CLI - Setup tool for Specify projects
 
 Usage:
-    uvx specify-cli.py init <project-name>
-    uvx specify-cli.py init .
-    uvx specify-cli.py init --here
+    uvx --from git+https://github.com/bigsmartben/sdd.git specify init <project-name>
+    uvx --from git+https://github.com/bigsmartben/sdd.git specify init .
+    uvx --from git+https://github.com/bigsmartben/sdd.git specify init --here
 
 Or install globally:
-    uv tool install --from specify-cli.py specify-cli
+    uv tool install specify-cli --from git+https://github.com/bigsmartben/sdd.git
     specify init <project-name>
     specify init .
     specify init --here
@@ -57,6 +57,7 @@ from datetime import datetime, timezone
 from .runtime_data_model_bootstrap import build_data_model_bootstrap_payload
 from .runtime_implement_bootstrap import build_implement_bootstrap_payload
 from .runtime_task_bootstrap import build_task_bootstrap_payload
+from .runtime_tasks_manifest_bootstrap import build_tasks_manifest_bootstrap_payload
 from .runtime_tools import runtime_tools_manifest
 
 ssl_context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -1997,6 +1998,23 @@ def internal_implement_bootstrap(
         plan_path=_normalized_path(plan),
         tasks_path=_normalized_path(tasks),
         analyze_history_path=_normalized_path(analyze_history),
+    )
+    _emit_internal_payload(payload)
+
+
+@app.command("internal-tasks-manifest-bootstrap", hidden=True)
+def internal_tasks_manifest_bootstrap(
+    feature_dir: str = typer.Option(..., "--feature-dir"),
+    plan: str = typer.Option(..., "--plan"),
+    tasks: str = typer.Option(..., "--tasks"),
+    tasks_manifest: str = typer.Option(..., "--tasks-manifest"),
+) -> None:
+    """Emit the packaged tasks.manifest bootstrap payload."""
+    payload = build_tasks_manifest_bootstrap_payload(
+        feature_dir=_normalized_path(feature_dir),
+        plan_path=_normalized_path(plan),
+        tasks_path=_normalized_path(tasks),
+        tasks_manifest_path=_normalized_path(tasks_manifest),
     )
     _emit_internal_payload(payload)
 

@@ -71,6 +71,13 @@ def load_binding_contract_packets(test_matrix_path: Path) -> dict[str, dict[str,
 def inspect_contract_artifact(contract_path_abs: str) -> dict[str, Any]:
     inspection = {
         "full_field_dictionary_present": False,
+        "field_dictionary_tier_present": False,
+        "test_projection_section_present": False,
+        "closure_check_section_present": False,
+        "interface_definition_closure_check_present": False,
+        "uml_closure_check_present": False,
+        "sequence_closure_check_present": False,
+        "test_closure_check_present": False,
         "has_unresolved_field_gaps": False,
         "placeholder_names_present": False,
         "placeholder_names": [],
@@ -80,6 +87,17 @@ def inspect_contract_artifact(contract_path_abs: str) -> dict[str, Any]:
 
     content = Path(contract_path_abs).read_text(encoding="utf-8")
     inspection["full_field_dictionary_present"] = "## Full Field Dictionary (Operation-scoped)" in content
+    inspection["field_dictionary_tier_present"] = re.search(
+        r"(?i)^\|\s*Field\s*\|\s*Owner\s+Class\s*\|\s*Dictionary\s+Tier\s*\|",
+        content,
+        flags=re.MULTILINE,
+    ) is not None
+    inspection["test_projection_section_present"] = "## Test Projection" in content
+    inspection["closure_check_section_present"] = "## Closure Check" in content
+    inspection["interface_definition_closure_check_present"] = "| Interface-definition closure |" in content
+    inspection["uml_closure_check_present"] = "| UML closure |" in content
+    inspection["sequence_closure_check_present"] = "| Sequence closure |" in content
+    inspection["test_closure_check_present"] = "| Test closure |" in content
     inspection["has_unresolved_field_gaps"] = "TODO(REPO_ANCHOR)" in content or re.search(
         r"(?i)\|\s*gap\s*\|",
         content,
@@ -208,6 +226,15 @@ def build_unit_inventory(
                 "target_path_abs": contract_target_path_abs,
                 "exists": contract_exists,
                 "full_field_dictionary_present": contract_inspection["full_field_dictionary_present"],
+                "field_dictionary_tier_present": contract_inspection["field_dictionary_tier_present"],
+                "test_projection_section_present": contract_inspection["test_projection_section_present"],
+                "closure_check_section_present": contract_inspection["closure_check_section_present"],
+                "interface_definition_closure_check_present": contract_inspection[
+                    "interface_definition_closure_check_present"
+                ],
+                "uml_closure_check_present": contract_inspection["uml_closure_check_present"],
+                "sequence_closure_check_present": contract_inspection["sequence_closure_check_present"],
+                "test_closure_check_present": contract_inspection["test_closure_check_present"],
                 "has_unresolved_field_gaps": contract_inspection["has_unresolved_field_gaps"],
                 "placeholder_names_present": contract_inspection["placeholder_names_present"],
                 "placeholder_names": contract_inspection["placeholder_names"],
@@ -223,6 +250,13 @@ def build_unit_inventory(
             and unit["contract"]["status"] == "done"
             and contract_exists
             and unit["contract"]["full_field_dictionary_present"]
+            and unit["contract"]["field_dictionary_tier_present"]
+            and unit["contract"]["test_projection_section_present"]
+            and unit["contract"]["closure_check_section_present"]
+            and unit["contract"]["interface_definition_closure_check_present"]
+            and unit["contract"]["uml_closure_check_present"]
+            and unit["contract"]["sequence_closure_check_present"]
+            and unit["contract"]["test_closure_check_present"]
             and not unit["contract"]["has_unresolved_field_gaps"]
             and not unit["contract"]["placeholder_names_present"]
         ):
@@ -439,6 +473,96 @@ def build_task_execution_readiness(
                 "code": "full_field_dictionary_missing",
                 "message": "Some done contract rows are missing `Full Field Dictionary (Operation-scoped)`.",
                 "details": {"binding_row_ids": missing_field_dictionary_rows},
+            }
+        )
+
+    missing_field_dictionary_tier_rows = sorted(
+        [
+            unit["binding_row_id"]
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and not unit["contract"]["field_dictionary_tier_present"]
+        ]
+    )
+    if missing_field_dictionary_tier_rows:
+        warnings.append(
+            {
+                "code": "field_dictionary_tier_missing",
+                "message": "Some done contract rows are missing `Dictionary Tier` in `Full Field Dictionary (Operation-scoped)`.",
+                "details": {"binding_row_ids": missing_field_dictionary_tier_rows},
+            }
+        )
+
+    missing_test_projection_section_rows = sorted(
+        [
+            unit["binding_row_id"]
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and not unit["contract"]["test_projection_section_present"]
+        ]
+    )
+    if missing_test_projection_section_rows:
+        warnings.append(
+            {
+                "code": "test_projection_section_missing",
+                "message": "Some done contract rows are missing `Test Projection`.",
+                "details": {"binding_row_ids": missing_test_projection_section_rows},
+            }
+        )
+
+    missing_closure_check_section_rows = sorted(
+        [
+            unit["binding_row_id"]
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and not unit["contract"]["closure_check_section_present"]
+        ]
+    )
+    if missing_closure_check_section_rows:
+        warnings.append(
+            {
+                "code": "closure_check_section_missing",
+                "message": "Some done contract rows are missing `Closure Check`.",
+                "details": {"binding_row_ids": missing_closure_check_section_rows},
+            }
+        )
+
+    missing_closure_check_rows = sorted(
+        [
+            {
+                "binding_row_id": unit["binding_row_id"],
+                "checks": [
+                    check_name
+                    for check_name, check_present in (
+                        ("interface_definition_closure", unit["contract"]["interface_definition_closure_check_present"]),
+                        ("uml_closure", unit["contract"]["uml_closure_check_present"]),
+                        ("sequence_closure", unit["contract"]["sequence_closure_check_present"]),
+                        ("test_closure", unit["contract"]["test_closure_check_present"]),
+                    )
+                    if not check_present
+                ],
+            }
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and (
+                not unit["contract"]["interface_definition_closure_check_present"]
+                or not unit["contract"]["uml_closure_check_present"]
+                or not unit["contract"]["sequence_closure_check_present"]
+                or not unit["contract"]["test_closure_check_present"]
+            )
+        ],
+        key=lambda item: item["binding_row_id"],
+    )
+    if missing_closure_check_rows:
+        warnings.append(
+            {
+                "code": "closure_check_rows_missing",
+                "message": "Some done contract rows are missing one or more required `Closure Check` rows.",
+                "details": {"rows": missing_closure_check_rows},
             }
         )
 

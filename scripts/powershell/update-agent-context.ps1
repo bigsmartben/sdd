@@ -1,12 +1,12 @@
 #!/usr/bin/env pwsh
 <#!
 .SYNOPSIS
-Update agent context files with information from plan.md (PowerShell version)
+Update agent context files with information from stable project metadata (PowerShell version)
 
 .DESCRIPTION
 Mirrors the behavior of scripts/bash/update-agent-context.sh:
  1. Environment Validation
- 2. Plan Data Extraction
+ 2. Project Metadata Extraction
  3. Agent File Management (create from template or update existing)
  4. Content Generation (technology stack, recent changes, timestamp)
  5. Multi-Agent Support (claude, gemini, copilot, cursor-agent, cline, qwen, opencode, codex, windsurf, kilocode, auggie, roo, codebuddy, amp, shai, tabnine, kiro-cli, agy, bob, vibe, qodercli, kimi, generic)
@@ -40,8 +40,10 @@ $envData = Get-FeaturePathsEnv
 $REPO_ROOT     = $envData.REPO_ROOT
 $CURRENT_BRANCH = $envData.CURRENT_BRANCH
 $HAS_GIT       = $envData.HAS_GIT
+$FEATURE_SPEC  = $envData.FEATURE_SPEC
 $IMPL_PLAN     = $envData.IMPL_PLAN
 $NEW_PLAN = $IMPL_PLAN
+$NEW_SPEC = $FEATURE_SPEC
 
 # Agent file paths
 $CLAUDE_FILE   = Join-Path $REPO_ROOT 'CLAUDE.md'
@@ -67,6 +69,7 @@ $VIBE_FILE     = Join-Path $REPO_ROOT '.vibe/agents/specify-agents.md'
 $KIMI_FILE     = Join-Path $REPO_ROOT 'KIMI.md'
 
 $TEMPLATE_FILE = Join-Path $REPO_ROOT '.specify/templates/agent-file-template.md'
+$CONFIG_FILE = Join-Path $REPO_ROOT '.specify/config.yaml'
 
 # Parsed plan data placeholders
 $script:NEW_LANG = ''
@@ -125,17 +128,16 @@ function Validate-Environment {
     }
 }
 
-function Extract-PlanField {
+function Extract-ConfigField {
     param(
         [Parameter(Mandatory=$true)]
         [string]$FieldPattern,
         [Parameter(Mandatory=$true)]
-        [string]$PlanFile
+        [string]$ConfigFile
     )
-    if (-not (Test-Path $PlanFile)) { return '' }
-    # Lines like **Language/Version**: Python 3.12
-    $regex = "^\*\*$([Regex]::Escape($FieldPattern))\*\*: (.+)$"
-    Get-Content -LiteralPath $PlanFile -Encoding utf8 | ForEach-Object {
+    if (-not (Test-Path $ConfigFile)) { return '' }
+    $regex = "^\s*$([Regex]::Escape($FieldPattern))\s*:\s*(.+)$"
+    Get-Content -LiteralPath $ConfigFile -Encoding utf8 | ForEach-Object {
         if ($_ -match $regex) { 
             $val = $Matches[1].Trim()
             if ($val -notin @('NEEDS CLARIFICATION','N/A')) { return $val }
@@ -143,19 +145,48 @@ function Extract-PlanField {
     } | Select-Object -First 1
 }
 
-function Parse-PlanData {
+function Extract-SpecHintField {
     param(
         [Parameter(Mandatory=$true)]
-        [string]$PlanFile
+        [string]$FieldPattern,
+        [Parameter(Mandatory=$true)]
+        [string]$SpecFile
     )
-    if (-not (Test-Path $PlanFile)) { Write-Err "Plan file not found: $PlanFile"; return $false }
-    Write-Info "Parsing plan data from $PlanFile"
-    $script:NEW_LANG        = Extract-PlanField -FieldPattern 'Language/Version' -PlanFile $PlanFile
-    $script:NEW_FRAMEWORK   = Extract-PlanField -FieldPattern 'Primary Dependencies' -PlanFile $PlanFile
-    $script:NEW_DB          = Extract-PlanField -FieldPattern 'Storage' -PlanFile $PlanFile
-    $script:NEW_PROJECT_TYPE = Extract-PlanField -FieldPattern 'Project Type' -PlanFile $PlanFile
+    if (-not (Test-Path $SpecFile)) { return '' }
+    $regex = "^\s*[-*]?\s*$([Regex]::Escape($FieldPattern))\s*:\s*(.+)$"
+    Get-Content -LiteralPath $SpecFile -Encoding utf8 | ForEach-Object {
+        if ($_ -match $regex) {
+            $val = $Matches[1].Trim()
+            if ($val -notin @('NEEDS CLARIFICATION','N/A')) { return $val }
+        }
+    } | Select-Object -First 1
+}
 
-    if ($NEW_LANG) { Write-Info "Found language: $NEW_LANG" } else { Write-WarningMsg 'No language information found in plan' }
+function Parse-ProjectMetadata {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$SpecFile,
+        [Parameter(Mandatory=$true)]
+        [string]$ConfigFile
+    )
+    if (Test-Path $ConfigFile) {
+        Write-Info "Parsing project metadata from $ConfigFile"
+        $script:NEW_LANG        = Extract-ConfigField -FieldPattern 'language' -ConfigFile $ConfigFile
+        $script:NEW_FRAMEWORK   = Extract-ConfigField -FieldPattern 'framework' -ConfigFile $ConfigFile
+        $script:NEW_DB          = Extract-ConfigField -FieldPattern 'database' -ConfigFile $ConfigFile
+        $script:NEW_PROJECT_TYPE = Extract-ConfigField -FieldPattern 'project_type' -ConfigFile $ConfigFile
+    } else {
+        Write-WarningMsg "Project metadata file not found at $ConfigFile; falling back to spec hints"
+    }
+
+    if (Test-Path $SpecFile) {
+        if (-not $NEW_LANG) { $script:NEW_LANG = Extract-SpecHintField -FieldPattern 'Language' -SpecFile $SpecFile }
+        if (-not $NEW_FRAMEWORK) { $script:NEW_FRAMEWORK = Extract-SpecHintField -FieldPattern 'Framework' -SpecFile $SpecFile }
+        if (-not $NEW_DB) { $script:NEW_DB = Extract-SpecHintField -FieldPattern 'Storage' -SpecFile $SpecFile }
+        if (-not $NEW_PROJECT_TYPE) { $script:NEW_PROJECT_TYPE = Extract-SpecHintField -FieldPattern 'Project Type' -SpecFile $SpecFile }
+    }
+
+    if ($NEW_LANG) { Write-Info "Found language: $NEW_LANG" } else { Write-WarningMsg 'No language information found in project metadata' }
     if ($NEW_FRAMEWORK) { Write-Info "Found framework: $NEW_FRAMEWORK" }
     if ($NEW_DB -and $NEW_DB -ne 'N/A') { Write-Info "Found database: $NEW_DB" }
     if ($NEW_PROJECT_TYPE) { Write-Info "Found project type: $NEW_PROJECT_TYPE" }
@@ -458,7 +489,7 @@ function Print-Summary {
 function Main {
     Validate-Environment
     Write-Info "=== Updating agent context files for feature $CURRENT_BRANCH ==="
-    if (-not (Parse-PlanData -PlanFile $NEW_PLAN)) { Write-Err 'Failed to parse plan data'; exit 1 }
+    if (-not (Parse-ProjectMetadata -SpecFile $NEW_SPEC -ConfigFile $CONFIG_FILE)) { Write-Err 'Failed to parse project metadata'; exit 1 }
     $success = $true
     if ($AgentType) {
         Write-Info "Updating specific agent: $AgentType"

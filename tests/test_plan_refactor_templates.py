@@ -213,6 +213,8 @@ def test_tasks_command_uses_contract_as_realization_source():
     assert "interface-details/" not in content
     assert "Terminology note (compatibility, non-normative)" not in content
     assert "detail doc defines a narrower repo-backed internal handoff entry" not in content
+    assert "Any selected `contract` row is missing `Full Field Dictionary (Operation-scoped)`" in content
+    assert "binding-packet projection stability" in content
 
 
 def test_tasks_template_is_contract_only():
@@ -270,6 +272,28 @@ def test_docs_describe_contract_only_planning_queue():
     assert "/sdd.plan.interface-detail" not in spec_driven
 
 
+def test_docs_follow_canonical_planning_queue_order():
+    readme = read("README.md")
+    spec_driven = read("spec-driven.md")
+    spec_template = read("templates/spec-template.md")
+
+    assert readme.index("/sdd.plan.research") < readme.index("/sdd.plan.test-matrix") < readme.index("/sdd.plan.data-model")
+    assert spec_driven.index("/sdd.plan.research") < spec_driven.index("/sdd.plan.test-matrix") < spec_driven.index("/sdd.plan.data-model")
+    assert spec_template.index("`research.md` via `/sdd.plan.research`") < spec_template.index("`test-matrix.md` via `/sdd.plan.test-matrix`") < spec_template.index("`data-model.md` via `/sdd.plan.data-model`")
+
+
+def test_readme_positions_analyze_as_main_flow_default():
+    readme = read("README.md")
+    assert "| `/sdd.analyze`   | Default pre-implementation unified audit entrypoint" in readme
+    optional_section = readme.split("#### Optional Commands", 1)[1].split("### Environment Variables", 1)[0]
+    assert "/sdd.analyze" not in optional_section
+
+
+def test_readme_walkthrough_orders_tasks_before_analyze():
+    readme = read("README.md")
+    assert readme.index("### **STEP 6:** Generate task breakdown with `/sdd.tasks`") < readme.index("### **STEP 7:** Audit model and optional checklist (`/sdd.analyze`, `/sdd.checklist`)")
+
+
 def test_cli_skill_descriptions_and_next_steps_drop_interface_detail():
     content = read("src/specify_cli/__init__.py")
     assert '"plan.contract": "Generate one queued full-field contract artifact' in content
@@ -309,6 +333,24 @@ def test_lint_rules_for_unified_contract_runtime_rows():
     assert "PLN-RA-013" in content
     assert "\tcontracts\tcontracts/*\t" in content
     assert "Interface details are missing" not in content
+
+
+def test_plan_required_sections_are_consistent_across_lint_and_preflights():
+    rules = read("rules/planning-lint-rules.tsv")
+    task_preflight = read("scripts/task_preflight.py")
+    data_model_preflight = read("scripts/data_model_preflight.py")
+    required_sections = [
+        "Summary",
+        "Shared Context Snapshot",
+        "Stage Queue",
+        "Binding Projection Index",
+        "Artifact Status",
+        "Handoff Protocol",
+    ]
+    for section in required_sections:
+        assert section in rules
+        assert section in task_preflight
+        assert section in data_model_preflight
 
 
 def test_checklist_command_uses_branch_inferred_plan_input_with_hard_gate():

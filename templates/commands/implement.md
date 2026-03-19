@@ -31,7 +31,7 @@ Comprehensive audit ownership remains with `/sdd.analyze`.
 
 ## Read Only
 
-1. Run `{SCRIPT}` once and parse `FEATURE_DIR`, `AVAILABLE_DOCS`, `LOCAL_EXECUTION_PROTOCOL`, and `IMPLEMENT_BOOTSTRAP`.
+1. Run `{SCRIPT}` once and parse `FEATURE_DIR`, `AVAILABLE_DOCS`, `LOCAL_EXECUTION_PROTOCOL`, `IMPLEMENT_BOOTSTRAP`, and `TASKS_MANIFEST_BOOTSTRAP`.
 2. Treat `IMPLEMENT_BOOTSTRAP.analyze_readiness` as the primary analyze hard gate.
 3. If `IMPLEMENT_BOOTSTRAP` is missing, malformed, or contradictory, perform one bounded fallback validation from latest `analyze-history.md` run block and current `spec.md` / `plan.md` / `tasks.md` SHA-256 values.
 4. Parse optional runtime mode:
@@ -40,6 +40,7 @@ Comprehensive audit ownership remains with `/sdd.analyze`.
 5. Parse optional explicit waiver: `waive-analyze-gate`.
 6. Runtime source preference:
    - use `tasks.manifest.json` when schema validation passes
+   - prefer `TASKS_MANIFEST_BOOTSTRAP.validation` as the packaged manifest gate when available
    - fallback to `tasks.md` parsing when manifest is missing or invalid
 7. Read `plan.md` only as control-plane context (`Shared Context Snapshot`, `Stage Queue`, `Artifact Status`, `Binding Projection Index`) and resolved artifact paths; do not treat it as a semantic source for architecture/contract/model requirements.
 8. Read support artifacts only when required by active tasks (`contracts/`, `data-model.md`, `test-matrix.md`, `research.md`).

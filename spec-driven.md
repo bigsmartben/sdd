@@ -91,7 +91,7 @@ Once a feature specification exists, `/sdd.plan` initializes the planning contro
 1. **Specification Analysis**: Reads and understands the feature requirements, user stories, and acceptance criteria from the current feature branch `spec.md`
 2. **Constitutional Compliance**: Ensures alignment with project constitution and architectural principles
 3. **Control-Plane Initialization**: Writes `plan.md` with `Shared Context Snapshot`, `Stage Queue`, `Binding Projection Index`, and `Artifact Status`
-4. **Queue-Driven Planning**: The child commands `/sdd.plan.research`, `/sdd.plan.data-model`, `/sdd.plan.test-matrix`, and repeated `/sdd.plan.contract` generate stage artifacts one queue unit at a time
+4. **Queue-Driven Planning**: The child commands `/sdd.plan.research`, `/sdd.plan.test-matrix`, `/sdd.plan.data-model`, and repeated `/sdd.plan.contract` generate stage artifacts one queue unit at a time
 
 ### The `/sdd.tasks` Command
 
@@ -140,8 +140,8 @@ Total: ~12 hours of documentation work
 
 # Step 2b: Execute the planning queue in order
 /sdd.plan.research
-/sdd.plan.data-model
 /sdd.plan.test-matrix
+/sdd.plan.data-model
 /sdd.plan.contract
 
 # Step 3: Generate executable tasks (5 minutes)
@@ -150,8 +150,8 @@ Total: ~12 hours of documentation work
 # This workflow creates:
 # - specs/20250708-chat-system/plan.md
 # - specs/20250708-chat-system/research.md (via /sdd.plan.research)
-# - specs/20250708-chat-system/data-model.md (via /sdd.plan.data-model)
 # - specs/20250708-chat-system/test-matrix.md (via /sdd.plan.test-matrix)
+# - specs/20250708-chat-system/data-model.md (via /sdd.plan.data-model)
 # - specs/20250708-chat-system/contracts/ (via repeated /sdd.plan.contract)
 # - specs/20250708-chat-system/tasks.md (Task list derived from the plan)
 # - specs/20250708-chat-system/ui.html (only when /sdd.specify.ui-html is explicitly invoked)

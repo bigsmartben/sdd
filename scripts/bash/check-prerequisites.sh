@@ -212,13 +212,14 @@ check_feature_branch "$CURRENT_BRANCH" "$HAS_GIT" || exit 1
 if $PATHS_ONLY; then
     if $JSON_MODE; then
         # Minimal JSON paths payload (no validation performed)
-        printf '{"REPO_ROOT":%s,"BRANCH":%s,"FEATURE_DIR":%s,"FEATURE_SPEC":%s,"IMPL_PLAN":%s,"TASKS":%s}\n' \
+        printf '{"REPO_ROOT":%s,"BRANCH":%s,"FEATURE_DIR":%s,"FEATURE_SPEC":%s,"IMPL_PLAN":%s,"TASKS":%s,"TASKS_MANIFEST":%s}\n' \
             "$(json_string "$REPO_ROOT")" \
             "$(json_string "$CURRENT_BRANCH")" \
             "$(json_string "$FEATURE_DIR")" \
             "$(json_string "$FEATURE_SPEC")" \
             "$(json_string "$IMPL_PLAN")" \
-            "$(json_string "$TASKS")"
+            "$(json_string "$TASKS")" \
+            "$(json_string "$TASKS_MANIFEST")"
     else
         echo "REPO_ROOT: $REPO_ROOT"
         echo "BRANCH: $CURRENT_BRANCH"
@@ -226,6 +227,7 @@ if $PATHS_ONLY; then
         echo "FEATURE_SPEC: $FEATURE_SPEC"
         echo "IMPL_PLAN: $IMPL_PLAN"
         echo "TASKS: $TASKS"
+        echo "TASKS_MANIFEST: $TASKS_MANIFEST"
     fi
     exit 0
 fi
@@ -331,6 +333,7 @@ if $JSON_MODE; then
 
     if $IMPLEMENT_PREFLIGHT; then
         implement_bootstrap="null"
+        tasks_manifest_bootstrap="null"
         if [[ -n "$SPECIFY_CMD" ]]; then
             if implement_bootstrap="$("$SPECIFY_CMD" internal-implement-bootstrap \
                 --feature-dir "$FEATURE_DIR" \
@@ -342,8 +345,19 @@ if $JSON_MODE; then
             else
                 implement_bootstrap="null"
             fi
+
+            if tasks_manifest_bootstrap="$("$SPECIFY_CMD" internal-tasks-manifest-bootstrap \
+                --feature-dir "$FEATURE_DIR" \
+                --plan "$IMPL_PLAN" \
+                --tasks "$TASKS" \
+                --tasks-manifest "$TASKS_MANIFEST")"; then
+                :
+            else
+                tasks_manifest_bootstrap="null"
+            fi
         fi
         json_payload="${json_payload},\"IMPLEMENT_BOOTSTRAP\":${implement_bootstrap}"
+        json_payload="${json_payload},\"TASKS_MANIFEST_BOOTSTRAP\":${tasks_manifest_bootstrap}"
     fi
 
     if $TASK_PREFLIGHT; then
