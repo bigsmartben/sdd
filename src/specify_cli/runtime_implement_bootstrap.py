@@ -13,8 +13,6 @@ from specify_cli.runtime_gate_protocol import build_repository_first_gate_protoc
 IMPLEMENT_BOOTSTRAP_SCHEMA_VERSION = "1.0"
 RUN_BEGIN = "<!-- SDD_ANALYZE_RUN_BEGIN -->"
 RUN_END = "<!-- SDD_ANALYZE_RUN_END -->"
-IMPLEMENT_HISTORY_BEGIN = "<!-- SDD_IMPLEMENT_RUN_BEGIN -->"
-IMPLEMENT_HISTORY_END = "<!-- SDD_IMPLEMENT_RUN_END -->"
 IMPLEMENT_BASELINE_CODE_TO_CATEGORY = {
     "missing_required_artifacts": "missing",
     "analyze_history_missing": "missing",
@@ -210,35 +208,6 @@ def build_implement_bootstrap_payload(
         source_manifest_fingerprints=source_manifest_fingerprints,
     )
 
-    execution_policy = {
-        "waiver_policy": {
-            "strict_mode_disallow_waive_analyze_gate": True,
-            "adaptive_mode_requires_waive_reason": True,
-        },
-        "runtime_source_policy": {
-            "strict_mode_requires_valid_tasks_manifest": True,
-            "adaptive_mode_allows_tasks_md_fallback": True,
-        },
-        "completion_anchor_policy": {
-            "required_for_completed_tasks": True,
-            "anchor_gate_script": "scripts/implement_anchor_gate.py",
-        },
-        "implement_history_policy": {
-            "required_append_only": True,
-            "run_begin": IMPLEMENT_HISTORY_BEGIN,
-            "run_end": IMPLEMENT_HISTORY_END,
-            "required_markers": [
-                "Run At (UTC):",
-                "Execution Mode:",
-                "Analyze Gate Status:",
-                "Manifest Validation:",
-                "Anchor Gate:",
-                "Completed Task IDs:",
-            ],
-            "history_path": str((feature_dir / "audits" / "implement-history.md").resolve()),
-        },
-    }
-
     return {
         "schema_version": IMPLEMENT_BOOTSTRAP_SCHEMA_VERSION,
         "feature_dir": str(feature_dir),
@@ -250,5 +219,4 @@ def build_implement_bootstrap_payload(
         "latest_run": latest_run,
         "analyze_readiness": analyze_readiness,
         "repository_first_gate_protocol": repository_first_gate_protocol,
-        "execution_policy": execution_policy,
     }
