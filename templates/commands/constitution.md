@@ -64,8 +64,7 @@ Follow this execution flow:
      - avoid turning constitution text into field-level extraction specs
 
 4. Fact-source propagation and redundancy control:
-   - Treat `.specify/memory/constitution.md` as the authoritative project-level rule source.
-   - Treat `.specify/memory/constitution.md` as the authoritative project-level fact source. Any summaries, extracted rule lists, or downstream restatements of constitution content are derived views only and MUST be refreshed when constitution facts change.
+   - Treat `.specify/memory/constitution.md` as the authoritative project-level rule source and fact source. Any summaries, extracted rule lists, or downstream restatements of constitution content are derived views only and MUST be refreshed when constitution facts change.
    - Constitution content MUST stay at long-lived rule/terminology/ownership-boundary level; do not embed mechanical lint catalog details (rule IDs, regex patterns, script flags, payload schemas).
    - Runtime template authority path is `.specify/templates/`; when editing Spec Kit source directly, use the `templates/` mirror for the same files.
    - Review and refresh impacted artifact families only; avoid mechanical full-repo rewrites of unchanged downstream files.
@@ -76,24 +75,23 @@ Follow this execution flow:
      - `/sdd.analyze` validates `new`-anchor evidence and fails when missing
      - `/sdd.tasks` and `/sdd.implement` block execution when active tuples remain unresolved or missing required strategy evidence
    - Required alignment families:
-     - Planning control plane template: Read `.specify/templates/plan-template.md` and ensure any "Constitution Check" or rules align with updated principles.
+      - Planning control plane template: Read `.specify/templates/plan-template.md` and ensure any "Constitution Check" or rules align with updated principles.
+   - Planning-stage templates: Read the planning-stage templates in `.specify/templates/` (`research-template.md`, `data-model-template.md`, `test-matrix-template.md`, and `contract-template.md`) and ensure they reflect the updated principles and stage boundaries.
+   - Feature/task templates: Read `.specify/templates/spec-template.md` for scope/requirements alignment and `.specify/templates/tasks-template.md` for principle-driven task categorization changes (for example observability, versioning, testing discipline).
+   - Repository-first projection templates: Read `.specify/templates/technical-dependency-matrix-template.md` and `.specify/templates/module-invocation-spec-template.md` and keep them aligned with constitution repository-first rules.
+   - Command templates: Read each command file in the active agent command directory (for example `.roo/commands/*.md`, `.claude/commands/*.md`, `.github/agents/*.agent.md`, `.gemini/commands/*.toml`); if `templates/commands/*.md` exists in this repository, review it as well. Verify no outdated references (agent-specific names like CLAUDE only) remain when generic guidance is required.
+   - Runtime guidance docs: Read any runtime guidance docs (for example `README.md`, `docs/quickstart.md`, or agent-specific guidance files if present) and update references to principles changed.
+   - Runtime efficiency protocol:
+     - Resolve impacted families from the change impact map first, then read/update only those families.
+     - If the change is `governance-only`, skip downstream family reads unless an explicit user request asks for broader synchronization.
+     - Do not run directory-wide or repository-wide exploratory scans to "double check" unaffected families.
+     - When a family is skipped, record `unchanged (not impacted)` in the Sync Impact Report.
+     - For command templates, prioritize active agent command files first; inspect mirrors (`templates/commands/*`) only when active-agent files are absent or impacted rules are generic.
+     - Runtime guidance docs (`README.md`, `docs/quickstart.md`, agent docs) are **opt-in by trigger** only:
+       - read/update only when renamed principles/terms or invocation guidance text changed
+       - otherwise skip and mark `unchanged (not impacted)`
 
-- Planning-stage templates: Read the planning-stage templates in `.specify/templates/` (`research-template.md`, `data-model-template.md`, `test-matrix-template.md`, and `contract-template.md`) and ensure they reflect the updated principles and stage boundaries.
-  - Feature/task templates: Read `.specify/templates/spec-template.md` for scope/requirements alignment and `.specify/templates/tasks-template.md` for principle-driven task categorization changes (for example observability, versioning, testing discipline).
-  - Repository-first projection templates: Read `.specify/templates/technical-dependency-matrix-template.md` and `.specify/templates/module-invocation-spec-template.md` and keep them aligned with constitution repository-first rules.
-  - Command templates: Read each command file in the active agent command directory (for example `.roo/commands/*.md`, `.claude/commands/*.md`, `.github/agents/*.agent.md`, `.gemini/commands/*.toml`); if `templates/commands/*.md` exists in this repository, review it as well. Verify no outdated references (agent-specific names like CLAUDE only) remain when generic guidance is required.
-  - Runtime guidance docs: Read any runtime guidance docs (for example `README.md`, `docs/quickstart.md`, or agent-specific guidance files if present) and update references to principles changed.
-  - Runtime efficiency protocol:
-    - Resolve impacted families from the change impact map first, then read/update only those families.
-    - If the change is `governance-only`, skip downstream family reads unless an explicit user request asks for broader synchronization.
-    - Do not run directory-wide or repository-wide exploratory scans to "double check" unaffected families.
-    - When a family is skipped, record `unchanged (not impacted)` in the Sync Impact Report.
-    - For command templates, prioritize active agent command files first; inspect mirrors (`templates/commands/*`) only when active-agent files are absent or impacted rules are generic.
-    - Runtime guidance docs (`README.md`, `docs/quickstart.md`, agent docs) are **opt-in by trigger** only:
-      - read/update only when renamed principles/terms or invocation guidance text changed
-      - otherwise skip and mark `unchanged (not impacted)`
-
-1. Repository-first global baseline pipeline (mandatory):
+5. Repository-first global baseline pipeline (mandatory):
    - Detect build manifests from repo root using deterministic priority and process all supported ecosystems detected:
      - Maven: `pom.xml`
      - Node: `package.json` (workspace-aware)
@@ -133,7 +131,7 @@ Follow this execution flow:
      - Every dependency-governance rule MUST reference an existing `SIG-*` row (or explicit matrix fact summary) from the dependency matrix; do not emit speculative future-signal rows.
      - Invocation row schema and field-level constraints are owned by `.specify/templates/module-invocation-spec-template.md`; reference that template instead of restating row-level mechanics here.
 
-2. Produce a Sync Impact Report (prepend as an HTML comment at top of the constitution file after update):
+6. Produce a Sync Impact Report (prepend as an HTML comment at top of the constitution file after update):
    - Keep this report delta-oriented; do not restate unchanged template inventories or canonical baseline details beyond status.
    - Version change: old → new
    - List of modified principles (old title → new title if renamed)
@@ -148,7 +146,7 @@ Follow this execution flow:
      - for unchanged families, prefer one-line grouped summaries over per-file prose
    - Follow-up TODOs if any placeholders intentionally deferred.
 
-3. Final quality check before output (constitution-local only):
+7. Final quality check before output (constitution-local only):
    - No remaining unexplained bracket tokens.
    - Version line matches report.
    - Dates ISO format YYYY-MM-DD.
@@ -161,9 +159,9 @@ Follow this execution flow:
    - Do not introduce cross-artifact PASS/FAIL gates here; centralized consistency gating belongs to `/sdd.analyze`.
    - Repository-first canonical directory and files exist or are explicitly reported with unresolved blockers.
 
-4. Write the completed constitution back to `.specify/memory/constitution.md` (overwrite).
+8. Write the completed constitution back to `.specify/memory/constitution.md` (overwrite).
 
-5. Output a final summary to the user with:
+9. Output a final summary to the user with:
    - New version and bump rationale.
    - Net-new fact source changes only (for example repository-first dependency/invocation baseline updates); reference the Sync Impact Report instead of restating it.
    - Repository-first baseline update summary only when status changed (`created` / `updated`) or blockers remain.

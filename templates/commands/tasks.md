@@ -42,10 +42,9 @@ Resolve `PLAN_FILE` from current feature branch using `{SCRIPT}` defaults.
    - `plan.md` control plane (`Shared Context Snapshot`, `Binding Projection Index`, `Artifact Status`)
    - required refs from `spec.md`, `data-model.md`, `test-matrix.md`, and selected `contracts/` slices
    - canonical repository-first baselines under `.specify/memory/repository-first/`
-7. Hook dispatch here is phase-boundary execution only.
-8. Use `LOCAL_EXECUTION_PROTOCOL` as the default local shell contract for repository discovery and repo inspection during this run.
-9. If additional repository discovery is required, use only `LOCAL_EXECUTION_PROTOCOL.repo_search.list_files_cmd` and `LOCAL_EXECUTION_PROTOCOL.repo_search.search_text_cmd`; if `repo_search.available = false`, stop and report the blocker instead of trial-and-error across ad hoc CLIs.
-10. Do not install missing tools, mutate PATH, or guess alternate package managers/CLIs in this command.
+7. Use `LOCAL_EXECUTION_PROTOCOL` as the default local shell contract for repository discovery and repo inspection during this run.
+8. If additional repository discovery is required, use only `LOCAL_EXECUTION_PROTOCOL.repo_search.list_files_cmd` and `LOCAL_EXECUTION_PROTOCOL.repo_search.search_text_cmd`; if `repo_search.available = false`, stop and report the blocker instead of trial-and-error across ad hoc CLIs.
+9. Do not install missing tools, mutate PATH, or guess alternate package managers/CLIs in this command.
 
 ## Write Only
 

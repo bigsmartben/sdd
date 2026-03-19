@@ -82,7 +82,8 @@ def test_plan_and_test_matrix_templates_precompute_contract_bootstrap_inputs():
     assert "Lifecycle Ref(s)" in test_matrix_template
     assert "Invariant Ref(s)" in test_matrix_template
     assert "MUST NOT be added to `Scenario Matrix` or `Verification Case Anchors` tuple keys" in test_matrix_template
-    assert "| BindingRowID | Operation ID | IF Scope | Boundary Anchor | Boundary Anchor Status | Implementation Entry Anchor |" in test_matrix_template
+    assert "| BindingRowID | Operation ID | IF Scope | Boundary Anchor | Boundary Anchor Status |" in test_matrix_template
+    assert "Implementation Entry Anchor" in test_matrix_template
 
 
 def test_contract_command_uses_test_matrix_as_default_semantic_source():
@@ -132,6 +133,8 @@ def test_research_data_model_and_test_matrix_are_packet_first():
     assert "Keep repo-backed reads bounded to the selected unit and lifecycle/invariant blockers." in data_model
     assert "Prefer section-level reads of `spec.md` and `research.md`" in data_model
     assert "full spec-scoped abstract data-model class set" in data_model
+    assert "`DATA_MODEL_BOOTSTRAP.state_machine_policy`" in data_model
+    assert "If `N > 3` or `T >= 2N`, emit a full FSM package" in data_model
     assert "Every selected `new` anchor in normative content MUST record:" in data_model
     assert "A planned-but-missing file path is not sufficient evidence for normative `new`" in data_model
     assert "downstream `test-matrix.md` and `contracts/` MUST NOT invent missing state owners or owner fields" in data_model
@@ -143,6 +146,8 @@ def test_research_data_model_and_test_matrix_are_packet_first():
     assert "Treat `data-model.md` as authoritative for globally stable owner classes/fields/states" in test_matrix
     assert "Do not introduce new globally stable state owners, owner fields, or lifecycle vocabulary that are absent from `data-model.md`" in test_matrix
     assert "send the issue back to `/sdd.plan.data-model` instead of widening Stage 2 scope" in test_matrix
+    assert "`Boundary Anchor Strategy Evidence`" in test_matrix
+    assert "`Implementation Entry Anchor Strategy Evidence`" in test_matrix
 
 
 def test_contract_template_contains_unified_realization_requirements():
@@ -186,6 +191,8 @@ def test_data_model_template_requires_new_anchor_evidence_and_owner_closure():
     assert "Every normative `new` anchor MUST include explicit rejection evidence for both `existing` and `extended`" in content
     assert "Planned-but-missing files/symbols are not sufficient evidence for normative `new`" in content
     assert "When a lifecycle uses `extended`, keep `Stable states` in the anchored vocabulary" in content
+    assert "Apply the constitution state-machine applicability rule per lifecycle" in content
+    assert "`Required Model = [Full FSM | Lightweight State Model]`" in content
 
 
 def test_test_matrix_template_forbids_backfilling_missing_stage_one_model():

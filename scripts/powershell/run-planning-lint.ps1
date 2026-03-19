@@ -1003,7 +1003,7 @@ foreach ($row in $rows) {
                                 $entryColumnIndex = $idx
                             }
                         }
-                        if ($boundaryColumnIndex -ge 0 -or $entryColumnIndex -ge 0) {
+                        if ($boundaryColumnIndex -ge 0 -and $entryColumnIndex -ge 0) {
                             $inTable = $true
                         }
                         continue

@@ -16,17 +16,17 @@ def _write_feature_fixture(
     test_matrix_status: str = "existing",
     contract_anchor_status: str = "`existing`",
     contract_boundary_anchor: str = "HTTP `GET /demo`",
-    contract_entry_anchor: str | None = "src/app/demo.py::DemoHandler.handle",
+    contract_entry_anchor: str | None = "src/web/demo_controller.py::DemoController.handle",
     contract_entry_status: str = "`existing`",
     test_matrix_boundary_anchor: str = "HTTP `GET /demo`",
     packet_boundary_anchor: str = "HTTP GET /demo",
     packet_boundary_status: str = "existing",
-    packet_entry_anchor: str = "src/app/demo.py::DemoHandler.handle",
+    packet_entry_anchor: str = "src/web/demo_controller.py::DemoController.handle",
     packet_entry_status: str = "existing",
     include_research_trigger: bool = False,
     plan_feature_status: str = "planning-in-progress",
     plan_boundary_anchor: str = "HTTP GET /demo",
-    plan_entry_anchor: str = "src/app/demo.py::DemoHandler.handle",
+    plan_entry_anchor: str = "src/web/demo_controller.py::DemoController.handle",
     plan_boundary_status: str = "existing",
     plan_entry_status: str = "existing",
 ) -> Path:
@@ -35,6 +35,7 @@ def _write_feature_fixture(
     (tmp_path / "src" / "domain").mkdir(parents=True)
     (tmp_path / "src" / "boundary").mkdir(parents=True)
     (tmp_path / "src" / "app").mkdir(parents=True)
+    (tmp_path / "src" / "web").mkdir(parents=True)
 
     (tmp_path / "src" / "domain" / "demo.py").write_text(
         "class DemoAggregate:\n    pass\n",
@@ -47,6 +48,10 @@ def _write_feature_fixture(
     (tmp_path / "src" / "app" / "demo.py").write_text(
         "class DemoHandler:\n    def handle(self):\n        return DemoResponse()\n\n"
         "class DemoResponse:\n    demoId = 'demo'\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "src" / "web" / "demo_controller.py").write_text(
+        "class DemoController:\n    def handle(self):\n        return 'ok'\n",
         encoding="utf-8",
     )
 

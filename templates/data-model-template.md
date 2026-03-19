@@ -129,12 +129,24 @@ Before writing a lifecycle section, read repo-backed enum definitions, status/st
 Apply anchor decision order `existing -> extended -> new`.
 Stable states MUST come from anchors with status `existing`, `extended`, or `new`; UI phases/page steps/flow nodes are not aggregate lifecycle states.
 When a lifecycle uses `extended`, keep `Stable states` in the anchored vocabulary and record any business-term mapping outside the normative state list.
+Apply the constitution state-machine applicability rule per lifecycle:
+
+- Count distinct stable states as `N`.
+- Count unique effective transitions as `T`.
+- If `N > 3` or `T >= 2N`, the lifecycle MUST include a full FSM package: transition table, transition pseudocode, and state diagram.
+- Otherwise the lifecycle MUST stay lightweight: state field definition, allowed transitions, forbidden transitions, and key invariants only.
+- If a full FSM is still used below threshold, record explicit justification in the lifecycle section.
 
 ### Lifecycle: [Aggregate / Entity Name]
 
 - **Anchor Status**: [`existing` | `extended` | `new` | `todo`]
 - **Repo Anchor(s)**: [`path/to/file.ext::EnumOrStateField`] or `TODO(REPO_ANCHOR)`
 - **State field**: `[anchored status/state field name]`
+- **Applicability Assessment**:
+  - `N = [stable-state-count]`
+  - `T = [effective-transition-count]`
+  - `Required Model = [Full FSM | Lightweight State Model]`
+  - `Below-threshold Full FSM Justification = [required only when Full FSM is used below threshold]`
 - **Stable states**: `[must match anchored enum/status vocabulary]`
 - **Allowed transitions**:
   - `[Draft -> Active]` on [event/condition]
@@ -142,17 +154,32 @@ When a lifecycle uses `extended`, keep `Stable states` in the anchored vocabular
 - **Forbidden transitions**:
   - `[Closed -> Active]` (forbidden because [global reason])
   - `[Draft -> Closed]` unless [explicit global exception]
+- **Full FSM Package**: [required only when `Required Model = Full FSM`]
+  - **Transition table**: [transition rows]
+  - **Transition pseudocode**: [state-change rules]
+  - **State diagram**: [mermaid or equivalent]
+- **Lightweight State Model Notes**: [required only when `Required Model = Lightweight State Model`]
 
 ### Lifecycle: [Second Aggregate / Entity Name]
 
 - **Anchor Status**: [`existing` | `extended` | `new` | `todo`]
 - **Repo Anchor(s)**: [`path/to/file.ext::EnumOrStateField`] or `TODO(REPO_ANCHOR)`
 - **State field**: `[anchored status/state field name]`
+- **Applicability Assessment**:
+  - `N = [stable-state-count]`
+  - `T = [effective-transition-count]`
+  - `Required Model = [Full FSM | Lightweight State Model]`
+  - `Below-threshold Full FSM Justification = [required only when Full FSM is used below threshold]`
 - **Stable states**: `[must match anchored enum/status vocabulary]`
 - **Allowed transitions**:
   - `[StateA -> StateB]` on [event/condition]
 - **Forbidden transitions**:
   - `[StateC -> StateA]` (forbidden because [global reason])
+- **Full FSM Package**: [required only when `Required Model = Full FSM`]
+  - **Transition table**: [transition rows]
+  - **Transition pseudocode**: [state-change rules]
+  - **State diagram**: [mermaid or equivalent]
+- **Lightweight State Model Notes**: [required only when `Required Model = Lightweight State Model`]
 
 ## Backbone UML
 

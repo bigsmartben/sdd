@@ -193,6 +193,10 @@ normalize_regex_for_grep() {
         regex="${regex#(?i)}"
     fi
 
+    # grep -E does not support PCRE non-capturing groups; downgrade them to
+    # plain capture groups so one rules catalog can serve bash and PowerShell.
+    regex="${regex//\(\?:/(}"
+
     printf -v "$__out_regex_ref" '%s' "$regex"
     printf -v "$__out_case_insensitive_ref" '%s' "$case_insensitive"
 }
@@ -789,7 +793,7 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                                 fi
                                 idx=$((idx + 1))
                             done
-                            if [[ $boundary_col -ge 0 || $entry_col -ge 0 ]]; then
+                            if [[ $boundary_col -ge 0 && $entry_col -ge 0 ]]; then
                                 in_table=true
                             fi
                             continue

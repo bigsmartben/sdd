@@ -43,6 +43,22 @@ if [[ ! -f "$FEATURE_SPEC" ]]; then
     exit 1
 fi
 
+CONSTITUTION="$REPO_ROOT/.specify/memory/constitution.md"
+DEPENDENCY_MATRIX="$REPO_ROOT/.specify/memory/repository-first/technical-dependency-matrix.md"
+MODULE_INVOCATION="$REPO_ROOT/.specify/memory/repository-first/module-invocation-spec.md"
+
+for required_file in "$CONSTITUTION" "$DEPENDENCY_MATRIX" "$MODULE_INVOCATION"; do
+    if [[ ! -r "$required_file" ]]; then
+        echo "Error: Required constitution or repository-first baseline not found or not readable at $required_file. Run /sdd.constitution first." >&2
+        exit 1
+    fi
+
+    if [[ ! -s "$required_file" ]]; then
+        echo "Error: Required constitution or repository-first baseline is empty at $required_file. Run /sdd.constitution first." >&2
+        exit 1
+    fi
+done
+
 # Ensure the feature directory exists
 mkdir -p "$FEATURE_DIR"
 

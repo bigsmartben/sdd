@@ -35,7 +35,7 @@ Use `.specify/templates/data-model-template.md` only. If the runtime template is
 
 1. Run `{SCRIPT}` once from repo root and parse `FEATURE_DIR`, `AVAILABLE_DOCS`, and `DATA_MODEL_BOOTSTRAP`.
 2. Treat `DATA_MODEL_BOOTSTRAP.generation_readiness` as the primary hard gate.
-3. If `DATA_MODEL_BOOTSTRAP.generation_readiness.ready_for_generation = true`, reuse the selected stage row and resolved `plan.md` / `spec.md` / `research.md` / `data-model.md` paths from `DATA_MODEL_BOOTSTRAP`; do not rescan for alternate pending rows.
+3. If `DATA_MODEL_BOOTSTRAP.generation_readiness.ready_for_generation = true`, reuse the selected stage row, resolved `plan.md` / `spec.md` / `research.md` / `data-model.md` paths, and `state_machine_policy` from `DATA_MODEL_BOOTSTRAP`; do not rescan for alternate pending rows.
 4. If `DATA_MODEL_BOOTSTRAP` is missing, malformed, or contradictory, perform one bounded fallback validation from `plan.md` control-plane fields plus current `spec.md` / `research.md` availability.
 5. In fallback mode only, read the resolved `IMPL_PLAN`, find the first `Stage Queue` row where `Stage ID = data-model` and `Status = pending`, require the `research` row to be `done`, and stop on any blocker.
 
@@ -51,6 +51,14 @@ Build one bounded run-local packet for the selected `data-model` row from:
 
 Use this packet as the default context for generation.
 Do not load additional artifacts unless the selected-row blocker or lifecycle constraints require them.
+
+Apply the constitution-derived lifecycle applicability policy from `DATA_MODEL_BOOTSTRAP.state_machine_policy` while writing lifecycle sections:
+
+- For each declared lifecycle, count distinct stable states as `N`.
+- Count unique effective transitions (`FromState -> ToState`) as `T`.
+- If `N > 3` or `T >= 2N`, emit a full FSM package: transition table, transition pseudocode, and state diagram.
+- Otherwise keep the lifecycle lightweight: state field definition, allowed transitions, forbidden transitions, and key invariants.
+- If you still choose a full FSM below threshold, record explicit justification in the lifecycle section.
 
 ## Stop Conditions
 

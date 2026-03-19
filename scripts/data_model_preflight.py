@@ -17,11 +17,23 @@ from pathlib import Path
 from typing import Any
 
 
-BOOTSTRAP_SCHEMA_VERSION = "1.0"
+BOOTSTRAP_SCHEMA_VERSION = "1.1"
 SECTION_HEADINGS = (
     "Shared Context Snapshot",
     "Stage Queue",
 )
+STATE_MACHINE_POLICY = {
+    "decision_owner": "/sdd.plan.data-model",
+    "full_fsm_rule": "N > 3 or T >= 2N",
+    "full_fsm_required_components": ["transition_table", "transition_pseudocode", "state_diagram"],
+    "lightweight_model_required_components": [
+        "state_field_definition",
+        "allowed_transitions",
+        "forbidden_transitions",
+        "key_invariants",
+    ],
+    "full_fsm_below_threshold_requires_justification": True,
+}
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -317,6 +329,7 @@ def main(argv: list[str] | None = None) -> int:
             "inv_forbids_todo": True,
             "lifecycle_stable_states_forbid_todo": True,
         },
+        "state_machine_policy": STATE_MACHINE_POLICY,
         "generation_readiness": generation_readiness,
     }
 
