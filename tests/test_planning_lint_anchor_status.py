@@ -150,6 +150,10 @@ def _write_feature_fixture(
         [
             f"**Implementation Entry Anchor Status (Required)**: {contract_entry_status}",
             "",
+            "## Contract Binding",
+            "- Repo Anchor: `src/boundary/demo.py::DemoBoundary`",
+            "- Repo Anchor Role: boundary-owner",
+            "",
             "## Sequence Design",
             "- Boundary call enters controller and then reaches app handler.",
             "",
