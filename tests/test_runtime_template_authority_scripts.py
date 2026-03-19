@@ -78,6 +78,25 @@ def parse_last_json_line(stdout: str) -> dict:
     return json.loads(line)
 
 
+def assert_local_execution_protocol(payload: dict) -> None:
+    protocol = payload["LOCAL_EXECUTION_PROTOCOL"]
+    assert protocol["schema_version"] == "1.0"
+    assert protocol["rules"]
+    assert set(protocol["repo_search"]) >= {"available", "tool", "list_files_cmd", "search_text_cmd"}
+    assert set(protocol["repo_inspection"]) >= {"available", "status_cmd", "diff_cmd", "history_cmd"}
+    assert set(protocol["python"]) >= {"available", "tool", "runner_cmd"}
+    if protocol["repo_search"]["available"]:
+        assert protocol["repo_search"]["tool"] in {"rg", "git"}
+        assert protocol["repo_search"]["list_files_cmd"]
+        assert protocol["repo_search"]["search_text_cmd"]
+    if protocol["repo_inspection"]["available"]:
+        assert protocol["repo_inspection"]["status_cmd"].startswith("git ")
+        assert protocol["repo_inspection"]["diff_cmd"].startswith("git ")
+        assert protocol["repo_inspection"]["history_cmd"].startswith("git ")
+    if protocol["python"]["available"]:
+        assert protocol["python"]["runner_cmd"]
+
+
 def test_create_new_feature_powershell_accepts_positional_feature_description(tmp_path):
     repo_dir = tmp_path / "repo"
     (repo_dir / ".specify" / "templates").mkdir(parents=True)
@@ -245,6 +264,7 @@ def test_check_prerequisites_bash_uses_branch_inferred_plan_file(tmp_path):
     payload = json.loads(result.stdout)
     assert normalize_path(payload["FEATURE_DIR"]) == normalize_path(feature_dir)
     assert payload["AVAILABLE_DOCS"] == []
+    assert_local_execution_protocol(payload)
 
     legacy_flag = run_bash(script, repo_dir, ["--json", "--plan-file", "specs/001-demo/plan.md"])
     assert legacy_flag.returncode != 0
@@ -265,6 +285,24 @@ def test_check_prerequisites_powershell_rejects_positional_plan_file(tmp_path):
     assert result.returncode != 0
     combined_output = f"{result.stdout}\n{result.stderr}"
     assert "A positional parameter cannot be found" in combined_output
+
+
+def test_check_prerequisites_powershell_emits_local_execution_protocol(tmp_path):
+    repo_dir = tmp_path / "repo"
+    feature_dir = repo_dir / "specs" / "001-demo"
+    feature_dir.mkdir(parents=True)
+    (feature_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    (feature_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+    copy_powershell_script(repo_dir, "common.ps1")
+    script = copy_powershell_script(repo_dir, "check-prerequisites.ps1")
+
+    result = run_powershell(script, repo_dir, ["-Json"])
+
+    assert result.returncode == 0
+    payload = parse_last_json_line(result.stdout)
+    assert normalize_path(payload["FEATURE_DIR"]) == normalize_path(feature_dir)
+    assert payload["AVAILABLE_DOCS"] == []
+    assert_local_execution_protocol(payload)
 
 
 def test_setup_plan_bash_handles_branch_inferred_spec_file_with_spaces_in_path(tmp_path):
@@ -625,3 +663,11 @@ def test_update_agent_context_scripts_require_runtime_agent_template():
 
     assert "Write-Err \"Template file not found at $TEMPLATE_FILE\"" in pwsh
     assert "Run specify init to scaffold .specify/templates, or add agent-file-template.md there." in pwsh
+
+
+def test_agent_template_includes_stable_local_execution_guidance():
+    template = read("templates/agent-file-template.md")
+
+    assert "## Stable Local Execution" in template
+    assert "LOCAL_EXECUTION_PROTOCOL" in template
+    assert "uv run python" in template

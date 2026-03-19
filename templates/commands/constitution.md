@@ -59,6 +59,9 @@ Follow this execution flow:
    - Ensure Governance section lists amendment procedure, versioning policy, and compliance review expectations.
    - Ensure `Repo-Anchor Evidence Protocol` keeps the strict strategy priority `existing -> extended -> new`.
    - Ensure every `new` anchor policy statement includes mandatory rejection evidence requirements for `existing` and `extended`.
+   - Keep repository-first requirements lightweight and inference-friendly:
+     - require concise `fact -> conclusion` reasoning notes
+     - avoid turning constitution text into field-level extraction specs
 
 4. Fact-source propagation and redundancy control:
    - Treat `.specify/memory/constitution.md` as the authoritative project-level rule source.
@@ -67,6 +70,7 @@ Follow this execution flow:
    - Runtime template authority path is `.specify/templates/`; when editing Spec Kit source directly, use the `templates/` mirror for the same files.
    - Review and refresh impacted artifact families only; avoid mechanical full-repo rewrites of unchanged downstream files.
    - Prefer targeted references over restating the same rule text across multiple downstream templates. When a downstream command or template only needs the constitution as authority, keep the downstream wording brief and aligned instead of cloning full rule prose.
+   - Prefer minimal fact references in repository-first outputs: path-level references by default; line-level precision only when ambiguity/conflict requires it.
    - Keep command ownership boundaries explicit for repo-anchor strategy:
      - `/sdd.plan.*` records strategy selection evidence
      - `/sdd.analyze` validates `new`-anchor evidence and fails when missing
@@ -116,32 +120,18 @@ Follow this execution flow:
      - `unchanged`: file existed and content is identical (do not rewrite)
      - `deleted`: legacy baseline file removed by migration
    - Dependency matrix generation policy:
-     - Classify each dependency declaration before emission as exactly one of `in_repo_first_party_module`, `external_second_party`, or `third_party`.
-     - Build the in-repo first-party module set from detected product/runtime manifests and exclude those coordinates from emitted dependency rows.
-     - Normalize `Dependency (G:A)` as:
-       - Maven: `group:artifact`
-       - Node/Python/Go: `ecosystem:package_or_module`
      - Matrix rows MUST be exhaustive for the filtered product/runtime dependency set; do not emit highlight-only subsets.
      - Emit one row per dependency usage; do not collapse multiple modules, scopes, version sources, or evidence locations into one summary row.
-     - Enforce `Type` values as `2nd` or `3rd` only.
-     - Classify organization-owned or organization-coordinated dependencies not produced inside the current repository as `2nd`; do not default all rows to `3rd`.
-     - Enforce `Version Source` values as `direct`, `dependencyManagement`, `module-dependencyManagement`, or `unresolved`.
-     - Bind `Evidence` to the exact dependency declaration occurrence that produced the row; do not reuse the version-provider line as the declaration site.
-     - If the same dependency is declared multiple times in one manifest, preserve one emitted row per occurrence with distinct line refs.
-     - If version resolution is inherited, keep `Evidence` at the declaration site and set `Version Source` from the provider class.
-     - Emit `unresolved` only when the effective version cannot be resolved from the declaration, the current module, or the detected in-repo ancestor manifest chain.
-     - Emit `version-source-mix` only when 2 or more distinct `Version Source` values exist across emitted rows for the same dependency.
-     - Emit `version-divergence` only when 2 or more distinct effective versions exist across emitted rows for the same dependency.
      - Preserve version divergence, version-source-mix, and `unresolved` as governance signals (no silent normalization).
-     - Tooling-only manifests outside the product/runtime build surface SHOULD stay in detection notes and MUST NOT displace product dependency rows.
-     - Every material signal MUST cite manifest paths and line refs.
+     - Keep supporting evidence explainable as `fact -> conclusion` with path-level references by default; add line-level precision only when ambiguity/conflict requires it.
      - Every dependency-governance signal MUST be derivable from emitted matrix rows only.
-     - Run a final self-check to confirm `Evidence` lines map to the correct declaration occurrences and every emitted signal satisfies its trigger conditions.
+     - Detailed matrix row schema, allowed value vocabularies, and signal derivation mechanics are owned by `.specify/templates/technical-dependency-matrix-template.md`; reference that template instead of restating field-level rules here.
    - Module invocation generation policy:
      - Allowed/forbidden direction tables MUST cover the concrete first-party module edges found in the target runtime repo.
      - Use concrete module-to-module rows as the primary representation; layer summaries are optional metadata only.
      - Do not collapse uncovered edges into broad grouped rows unless every covered edge shares the same rule and rationale.
-     - Every dependency-governance rule MUST reference an existing `SIG-*` row from the dependency matrix; do not emit speculative future-signal rows.
+     - Every dependency-governance rule MUST reference an existing `SIG-*` row (or explicit matrix fact summary) from the dependency matrix; do not emit speculative future-signal rows.
+     - Invocation row schema and field-level constraints are owned by `.specify/templates/module-invocation-spec-template.md`; reference that template instead of restating row-level mechanics here.
 
 2. Produce a Sync Impact Report (prepend as an HTML comment at top of the constitution file after update):
    - Keep this report delta-oriented; do not restate unchanged template inventories or canonical baseline details beyond status.
@@ -167,6 +157,7 @@ Follow this execution flow:
    - Do not duplicate one normative rule into competing expansions across multiple command templates; keep one constitution-level rule and downstream references aligned to that single authority.
    - Downstream alignment updates are minimal and delta-based; unchanged command/template text should not be rewritten just to restate existing authority.
    - Repo-anchor strategy wording preserves strict priority semantics (`existing -> extended -> new`) and explicit rejection-evidence requirements for `new`.
+   - Repository-first wording stays lightweight: enough facts to explain conclusions, no mandatory fine-grained replay burden.
    - Do not introduce cross-artifact PASS/FAIL gates here; centralized consistency gating belongs to `/sdd.analyze`.
    - Repository-first canonical directory and files exist or are explicitly reported with unresolved blockers.
 

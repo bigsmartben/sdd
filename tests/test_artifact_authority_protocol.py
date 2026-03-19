@@ -27,6 +27,8 @@ def test_specify_and_plan_define_authority_vs_derived_views():
 
     assert "`spec.md` becomes the authoritative feature-semantics artifact" in specify
     assert "`ui.html` generated later by `/sdd.specify.ui-html` is a derived prototype artifact" in specify
+    assert "`/sdd.specify` writes `spec.md` only and MUST NOT directly generate `ui.html`." in specify
+    assert "`/sdd.specify.ui-html` is an optional sidecar command; users decide if/when to invoke it." in specify
     assert "`plan.md` is the sole planning control plane" in plan
     assert "does **not** generate downstream planning-stage artifacts directly" in plan
     assert "authoritative for planning queue state, binding-projection rows, and source/output fingerprints only" in plan_template
@@ -48,22 +50,24 @@ def test_tasks_implement_and_analyze_use_compact_contract_sections():
     assert "Treat `TASKS_BOOTSTRAP.execution_readiness` as the primary hard gate." in tasks
     assert "`TASKS_BOOTSTRAP.execution_readiness.errors` contains blockers" in tasks
     assert "Active executable tuples select `new` repo anchors but lack explicit rejection evidence for `existing` and `extended`" in tasks
-    assert "Repository-first replay trace: list consumed dependency rows" in tasks
+    assert "LOCAL_EXECUTION_PROTOCOL" in tasks
+    assert "Repository-first explainable evidence" in tasks
     assert "Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`" in tasks
 
     assert "Treat `IMPLEMENT_BOOTSTRAP.analyze_readiness` as the primary analyze hard gate." in implement
     assert "bounded fallback validation" in implement
     assert "waive-analyze-gate" in implement
     assert "`IMPLEMENT_BOOTSTRAP.analyze_readiness.errors` contains blockers" in implement
+    assert "LOCAL_EXECUTION_PROTOCOL" in implement
     assert "no bypass of repo-anchor strategy priority (`existing -> extended -> new`)" in implement
     assert "Read `plan.md` only as control-plane context (`Shared Context Snapshot`, `Stage Queue`, `Artifact Status`, `Binding Projection Index`)" in implement
     assert "Repository-first Validation Trace" in implement
 
     assert "centralized audit entry and single concentrated audit step before `/sdd.implement`" in analyze
-    assert "CRITICAL/HIGH findings MUST cite the authoritative source artifact(s)." in analyze
+    assert "CRITICAL/HIGH findings MUST cite the authoritative source artifact(s) with concise supporting facts." in analyze
     assert "repo-anchor strategy priority compliance (`existing -> extended -> new`)" in analyze
     assert "any active tuple selecting `new` anchors without explicit rejection evidence for both `existing` and `extended` is `FAIL`" in analyze
-    assert "`Used By Module`, `Evidence`, and `SIG-*` governance signals including divergence, version-source-mix, and `unresolved`" in analyze
+    assert "matrix dependency facts plus `SIG-*` governance signals including divergence, version-source-mix, and `unresolved`" in analyze
     assert "using concrete module-to-module rows as the primary representation" in analyze
     assert "Gate Decision" in analyze
     assert "<!-- SDD_ANALYZE_RUN_BEGIN -->" in analyze
@@ -85,7 +89,7 @@ def test_tasks_runtime_projection_and_hook_boundaries_stay_narrow():
     tasks = read("templates/commands/tasks.md")
 
     assert "Treat `TASKS_BOOTSTRAP.execution_readiness` as the primary hard gate." in tasks
-    assert "do not recompute full hard gates by replaying complete `plan.md` tables" in tasks
+    assert "do not recompute full hard gates by re-deriving complete `plan.md` tables" in tasks
     assert "Hook dispatch here is phase-boundary execution only" in tasks
     assert "same run-local execution graph used to render `tasks.md`" in tasks
     assert "Do not re-parse the just-written markdown to construct the manifest" in tasks

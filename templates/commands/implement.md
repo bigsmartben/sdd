@@ -25,7 +25,7 @@ Comprehensive audit ownership remains with `/sdd.analyze`.
 
 ## Read Only
 
-1. Run `{SCRIPT}` once and parse `FEATURE_DIR`, `AVAILABLE_DOCS`, and `IMPLEMENT_BOOTSTRAP`.
+1. Run `{SCRIPT}` once and parse `FEATURE_DIR`, `AVAILABLE_DOCS`, `LOCAL_EXECUTION_PROTOCOL`, and `IMPLEMENT_BOOTSTRAP`.
 2. Treat `IMPLEMENT_BOOTSTRAP.analyze_readiness` as the primary analyze hard gate.
 3. If `IMPLEMENT_BOOTSTRAP` is missing, malformed, or contradictory, perform one bounded fallback validation from latest `analyze-history.md` run block and current `spec.md` / `plan.md` / `tasks.md` SHA-256 values.
 4. Parse optional runtime mode:
@@ -38,6 +38,9 @@ Comprehensive audit ownership remains with `/sdd.analyze`.
 7. Read `plan.md` only as control-plane context (`Shared Context Snapshot`, `Stage Queue`, `Artifact Status`, `Binding Projection Index`) and resolved artifact paths; do not treat it as a semantic source for architecture/contract/model requirements.
 8. Read support artifacts only when required by active tasks (`contracts/`, `data-model.md`, `test-matrix.md`, `research.md`).
 9. Read canonical repository-first baselines under `.specify/memory/repository-first/` for dependency/module-edge validation.
+10. Use `LOCAL_EXECUTION_PROTOCOL` as the default local shell contract for repository discovery, repo inspection, and bounded helper execution during this run.
+11. If additional repository discovery is required, use only `LOCAL_EXECUTION_PROTOCOL.repo_search.list_files_cmd` and `LOCAL_EXECUTION_PROTOCOL.repo_search.search_text_cmd`; if `repo_search.available = false`, stop and report the blocker instead of trial-and-error across ad hoc CLIs.
+12. When a task requires build/test/lint commands, execute only completion anchors or repo-backed scripts/config entries; do not guess alternate package managers or install tooling in this command.
 
 Manifest validation keys:
 
@@ -64,6 +67,7 @@ Stop immediately when any condition holds:
 6. Required canonical repository-first evidence for affected scope is missing, stale, or non-traceable.
 7. Runtime drift exceeds safe local adaptation in adaptive mode.
 8. Active execution targets rely on `new` repo anchors without explicit rejection evidence for `existing` and `extended`.
+9. Required repository discovery or helper execution is blocked because `LOCAL_EXECUTION_PROTOCOL` marks the capability unavailable.
 
 When gate is not ready and `waive-analyze-gate` is present, continue with explicit waiver notice.
 
@@ -73,6 +77,7 @@ Do not invent missing semantics in this command:
 - no lifecycle model invention
 - no conversion of `TODO(REPO_ANCHOR)` into executable semantics
 - no bypass of repo-anchor strategy priority (`existing -> extended -> new`)
+- no local CLI trial-and-error outside `LOCAL_EXECUTION_PROTOCOL` and repo-backed task anchors
 
 ## Final Output
 

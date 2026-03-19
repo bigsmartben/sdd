@@ -726,7 +726,7 @@ def test_data_model_preflight_helper_reports_ready_when_research_done_and_data_m
     assert payload["selected_stage"]["status"] == "pending"
     assert payload["generation_readiness"]["ready_for_generation"] is True
     assert payload["generation_readiness"]["error_count"] == 0
-    assert payload["repo_anchor_policy"]["decision_order"] == ["existing", "extended", "new", "todo"]
+    assert payload["repo_anchor_policy"]["decision_order"] == ["existing", "extended", "new"]
 
 
 def test_data_model_preflight_helper_flags_research_not_done(tmp_path):
@@ -833,15 +833,18 @@ def test_tasks_command_prefers_task_preflight_bootstrap():
     mapping_doc = mapping_path.read_text(encoding="utf-8") if mapping_path.exists() else None
     readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
     powershell_script = (REPO_ROOT / "scripts" / "powershell" / "check-prerequisites.ps1").read_text(encoding="utf-8")
+    bash_script = (REPO_ROOT / "scripts" / "bash" / "check-prerequisites.sh").read_text(encoding="utf-8")
 
     assert "scripts/bash/check-prerequisites.sh --json --task-preflight" in tasks_command
     assert "scripts/powershell/check-prerequisites.ps1 -Json -TaskPreflight" in tasks_command
     assert "`/sdd.tasks`" in tasks_command
     assert "Treat `TASKS_BOOTSTRAP.execution_readiness` as the primary hard gate." in tasks_command
-    assert "do not recompute full hard gates by replaying complete `plan.md` tables" in tasks_command
+    assert "do not recompute full hard gates by re-deriving complete `plan.md` tables" in tasks_command
     assert "Run `{SCRIPT}` once from repo root." in tasks_command
-    assert "Parse `FEATURE_DIR`, `AVAILABLE_DOCS`, and `TASKS_BOOTSTRAP`" in tasks_command
+    assert "Parse `FEATURE_DIR`, `AVAILABLE_DOCS`, `LOCAL_EXECUTION_PROTOCOL`, and `TASKS_BOOTSTRAP`" in tasks_command
     assert "`TASKS_BOOTSTRAP.execution_readiness.errors` contains blockers" in tasks_command
+    assert "LOCAL_EXECUTION_PROTOCOL.repo_search.list_files_cmd" in tasks_command
+    assert "LOCAL_EXECUTION_PROTOCOL.repo_search.available = false" in tasks_command
     assert "Generate `tasks.manifest.json` from the same run-local execution graph used to render `tasks.md`." in tasks_command
     assert "Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`" in tasks_command
     assert "`generated_from` keys: `plan_path`, `plan_source_fingerprint`, `contract_source_fingerprints`" in tasks_command
@@ -850,8 +853,11 @@ def test_tasks_command_prefers_task_preflight_bootstrap():
         assert "prerequisite script may emit `TASKS_BOOTSTRAP` as a derived preflight packet" in mapping_doc
         assert "if `TASKS_BOOTSTRAP` is missing, invalid, or contradictory, fall back to the authoritative `plan.md` control plane" in mapping_doc
     assert "pre-extract a compact `TASKS_BOOTSTRAP` packet from `plan.md`" in readme
+    assert "LOCAL_EXECUTION_PROTOCOL" in readme
 
+    assert "LOCAL_EXECUTION_PROTOCOL" in bash_script
     assert "-TaskPreflight" in powershell_script
+    assert "LOCAL_EXECUTION_PROTOCOL" in powershell_script
     assert "TASKS_BOOTSTRAP" in powershell_script
     assert '$payload.TASKS_BOOTSTRAP = $null' in powershell_script
 
@@ -866,10 +872,15 @@ def test_implement_command_prefers_implement_preflight_bootstrap():
     assert "Treat `IMPLEMENT_BOOTSTRAP.analyze_readiness` as the primary analyze hard gate." in implement_command
     assert "bounded fallback validation" in implement_command
     assert "`IMPLEMENT_BOOTSTRAP.analyze_readiness.errors` contains blockers" in implement_command
+    assert "parse `feature_dir`, `available_docs`, `local_execution_protocol`, and `implement_bootstrap`" in implement_command.lower()
+    assert "LOCAL_EXECUTION_PROTOCOL.repo_search.list_files_cmd" in implement_command
+    assert "no local CLI trial-and-error outside `LOCAL_EXECUTION_PROTOCOL`" in implement_command
 
     assert "--implement-preflight" in bash_script
+    assert "LOCAL_EXECUTION_PROTOCOL" in bash_script
     assert "IMPLEMENT_BOOTSTRAP" in bash_script
     assert "-ImplementPreflight" in powershell_script
+    assert "LOCAL_EXECUTION_PROTOCOL" in powershell_script
     assert "IMPLEMENT_BOOTSTRAP" in powershell_script
     assert '$payload.IMPLEMENT_BOOTSTRAP = $null' in powershell_script
 

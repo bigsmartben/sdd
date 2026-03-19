@@ -47,6 +47,7 @@ def test_plan_template_tracks_only_contract_artifacts():
     assert "`contract` is tracked as the single per-binding interface design artifact." in content
     assert "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | Boundary Anchor | Implementation Entry Anchor | Boundary Anchor Status | Implementation Entry Anchor Status | Test Scope |" in content
     assert "compact bootstrap fields only" in content
+    assert "regenerate the projection instead of letting downstream commands rewrite it" in content
     assert "interface-detail" not in content
 
 
@@ -80,12 +81,10 @@ def test_contract_command_uses_test_matrix_as_default_semantic_source():
     content = read("templates/commands/plan.contract.md")
 
     assert "treat the selected binding packet in `test-matrix.md` as the default semantic source for the contract run." in content
-    assert "Compatibility Fallback (Legacy `test-matrix.md`)" in content
-    assert "compatibility seed packet from" in content
-    assert "if absent, enter compatibility fallback mode" in content
-    assert "Do not read `spec.md`, `research.md`, or `data-model.md` unless the selected binding packet is missing required fields." in content
-    assert "keep fallback bounded to `PLAN_FILE` + `test-matrix.md` + conditional `spec.md`/`research.md`/`data-model.md` only" in content
-    assert "Keep repo-backed verification bounded to no more than eight files in one contract run" in content
+    assert "if absent, stop and route back to `/sdd.plan.test-matrix`" in content
+    assert "Do not read `spec.md`, `research.md`, or `data-model.md` unless the selected binding packet is missing required fields or cannot resolve contract-visible owner/source evidence." in content
+    assert "mark tuple drift, set an explicit blocker, and route `/sdd.plan.test-matrix`" in content
+    assert "Keep repo-backed verification bounded to the selected `BindingRowID` and active blockers" in content
     assert "- request DTO anchor target, when present" in content
     assert "- response DTO anchor target, when present" in content
     assert "- one primary collaborator anchor, when required for contract-visible behavior" in content
@@ -94,14 +93,19 @@ def test_contract_command_uses_test_matrix_as_default_semantic_source():
     assert "Sequence design MUST NOT collapse multiple mandatory collaborators/dependencies into one synthetic participant label" in content
     assert "`opt` blocks are valid only for truly conditional branches" in content
     assert "do not synthesize `RequestDTO` / `ResponseDTO` labels unless the anchored symbol itself uses those names." in content
+    assert "MAY refine operation-scoped VO/DTO/field mappings" in content
+    assert "MUST NOT mint new globally stable model concepts" in content
+    assert "Stop local refinement and route upstream when continuing would require a new upstream semantic owner" in content
+    assert "contract-visible field has no stable owner/source in `data-model.md`" in content
     assert "## Feature-Level Smoke Readiness (Queue-Complete Gate)" in content
     assert "Cross-Interface Smoke Candidate (Required)" in content
+    assert "do not rewrite upstream planning artifacts from this command" in content
 
 
 def test_contract_selection_rules_handle_empty_queue_before_packet_resolution():
     content = read("templates/commands/plan.contract.md")
     no_pending_idx = content.index("If no pending or blocked contract row exists, stop and report that the contract queue is complete")
-    resolve_packet_idx = content.index("Attempt to resolve one selected binding packet in `test-matrix.md` by the same `BindingRowID`; if absent, enter compatibility fallback mode")
+    resolve_packet_idx = content.index("Attempt to resolve one selected binding packet in `test-matrix.md` by the same `BindingRowID`; if absent, stop and route back to `/sdd.plan.test-matrix`")
     assert no_pending_idx < resolve_packet_idx
 
 
@@ -111,16 +115,24 @@ def test_research_data_model_and_test_matrix_are_packet_first():
     test_matrix = read("templates/commands/plan.test-matrix.md")
 
     assert "Stage Packet (Research Unit)" in research
-    assert "Read at most three repo-backed files per research run." in research
+    assert "Keep repo-backed reads bounded to the selected unit and active blocker." in research
     assert "Use this packet as the default context for generation." in research
 
     assert "Stage Packet (Data-Model Unit)" in data_model
-    assert "Read at most five repo-backed files per data-model run." in data_model
+    assert "Keep repo-backed reads bounded to the selected unit and lifecycle/invariant blockers." in data_model
     assert "Prefer section-level reads of `spec.md` and `research.md`" in data_model
+    assert "full spec-scoped abstract data-model class set" in data_model
+    assert "Every selected `new` anchor in normative content MUST record:" in data_model
+    assert "A planned-but-missing file path is not sufficient evidence for normative `new`" in data_model
+    assert "downstream `test-matrix.md` and `contracts/` MUST NOT invent missing state owners or owner fields" in data_model
 
     assert "Stage Packet (Test-Matrix Unit)" in test_matrix
     assert "Use this packet as the default context for generation and binding projection." in test_matrix
+    assert "coverage scope, path decomposition, verification goals, observability signals, and the contract seed packets" in test_matrix
     assert "prefer section-level rereads over whole-file replay for the selected unit" in test_matrix
+    assert "Treat `data-model.md` as authoritative for globally stable owner classes/fields/states" in test_matrix
+    assert "Do not introduce new globally stable state owners, owner fields, or lifecycle vocabulary that are absent from `data-model.md`" in test_matrix
+    assert "send the issue back to `/sdd.plan.data-model` instead of widening Stage 2 scope" in test_matrix
 
 
 def test_contract_template_contains_unified_realization_requirements():
@@ -151,6 +163,31 @@ def test_contract_template_contains_unified_realization_requirements():
     assert "Collaborator-chain coverage" in content
 
 
+def test_data_model_template_requires_new_anchor_evidence_and_owner_closure():
+    content = read("templates/data-model-template.md")
+
+    assert "full spec-scoped abstract data-model class set" in content
+    assert "MAY refine operation-scoped VO/DTO/field mappings from the classes and owners declared here" in content
+    assert "## State Ownership Closure" in content
+    assert "Every globally stable derived/projection semantic above MUST cite the owner class/field/state that sustains it." in content
+    assert "route back to `/sdd.plan.data-model` instead of inventing the model later" in content
+    assert "## New Anchor Evidence" in content
+    assert "Every normative `new` anchor MUST include explicit rejection evidence for both `existing` and `extended`" in content
+    assert "Planned-but-missing files/symbols are not sufficient evidence for normative `new`" in content
+    assert "When a lifecycle uses `extended`, keep `Stable states` in the anchored vocabulary" in content
+
+
+def test_test_matrix_template_forbids_backfilling_missing_stage_one_model():
+    content = read("templates/test-matrix-template.md")
+
+    assert "[Coverage scope: which spec paths must be verified and why]" in content
+    assert "[How the selected strategy seeds downstream `Binding Contract Packets`]" in content
+    assert "/sdd.plan.contract` MUST consume these tuple keys verbatim and MUST NOT redefine them." in content
+    assert "[Where projections/derivations depend on globally stable owner classes or owner fields from `data-model.md`]" in content
+    assert "Do not invent new globally stable owner classes, owner fields, or lifecycle vocabulary here" in content
+    assert "`State Owner Anchor(s)` MUST trace back to owner classes/fields already modeled as globally stable in `data-model.md`" in content
+
+
 def test_tasks_command_uses_contract_as_realization_source():
     content = read("templates/commands/tasks.md")
     assert "selected `contracts/` slices" in content
@@ -160,7 +197,7 @@ def test_tasks_command_uses_contract_as_realization_source():
     assert "On projection drift, emit upstream writeback actions only:" in content
     assert "/sdd.specify" in content
     assert "/sdd.plan.test-matrix" in content
-    assert "Repository-first replay trace: list consumed dependency rows" in content
+    assert "Repository-first explainable evidence" in content
     assert "/sdd.plan.interface-detail" not in content
     assert "interface-details/" not in content
     assert "Terminology note (compatibility, non-normative)" not in content
@@ -185,7 +222,9 @@ def test_analyze_routes_stale_contract_rows_only():
     assert "centralized audit entry and single concentrated audit step before `/sdd.implement`." in content
     assert "contract-projection drift governance" in content
     assert "stale `contract` -> `/sdd.plan.contract`" in content
-    assert "CRITICAL/HIGH findings MUST cite the authoritative source artifact(s)." in content
+    assert "Tuple drift routing" in content
+    assert "upstream tuple-seed drift across `plan.md` / `test-matrix.md`" in content
+    assert "CRITICAL/HIGH findings MUST cite the authoritative source artifact(s) with concise supporting facts." in content
     assert "interface-detail" not in content
     assert "contract/interface DTO drift" not in content
     assert "contract/interface field drift from anchored DTOs/signatures" not in content
@@ -245,6 +284,7 @@ def test_generation_commands_reference_runtime_templates_only():
 
 def test_lint_rules_for_unified_contract_runtime_rows():
     content = read("rules/planning-lint-rules.tsv")
+    assert "PLN-BP-002" in content
     assert "PLN-ID-007" in content
     assert "PLN-ID-008" in content
     assert "PLN-ID-009" in content

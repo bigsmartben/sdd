@@ -29,6 +29,10 @@ Supported rule kinds:
   - component_symbols_exist
   - anchor_status_allowed_values
   - northbound_controller_required
+  - repo_anchor_paths_exist
+  - plan_status_consistency
+  - binding_projection_stable_only
+  - binding_tuple_projection_sync
 "@
 }
 
@@ -102,6 +106,36 @@ function Get-RelPath {
     }
 
     return (Split-Path -Path $fullNorm -Leaf)
+}
+
+function Get-FeatureRepoRoot {
+    param([string]$FeaturePath)
+
+    $featureItem = Get-Item -LiteralPath $FeaturePath
+    $parent = $featureItem.Parent
+    if ($null -ne $parent -and $parent.Name -eq 'specs' -and $null -ne $parent.Parent) {
+        return $parent.Parent.FullName
+    }
+
+    if ($null -ne $parent) {
+        return $parent.FullName
+    }
+
+    return $FeaturePath
+}
+
+function Resolve-RepoAnchorPath {
+    param(
+        [string]$RepoRoot,
+        [string]$AnchorPath
+    )
+
+    $normalized = ($AnchorPath ?? '') -replace '\\', '/'
+    if ([System.IO.Path]::IsPathRooted($normalized)) {
+        return $normalized
+    }
+
+    return Join-Path $RepoRoot ($normalized -replace '/', [System.IO.Path]::DirectorySeparatorChar)
 }
 
 function Get-AllowedStatusSet {
@@ -238,6 +272,299 @@ function Test-MarkdownSeparatorRow {
     return $true
 }
 
+function Normalize-MarkdownScalar {
+    param([string]$Value)
+
+    if ($null -eq $Value) {
+        return ''
+    }
+
+    return (($Value.Trim()) -replace '`', '').Trim()
+}
+
+function Get-AnchorStatusToken {
+    param([string]$Value)
+
+    $normalized = (Normalize-MarkdownScalar -Value $Value).ToLowerInvariant()
+    foreach ($token in @('existing', 'extended', 'new', 'todo')) {
+        if ($normalized -match "(^|[^a-z])$token([^a-z]|$)") {
+            return $token
+        }
+    }
+
+    return ''
+}
+
+function Get-PlanBindingTupleData {
+    param([string]$Path)
+
+    $rows = @{}
+    $targets = @{}
+    $lines = @(Get-Content -Path $Path -ErrorAction Stop)
+    $currentSection = ''
+    $inTable = $false
+    $bindingRowIndex = -1
+    $boundaryIndex = -1
+    $entryIndex = -1
+    $boundaryStatusIndex = -1
+    $entryStatusIndex = -1
+    $unitTypeIndex = -1
+    $targetPathIndex = -1
+
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        $line = $lines[$i]
+        $lineNumber = $i + 1
+        $trimmed = $line.Trim()
+        $headingMatch = [regex]::Match($trimmed, '^##\s+(.+)$')
+        if ($headingMatch.Success) {
+            $currentSection = $headingMatch.Groups[1].Value.Trim()
+            $inTable = $false
+            $bindingRowIndex = -1
+            $boundaryIndex = -1
+            $entryIndex = -1
+            $boundaryStatusIndex = -1
+            $entryStatusIndex = -1
+            $unitTypeIndex = -1
+            $targetPathIndex = -1
+            continue
+        }
+
+        if ($currentSection -notin @('Binding Projection Index', 'Artifact Status')) {
+            continue
+        }
+
+        $cells = @(Get-MarkdownCells -Line $line)
+        if ($cells.Count -eq 0) {
+            $inTable = $false
+            $bindingRowIndex = -1
+            $boundaryIndex = -1
+            $entryIndex = -1
+            $boundaryStatusIndex = -1
+            $entryStatusIndex = -1
+            $unitTypeIndex = -1
+            $targetPathIndex = -1
+            continue
+        }
+
+        if (-not $inTable) {
+            $bindingRowIndex = -1
+            $boundaryIndex = -1
+            $entryIndex = -1
+            $boundaryStatusIndex = -1
+            $entryStatusIndex = -1
+            $unitTypeIndex = -1
+            $targetPathIndex = -1
+
+            for ($idx = 0; $idx -lt $cells.Count; $idx++) {
+                switch ($cells[$idx]) {
+                    'BindingRowID' { $bindingRowIndex = $idx }
+                    'Boundary Anchor' { $boundaryIndex = $idx }
+                    'Implementation Entry Anchor' { $entryIndex = $idx }
+                    'Boundary Anchor Status' { $boundaryStatusIndex = $idx }
+                    'Implementation Entry Anchor Status' { $entryStatusIndex = $idx }
+                    'Unit Type' { $unitTypeIndex = $idx }
+                    'Target Path' { $targetPathIndex = $idx }
+                }
+            }
+
+            if ($currentSection -eq 'Binding Projection Index') {
+                if ($bindingRowIndex -ge 0) {
+                    $inTable = $true
+                }
+            } elseif ($bindingRowIndex -ge 0 -and $unitTypeIndex -ge 0 -and $targetPathIndex -ge 0) {
+                $inTable = $true
+            }
+            continue
+        }
+
+        if (Test-MarkdownSeparatorRow -Cells $cells) {
+            continue
+        }
+
+        if ($bindingRowIndex -lt 0 -or $bindingRowIndex -ge $cells.Count) {
+            continue
+        }
+
+        $bindingId = Normalize-MarkdownScalar -Value $cells[$bindingRowIndex]
+        if ([string]::IsNullOrWhiteSpace($bindingId)) {
+            continue
+        }
+
+        if ($currentSection -eq 'Binding Projection Index') {
+            $rows[$bindingId] = [PSCustomObject]@{
+                Line           = $lineNumber
+                Boundary       = if ($boundaryIndex -ge 0 -and $boundaryIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$boundaryIndex] } else { '' }
+                Entry          = if ($entryIndex -ge 0 -and $entryIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$entryIndex] } else { '' }
+                BoundaryStatus = if ($boundaryStatusIndex -ge 0 -and $boundaryStatusIndex -lt $cells.Count) { Get-AnchorStatusToken -Value $cells[$boundaryStatusIndex] } else { '' }
+                EntryStatus    = if ($entryStatusIndex -ge 0 -and $entryStatusIndex -lt $cells.Count) { Get-AnchorStatusToken -Value $cells[$entryStatusIndex] } else { '' }
+            }
+        } elseif ($unitTypeIndex -lt $cells.Count -and (Normalize-MarkdownScalar -Value $cells[$unitTypeIndex]) -eq 'contract') {
+            $targets[$bindingId] = Normalize-MarkdownScalar -Value $cells[$targetPathIndex]
+        }
+    }
+
+    return [PSCustomObject]@{
+        Rows    = $rows
+        Targets = $targets
+    }
+}
+
+function Get-TestMatrixBindingPackets {
+    param([string]$Path)
+
+    $rows = @{}
+    $lines = @(Get-Content -Path $Path -ErrorAction Stop)
+    $currentSection = ''
+    $inTable = $false
+    $bindingRowIndex = -1
+    $boundaryIndex = -1
+    $entryIndex = -1
+    $boundaryStatusIndex = -1
+    $entryStatusIndex = -1
+
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        $line = $lines[$i]
+        $lineNumber = $i + 1
+        $trimmed = $line.Trim()
+        $headingMatch = [regex]::Match($trimmed, '^##\s+(.+)$')
+        if ($headingMatch.Success) {
+            $currentSection = $headingMatch.Groups[1].Value.Trim()
+            $inTable = $false
+            $bindingRowIndex = -1
+            $boundaryIndex = -1
+            $entryIndex = -1
+            $boundaryStatusIndex = -1
+            $entryStatusIndex = -1
+            continue
+        }
+
+        if ($currentSection -ne 'Binding Contract Packets') {
+            continue
+        }
+
+        $cells = @(Get-MarkdownCells -Line $line)
+        if ($cells.Count -eq 0) {
+            $inTable = $false
+            $bindingRowIndex = -1
+            $boundaryIndex = -1
+            $entryIndex = -1
+            $boundaryStatusIndex = -1
+            $entryStatusIndex = -1
+            continue
+        }
+
+        if (-not $inTable) {
+            $bindingRowIndex = -1
+            $boundaryIndex = -1
+            $entryIndex = -1
+            $boundaryStatusIndex = -1
+            $entryStatusIndex = -1
+
+            for ($idx = 0; $idx -lt $cells.Count; $idx++) {
+                switch ($cells[$idx]) {
+                    'BindingRowID' { $bindingRowIndex = $idx }
+                    'Boundary Anchor' { $boundaryIndex = $idx }
+                    'Implementation Entry Anchor' { $entryIndex = $idx }
+                    'Boundary Anchor Status' { $boundaryStatusIndex = $idx }
+                    'Implementation Entry Anchor Status' { $entryStatusIndex = $idx }
+                }
+            }
+
+            if ($bindingRowIndex -ge 0) {
+                $inTable = $true
+            }
+            continue
+        }
+
+        if (Test-MarkdownSeparatorRow -Cells $cells) {
+            continue
+        }
+
+        if ($bindingRowIndex -lt 0 -or $bindingRowIndex -ge $cells.Count) {
+            continue
+        }
+
+        $bindingId = Normalize-MarkdownScalar -Value $cells[$bindingRowIndex]
+        if ([string]::IsNullOrWhiteSpace($bindingId)) {
+            continue
+        }
+
+        $rows[$bindingId] = [PSCustomObject]@{
+            Line           = $lineNumber
+            Boundary       = if ($boundaryIndex -ge 0 -and $boundaryIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$boundaryIndex] } else { '' }
+            Entry          = if ($entryIndex -ge 0 -and $entryIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$entryIndex] } else { '' }
+            BoundaryStatus = if ($boundaryStatusIndex -ge 0 -and $boundaryStatusIndex -lt $cells.Count) { Get-AnchorStatusToken -Value $cells[$boundaryStatusIndex] } else { '' }
+            EntryStatus    = if ($entryStatusIndex -ge 0 -and $entryStatusIndex -lt $cells.Count) { Get-AnchorStatusToken -Value $cells[$entryStatusIndex] } else { '' }
+        }
+    }
+
+    return $rows
+}
+
+function Get-ContractHeaderTuple {
+    param([string]$Path)
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        return $null
+    }
+
+    $boundaryPattern = '(?i)^\s*(?:\*\*)?Boundary[ _-]*Anchor(?:\s*\([^)]*\))?(?:\*\*)?\s*:\s*(.+)$'
+    $anchorStatusPattern = '(?i)^\s*(?:\*\*)?Anchor[ _-]*Status(?:\s*\([^)]*\))?(?:\*\*)?\s*:\s*(.+)$'
+    $entryStatusPattern = '(?i)^\s*(?:\*\*)?Implementation[ _-]*Entry[ _-]*Anchor[ _-]*Status(?:\s*\([^)]*\))?(?:\*\*)?\s*:\s*(.+)$'
+    $entryPattern = '(?i)^\s*(?:\*\*)?Implementation[ _-]*Entry[ _-]*Anchor(?:\s*\([^)]*\))?(?:\*\*)?\s*:\s*(.+)$'
+
+    $tuple = [ordered]@{
+        Line           = 0
+        Boundary       = ''
+        BoundaryStatus = ''
+        Entry          = ''
+        EntryStatus    = ''
+    }
+
+    $lines = @(Get-Content -Path $Path -ErrorAction Stop)
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        $line = $lines[$i]
+        $lineNumber = $i + 1
+
+        $match = [regex]::Match($line, $boundaryPattern)
+        if ($match.Success -and [string]::IsNullOrWhiteSpace($tuple.Boundary)) {
+            $tuple.Boundary = Normalize-MarkdownScalar -Value $match.Groups[1].Value
+            if ($tuple.Line -eq 0) {
+                $tuple.Line = $lineNumber
+            }
+            continue
+        }
+
+        $match = [regex]::Match($line, $anchorStatusPattern)
+        if ($match.Success -and [string]::IsNullOrWhiteSpace($tuple.BoundaryStatus)) {
+            $tuple.BoundaryStatus = Get-AnchorStatusToken -Value $match.Groups[1].Value
+            if ($tuple.Line -eq 0) {
+                $tuple.Line = $lineNumber
+            }
+            continue
+        }
+
+        $match = [regex]::Match($line, $entryStatusPattern)
+        if ($match.Success -and [string]::IsNullOrWhiteSpace($tuple.EntryStatus)) {
+            $tuple.EntryStatus = Get-AnchorStatusToken -Value $match.Groups[1].Value
+            if ($tuple.Line -eq 0) {
+                $tuple.Line = $lineNumber
+            }
+            continue
+        }
+
+        $match = [regex]::Match($line, $entryPattern)
+        if ($match.Success -and [string]::IsNullOrWhiteSpace($tuple.Entry)) {
+            $tuple.Entry = Normalize-MarkdownScalar -Value $match.Groups[1].Value
+            if ($tuple.Line -eq 0) {
+                $tuple.Line = $lineNumber
+            }
+        }
+    }
+
+    return [PSCustomObject]$tuple
+}
+
 function Test-NorthboundAnchorPair {
     param(
         [string]$BoundaryValue,
@@ -304,6 +631,7 @@ if (-not (Test-Path -Path $Rules -PathType Leaf)) {
 
 $featureRoot = (Resolve-Path -Path $FeatureDir).Path.TrimEnd('/', '\')
 $rulesPath = (Resolve-Path -Path $Rules).Path
+$repoRootForFeature = Get-FeatureRepoRoot -FeaturePath $featureRoot
 
 $allFiles = @(
     Get-ChildItem -Path $featureRoot -Recurse -File -ErrorAction SilentlyContinue |
@@ -697,8 +1025,252 @@ foreach ($row in $rows) {
             }
         }
 
+        'repo_anchor_paths_exist' {
+            $anchorPattern = '[A-Za-z0-9_./\\-]+\.[A-Za-z0-9_-]+::[A-Za-z_$][A-Za-z0-9_.$-]*'
+
+            foreach ($file in $matched) {
+                $lines = @(Get-Content -Path $file.FullPath -ErrorAction Stop)
+                for ($i = 0; $i -lt $lines.Count; $i++) {
+                    $lineNumber = $i + 1
+                    $matchesOnLine = [regex]::Matches($lines[$i], $anchorPattern)
+                    foreach ($m in $matchesOnLine) {
+                        $anchorToken = $m.Value
+                        if ([string]::IsNullOrWhiteSpace($anchorToken)) {
+                            continue
+                        }
+
+                        $anchorPath = ($anchorToken -split '::', 2)[0]
+                        $resolved = Resolve-RepoAnchorPath -RepoRoot $repoRootForFeature -AnchorPath $anchorPath
+                        if (-not (Test-Path -LiteralPath $resolved -PathType Leaf)) {
+                            Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lineNumber -Message "$($row.message) Missing file: $anchorPath" -Remediation $row.remediation
+                        }
+                    }
+                }
+            }
+        }
+
+        'plan_status_consistency' {
+            foreach ($file in $matched) {
+                $lines = @(Get-Content -Path $file.FullPath -ErrorAction Stop)
+                $planStatus = $null
+                $statusLine = 0
+                $currentSection = ''
+                $inTable = $false
+                $statusColumnIndex = -1
+                $stageStatuses = New-Object System.Collections.Generic.List[string]
+                $artifactStatuses = New-Object System.Collections.Generic.List[string]
+
+                for ($i = 0; $i -lt $lines.Count; $i++) {
+                    $lineNumber = $i + 1
+                    $line = $lines[$i]
+                    $trimmed = $line.Trim()
+
+                    $statusMatch = [regex]::Match($trimmed, '^-+\s*Status:\s*(planning-not-started|planning-in-progress|planning-complete)\s*$')
+                    if ($statusMatch.Success) {
+                        $planStatus = $statusMatch.Groups[1].Value
+                        $statusLine = $lineNumber
+                    }
+
+                    $headingMatch = [regex]::Match($trimmed, '^##\s+(.+)$')
+                    if ($headingMatch.Success) {
+                        $currentSection = $headingMatch.Groups[1].Value.Trim()
+                        $inTable = $false
+                        $statusColumnIndex = -1
+                        continue
+                    }
+
+                    if ($currentSection -notin @('Stage Queue', 'Artifact Status')) {
+                        continue
+                    }
+
+                    $cells = @(Get-MarkdownCells -Line $line)
+                    if ($cells.Count -eq 0) {
+                        $inTable = $false
+                        $statusColumnIndex = -1
+                        continue
+                    }
+
+                    if (-not $inTable) {
+                        $statusColumnIndex = -1
+                        for ($idx = 0; $idx -lt $cells.Count; $idx++) {
+                            if ($cells[$idx] -eq 'Status') {
+                                $statusColumnIndex = $idx
+                                break
+                            }
+                        }
+                        if ($statusColumnIndex -ge 0) {
+                            $inTable = $true
+                        }
+                        continue
+                    }
+
+                    if (Test-MarkdownSeparatorRow -Cells $cells) {
+                        continue
+                    }
+
+                    if ($statusColumnIndex -ge 0 -and $statusColumnIndex -lt $cells.Count) {
+                        $token = $cells[$statusColumnIndex].Trim().ToLowerInvariant()
+                        if ($currentSection -eq 'Stage Queue') {
+                            $stageStatuses.Add($token) | Out-Null
+                        } else {
+                            $artifactStatuses.Add($token) | Out-Null
+                        }
+                    }
+                }
+
+                if ([string]::IsNullOrWhiteSpace($planStatus)) {
+                    Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line 0 -Message "$($row.message) Missing ``Feature Identity -> Status`` value." -Remediation $row.remediation
+                    continue
+                }
+
+                $stageCount = $stageStatuses.Count
+                $artifactCount = $artifactStatuses.Count
+                $allStagePending = ($stageCount -gt 0)
+                $allStageDone = ($stageCount -gt 0)
+                foreach ($token in $stageStatuses) {
+                    if ($token -ne 'pending') {
+                        $allStagePending = $false
+                    }
+                    if ($token -ne 'done') {
+                        $allStageDone = $false
+                    }
+                }
+
+                $allArtifactDone = $true
+                foreach ($token in $artifactStatuses) {
+                    if ($token -ne 'done') {
+                        $allArtifactDone = $false
+                    }
+                }
+
+                $nothingStarted = $allStagePending -and ($artifactCount -eq 0)
+                $everythingDone = $allStageDone -and $allArtifactDone
+
+                switch ($planStatus) {
+                    'planning-not-started' {
+                        if (-not $nothingStarted) {
+                            Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $statusLine -Message "$($row.message) ``planning-not-started`` requires all stage rows to remain ``pending`` and ``Artifact Status`` to stay empty." -Remediation $row.remediation
+                        }
+                    }
+                    'planning-complete' {
+                        if (-not $everythingDone) {
+                            Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $statusLine -Message "$($row.message) ``planning-complete`` requires all stage rows and artifact rows to be ``done``." -Remediation $row.remediation
+                        }
+                    }
+                    'planning-in-progress' {
+                        if ($nothingStarted) {
+                            Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $statusLine -Message "$($row.message) ``planning-in-progress`` is too advanced for an untouched queue; use ``planning-not-started`` instead." -Remediation $row.remediation
+                        } elseif ($everythingDone) {
+                            Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $statusLine -Message "$($row.message) ``planning-in-progress`` is stale after all stage/artifact rows are complete; use ``planning-complete`` instead." -Remediation $row.remediation
+                        }
+                    }
+                }
+            }
+        }
+
+        'binding_projection_stable_only' {
+            foreach ($file in $matched) {
+                $lines = @(Get-Content -Path $file.FullPath -ErrorAction Stop)
+                $currentSection = ''
+                $inTable = $false
+                $boundaryStatusIndex = -1
+                $entryStatusIndex = -1
+
+                for ($i = 0; $i -lt $lines.Count; $i++) {
+                    $lineNumber = $i + 1
+                    $line = $lines[$i]
+                    $trimmed = $line.Trim()
+
+                    $headingMatch = [regex]::Match($trimmed, '^##\s+(.+)$')
+                    if ($headingMatch.Success) {
+                        $currentSection = $headingMatch.Groups[1].Value.Trim()
+                        $inTable = $false
+                        $boundaryStatusIndex = -1
+                        $entryStatusIndex = -1
+                        continue
+                    }
+
+                    if ($currentSection -ne 'Binding Projection Index') {
+                        continue
+                    }
+
+                    $cells = @(Get-MarkdownCells -Line $line)
+                    if ($cells.Count -eq 0) {
+                        $inTable = $false
+                        $boundaryStatusIndex = -1
+                        $entryStatusIndex = -1
+                        continue
+                    }
+
+                    if (-not $inTable) {
+                        $boundaryStatusIndex = -1
+                        $entryStatusIndex = -1
+                        for ($idx = 0; $idx -lt $cells.Count; $idx++) {
+                            if ($cells[$idx] -eq 'Boundary Anchor Status') {
+                                $boundaryStatusIndex = $idx
+                            }
+                            if ($cells[$idx] -eq 'Implementation Entry Anchor Status') {
+                                $entryStatusIndex = $idx
+                            }
+                        }
+                        if ($boundaryStatusIndex -ge 0 -or $entryStatusIndex -ge 0) {
+                            $inTable = $true
+                        }
+                        continue
+                    }
+
+                    if (Test-MarkdownSeparatorRow -Cells $cells) {
+                        continue
+                    }
+
+                    $hasTodo = $false
+                    if ($boundaryStatusIndex -ge 0 -and $boundaryStatusIndex -lt $cells.Count) {
+                        if ($cells[$boundaryStatusIndex].ToLowerInvariant() -match '(^|[^a-z])todo([^a-z]|$)') {
+                            $hasTodo = $true
+                        }
+                    }
+                    if ($entryStatusIndex -ge 0 -and $entryStatusIndex -lt $cells.Count) {
+                        if ($cells[$entryStatusIndex].ToLowerInvariant() -match '(^|[^a-z])todo([^a-z]|$)') {
+                            $hasTodo = $true
+                        }
+                    }
+
+                    if ($hasTodo) {
+                        Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lineNumber -Message $row.message -Remediation $row.remediation
+                    }
+                }
+            }
+        }
+
+        'binding_tuple_projection_sync' {
+            foreach ($file in $matched) {
+                $testMatrixPath = Join-Path $featureRoot 'test-matrix.md'
+                if (-not (Test-Path -LiteralPath $testMatrixPath -PathType Leaf)) {
+                    Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line 0 -Message "$($row.message) Missing file: test-matrix.md" -Remediation $row.remediation
+                    continue
+                }
+
+                $planData = Get-PlanBindingTupleData -Path $file.FullPath
+                $packetRows = Get-TestMatrixBindingPackets -Path $testMatrixPath
+
+                foreach ($bindingId in $planData.Rows.Keys) {
+                    $planRow = $planData.Rows[$bindingId]
+                    if (-not $packetRows.ContainsKey($bindingId)) {
+                        Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $planRow.Line -Message "$($row.message) BindingRowID $bindingId is present in `Binding Projection Index` but missing from `test-matrix.md` `Binding Contract Packets`." -Remediation $row.remediation
+                        continue
+                    }
+
+                    $packetRow = $packetRows[$bindingId]
+                    if ($planRow.Boundary -ne $packetRow.Boundary -or $planRow.Entry -ne $packetRow.Entry -or $planRow.BoundaryStatus -ne $packetRow.BoundaryStatus -or $planRow.EntryStatus -ne $packetRow.EntryStatus) {
+                        Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $planRow.Line -Message "$($row.message) BindingRowID $bindingId differs from `test-matrix.md` `Binding Contract Packets` for boundary/entry tuple fields." -Remediation $row.remediation
+                    }
+
+                }
+            }
+        }
+
         default {
-            Add-Finding -RuleId $row.id -Severity $row.severity -File $row.glob -Line 0 -Message "Unsupported rule kind: $($row.kind)" -Remediation 'Use one of: file_regex_forbidden, file_regex_required_any, component_symbols_exist, anchor_status_allowed_values, northbound_controller_required.'
+            Add-Finding -RuleId $row.id -Severity $row.severity -File $row.glob -Line 0 -Message "Unsupported rule kind: $($row.kind)" -Remediation 'Use one of: file_regex_forbidden, file_regex_required_any, component_symbols_exist, anchor_status_allowed_values, northbound_controller_required, repo_anchor_paths_exist, plan_status_consistency, binding_projection_stable_only, binding_tuple_projection_sync.'
         }
     }
 }

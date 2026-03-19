@@ -8,8 +8,13 @@ Keep the matrix minimal-but-sufficient: merge pure permutations with identical o
 
 ## Coverage Strategy
 
+- [Coverage scope: which spec paths must be verified and why]
+- [Path decomposition: which main / branch / failure / degraded paths must stay distinct]
+- [Verification goals and observability signals for each path family]
+- [How the selected strategy seeds downstream `Binding Contract Packets`]
 - [How `spec.md` scenarios are translated into verifiable paths]
 - [Where shared invariants, lifecycle, or role boundaries affect coverage]
+- [Where projections/derivations depend on globally stable owner classes or owner fields from `data-model.md`]
 
 ## Stable Binding Keys (Required)
 
@@ -19,15 +24,16 @@ Keep the matrix minimal-but-sufficient: merge pure permutations with identical o
 - `Boundary Anchor` MUST identify the first consumer-callable entry used for contract binding; do not project internal service/manager/mapper handoff symbols here.
 - If the consumer enters through HTTP, prefer `HTTP METHOD /path`; if the consumer enters through a stable RPC/Façade surface, use `Facade.method`.
 - `BA-*` labels are invalid as normative boundary anchors and may appear only as non-normative helper labels.
-- Apply repo-anchor decision order `existing -> extended -> new -> todo`.
+- Apply repo-anchor decision order `existing -> extended -> new`.
 - `extended` is valid only for same-entity field/state expansion.
 - `new` is normative only when explicit `path::symbol` target evidence is provided.
 - If explicit target evidence is missing, set `Anchor Status = todo` and keep the row non-normative forward-looking only.
-- Keep `Operation ID` / `Boundary Anchor` / `IF Scope` values textually consistent with `contracts/`.
+- Keep `Operation ID` / `Boundary Anchor` / `IF Scope` values stable; `/sdd.plan.contract` MUST consume these tuple keys verbatim and MUST NOT redefine them.
 - `Implementation Entry Anchor` MUST NOT be added to `Scenario Matrix` or `Verification Case Anchors` tuple keys.
 - `Implementation Entry Anchor` is allowed only in `Binding Contract Packets` as a contract-seed field for `/sdd.plan.contract`.
 - For HTTP-facing bindings, `Boundary Anchor` MUST stay `HTTP METHOD /path`, `Implementation Entry Anchor` MUST stay the owning controller method, and downstream service/facade symbols MUST remain collaborators only.
 - `Request DTO Anchor`, `Response DTO Anchor`, and `State Owner Anchor(s)` MAY remain `TODO(REPO_ANCHOR)` only as explicit contract gap sources; they MUST NOT trigger a fallback back to minimal-field contract output.
+- Do not invent new globally stable owner classes, owner fields, or lifecycle vocabulary here; if verification semantics need them, route the gap back to `data-model.md`.
 - Main-path verification binding MUST use tuples with `Anchor Status = existing|extended|new`. Rows with `Anchor Status = todo` MUST NOT enter primary verification path rows.
 
 ## Scenario Matrix
@@ -62,6 +68,8 @@ This packet seeds the operation-scoped `Full Field Dictionary` in `contracts/`; 
 - Treat `Boundary Anchor` as the client-facing contract entry only; keep internal implementation handoff anchors for contract realization design sections.
 - For HTTP-facing bindings, keep the controller method in `Implementation Entry Anchor` and the first downstream service/facade hop in `Primary Collaborator Anchor`.
 - `State Owner Anchor(s)` MUST identify the owner classes that this operation reads, writes, projects, or uses for state/default/validation decisions; do not substitute the collaborator list here.
+- If later contract generation surfaces tuple drift, repair this packet via `/sdd.plan.test-matrix`; do not let downstream commands rewrite Stage 2 tuple seeds.
+- `State Owner Anchor(s)` MUST trace back to owner classes/fields already modeled as globally stable in `data-model.md`; contract stage may widen operation-scoped field coverage, but it MUST NOT mint a new owner concept.
 - `Primary Collaborator Anchor` MAY be `N/A`, but `State Owner Anchor(s)` MUST NOT be replaced by `Primary Collaborator Anchor`.
 - Contract-seed coverage is operation-scoped: request DTO fields, response DTO fields, state-owner fields, and the directly read/write/project/validate/default-driving fields that the contract must preserve.
 - Treat `BA-*` as non-normative shorthand only; never use it as a normative tuple key.

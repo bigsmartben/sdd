@@ -34,15 +34,18 @@ Resolve `PLAN_FILE` from current feature branch using `{SCRIPT}` defaults.
 ## Read Only
 
 1. Run `{SCRIPT}` once from repo root.
-2. Parse `FEATURE_DIR`, `AVAILABLE_DOCS`, and `TASKS_BOOTSTRAP`.
+2. Parse `FEATURE_DIR`, `AVAILABLE_DOCS`, `LOCAL_EXECUTION_PROTOCOL`, and `TASKS_BOOTSTRAP`.
 3. Treat `TASKS_BOOTSTRAP.execution_readiness` as the primary hard gate.
-4. If `TASKS_BOOTSTRAP.execution_readiness.ready_for_task_generation = true`, do not recompute full hard gates by replaying complete `plan.md` tables.
+4. If `TASKS_BOOTSTRAP.execution_readiness.ready_for_task_generation = true`, do not recompute full hard gates by re-deriving complete `plan.md` tables.
 5. If `TASKS_BOOTSTRAP` is missing, malformed, or contradictory, perform one bounded fallback validation from `plan.md` control-plane fields.
 6. Read only authoritative inputs for the active generation unit:
    - `plan.md` control plane (`Shared Context Snapshot`, `Binding Projection Index`, `Artifact Status`)
    - required refs from `spec.md`, `data-model.md`, `test-matrix.md`, and selected `contracts/` slices
    - canonical repository-first baselines under `.specify/memory/repository-first/`
 7. Hook dispatch here is phase-boundary execution only.
+8. Use `LOCAL_EXECUTION_PROTOCOL` as the default local shell contract for repository discovery and repo inspection during this run.
+9. If additional repository discovery is required, use only `LOCAL_EXECUTION_PROTOCOL.repo_search.list_files_cmd` and `LOCAL_EXECUTION_PROTOCOL.repo_search.search_text_cmd`; if `repo_search.available = false`, stop and report the blocker instead of trial-and-error across ad hoc CLIs.
+10. Do not install missing tools, mutate PATH, or guess alternate package managers/CLIs in this command.
 
 ## Write Only
 
@@ -78,6 +81,7 @@ Stop immediately when any condition holds:
 4. `TASKS_BOOTSTRAP.execution_readiness.errors` contains blockers.
 5. Required canonical repository-first evidence for affected scope is missing, stale, or non-traceable.
 6. Active executable tuples select `new` repo anchors but lack explicit rejection evidence for `existing` and `extended` in authoritative upstream artifacts.
+7. Required repository discovery is blocked because `LOCAL_EXECUTION_PROTOCOL.repo_search.available = false`.
 
 Hard execution safety gates in this command are limited to:
 
@@ -98,8 +102,8 @@ Return a concise execution summary:
 3. task totals (`GLOBAL` and each `IF-###`)
 4. DAG schedulability result
 5. manifest/task alignment result
-6. Repository-first replay trace: list consumed dependency rows (`Dependency (G:A)`, `Version`, `Scope`, `Version Source`, `Used By Module`, `Evidence`, linked `SIG-*`)
-7. Module-edge replay trace: list consumed invocation-governance rows (`From Module`, `To Module`, `Rule`, linked `SIG-*` when used)
+6. Repository-first explainable evidence: list only decision-relevant dependency/governance facts in `fact -> conclusion` format (path-level refs by default; add line refs only when ambiguity/conflict requires precision)
+7. Module-edge explainable evidence: list only decision-relevant invocation-governance facts in `fact -> conclusion` format (path-level refs by default; add line refs only when ambiguity/conflict requires precision)
 8. upstream alignment repair actions (if any)
 9. analyze handoff note
 

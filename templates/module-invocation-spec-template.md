@@ -35,7 +35,8 @@ Every observed first-party cross-module edge MUST be represented as allowed or f
 ## Dependency Governance Rules
 
 These rules MUST consume version-divergence and `unresolved` signals from `.specify/memory/repository-first/technical-dependency-matrix.md`.
-Every governance rule MUST reference an existing `SIG-*` row from the matrix; do not emit speculative future-signal rows.
+Every governance rule MUST reference an existing `SIG-*` row from the matrix or an explicit matrix fact summary; do not emit speculative future-signal rows.
+Use concise reasoning facts (`trigger fact -> governance action`) and avoid restating full matrix content.
 
 | Rule ID | Trigger Signal (from matrix) | Governance Rule | Required Action |
 |---------|------------------------------|-----------------|-----------------|

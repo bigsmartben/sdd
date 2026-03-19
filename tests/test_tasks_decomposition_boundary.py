@@ -19,6 +19,7 @@ def test_tasks_command_enforces_preflight_and_hard_stop():
     assert "perform one bounded fallback validation from `plan.md` control-plane fields" in content
     assert "Stop immediately when any condition holds:" in content
     assert "`TASKS_BOOTSTRAP.execution_readiness.errors` contains blockers" in content
+    assert "LOCAL_EXECUTION_PROTOCOL.repo_search.list_files_cmd" in content
     assert "Active executable tuples select `new` repo anchors but lack explicit rejection evidence for `existing` and `extended`" in content
     assert "/sdd.plan.interface-detail" not in content
 
@@ -68,6 +69,7 @@ def test_manifest_schema_contract_between_tasks_and_implement():
     assert "fallback to `tasks.md` parsing when manifest is missing or invalid" in implement_command
     assert "task keys: `task_id`, `dependencies`, `if_scope`, `refs`, `target_paths`, `completion_anchors`, `conflict_hints`, `topo_layer`, `status`" in implement_command
     assert "Active execution targets rely on `new` repo anchors without explicit rejection evidence for `existing` and `extended`." in implement_command
+    assert "LOCAL_EXECUTION_PROTOCOL" in implement_command
     assert "no bypass of repo-anchor strategy priority (`existing -> extended -> new`)" in implement_command
 
 

@@ -31,6 +31,82 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+function Get-LocalExecutionProtocol {
+    param(
+        [Parameter(Mandatory = $true)]
+        [bool]$HasGit
+    )
+
+    $hasRipgrep = [bool](Get-Command rg -ErrorAction SilentlyContinue)
+    $hasGitCli = [bool](Get-Command git -ErrorAction SilentlyContinue)
+    $hasUv = [bool](Get-Command uv -ErrorAction SilentlyContinue)
+    $hasPython3 = [bool](Get-Command python3 -ErrorAction SilentlyContinue)
+    $hasPython = [bool](Get-Command python -ErrorAction SilentlyContinue)
+
+    $repoSearch = [ordered]@{
+        available = $false
+        tool = 'unavailable'
+        list_files_cmd = ''
+        search_text_cmd = ''
+    }
+
+    if ($hasRipgrep) {
+        $repoSearch.available = $true
+        $repoSearch.tool = 'rg'
+        $repoSearch.list_files_cmd = 'rg --files'
+        $repoSearch.search_text_cmd = "rg -n --hidden --glob '!.git/*' -- <pattern>"
+    } elseif ($HasGit -and $hasGitCli) {
+        $repoSearch.available = $true
+        $repoSearch.tool = 'git'
+        $repoSearch.list_files_cmd = 'git ls-files'
+        $repoSearch.search_text_cmd = 'git grep -n -- <pattern>'
+    }
+
+    $repoInspection = [ordered]@{
+        available = $false
+        status_cmd = ''
+        diff_cmd = ''
+        history_cmd = ''
+    }
+    if ($HasGit -and $hasGitCli) {
+        $repoInspection.available = $true
+        $repoInspection.status_cmd = 'git status --short'
+        $repoInspection.diff_cmd = 'git diff -- <path>'
+        $repoInspection.history_cmd = 'git log --oneline -- <path>'
+    }
+
+    $python = [ordered]@{
+        available = $false
+        tool = 'unavailable'
+        runner_cmd = ''
+    }
+    if ($hasUv) {
+        $python.available = $true
+        $python.tool = 'uv'
+        $python.runner_cmd = 'uv run python'
+    } elseif ($hasPython3) {
+        $python.available = $true
+        $python.tool = 'python3'
+        $python.runner_cmd = 'python3'
+    } elseif ($hasPython) {
+        $python.available = $true
+        $python.tool = 'python'
+        $python.runner_cmd = 'python'
+    }
+
+    return [ordered]@{
+        schema_version = '1.0'
+        rules = @(
+            'Reuse the emitted commands before trying alternates.',
+            'Do not install missing tools or mutate PATH during /sdd runs.',
+            'Use project-specific build/test commands only when they are task anchors or repo-backed scripts/configs.'
+        )
+        repo_search = $repoSearch
+        repo_inspection = $repoInspection
+        python = $python
+    }
+}
+
 # Show help if requested
 if ($Help) {
     Write-Output @"
@@ -162,6 +238,7 @@ if ($Json) {
     $payload = [ordered]@{
         FEATURE_DIR = $paths.FEATURE_DIR
         AVAILABLE_DOCS = $docs
+        LOCAL_EXECUTION_PROTOCOL = Get-LocalExecutionProtocol -HasGit:$paths.HAS_GIT
     }
 
     if ($DataModelPreflight) {

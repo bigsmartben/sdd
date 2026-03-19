@@ -5,10 +5,6 @@ handoffs:
     agent: sdd.clarify
     prompt: Clarify specification requirements
     send: true
-  - label: Generate Interactive Prototype
-    agent: sdd.specify.ui-html
-    prompt: Create an interactive prototype by running /sdd.specify.ui-html in the same active feature branch context.
-    send: true
   - label: Build Technical Plan
     agent: sdd.plan
     prompt: Create a plan by running /sdd.plan in the same active feature branch context. I am building with...
@@ -81,6 +77,8 @@ Given that feature description, do this:
 - Any extracted actor lists, term sets, requirement drafts, or working summaries used during `/sdd.specify` are derived working views only.
 - `spec.md` becomes the authoritative feature-semantics artifact only after the current refinement/validation cycle is written successfully.
 - `ui.html` generated later by `/sdd.specify.ui-html` is a derived prototype artifact and MUST NOT override `spec.md`.
+- `/sdd.specify` writes `spec.md` only and MUST NOT directly generate `ui.html`.
+- `/sdd.specify.ui-html` is an optional sidecar command; users decide if/when to invoke it.
 - If clarification answers, validation rewrites, or scope edits change feature meaning, discard stale derived notes and re-derive from the current `spec.md` content before handoff.
 
 1. Follow this execution flow:
@@ -119,10 +117,13 @@ Given that feature description, do this:
     9. Generate Functional Requirements
        Each requirement must be testable and linked to scenarios and UDD references
     10. Define Success Criteria
-       Create measurable, technology-agnostic outcomes
-       Include both quantitative metrics (time, performance, volume) and qualitative measures (user satisfaction, task completion)
-       Each criterion must be verifiable without implementation details
+        Create measurable, technology-agnostic outcomes
+        Include both quantitative metrics (time, performance, volume) and qualitative measures (user satisfaction, task completion)
+        Each criterion must be verifiable without implementation details
     11. Add Environment Edge Cases
+        - Treat `EC-*` as semantic anchors, not a fixed four-item bucket list.
+        - Add `EC-005+` whenever retry, re-entry, permission/access, duplicate/dedup, timeout/transport, validation, or recovery behaviors are distinct in user-visible semantics.
+        - Keep `Path Inventory`, `Exception Paths`, FR blocks, and `N.2 Environment Edge Cases` textually aligned on the same `EC-*` meaning.
     12. Add Assumptions/Open Questions only when needed
     13. Return: SUCCESS (spec ready for planning)
 
@@ -148,10 +149,11 @@ Given that feature description, do this:
       - No unsupported domain terms leaked from prior analysis/examples
       - No [NEEDS CLARIFICATION] markers remain
       - Requirements are testable and unambiguous
-      - Success criteria are measurable and technology-agnostic
-      - All acceptance scenarios and edge cases are defined
-      - Scope is clearly bounded; dependencies and assumptions identified
-      - All functional requirements have clear acceptance criteria
+       - Success criteria are measurable and technology-agnostic
+       - All acceptance scenarios and edge cases are defined
+       - `EC-*` references remain semantically aligned across `Path Inventory`, `Exception Paths`, FR blocks, and `N.2 Environment Edge Cases`
+       - Scope is clearly bounded; dependencies and assumptions identified
+       - All functional requirements have clear acceptance criteria
       - User scenarios cover primary flows
 
    b. **Handle Validation Results**:
@@ -199,7 +201,7 @@ Given that feature description, do this:
         8. Update the spec by replacing each [NEEDS CLARIFICATION] marker with the user's selected or provided answer
         9. Re-run validation after all clarifications are resolved
 
-4. Report completion with branch name, spec file path, and readiness for the next phase (run `/sdd.specify.ui-html` for an interactive prototype if needed, then `/sdd.clarify` first, then `/sdd.plan`; if user explicitly skips clarification, warn about increased downstream rework risk and then proceed). If checklist-style validation output is needed, direct users to run `/sdd.checklist` as a separate vertical command after `/sdd.plan`.
+4. Report completion with branch name, spec file path, and readiness for the next phase (`/sdd.clarify` first, then `/sdd.plan`; `/sdd.specify.ui-html` remains an optional sidecar command that users can invoke at their chosen time after `spec.md` is available). If user explicitly skips clarification, warn about increased downstream rework risk and then proceed. If checklist-style validation output is needed, direct users to run `/sdd.checklist` as a separate vertical command after `/sdd.plan`.
 
 **NOTE:** The script initializes the `specs/<feature-key>/spec.md` path (`feature-key = YYYYMMDD-short-name` for preferred branch naming). In Git repositories it also switches to the resolved feature branch.
 

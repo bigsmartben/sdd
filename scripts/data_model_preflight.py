@@ -277,7 +277,7 @@ def main(argv: list[str] | None = None) -> int:
         "research_stage": research_stage,
         "selected_stage": selected_stage,
         "repo_anchor_policy": {
-            "decision_order": ["existing", "extended", "new", "todo"],
+            "decision_order": ["existing", "extended", "new"],
             "repo_anchor_input_limit": 5,
             "inv_requires_repo_evidence": True,
             "inv_forbids_todo": True,

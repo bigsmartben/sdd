@@ -17,11 +17,38 @@ def _write_feature_fixture(
     contract_anchor_status: str = "`existing`",
     contract_boundary_anchor: str = "HTTP `GET /demo`",
     contract_entry_anchor: str | None = "src/app/demo.py::DemoHandler.handle",
+    contract_entry_status: str = "`existing`",
     test_matrix_boundary_anchor: str = "HTTP `GET /demo`",
+    packet_boundary_anchor: str = "HTTP GET /demo",
+    packet_boundary_status: str = "existing",
+    packet_entry_anchor: str = "src/app/demo.py::DemoHandler.handle",
+    packet_entry_status: str = "existing",
     include_research_trigger: bool = False,
+    plan_feature_status: str = "planning-in-progress",
+    plan_boundary_anchor: str = "HTTP GET /demo",
+    plan_entry_anchor: str = "src/app/demo.py::DemoHandler.handle",
+    plan_boundary_status: str = "existing",
+    plan_entry_status: str = "existing",
 ) -> Path:
     feature_dir = tmp_path / "feature"
     (feature_dir / "contracts").mkdir(parents=True)
+    (tmp_path / "src" / "domain").mkdir(parents=True)
+    (tmp_path / "src" / "boundary").mkdir(parents=True)
+    (tmp_path / "src" / "app").mkdir(parents=True)
+
+    (tmp_path / "src" / "domain" / "demo.py").write_text(
+        "class DemoAggregate:\n    pass\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "src" / "boundary" / "demo.py").write_text(
+        "class DemoBoundary:\n    def handle(self):\n        return 'ok'\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "src" / "app" / "demo.py").write_text(
+        "class DemoHandler:\n    def handle(self):\n        return DemoResponse()\n\n"
+        "class DemoResponse:\n    demoId = 'demo'\n",
+        encoding="utf-8",
+    )
 
     (feature_dir / "data-model.md").write_text(
         "\n".join(
@@ -41,11 +68,25 @@ def _write_feature_fixture(
             [
                 "# Test Matrix",
                 "",
+                "## Scenario Matrix",
+                "",
                 "State Owner Anchor(s): src/domain/demo.py::DemoAggregate",
                 "",
                 "| TM ID | Operation ID | Boundary Anchor | IF Scope | Repo Anchor | Anchor Status | Path Type |",
                 "|------|--------------|-----------------|----------|-------------|---------------|-----------|",
                 f"| TM-001 | demoOp | {test_matrix_boundary_anchor} | IF-001 | src/boundary/demo.py::DemoBoundary | {test_matrix_status} | Main |",
+                "",
+                "## Verification Case Anchors",
+                "",
+                "| TC ID | TM ID | Operation ID | Boundary Anchor | IF Scope | Repo Anchor | Anchor Status | Verification Goal | Observability / Signal |",
+                "|-------|-------|--------------|-----------------|----------|-------------|---------------|-------------------|------------------------|",
+                f"| TC-001 | TM-001 | demoOp | {test_matrix_boundary_anchor} | IF-001 | src/boundary/demo.py::DemoBoundary | {test_matrix_status} | Verify demo payload | Demo payload is visible |",
+                "",
+                "## Binding Contract Packets",
+                "",
+                "| BindingRowID | Operation ID | IF Scope | Boundary Anchor | Boundary Anchor Status | Implementation Entry Anchor | Implementation Entry Anchor Status | Request DTO Anchor | Response DTO Anchor | Primary Collaborator Anchor | State Owner Anchor(s) | TM ID | TC IDs | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) | Main Pass Anchor | Branch/Failure Anchor(s) |",
+                "|--------------|--------------|----------|-----------------|------------------------|-----------------------------|------------------------------------|--------------------|--------------------|-----------------------------|-----------------------|-------|--------|-------------|-----------------|----------------|-------------|------------------|--------------------------|",
+                f"| BR-001 | demoOp | IF-001 | {packet_boundary_anchor} | {packet_boundary_status} | {packet_entry_anchor} | {packet_entry_status} | N/A | src/app/demo.py::DemoResponse | N/A | [src/domain/demo.py::DemoAggregate] | TM-001 | [TC-001] | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] | happy path | retry path |",
             ]
         ),
         encoding="utf-8",
@@ -74,7 +115,7 @@ def _write_feature_fixture(
         contract_lines.append(f"**Implementation Entry Anchor (Required)**: {contract_entry_anchor}")
     contract_lines.extend(
         [
-            "**Implementation Entry Anchor Status (Required)**: `existing`",
+            f"**Implementation Entry Anchor Status (Required)**: {contract_entry_status}",
             "",
             "## Contract Binding",
             "- Repo Anchor: `src/boundary/demo.py::DemoBoundary`",
@@ -91,6 +132,71 @@ def _write_feature_fixture(
         ]
     )
     (feature_dir / "contracts" / "demo.md").write_text("\n".join(contract_lines), encoding="utf-8")
+
+    (feature_dir / "plan.md").write_text(
+        "\n".join(
+            [
+                "# Planning Control Plane: Demo",
+                "",
+                "## Summary",
+                "",
+                "Demo planning control plane.",
+                "",
+                "## Shared Context Snapshot",
+                "",
+                "### Feature Identity",
+                "",
+                "- Feature: Demo",
+                "- Scope anchor: `spec.md`",
+                f"- Status: {plan_feature_status}",
+                "",
+                "### Stable Shared Inputs",
+                "",
+                "- Actors: Demo User",
+                "- In Scope: demo flow",
+                "- Out of Scope: none",
+                "- Shared blockers: none",
+                "",
+                "### Repository-First Consumption Slice",
+                "",
+                "- Relevant dependency usage rows / `SIG-*`: none",
+                "- Relevant module-edge rules: none",
+                "",
+                "## Stage Queue",
+                "",
+                "| Stage ID | Command | Required Inputs | Output Path | Status | Source Fingerprint | Output Fingerprint | Blocker |",
+                "|----------|---------|-----------------|-------------|--------|--------------------|--------------------|---------|",
+                "| research | `/sdd.plan.research` | `plan.md`, `spec.md` | `research.md` | done | spec | research | none |",
+                "| data-model | `/sdd.plan.data-model` | `plan.md`, `spec.md`, `research.md` | `data-model.md` | done | spec+research | data-model | none |",
+                "| test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md`, `research.md`, `data-model.md` | `test-matrix.md` | done | spec+research+data-model | test-matrix | none |",
+                "",
+                "## Binding Projection Index",
+                "",
+                "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | Boundary Anchor | Implementation Entry Anchor | Boundary Anchor Status | Implementation Entry Anchor Status | Test Scope |",
+                "|--------------|-------|--------|-------|------------------|-------|--------|--------------|-----------------|-----------------------------|------------------------|------------------------------------|------------|",
+                f"| BR-001 | UC-001 | UIF-001 | FR-001 | IF-001 | TM-001 | TC-001 | demoOp | {plan_boundary_anchor} | {plan_entry_anchor} | {plan_boundary_status} | {plan_entry_status} | Integration |",
+                "",
+                "## Artifact Status",
+                "",
+                "| BindingRowID | Unit Type | Target Path | Status | Source Fingerprint | Output Fingerprint | Blocker |",
+                "|--------------|-----------|-------------|--------|--------------------|--------------------|---------|",
+                "| BR-001 | contract | `contracts/demo.md` | pending | test-matrix:demo | pending | none |",
+                "",
+                "## Handoff Protocol",
+                "",
+                "- `/sdd.plan` initializes this file and starts the queue.",
+                "- `/sdd.plan.contract` advances `Artifact Status` one row at a time.",
+                "- `/sdd.tasks` starts only after all required stage and artifact rows are `done`.",
+                "",
+                "## Complexity Tracking",
+                "",
+                "| Violation | Why Needed | Simpler Alternative Rejected Because |",
+                "|-----------|------------|-------------------------------------|",
+                "| none | n/a | n/a |",
+            ]
+        ),
+        encoding="utf-8",
+    )
 
     if include_research_trigger:
         (feature_dir / "research.md").write_text(
@@ -229,3 +335,100 @@ def test_northbound_rule_flags_missing_label_entry_anchor_in_powershell(tmp_path
         f["rule_id"] == "PLN-NB-001" and "requires an Implementation Entry Anchor" in f["message"]
         for f in payload["findings"]
     )
+
+
+def test_binding_tuple_projection_sync_accepts_aligned_artifacts(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    payload = _run_planning_lint(feature_dir)
+    assert not any(f["rule_id"] == "PLN-BP-002" for f in payload["findings"])
+
+
+def test_binding_tuple_projection_sync_flags_plan_projection_drift(tmp_path: Path):
+    feature_dir = _write_feature_fixture(
+        tmp_path,
+        plan_entry_status="new",
+        packet_entry_status="existing",
+    )
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-BP-002" for f in payload["findings"])
+
+
+def test_repo_anchor_paths_must_resolve_to_real_files(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    data_model = feature_dir / "data-model.md"
+    data_model.write_text(
+        data_model.read_text(encoding="utf-8").replace(
+            "src/domain/demo.py::DemoAggregate",
+            "src/domain/missing_demo.py::DemoAggregate",
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-RA-009" for f in payload["findings"])
+
+
+def test_repo_anchor_paths_must_resolve_to_real_files_in_powershell(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    data_model = feature_dir / "data-model.md"
+    data_model.write_text(
+        data_model.read_text(encoding="utf-8").replace(
+            "src/domain/demo.py::DemoAggregate",
+            "src/domain/missing_demo.py::DemoAggregate",
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    payload = _run_planning_lint_powershell(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-RA-009" for f in payload["findings"])
+
+
+@pytest.mark.parametrize(
+    ("section_marker", "rule_id"),
+    [
+        ("## Summary", "PLN-CP-001"),
+        ("## Handoff Protocol", "PLN-CP-002"),
+        ("## Complexity Tracking", "PLN-CP-003"),
+    ],
+)
+def test_plan_required_sections_are_enforced(section_marker: str, rule_id: str, tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    plan = feature_dir / "plan.md"
+    lines = plan.read_text(encoding="utf-8").splitlines()
+    filtered = [line for line in lines if line != section_marker]
+    plan.write_text("\n".join(filtered) + "\n", encoding="utf-8")
+
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == rule_id for f in payload["findings"])
+
+
+def test_plan_required_sections_accept_crlf_line_endings(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    plan = feature_dir / "plan.md"
+    plan.write_bytes(plan.read_text(encoding="utf-8").replace("\n", "\r\n").encode("utf-8"))
+
+    payload = _run_planning_lint(feature_dir)
+    assert not any(
+        f["rule_id"] in {"PLN-CP-001", "PLN-CP-002", "PLN-CP-003"}
+        for f in payload["findings"]
+    )
+
+
+def test_plan_status_must_match_stage_and_artifact_progress(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path, plan_feature_status="planning-not-started")
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-CP-004" for f in payload["findings"])
+
+
+def test_binding_projection_index_rejects_todo_anchor_status_rows(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path, plan_boundary_status="todo")
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-BP-001" for f in payload["findings"])

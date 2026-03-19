@@ -64,6 +64,7 @@ Rules:
 - `Binding Projection Index` is a projection ledger only.
 - `Boundary Anchor` is the client-facing contract binding key projected from `test-matrix.md`; it is not the internal implementation handoff anchor.
 - `Implementation Entry Anchor`, `Boundary Anchor Status`, `Implementation Entry Anchor Status`, and `Test Scope` are compact bootstrap fields only; DTO anchors, collaborator anchors, and realization-detail evidence remain authoritative in `test-matrix.md`.
+- Keep this index aligned only from `/sdd.plan.test-matrix`; if tuple stability changes later, repair upstream and regenerate the projection instead of letting downstream commands rewrite it.
 - If a stable key is not confirmed, keep it out of the index.
 
 ## Artifact Status
