@@ -68,7 +68,6 @@ Given that feature description, do this:
    - The JSON output will contain BRANCH_NAME and SPEC_FILE paths
    - In Git repositories, the script MUST ensure the active branch is `BRANCH_NAME`: if already on it, keep it; otherwise switch to it (create then switch when needed)
    - `/sdd.specify` is the only command allowed to create/switch feature branches; downstream `/sdd.*` commands MUST stay on the already-active branch and use branch inference only
-   - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot")
 
 3. Load `.specify/templates/spec-template.md` to understand required sections. This runtime template path is mandatory; if the file is missing or non-consumable, stop and report the blocker. Do not substitute `templates/spec-template.md` or any other template location.
 
@@ -235,61 +234,18 @@ Given that feature description, do this:
 3. **UI and UX subnodes are mandatory** for user-facing/interactive UCs.
 4. Keep spec focused on business semantics; avoid governance/process-control sections.
 
-### For AI Generation
+### Generation Defaults
 
-When creating this spec from a user prompt:
+- Make informed defaults from user context and common domain practice; record them in `Assumptions / Open Questions`.
+- Ask clarifications only when the decision is high-impact and no safe default exists.
+- Keep total clarifications bounded (`<=5`) and prioritize: scope > security/privacy > UX > technical detail.
+- Keep success criteria measurable, user-facing, and technology-agnostic.
 
-1. **Make informed guesses**: Use context, industry standards, and common patterns to fill gaps
-2. **Document assumptions**: Record reasonable defaults in the Assumptions section
-3. **Limit clarifications**: Maximum 5 [NEEDS CLARIFICATION] markers - use only for critical decisions that:
-   - Significantly impact feature scope or user experience
-   - Have multiple reasonable interpretations with different implications
-   - Lack any reasonable default
-4. **Prioritize clarifications**: scope > security/privacy > user experience > technical details
-5. **Think like a tester**: Every vague requirement should fail the "testable and unambiguous" checklist item
-6. **Common areas needing clarification** (only if no reasonable default exists):
-   - Feature scope and boundaries (include/exclude specific use cases)
-   - User types and permissions (if multiple conflicting interpretations possible)
-   - Security/compliance requirements (when legally/financially significant)
+### Final Validation Checklist
 
-**Examples of reasonable defaults** (don't ask about these):
-
-- Data retention: Industry-standard practices for the domain
-- Performance targets: Standard web/mobile app expectations unless specified
-- Error handling: User-friendly messages with appropriate fallbacks
-- Authentication method: Standard session-based or OAuth2 for web apps
-- Integration patterns: Use project-appropriate patterns (REST/GraphQL for web services, function calls for libraries, CLI args for tools, etc.)
-
-### Success Criteria Guidelines
-
-Success criteria must be:
-
-1. **Measurable**: Include specific metrics (time, percentage, count, rate)
-2. **Technology-agnostic**: No mention of frameworks, languages, databases, or tools
-3. **User-focused**: Describe outcomes from user/business perspective, not system internals
-4. **Verifiable**: Can be tested/validated without knowing implementation details
-
-**Good examples**:
-
-- "Users can complete checkout in under 3 minutes"
-- "System supports 10,000 concurrent users"
-- "95% of searches return results in under 1 second"
-- "Task completion rate improves by 40%"
-
-**Bad examples** (implementation-focused):
-
-- "API response time is under 200ms" (too technical, use "Users see results instantly")
-- "Database can handle 1000 TPS" (implementation detail, use user-facing metric)
-- "React components render efficiently" (framework-specific)
-- "Redis cache hit rate above 80%" (technology-specific)
-
-### Validation Additions for New Structure
-
-When validating the generated spec, also ensure:
-
-- UDD exists and is field-level (`Entity.field`) for core user-visible entities
-- Each interactive UC includes the heavy UX flow tables
-- Each user-facing UC includes UI definitions and component-data dependency table
-- FR sections reference scenarios and relevant UDD fields
-- No governance/audit payload is embedded in the spec body
-- No carry-over domain identifiers appear unless traceable to current user input or explicit in-spec assumptions
+- UDD exists and is field-level (`Entity.field`) for core user-visible entities.
+- Each interactive UC includes heavy UX flow tables.
+- Each user-facing UC includes UI definitions and component-data dependency table.
+- FR sections reference scenarios and relevant UDD fields.
+- No governance/audit payload is embedded in the spec body.
+- No carry-over domain identifiers appear unless traceable to current user input or explicit in-spec assumptions.
