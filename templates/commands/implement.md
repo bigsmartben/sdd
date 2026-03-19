@@ -38,9 +38,10 @@ Comprehensive audit ownership remains with `/sdd.analyze`.
 7. Read `plan.md` only as control-plane context (`Shared Context Snapshot`, `Stage Queue`, `Artifact Status`, `Binding Projection Index`) and resolved artifact paths; do not treat it as a semantic source for architecture/contract/model requirements.
 8. Read support artifacts only when required by active tasks (`contracts/`, `data-model.md`, `test-matrix.md`, `research.md`).
 9. Read canonical repository-first baselines under `.specify/memory/repository-first/` for dependency/module-edge validation.
-10. Use `LOCAL_EXECUTION_PROTOCOL` as the default local shell contract for repository discovery, repo inspection, and bounded helper execution during this run.
+10. Treat `LOCAL_EXECUTION_PROTOCOL` as the constitution-derived run-local execution packet for repository discovery, repo inspection, and bounded helper execution during this run.
 11. If additional repository discovery is required, use only `LOCAL_EXECUTION_PROTOCOL.repo_search.list_files_cmd` and `LOCAL_EXECUTION_PROTOCOL.repo_search.search_text_cmd`; if `repo_search.available = false`, stop and report the blocker instead of trial-and-error across ad hoc CLIs.
-12. When a task requires build/test/lint commands, execute only completion anchors or repo-backed scripts/config entries; do not guess alternate package managers or install tooling in this command.
+12. If bounded Python helper execution is required, use only `LOCAL_EXECUTION_PROTOCOL.python.runner_cmd`; do not switch to user-managed interpreters, project-local virtual environments, or repo-local `uv run python`.
+13. When a task requires build/test/lint commands, execute only completion anchors or repo-backed scripts/config entries; do not guess alternate package managers or install tooling in this command.
 
 Manifest validation keys:
 

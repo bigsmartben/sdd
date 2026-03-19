@@ -18,10 +18,10 @@ Auto-generated from all feature plans. Last updated: [DATE]
 
 ## Stable Local Execution
 
-- Prefer the runtime `LOCAL_EXECUTION_PROTOCOL` emitted by `/sdd.*` prerequisite scripts for repository search, git inspection, and Python helper execution.
+- Treat the constitution-defined local execution policy as the authority; use the runtime `LOCAL_EXECUTION_PROTOCOL` emitted by `/sdd.*` prerequisite scripts as the run-local projection for repository search, git inspection, and Python helper execution.
 - Default repository discovery order: `rg --files` / `rg -n`; if unavailable and the workspace is a git repo, use the emitted git commands instead of guessing alternates.
-- Prefer the emitted Python runner (for example `uv run python` when selected by the runtime protocol) over ad hoc interpreter guesses.
-- Do not install missing CLI tools, mutate PATH, or switch package managers inside `/sdd.*` runs unless the task artifact explicitly requires it.
+- Prefer the emitted `specify-cli` Python helper runner (for example `specify internal-run-python --script <repo-python-helper>`) over ad hoc interpreter guesses or repo-local `uv run python`.
+- Do not install missing CLI tools, mutate PATH, or switch package managers/interpreters inside `/sdd.*` runs unless the task artifact explicitly requires it.
 
 ## Code Style
 

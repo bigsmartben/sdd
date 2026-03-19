@@ -1,5 +1,5 @@
 ---
-description: Generate a high-value interactive HTML prototype from the current feature branch spec.md for walkthrough, review, and interaction validation.
+description: Generate a high-value interactive HTML tool prototype from the current feature branch spec.md for walkthrough, review, and interaction validation.
 ---
 
 ## User Input
@@ -23,7 +23,7 @@ If branch-derived `SPEC_FILE` is missing or invalid, stop immediately and report
 
 ## Goal
 
-Generate exactly one review-ready `ui.html` interactive prototype from the resolved `SPEC_FILE`.
+Generate exactly one review-ready `ui.html` focused interactive tool from the resolved `SPEC_FILE`.
 
 This artifact is for:
 
@@ -33,7 +33,7 @@ This artifact is for:
 - copy/state validation
 - early concept communication
 
-This command should produce a prototype that is visually intentional, easy to demo, and immediately useful for discussion.
+This command should produce a focused interaction tool that is visually intentional, easy to demo, and immediately useful for discussion.
 
 Use `.specify/templates/ui-html-template.html` only. If the runtime template is missing or unreadable, stop and report the blocker instead of inferring structure from mirrors or previous outputs.
 
@@ -42,6 +42,7 @@ Use `.specify/templates/ui-html-template.html` only. If the runtime template is 
 - `spec.md` remains the authoritative feature-semantics artifact.
 - `ui.html` is a derived prototype artifact only.
 - `ui.html` MUST reflect `spec.md`, not replace it.
+- `ui.html` MUST make the core expression of `spec.md` easier to perceive through interaction, not harder to infer through layout or decoration.
 - Treat `spec.md` as a fact ledger for prototype derivation, especially `1.3 UI Data Dictionary (UDD)`, `3.2 UX — User Interaction Flow`, `3.4 UI — UI Element Definitions`, and `3.5 Component-Data Dependency Overview`.
 - If the prototype exposes semantic gaps or contradictions, route the repair back to `/sdd.specify` or `/sdd.clarify`.
 - Do **not** invent new requirements, actors, entities, or product flows that are not traceable to `spec.md` or current user input.
@@ -103,11 +104,23 @@ Do **not** scan unrelated feature folders.
 
 Prioritize prototype usefulness over document-like completeness.
 
+### 0. Tool-First Delivery
+
+`ui.html` should deliver a tool, not a document page.
+
+- Default to one dominant interaction tool with one primary user intention
+- Organize the experience around a closed interaction loop: context -> action -> system feedback -> completion/result -> next action
+- Start by extracting one plain-language expression sentence from `spec.md`: who is trying to finish what, under what context, to get what visible result
+- Make that expression sentence legible across the tool intent, primary action, feedback, and completion content
+- Make the main action visually dominant within seconds
+- Keep supporting states, history, and guidance subordinate to the tool's main loop
+- Avoid dashboard-style equal-weight cards, report-like sections, or artifact-review layouts unless `spec.md` explicitly requires them
+
 ### 1. Reviewability First
 
 The prototype should let a reviewer understand the feature quickly by interacting with it.
 
-- Prefer one coherent clickable prototype over a static page dump
+- Prefer one coherent clickable interaction tool over a static page dump
 - Make the main user flow obvious within seconds
 - Surface key decisions, feedback, and state transitions visually
 - Use clear headings, labels, calls to action, and UI hierarchy
@@ -127,9 +140,9 @@ Avoid generic placeholder-looking output.
 Prototype interaction should be meaningful.
 
 - Use light inline JavaScript when needed to simulate:
-  - navigation between views
+  - the primary tool loop
   - state switching
-  - tab/filter changes
+  - tool-mode changes
   - modal open/close
   - happy path transitions
   - empty/error/success states
@@ -148,10 +161,12 @@ Use the spec to derive:
 - user actions
 - important feedback states
 - acceptance-relevant interaction outcomes
+- the one dominant semantic through-line the user should understand after one pass
 
 Keep labels and terminology aligned with `spec.md`.
 Prefer explicit `UC`, `UIP`, `UIF`, `FR`, and `Entity.field` anchors in lightweight review surfaces only when they improve traceability without turning the artifact into a document dump or replacing user-facing content.
 If traceability markers are shown in `ui.html`, keep them secondary and compact. Do not make IDs, coverage ledgers, or audit-style badges the dominant visible content of the prototype.
+If the generated surface is visually polished but does not make the dominant semantic through-line from `spec.md` obvious within one pass, it is not acceptable.
 
 ### 5. Selective Scope
 
@@ -159,13 +174,14 @@ Do not try to prototype everything.
 
 Instead, cover the smallest set of screens and interactions that best represent the feature:
 
-- primary entry view
+- one primary tool surface
 - main happy path for each selected interactive UC
 - one meaningful alternate/error/empty/permission/timeout branch when the selected path set makes it user-visible or acceptance-relevant
 - visible data presentation anchored to the completed `Entity.field` subset needed by the selected interaction and FR/scenario context
 - rule-driven state evidence for selected UDD fields (for example: empty, error, disabled, warning, formatting, or recovery state)
 
 When the interaction reaches a completion/result moment, show the completed UDD-backed content where the user would actually perceive it instead of listing UDD rows separately.
+Default to keeping the user in the same tool shell while the content, mode, or state changes around the main interaction loop.
 
 If the spec implies many views, choose the most representative subset and keep the rest implicit.
 
@@ -197,6 +213,7 @@ The generated `ui.html` should:
 - use semantic HTML
 - use organized CSS with readable structure
 - use minimal, targeted JS only where it improves prototype value
+- present one clearly dominant tool interaction instead of multiple equal-priority sections
 - be suitable for screenshotting, walkthroughs, or user review sessions
 
 ## Execution Flow
@@ -206,6 +223,7 @@ The generated `ui.html` should:
 3. Read `SPEC_FILE` and extract a compact prototype packet:
    - feature goal
    - actors
+   - one plain-language expression sentence summarizing what `spec.md` is trying to make true for the user
    - positioning tuple (target user / core scenario / visible value)
    - key user-facing use cases
    - selected path inventory rows (`UIP-*`) and `UIF` nodes for the prototype surface
@@ -216,7 +234,7 @@ The generated `ui.html` should:
    - terminology and copy anchors
 4. Build the internal coverage ledger for the selected paths, `UIF` nodes, components, and `Entity.field` rows
 5. Decide the smallest high-value prototype surface:
-   - what screens/views to show
+   - what single dominant tool surface to show
    - what interactions to simulate
    - what states must be demonstrated
 6. Generate `ui.html` using the runtime template and current prototype packet
@@ -229,6 +247,8 @@ Before completing, validate that:
 
 - the prototype clearly represents the feature described in `spec.md`
 - the main flow is understandable through interaction
+- the deliverable reads as a focused interaction tool with one dominant primary loop
+- the core expression sentence from `spec.md` is obvious from the tool intent, main action, feedback, and completion content without reading supporting notes
 - every demonstrated interaction step maps to selected `UIF` node(s)
 - each selected happy/branch path has a visible entry, transition, and user-visible outcome
 - the prototype does not dump the full UDD inventory as visible content unless the spec explicitly requires it

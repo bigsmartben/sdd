@@ -66,6 +66,7 @@ Follow this execution flow:
 4. Fact-source propagation and redundancy control:
    - Treat `.specify/memory/constitution.md` as the authoritative project-level rule source and fact source. Any summaries, extracted rule lists, or downstream restatements of constitution content are derived views only and MUST be refreshed when constitution facts change.
    - Constitution content MUST stay at long-lived rule/terminology/ownership-boundary level; do not embed mechanical lint catalog details (rule IDs, regex patterns, script flags, payload schemas).
+   - Keep local CLI execution policy at constitution level; command templates and `LOCAL_EXECUTION_PROTOCOL` packets are derived execution views, not competing policy sources.
    - Runtime template authority path is `.specify/templates/`; when editing Spec Kit source directly, use the `templates/` mirror for the same files.
    - Review and refresh impacted artifact families only; avoid mechanical full-repo rewrites of unchanged downstream files.
    - Prefer targeted references over restating the same rule text across multiple downstream templates. When a downstream command or template only needs the constitution as authority, keep the downstream wording brief and aligned instead of cloning full rule prose.
@@ -78,6 +79,7 @@ Follow this execution flow:
       - Planning control plane template: Read `.specify/templates/plan-template.md` and ensure any "Constitution Check" or rules align with updated principles.
    - Planning-stage templates: Read the planning-stage templates in `.specify/templates/` (`research-template.md`, `data-model-template.md`, `test-matrix-template.md`, and `contract-template.md`) and ensure they reflect the updated principles and stage boundaries.
    - Feature/task templates: Read `.specify/templates/spec-template.md` for scope/requirements alignment and `.specify/templates/tasks-template.md` for principle-driven task categorization changes (for example observability, versioning, testing discipline).
+   - Execution-governance templates: When local CLI governance changes, read `.specify/templates/agent-file-template.md`, `.specify/templates/commands/tasks.md`, and `.specify/templates/commands/implement.md` and keep them aligned as derived execution guidance only.
    - Repository-first projection templates: Read `.specify/templates/technical-dependency-matrix-template.md` and `.specify/templates/module-invocation-spec-template.md` and keep them aligned with constitution repository-first rules.
    - Command templates: Read each command file in the active agent command directory (for example `.roo/commands/*.md`, `.claude/commands/*.md`, `.github/agents/*.agent.md`, `.gemini/commands/*.toml`); if `templates/commands/*.md` exists in this repository, review it as well. Verify no outdated references (agent-specific names like CLAUDE only) remain when generic guidance is required.
    - Runtime guidance docs: Read any runtime guidance docs (for example `README.md`, `docs/quickstart.md`, or agent-specific guidance files if present) and update references to principles changed.

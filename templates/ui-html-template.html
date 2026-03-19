@@ -70,6 +70,94 @@
       gap: 20px;
     }
 
+    .tool-shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.9fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .tool-stage {
+      position: relative;
+      min-height: 420px;
+      overflow: hidden;
+    }
+
+    .tool-stage::before {
+      content: "";
+      position: absolute;
+      inset: 28px;
+      border-radius: 50%;
+      border: 1px dashed rgba(22, 98, 79, 0.28);
+      background:
+        radial-gradient(circle at center, rgba(22, 98, 79, 0.08) 0 30%, transparent 31% 100%);
+      pointer-events: none;
+    }
+
+    .loop-grid {
+      position: relative;
+      z-index: 1;
+      min-height: 360px;
+      display: grid;
+      place-items: center;
+      padding: 26px;
+    }
+
+    .loop-core {
+      width: min(240px, 58vw);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      background: linear-gradient(180deg, #1d7a63 0%, #145948 100%);
+      color: #f7f3eb;
+      box-shadow: 0 20px 40px rgba(22, 98, 79, 0.24);
+      padding: 22px;
+    }
+
+    .loop-core h2 {
+      margin: 0 0 8px;
+      font-size: 1.2rem;
+    }
+
+    .loop-core p {
+      color: rgba(247, 243, 235, 0.88);
+    }
+
+    .loop-node {
+      position: absolute;
+      width: 140px;
+      min-height: 84px;
+      border-radius: 16px;
+      background: rgba(255, 250, 242, 0.96);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      padding: 12px;
+    }
+
+    .loop-node strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.82rem;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .loop-node p {
+      font-size: 0.92rem;
+    }
+
+    .node-context { top: 6%; left: 6%; }
+    .node-action { top: 6%; right: 6%; }
+    .node-feedback { bottom: 10%; right: 10%; }
+    .node-result { bottom: 10%; left: 10%; }
+
+    .tool-side {
+      display: grid;
+      gap: 16px;
+    }
+
     .panel h2 {
       margin: 0 0 10px;
       font-size: 1.1rem;
@@ -149,6 +237,7 @@
     .status.default { background: var(--accent-weak); color: var(--accent); }
     .status.empty { background: #f3ead8; color: var(--warning); }
     .status.error { background: #f7e2df; color: var(--danger); }
+    .status.success { background: #e6f3ee; color: var(--accent); }
 
     .rail {
       display: flex;
@@ -169,6 +258,16 @@
       .shell { padding: 20px 14px 32px; }
       .hero, .panel { padding: 18px; }
     }
+
+    @media (max-width: 900px) {
+      .tool-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .tool-stage {
+        min-height: 520px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -177,15 +276,16 @@
       <div class="eyebrow">UI Preview</div>
       <h1>[FEATURE NAME]</h1>
       <p>
-        Replace this hero summary with the current review-ready UI narrative
-        derived from <code>spec.md</code>.
+        [Write one plain-language sentence that makes the main expression of
+        <code>spec.md</code> obvious: who is trying to complete what, and what
+        visible result they should get.]
       </p>
     </section>
 
     <section class="panel">
       <article class="card">
-        <h2>Positioning Snapshot</h2>
-        <p>[One clear statement: who this is for, what core problem is solved, and why it matters.]</p>
+        <h2>Tool Intent</h2>
+        <p>[State the same core meaning as spec.md in tool form: who uses this tool, what they are trying to complete right now, and what visible result they expect.]</p>
         <div class="positioning-grid">
           <div class="positioning-cell">
             <h3>Target User</h3>
@@ -202,51 +302,82 @@
         </div>
       </article>
 
-      <div class="grid">
-        <article class="card">
-          <h2>Primary View</h2>
-          <p>[Describe only the main screen, route, and user goal. Avoid repeating positioning text.]</p>
-          <div class="rail">
-            <span class="pill">Entry Context</span>
-            <span class="pill">Primary Action</span>
-            <span class="pill">Visible Outcome</span>
+      <section class="tool-shell">
+        <article class="card tool-stage">
+          <div class="loop-grid">
+            <div class="loop-node node-context">
+              <strong>Context</strong>
+              <p>[What the user knows before acting.]</p>
+            </div>
+            <div class="loop-node node-action">
+              <strong>Action</strong>
+              <p>[The one action that most directly expresses spec.md's main intent.]</p>
+            </div>
+            <div class="loop-core">
+              <div>
+                <h2>Primary Tool Loop</h2>
+                <p>[Name the single dominant task this tool helps the user finish, using spec.md terminology.]</p>
+              </div>
+            </div>
+            <div class="loop-node node-feedback">
+              <strong>Feedback</strong>
+              <p>[Immediate system response or guidance that confirms the intended flow.]</p>
+            </div>
+            <div class="loop-node node-result">
+              <strong>Result</strong>
+              <p>[The completion content or changed state that proves spec.md's intended outcome.]</p>
+            </div>
           </div>
         </article>
 
-        <article class="card">
-          <h2>Critical Component + States</h2>
-          <p>[Describe the highest-value component and the completed user-visible data it must reveal during interaction.]</p>
-          <div class="status default">Default State</div>
-          <div class="status empty">Empty State</div>
-          <div class="status error">Error State</div>
-        </article>
+        <div class="tool-side">
+          <article class="card">
+            <h2>Action Surface</h2>
+            <p>[Describe the input controls, CTA, or direct manipulation area that powers the main tool loop.]</p>
+            <div class="rail">
+              <span class="pill">Entry Context</span>
+              <span class="pill">Primary Action</span>
+              <span class="pill">Visible Outcome</span>
+            </div>
+          </article>
 
-        <article class="card">
-          <h2>User-Visible Completion</h2>
-          <p>[Show the completed result content, confirmation, or changed state that the user should actually see after the key interaction.]</p>
-          <div class="rail">
-            <span class="pill">Completed State</span>
-            <span class="pill">Key Feedback</span>
-            <span class="pill">User Result</span>
-          </div>
-        </article>
-      </div>
+          <article class="card">
+            <h2>Critical Component + States</h2>
+            <p>[Describe the highest-value component and the completed user-visible data it must reveal during interaction.]</p>
+            <div class="status default">Default State</div>
+            <div class="status empty">Empty State</div>
+            <div class="status error">Error State</div>
+            <div class="status success">Completed State</div>
+          </article>
+
+          <article class="card">
+            <h2>User-Visible Completion</h2>
+            <p>[Show the completed result content, confirmation, or changed state that the user should actually see after the key interaction.]</p>
+            <div class="rail">
+              <span class="pill">Completed State</span>
+              <span class="pill">Key Feedback</span>
+              <span class="pill">Next Action</span>
+            </div>
+          </article>
+        </div>
+      </section>
 
       <article class="card">
-        <h2>Primary Interaction Flow</h2>
+        <h2>Loop Steps</h2>
         <ol class="flow">
           <li>[Entry action and initial context.]</li>
           <li>[Main user action and system feedback.]</li>
           <li>[Completion signal or fallback branch with the user-visible result content.]</li>
+          <li>[What the user does next without leaving the tool shell.]</li>
         </ol>
       </article>
 
       <article class="card">
-        <h2>Review Focus</h2>
+        <h2>Interaction Guardrails</h2>
         <ul>
-          <li>[Copy and terminology match with spec.md]</li>
-          <li>[Responsive behavior for desktop/mobile]</li>
-          <li>[Accessibility + loading/empty/error evidence]</li>
+          <li>[Copy and terminology stay aligned with spec.md]</li>
+          <li>[The primary action remains dominant on desktop/mobile]</li>
+          <li>[Accessibility + loading/empty/error/completed evidence]</li>
         </ul>
       </article>
     </section>

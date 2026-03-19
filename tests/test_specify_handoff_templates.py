@@ -22,12 +22,17 @@ def test_specify_command_keeps_current_flow_and_treats_ui_html_as_optional_sidec
 
     assert "Treat all `$ARGUMENTS` as optional prototype direction." in ui_html
     assert ".specify/templates/ui-html-template.html" in ui_html
-    assert "Generate exactly one review-ready `ui.html` interactive prototype" in ui_html
+    assert "Generate exactly one review-ready `ui.html` focused interactive tool" in ui_html
     assert "## UIF + UDD Coverage Protocol (MUST)" in ui_html
     assert "Every demonstrated user interaction MUST trace back to an explicit `UIF` node." in ui_html
     assert "Only surface the subset of completed `Entity.field` rows needed to make the selected interaction understandable from the user's point of view." in ui_html
     assert "Every business-significant datum that appears inside the demonstrated interaction MUST trace back to explicit completed `Entity.field` rows." in ui_html
     assert "Do not make IDs, coverage ledgers, or audit-style badges the dominant visible content of the prototype." in ui_html
+    assert "`ui.html` should deliver a tool, not a document page." in ui_html
+    assert "Organize the experience around a closed interaction loop: context -> action -> system feedback -> completion/result -> next action" in ui_html
+    assert "`ui.html` MUST make the core expression of `spec.md` easier to perceive through interaction" in ui_html
+    assert "Start by extracting one plain-language expression sentence from `spec.md`" in ui_html
+    assert "the one dominant semantic through-line the user should understand after one pass" in ui_html
     assert "`UIF Coverage Summary`" in ui_html
     assert "`UDD Coverage Summary`" in ui_html
     assert "`Next Command`: `/sdd.clarify`" in ui_html
@@ -43,10 +48,12 @@ def test_spec_template_stays_unsplit_and_ui_html_template_exists():
     assert "[ui.html](ui.html)" not in spec_template
     assert "UI Preview" in ui_html_template
     assert "spec.md" in ui_html_template
-    assert "User-Visible Completion" in ui_html_template
-    assert "Completed State" in ui_html_template
-    assert "Entry Context" in ui_html_template
-    assert "Visible Outcome" in ui_html_template
+    assert "Primary Tool Loop" in ui_html_template
+    assert "Tool Intent" in ui_html_template
+    assert "Loop Steps" in ui_html_template
+    assert "Next Action" in ui_html_template
+    assert "who is trying to complete what" in ui_html_template
+    assert "proves spec.md's intended outcome" in ui_html_template
 
 
 def test_spec_and_commands_require_semantically_aligned_edge_case_refs():

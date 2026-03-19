@@ -188,6 +188,36 @@ If the rule is not met, use a **Lightweight State Model** instead:
 If a Full FSM is used below threshold, downstream planning artifacts MUST record explicit
 justification for why lightweight is insufficient.
 
+## Local Execution Protocol Governance
+
+This section defines long-lived governance for AI-local CLI execution inside
+`/sdd.*` commands.
+
+- Constitution authority (hard rule):
+  - `.specify/memory/constitution.md` is the SSOT for local execution rules
+  - `LOCAL_EXECUTION_PROTOCOL` is a run-local derived projection only and MUST
+    NOT introduce competing policy
+- Repository discovery and inspection (hard rule):
+  - downstream `/sdd.*` commands MUST prefer the emitted
+    `repo_search` / `repo_inspection` commands before alternates
+- Python helper isolation (hard rule):
+  - SDD-owned Python helper execution MUST use the `specify-cli` tool runtime
+    exposed by `LOCAL_EXECUTION_PROTOCOL.python.runner_cmd`
+  - do not call user-managed `python`, `python3`, `py`, project-local virtual
+    environments, or repo-local `uv run python` for SDD helper execution
+- Safe degradation (hard rule):
+  - if a projected capability is unavailable, downstream commands MAY downgrade
+    helper-dependent fast paths to warnings or null bootstrap packets, but MUST
+    NOT invent substitute CLIs
+- High-risk prohibitions (hard rule):
+  - `/sdd.*` commands MUST NOT install missing tools, mutate `PATH`, or switch
+    package managers/interpreters during a run
+- Ownership binding (hard rule):
+  - `specify-cli` owns provisioning the controlled Python runtime entry
+  - prerequisite scripts emit the run-local projection packet
+  - downstream command templates and agent guidance consume that packet without
+    redefining competing execution policy
+
 ## Constraints & Evolution Rules
 
 This section defines long-lived constraints that guide change over time.

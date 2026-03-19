@@ -1895,6 +1895,28 @@ def version():
     console.print()
 
 
+@app.command(
+    "internal-run-python",
+    hidden=True,
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+)
+def internal_run_python(
+    ctx: typer.Context,
+    script: Path = typer.Option(
+        ...,
+        "--script",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+        resolve_path=True,
+        help="Repository helper script to execute with the specify-cli runtime.",
+    ),
+):
+    """Run a repository helper script with the specify-cli Python runtime."""
+    result = subprocess.run([sys.executable, str(script), *ctx.args])
+    raise typer.Exit(result.returncode)
+
+
 # ===== Extension Commands =====
 
 extension_app = typer.Typer(

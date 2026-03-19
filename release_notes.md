@@ -4,11 +4,5 @@ This is the latest set of releases that you can use with your agent of choice. W
 
 ## Changelog
 
-- Enforce planning gates for baselines FSM and anchor evidence
-- Handle escaped markdown pipes and tighten planning handoffs
-- refactor: streamline command prompts for fast-path clarification
-- fix: align plan bootstrap with preflight and reduce lint false positives
-- Streamline repo-anchor governance and sync planning templates
-- Merge pull request #27 from bigsmartben/codex/sync-release-notes-v2.0.23
-- docs: sync release notes for v2.0.23
+- Refine ui-html release coverage guidance
 

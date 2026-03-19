@@ -39,9 +39,7 @@ function Get-LocalExecutionProtocol {
 
     $hasRipgrep = [bool](Get-Command rg -ErrorAction SilentlyContinue)
     $hasGitCli = [bool](Get-Command git -ErrorAction SilentlyContinue)
-    $hasUv = [bool](Get-Command uv -ErrorAction SilentlyContinue)
-    $hasPython3 = [bool](Get-Command python3 -ErrorAction SilentlyContinue)
-    $hasPython = [bool](Get-Command python -ErrorAction SilentlyContinue)
+    $hasSpecify = [bool](Get-Command specify -ErrorAction SilentlyContinue)
 
     $repoSearch = [ordered]@{
         available = $false
@@ -80,18 +78,10 @@ function Get-LocalExecutionProtocol {
         tool = 'unavailable'
         runner_cmd = ''
     }
-    if ($hasUv) {
+    if ($hasSpecify) {
         $python.available = $true
-        $python.tool = 'uv'
-        $python.runner_cmd = 'uv run python'
-    } elseif ($hasPython3) {
-        $python.available = $true
-        $python.tool = 'python3'
-        $python.runner_cmd = 'python3'
-    } elseif ($hasPython) {
-        $python.available = $true
-        $python.tool = 'python'
-        $python.runner_cmd = 'python'
+        $python.tool = 'specify-cli'
+        $python.runner_cmd = 'specify internal-run-python --script <repo-python-helper>'
     }
 
     return [ordered]@{
@@ -244,27 +234,21 @@ if ($Json) {
     if ($DataModelPreflight) {
         $payload.DATA_MODEL_BOOTSTRAP = $null
         $helper = Join-Path (Split-Path $PSScriptRoot -Parent) 'data_model_preflight.py'
-        if (Test-Path $helper -PathType Leaf) {
-            $pythonCmd = Get-Command python3 -ErrorAction SilentlyContinue
-            if (-not $pythonCmd) {
-                $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
-            }
+        $specifyCmd = Get-Command specify -ErrorAction SilentlyContinue
+        if ((Test-Path $helper -PathType Leaf) -and $specifyCmd) {
+            try {
+                $dataModelBootstrapJson = & $specifyCmd.Source internal-run-python --script $helper `
+                    --feature-dir $paths.FEATURE_DIR `
+                    --plan $paths.IMPL_PLAN `
+                    --spec $paths.FEATURE_SPEC `
+                    --research $paths.RESEARCH `
+                    --data-model $paths.DATA_MODEL
 
-            if ($pythonCmd) {
-                try {
-                    $dataModelBootstrapJson = & $pythonCmd.Source $helper `
-                        --feature-dir $paths.FEATURE_DIR `
-                        --plan $paths.IMPL_PLAN `
-                        --spec $paths.FEATURE_SPEC `
-                        --research $paths.RESEARCH `
-                        --data-model $paths.DATA_MODEL
-
-                    if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($dataModelBootstrapJson)) {
-                        $payload.DATA_MODEL_BOOTSTRAP = $dataModelBootstrapJson | ConvertFrom-Json
-                    }
-                } catch {
-                    $payload.DATA_MODEL_BOOTSTRAP = $null
+                if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($dataModelBootstrapJson)) {
+                    $payload.DATA_MODEL_BOOTSTRAP = $dataModelBootstrapJson | ConvertFrom-Json
                 }
+            } catch {
+                $payload.DATA_MODEL_BOOTSTRAP = $null
             }
         }
     }
@@ -272,28 +256,22 @@ if ($Json) {
     if ($TaskPreflight) {
         $payload.TASKS_BOOTSTRAP = $null
         $helper = Join-Path (Split-Path $PSScriptRoot -Parent) 'task_preflight.py'
-        if (Test-Path $helper -PathType Leaf) {
-            $pythonCmd = Get-Command python3 -ErrorAction SilentlyContinue
-            if (-not $pythonCmd) {
-                $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
-            }
+        $specifyCmd = Get-Command specify -ErrorAction SilentlyContinue
+        if ((Test-Path $helper -PathType Leaf) -and $specifyCmd) {
+            try {
+                $taskBootstrapJson = & $specifyCmd.Source internal-run-python --script $helper `
+                    --feature-dir $paths.FEATURE_DIR `
+                    --plan $paths.IMPL_PLAN `
+                    --spec $paths.FEATURE_SPEC `
+                    --data-model $paths.DATA_MODEL `
+                    --test-matrix $paths.TEST_MATRIX `
+                    --contracts-dir $paths.CONTRACTS_DIR
 
-            if ($pythonCmd) {
-                try {
-                    $taskBootstrapJson = & $pythonCmd.Source $helper `
-                        --feature-dir $paths.FEATURE_DIR `
-                        --plan $paths.IMPL_PLAN `
-                        --spec $paths.FEATURE_SPEC `
-                        --data-model $paths.DATA_MODEL `
-                        --test-matrix $paths.TEST_MATRIX `
-                        --contracts-dir $paths.CONTRACTS_DIR
-
-                    if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($taskBootstrapJson)) {
-                        $payload.TASKS_BOOTSTRAP = $taskBootstrapJson | ConvertFrom-Json
-                    }
-                } catch {
-                    $payload.TASKS_BOOTSTRAP = $null
+                if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($taskBootstrapJson)) {
+                    $payload.TASKS_BOOTSTRAP = $taskBootstrapJson | ConvertFrom-Json
                 }
+            } catch {
+                $payload.TASKS_BOOTSTRAP = $null
             }
         }
     }
@@ -301,27 +279,21 @@ if ($Json) {
     if ($ImplementPreflight) {
         $payload.IMPLEMENT_BOOTSTRAP = $null
         $helper = Join-Path (Split-Path $PSScriptRoot -Parent) 'implement_preflight.py'
-        if (Test-Path $helper -PathType Leaf) {
-            $pythonCmd = Get-Command python3 -ErrorAction SilentlyContinue
-            if (-not $pythonCmd) {
-                $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
-            }
+        $specifyCmd = Get-Command specify -ErrorAction SilentlyContinue
+        if ((Test-Path $helper -PathType Leaf) -and $specifyCmd) {
+            try {
+                $implementBootstrapJson = & $specifyCmd.Source internal-run-python --script $helper `
+                    --feature-dir $paths.FEATURE_DIR `
+                    --spec $paths.FEATURE_SPEC `
+                    --plan $paths.IMPL_PLAN `
+                    --tasks $paths.TASKS `
+                    --analyze-history (Join-Path $paths.FEATURE_DIR 'audits/analyze-history.md')
 
-            if ($pythonCmd) {
-                try {
-                    $implementBootstrapJson = & $pythonCmd.Source $helper `
-                        --feature-dir $paths.FEATURE_DIR `
-                        --spec $paths.FEATURE_SPEC `
-                        --plan $paths.IMPL_PLAN `
-                        --tasks $paths.TASKS `
-                        --analyze-history (Join-Path $paths.FEATURE_DIR 'audits/analyze-history.md')
-
-                    if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($implementBootstrapJson)) {
-                        $payload.IMPLEMENT_BOOTSTRAP = $implementBootstrapJson | ConvertFrom-Json
-                    }
-                } catch {
-                    $payload.IMPLEMENT_BOOTSTRAP = $null
+                if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($implementBootstrapJson)) {
+                    $payload.IMPLEMENT_BOOTSTRAP = $implementBootstrapJson | ConvertFrom-Json
                 }
+            } catch {
+                $payload.IMPLEMENT_BOOTSTRAP = $null
             }
         }
     }

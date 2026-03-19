@@ -35,6 +35,10 @@ EXPECTED_MARKERS = [
     "Only surface the subset of completed `Entity.field` rows needed to make the selected interaction understandable from the user's point of view.",
     "Every business-significant datum that appears inside the demonstrated interaction MUST trace back to explicit completed `Entity.field` rows.",
     "Do not make IDs, coverage ledgers, or audit-style badges the dominant visible content of the prototype.",
+    "`ui.html` should deliver a tool, not a document page.",
+    "Organize the experience around a closed interaction loop: context -> action -> system feedback -> completion/result -> next action",
+    "`ui.html` MUST make the core expression of `spec.md` easier to perceive through interaction",
+    "Start by extracting one plain-language expression sentence from `spec.md`",
     "`UIF Coverage Summary`",
     "`UDD Coverage Summary`",
 ]

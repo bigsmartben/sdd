@@ -64,18 +64,10 @@ build_local_execution_protocol_json() {
     local python_available=false
     local python_tool="unavailable"
     local python_runner_cmd=""
-    if command -v uv >/dev/null 2>&1; then
+    if command -v specify >/dev/null 2>&1; then
         python_available=true
-        python_tool="uv"
-        python_runner_cmd="uv run python"
-    elif command -v python3 >/dev/null 2>&1; then
-        python_available=true
-        python_tool="python3"
-        python_runner_cmd="python3"
-    elif command -v python >/dev/null 2>&1; then
-        python_available=true
-        python_tool="python"
-        python_runner_cmd="python"
+        python_tool="specify-cli"
+        python_runner_cmd="specify internal-run-python --script <repo-python-helper>"
     fi
 
     local rules_json
@@ -278,8 +270,8 @@ if $JSON_MODE; then
         DATA_MODEL_PREFLIGHT_SCRIPT="$SCRIPT_DIR/../data_model_preflight.py"
         data_model_bootstrap="null"
         PYTHON_BIN="$(command -v python3 || command -v python || true)"
-        if [[ -f "$DATA_MODEL_PREFLIGHT_SCRIPT" && -n "$PYTHON_BIN" ]]; then
-            if data_model_bootstrap="$("$PYTHON_BIN" "$DATA_MODEL_PREFLIGHT_SCRIPT" \
+        if [[ -f "$DATA_MODEL_PREFLIGHT_SCRIPT" ]] && command -v specify >/dev/null 2>&1; then
+            if data_model_bootstrap="$(specify internal-run-python --script "$DATA_MODEL_PREFLIGHT_SCRIPT" \
                 --feature-dir "$FEATURE_DIR" \
                 --plan "$IMPL_PLAN" \
                 --spec "$FEATURE_SPEC" \
@@ -296,9 +288,8 @@ if $JSON_MODE; then
     if $TASK_PREFLIGHT; then
         TASK_PREFLIGHT_SCRIPT="$SCRIPT_DIR/../task_preflight.py"
         task_bootstrap="null"
-        PYTHON_BIN="$(command -v python3 || command -v python || true)"
-        if [[ -f "$TASK_PREFLIGHT_SCRIPT" && -n "$PYTHON_BIN" ]]; then
-            if task_bootstrap="$("$PYTHON_BIN" "$TASK_PREFLIGHT_SCRIPT" \
+        if [[ -f "$TASK_PREFLIGHT_SCRIPT" ]] && command -v specify >/dev/null 2>&1; then
+            if task_bootstrap="$(specify internal-run-python --script "$TASK_PREFLIGHT_SCRIPT" \
                 --feature-dir "$FEATURE_DIR" \
                 --plan "$IMPL_PLAN" \
                 --spec "$FEATURE_SPEC" \
@@ -315,9 +306,8 @@ if $JSON_MODE; then
     if $IMPLEMENT_PREFLIGHT; then
         IMPLEMENT_PREFLIGHT_SCRIPT="$SCRIPT_DIR/../implement_preflight.py"
         implement_bootstrap="null"
-        PYTHON_BIN="$(command -v python3 || command -v python || true)"
-        if [[ -f "$IMPLEMENT_PREFLIGHT_SCRIPT" && -n "$PYTHON_BIN" ]]; then
-            if implement_bootstrap="$("$PYTHON_BIN" "$IMPLEMENT_PREFLIGHT_SCRIPT" \
+        if [[ -f "$IMPLEMENT_PREFLIGHT_SCRIPT" ]] && command -v specify >/dev/null 2>&1; then
+            if implement_bootstrap="$(specify internal-run-python --script "$IMPLEMENT_PREFLIGHT_SCRIPT" \
                 --feature-dir "$FEATURE_DIR" \
                 --spec "$FEATURE_SPEC" \
                 --plan "$IMPL_PLAN" \
