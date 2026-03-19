@@ -1,7 +1,7 @@
 # Feature Verification Design: [FEATURE]
 
 **Stage**: Stage 2 Feature Verification Design
-**Inputs**: `spec.md`, `research.md`, `data-model.md`
+**Inputs**: `spec.md`, `research.md`, bounded repo evidence
 
 Use this artifact to define scenario-oriented software test design for the feature. Cover main, branch, exception, and degraded behavior without turning the document into an audit ledger.
 Keep the matrix minimal-but-sufficient: merge pure permutations with identical observable outcomes, and add a new row only when path semantics, preconditions, or expected outcomes materially differ.
@@ -13,8 +13,14 @@ Keep the matrix minimal-but-sufficient: merge pure permutations with identical o
 - [Verification goals and observability signals for each path family]
 - [How the selected strategy seeds downstream `Binding Contract Packets` and bounded contract reads]
 - [How `spec.md` scenarios are translated into verifiable paths]
-- [Where shared invariants, lifecycle, or role boundaries affect coverage]
-- [Where projections/derivations depend on globally stable owner classes or owner fields from `data-model.md`]
+- [Which repo-confirmed interface bindings make each path executable in the current repository]
+- [Which shared semantics are already upstream-defined and therefore must stay explicit rather than re-derived here]
+
+## Repo Evidence Guidance (Binding Only)
+
+- Use repo evidence to confirm interface bindings only: boundary entry, implementation entry, request/response DTO anchors, and first-hop collaborator anchors.
+- Keep repo reads bounded to the selected binding slice; do not use Stage 2 to close shared class modeling, owner closure, field closure, lifecycle design, or invariant authoring.
+- If interface realism depends on a missing shared-semantic class, owner/source, lifecycle, or invariant, route the gap back to `data-model.md` instead of widening this artifact.
 
 ## Stable Binding Keys (Required)
 
@@ -36,8 +42,8 @@ Keep the matrix minimal-but-sufficient: merge pure permutations with identical o
 - `Implementation Entry Anchor` MUST NOT be added to `Scenario Matrix` or `Verification Case Anchors` tuple keys.
 - `Implementation Entry Anchor` is allowed only in `Binding Contract Packets` as a contract-seed field for `/sdd.plan.contract`.
 - For HTTP-facing bindings, `Boundary Anchor` MUST stay `HTTP METHOD /path`, `Implementation Entry Anchor` MUST stay the owning controller method, and downstream service/facade symbols MUST remain collaborators only.
-- `Request DTO Anchor`, `Response DTO Anchor`, and `State Owner Anchor(s)` MAY remain `TODO(REPO_ANCHOR)` only as explicit contract gap sources; they MUST NOT trigger a fallback back to minimal-field contract output.
-- Do not invent new globally stable owner classes, owner fields, or lifecycle vocabulary here; if verification semantics need them, route the gap back to `data-model.md`.
+- `Request DTO Anchor` and `Response DTO Anchor` MAY remain `TODO(REPO_ANCHOR)` only as explicit contract gap sources; they MUST NOT trigger a fallback back to minimal-field contract output.
+- Do not invent new shared-semantic classes, owners, fields, or lifecycle vocabulary here; if verification semantics need them, route the gap back to `data-model.md`.
 - Main-path verification binding MUST use tuples with `Anchor Status = existing|extended|new`. Rows with `Anchor Status = todo` MUST NOT enter primary verification path rows.
 
 ## Scenario Matrix
@@ -59,9 +65,9 @@ Keep the packet compact and tuple-oriented; do not restate scenario prose or rea
 This packet scopes the operation-scoped `Full Field Dictionary` and the minimum targeted contract reads in `contracts/`; it does not claim field-level closure on its own, and it does not authorize a fallback to minimal-field contract output.
 When either anchor status is `new`, the packet MUST carry concise strategy evidence showing why `existing` was rejected and why `extended` was rejected or unsafe.
 
-| BindingRowID | Operation ID | IF Scope | Boundary Anchor | Boundary Anchor Status | Boundary Anchor Strategy Evidence | Implementation Entry Anchor | Implementation Entry Anchor Status | Implementation Entry Anchor Strategy Evidence | Request DTO Anchor | Response DTO Anchor | Primary Collaborator Anchor | State Owner Anchor(s) | TM ID | TC IDs | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) | Lifecycle Ref(s) | Invariant Ref(s) | Main Pass Anchor | Branch/Failure Anchor(s) |
-|--------------|--------------|----------|-----------------|------------------------|-----------------------------------|-----------------------------|------------------------------------|-----------------------------------------------|--------------------|--------------------|-----------------------------|-----------------------|-------|--------|-------------|-----------------|----------------|-------------|------------------|------------------|------------------|--------------------------|
-| BR-001 | [operationId or N/A] | [IF-### or N/A] | [HTTP `METHOD /path` \| `event.topic` \| `Facade.method` \| `cli command` \| `N/A`] | [`existing` \| `extended` \| `new` \| `todo`] | [`existing: ...; extended: ...` or `N/A`] | [`path/to/file.ext::Symbol` or `TODO(REPO_ANCHOR)`] | [`existing` \| `extended` \| `new` \| `todo`] | [`existing: ...; extended: ...` or `N/A`] | [`path/to/file.ext::Symbol` or `N/A` or `TODO(REPO_ANCHOR)`] | [`path/to/file.ext::Symbol` or `N/A` or `TODO(REPO_ANCHOR)`] | [`path/to/file.ext::Symbol` or `N/A` or `TODO(REPO_ANCHOR)`] | [[`path/to/file.ext::Symbol`, `path/to/file.ext::Symbol`] or `N/A` or `TODO(REPO_ANCHOR)`] | [TM-001] | [TC-001, TC-002] | [UC / UIF / FR refs] | [SC / scenario refs] | [success refs] | [edge / EC refs] | [Lifecycle: EntityName or `N/A`] | [INV-001, INV-002 or `N/A`] | [primary success check] | [branch or failure checks] |
+| BindingRowID | Operation ID | IF Scope | Boundary Anchor | Boundary Anchor Status | Boundary Anchor Strategy Evidence | Implementation Entry Anchor | Implementation Entry Anchor Status | Implementation Entry Anchor Strategy Evidence | Request DTO Anchor | Response DTO Anchor | Primary Collaborator Anchor | TM ID | TC IDs | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) | Main Pass Anchor | Branch/Failure Anchor(s) |
+|--------------|--------------|----------|-----------------|------------------------|-----------------------------------|-----------------------------|------------------------------------|-----------------------------------------------|--------------------|--------------------|-----------------------------|-------|--------|-------------|-----------------|----------------|-------------|------------------|--------------------------|
+| BR-001 | [operationId or N/A] | [IF-### or N/A] | [HTTP `METHOD /path` \| `event.topic` \| `Facade.method` \| `cli command` \| `N/A`] | [`existing` \| `extended` \| `new` \| `todo`] | [`existing: ...; extended: ...` or `N/A`] | [`path/to/file.ext::Symbol` or `TODO(REPO_ANCHOR)`] | [`existing` \| `extended` \| `new` \| `todo`] | [`existing: ...; extended: ...` or `N/A`] | [`path/to/file.ext::Symbol` or `N/A` or `TODO(REPO_ANCHOR)`] | [`path/to/file.ext::Symbol` or `N/A` or `TODO(REPO_ANCHOR)`] | [`path/to/file.ext::Symbol` or `N/A` or `TODO(REPO_ANCHOR)`] | [TM-001] | [TC-001, TC-002] | [UC / UIF / FR refs] | [SC / scenario refs] | [success refs] | [edge / EC refs] | [primary success check] | [branch or failure checks] |
 
 ## Boundary Notes
 
@@ -73,12 +79,8 @@ When either anchor status is `new`, the packet MUST carry concise strategy evide
 - Bind TM/TC rows to tuples with `Anchor Status = existing|extended|new` for normative verification; keep rows with `Anchor Status = todo` out of the main validation path.
 - Treat `Boundary Anchor` as the client-facing contract entry only; keep internal implementation handoff anchors for contract realization design sections.
 - For HTTP-facing bindings, keep the controller method in `Implementation Entry Anchor` and the first downstream service/facade hop in `Primary Collaborator Anchor`.
-- `State Owner Anchor(s)` MUST identify the owner classes that this operation reads, writes, projects, or uses for state/default/validation decisions; do not substitute the collaborator list here.
-- `State Owner Anchor(s)` MUST use anchors that map to `owner`, `state-source`, or `projection-source` in `data-model.md`; `transport-carrier`, `context-carrier`, and `partial-lineage` are supporting evidence only.
-- `Lifecycle Ref(s)` and `Invariant Ref(s)` SHOULD point to `data-model.md` only when contract-visible behavior depends on lifecycle or invariant semantics; otherwise keep them `N/A`.
 - If later contract generation surfaces tuple drift, repair this packet via `/sdd.plan.test-matrix`; do not let downstream commands rewrite Stage 2 tuple seeds.
-- `State Owner Anchor(s)` MUST trace back to owner classes/fields already modeled as globally stable in `data-model.md`; contract stage may widen operation-scoped field coverage, but it MUST NOT mint a new owner concept.
-- `Primary Collaborator Anchor` MAY be `N/A`, but `State Owner Anchor(s)` MUST NOT be replaced by `Primary Collaborator Anchor`.
-- Contract-seed coverage is operation-scoped and bounded: it identifies request/response surfaces, owner surfaces, and model refs the contract must preserve without duplicating the full field dictionary.
+- `Primary Collaborator Anchor` MAY be `N/A`, but it MUST NOT be used to disguise an unknown boundary or implementation entry.
+- Contract-seed coverage is operation-scoped and bounded: it identifies request/response surfaces, collaborator surfaces, and test anchors the contract must preserve without duplicating the full field dictionary.
 - Treat `BA-*` as non-normative shorthand only; never use it as a normative tuple key.
 - Do not redefine contract fields, interface internals, audit tables, or traceability ledgers here.

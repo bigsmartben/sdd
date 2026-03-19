@@ -1,9 +1,9 @@
 ---
 description: Generate the pending research.md artifact selected from the current feature branch plan.md.
 handoffs:
-  - label: Continue Data Model Queue
-    agent: sdd.plan.data-model
-    prompt: Run /sdd.plan.data-model with the same active feature branch context.
+  - label: Continue Test Matrix Queue
+    agent: sdd.plan.test-matrix
+    prompt: Run /sdd.plan.test-matrix with the same active feature branch context.
     send: true
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json
@@ -98,8 +98,8 @@ Do not write long summaries or detailed research prose back into `PLAN_FILE`.
 
 Emit a `Handoff Decision` section in the runtime output with exactly these fields:
 
-- `Next Command`: `/sdd.plan.data-model`
-- `Decision Basis`: `Stage Queue` shows the selected `research` row is complete and the fixed next pending stage is `data-model`
+- `Next Command`: `/sdd.plan.test-matrix` by default; route `/sdd.plan.data-model` only when the selected research output leaves an explicit shared-semantic alignment blocker that must be closed before Stage 2
+- `Decision Basis`: default planning flow continues to `test-matrix`; only explicit shared-semantic blockers reroute to `data-model`
 - `Selected Stage ID`: selected `research` stage row id
 - `Ready/Blocked`: `Ready` when the selected row is updated to `done`; otherwise `Blocked`
 

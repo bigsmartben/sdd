@@ -41,12 +41,13 @@ Do not place stage prose, audit payload, or execution logs here.
 |----------|---------|-----------------|-------------|--------|--------------------|--------------------|---------|
 | research | `/sdd.plan.research` | `plan.md`, `spec.md`, constitution, targeted repo anchors | `research.md` | pending | [fingerprint] | [fingerprint] | [none] |
 | data-model | `/sdd.plan.data-model` | `plan.md`, `spec.md`, `research.md`, lifecycle repo anchors | `data-model.md` | pending | [fingerprint] | [fingerprint] | [none] |
-| test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md`, `research.md`, `data-model.md` | `test-matrix.md` | pending | [fingerprint] | [fingerprint] | [none] |
+| test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md`, `research.md`, bounded repo evidence | `test-matrix.md` | pending | [fingerprint] | [fingerprint] | [none] |
 
 Rules:
 
 - Queue order is fixed.
 - Child commands take the first matching `pending` row only.
+- `data-model` is an on-demand shared-semantic alignment row; it remains queued but does not block the default `research -> test-matrix -> contract` path.
 - Do not add prose summaries into this table.
 
 ## Binding Projection Index

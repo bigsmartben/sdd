@@ -75,9 +75,8 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 - `Northbound Contract Summary` is reader-oriented only: summarize external request/response, visible outcomes, and side effects without competing with field-level contract authority.
 - `Full Field Dictionary (Operation-scoped)` is the only authoritative field-level contract surface: it MUST cover request DTO fields, response DTO fields, selected state-owner fields, and the fields directly used for reads, writes, projections, validation, defaults, or state decisions.
 - `Full Field Dictionary (Operation-scoped)` MUST classify rows using `Dictionary Tier = operation-critical|owner-residual`, and list `operation-critical` rows first.
-- The selected binding packet scopes tuple keys, owner surfaces, and model refs; use targeted repo/data-model reads to close remaining field-level details instead of re-deriving broad feature semantics.
-- This stage MAY refine operation-scoped VO/DTO/field mappings from the stable classes, owners, and seeds declared upstream; it MUST NOT mint new globally stable model concepts, owners, lifecycle vocabulary, or invariants.
-- `State Owner Anchor(s)` are valid only when evidence role is `owner`, `state-source`, or `projection-source`; treat `transport-carrier`, `context-carrier`, and `partial-lineage` as supporting evidence or explicit gaps, not owner closure.
+- The selected binding packet scopes tuple keys, boundary/entry anchors, DTO surfaces, collaborator surfaces, and test anchors; use targeted repo/data-model reads to close remaining field-level details instead of re-deriving broad feature semantics.
+- This stage MAY refine operation-scoped VO/DTO/field mappings from the stable classes and seeds declared upstream; it MUST NOT mint new shared-semantic classes, owners/sources, lifecycle vocabulary, or invariants.
 - Do not delete owner fields that this operation does not use; keep them in the field dictionary with `Used in <Operation ID> = no`.
 - Realization design scope is delivery-ready: internal handoff, failure propagation, sequence closure, UML ownership, and southbound dependency chain.
 - Fill `Downstream Projection Input (Required)` with one executable slice for the selected `IF Scope` / `Operation ID`: include `spec` refs (`UC/UIF/FR/SC/EC`) and `test` refs (`Test Scope`, `TM/TC`, pass/failure anchors, command/assertion signal).
@@ -99,6 +98,14 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 - UML request/response class labels should use anchored symbols or repository boundary naming conventions; do not synthesize `RequestDTO` / `ResponseDTO` labels unless the anchored symbol itself uses those names.
 - Any newly introduced field/method/call MUST be explicitly marked as new and connected to owner/consumer or caller/callee.
 
+## Concrete Naming Closure (Mandatory)
+
+- Every class/type/callable name that appears in the generated contract MUST be concrete before the row can be marked `done`; do not leave angle-bracket placeholders such as `<BoundaryRequestModel>` or `<ContractBoundaryEntry>` in the final artifact.
+- Apply the same repository decision order used by `data-model`: `existing -> extended -> new`.
+- A contract may define operation-scoped classes/types in this stage when upstream has not already fixed them, but those names MUST be concrete and MUST stay inside the selected operation boundary.
+- Here, "class/type/callable" includes any concrete contract-visible or realization-visible symbol named in the artifact: controller methods, service/facade entry points, request/response DTOs, command/result models, entities, value objects, policies, and collaborators.
+- If continuing would require inventing a new shared-semantic class/owner/source rather than an operation-scoped contract detail, stop and route upstream to `/sdd.plan.data-model`.
+
 ## Repo Anchor Decision Protocol (Mandatory)
 
 - Use the repo-anchor decision protocol in `.specify/templates/contract-template.md` as the authority for this stage.
@@ -115,7 +122,7 @@ Read only, in this order:
 - selected binding packet from `test-matrix.md`
 
 Treat the selected binding packet in `test-matrix.md` as the default authoritative semantic input for this stage.
-Do not read `spec.md`, `research.md`, or `data-model.md` unless the selected binding packet is missing required fields or cannot resolve contract-visible owner/source evidence.
+Do not read `spec.md`, `research.md`, or `data-model.md` unless the selected binding packet is missing required fields or concrete class/source resolution cannot be closed from the selected contract slice.
 
 ### Conditional Inputs
 
@@ -128,12 +135,12 @@ Read `spec.md` only if the selected binding packet is missing any of:
 
 Read `data-model.md` only if the selected binding packet explicitly depends on:
 
-- `Lifecycle Ref(s)` or `Invariant Ref(s)` that must be checked in this contract run
 - lifecycle transitions
 - state invariants
 - entity constraints required for contract-visible behavior
-- state-owner vocabulary needed to complete `Full Field Dictionary (Operation-scoped)`
-- contract-visible fields whose stable owner/source cannot be resolved from selected packet anchors
+- already-declared shared owner/source vocabulary needed to complete `Full Field Dictionary (Operation-scoped)`
+- shared projection/derivation semantics already defined upstream
+- contract-visible fields whose shared owner/source cannot be resolved from selected packet anchors and bounded repo reads
 
 Read `research.md` only when northbound or layering evidence is needed to disambiguate controller-vs-service/facade entry selection.
 
@@ -146,7 +153,7 @@ Read only the minimum repo-backed targets required to confirm the selected bindi
 - request DTO anchor target, when present
 - response DTO anchor target, when present
 - one primary collaborator anchor, when required for contract-visible behavior
-- up to three `State Owner Anchor(s)` targets, when present
+- only the additional owner/source targets needed to close contract-visible fields when those owners/sources are already defined upstream or already repo-confirmed in this run
 
 When the boundary is HTTP, confirm the route-owning controller before accepting any downstream service/facade symbol as a collaborator.
 
@@ -163,9 +170,9 @@ After generation, the selected artifact under `contracts/` becomes the authorita
 
 ## Block And Route Upstream
 
-Stop local refinement and route upstream when continuing would require a new upstream semantic owner:
+Stop local refinement and route upstream when continuing would require a new upstream shared semantic:
 
-- `/sdd.plan.data-model` when the contract would need a new spec-scoped data-model class, new globally stable owner, new globally stable field, new lifecycle state/transition, new invariant, or a contract-visible field has no stable owner/source in `data-model.md`
+- `/sdd.plan.data-model` when the contract would need a new shared-semantic class, new shared owner/source, new shared field, new lifecycle state/transition, new invariant, or a contract-visible field depends on shared semantics that remain undefined upstream
 - `/sdd.plan.test-matrix` when the selected binding packet is missing, the verification path/goal/signal seed is incomplete, or the tuple seed in `test-matrix.md` is inconsistent with `plan.md`
 
 Do not route upstream for operation-scoped field selection, VO/DTO projection shape, default/validation detail, or realization-design detail that can be derived from the existing upstream boundary.
@@ -211,7 +218,7 @@ Determine `Next Command` from the resolved `PLAN_FILE` state only after the sele
 
 - If any `contract` rows remain `blocked`, `Next Command = /sdd.plan.contract`
 - Otherwise, if any `contract` rows remain `pending`, `Next Command = /sdd.plan.contract`
-- Otherwise, if all required planning rows are complete, `Next Command = /sdd.tasks`
+- Otherwise, if all required planning rows (`research`, `test-matrix`, and all queued `contract` rows) are complete, `Next Command = /sdd.tasks` even if `data-model` remains pending-unused
 - Otherwise, if queue state is inconsistent with either condition, keep `Next Command` empty and set `Ready/Blocked = Blocked`
 
 `Decision Basis` MUST cite the post-update `Artifact Status` state and planning-complete check that produced the routing decision.

@@ -56,9 +56,9 @@ def _write_minimal_feature(
 
 ## Binding Contract Packets
 
-| BindingRowID | Operation ID | IF Scope | Boundary Anchor | Boundary Anchor Status | Boundary Anchor Strategy Evidence | Implementation Entry Anchor | Implementation Entry Anchor Status | Implementation Entry Anchor Strategy Evidence | Request DTO Anchor | Response DTO Anchor | Primary Collaborator Anchor | State Owner Anchor(s) | TM ID | TC IDs | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) | Lifecycle Ref(s) | Invariant Ref(s) | Main Pass Anchor | Branch/Failure Anchor(s) |
-|--------------|--------------|----------|-----------------|------------------------|-----------------------------------|-----------------------------|------------------------------------|-----------------------------------------------|--------------------|--------------------|-----------------------------|-----------------------|-------|--------|-------------|-----------------|----------------|-------------|------------------|------------------|------------------|--------------------------|
-| BindingRowID-001 | createTask | IF-001 | HTTP POST /tasks | {boundary_anchor_status} | {boundary_anchor_strategy_evidence} | {implementation_entry_anchor} | {implementation_entry_anchor_status} | {implementation_entry_anchor_strategy_evidence} | src/app/contracts.py::CreateTaskRequest | src/app/contracts.py::CreateTaskResponse | src/app/task_service.py::TaskService.create_task | [src/domain/task.py::Task] | TM-001 | [TC-001, TC-002] | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] | [Lifecycle: Task] | [INV-001] | TC-001 pass | TC-002 fail |
+| BindingRowID | Operation ID | IF Scope | Boundary Anchor | Boundary Anchor Status | Boundary Anchor Strategy Evidence | Implementation Entry Anchor | Implementation Entry Anchor Status | Implementation Entry Anchor Strategy Evidence | Request DTO Anchor | Response DTO Anchor | Primary Collaborator Anchor | TM ID | TC IDs | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) | Main Pass Anchor | Branch/Failure Anchor(s) |
+|--------------|--------------|----------|-----------------|------------------------|-----------------------------------|-----------------------------|------------------------------------|-----------------------------------------------|--------------------|--------------------|-----------------------------|-------|--------|-------------|-----------------|----------------|-------------|------------------|--------------------------|
+| BindingRowID-001 | createTask | IF-001 | HTTP POST /tasks | {boundary_anchor_status} | {boundary_anchor_strategy_evidence} | {implementation_entry_anchor} | {implementation_entry_anchor_status} | {implementation_entry_anchor_strategy_evidence} | src/app/contracts.py::CreateTaskRequest | src/app/contracts.py::CreateTaskResponse | src/app/task_service.py::TaskService.create_task | TM-001 | [TC-001, TC-002] | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] | TC-001 pass | TC-002 fail |
 """,
             encoding="utf-8",
         )
@@ -72,6 +72,14 @@ def _write_minimal_feature(
 | BindingRowID | Operation ID | IF Scope | Seed Boundary Anchor | Repo-Confirmed Boundary Entry | Drift Type | Contract Handling Strategy | Upstream Route Required |
 |--------------|--------------|----------|----------------------|-------------------------------|------------|----------------------------|-------------------------|
 | BR-001 | createTask | IF-001 | HTTP POST /tasks | HTTP POST /tasks | none | Keep controller-first tuple and align contract entry anchor to controller method | none |
+
+## Resolved Class Inventory (Required)
+
+| Role | Concrete Name | Resolution | Source / Evidence | Notes |
+|------|---------------|------------|-------------------|-------|
+| boundary-entry | src/app/tasks_controller.py::TasksController.create_task | existing | binding packet + repo anchor | controller-first HTTP entry |
+| request-dto | src/app/contracts.py::CreateTaskRequest | existing | binding packet | concrete request model |
+| response-dto | src/app/contracts.py::CreateTaskResponse | existing | binding packet | concrete response model |
 
 ## Full Field Dictionary (Operation-scoped)
 
@@ -179,7 +187,7 @@ def _write_data_model_feature(
 |----------|---------|-----------------|-------------|--------|--------------------|--------------------|---------|
 | research | `/sdd.plan.research` | `plan.md`, `spec.md` | `research.md` | {research_status} | a | b | [none] |
 | data-model | `/sdd.plan.data-model` | `plan.md`, `spec.md`, `research.md` | `data-model.md` | {data_model_status} | a | b | [none] |
-| test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md`, `research.md`, `data-model.md` | `test-matrix.md` | pending | a | b | [none] |
+| test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md`, `research.md`, bounded repo evidence | `test-matrix.md` | pending | a | b | [none] |
 """,
         encoding="utf-8",
     )
@@ -398,6 +406,48 @@ def test_task_preflight_helper_surfaces_incomplete_stage_queue_blocker(tmp_path)
     assert "incomplete_stage_queue" in error_codes
 
 
+def test_task_preflight_helper_allows_pending_data_model_stage(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(feature_dir)
+
+    plan_path = feature_dir / "plan.md"
+    plan_text = plan_path.read_text(encoding="utf-8")
+    plan_path.write_text(
+        plan_text.replace(
+            "| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | done | a | b | [none] |",
+            "| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | pending | a | b | [none] |",
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "task_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+            "--test-matrix",
+            str(feature_dir / "test-matrix.md"),
+            "--contracts-dir",
+            str(feature_dir / "contracts"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["incomplete_stage_ids"] == []
+    assert payload["execution_readiness"]["ready_for_task_generation"] is True
+
+
 def test_task_preflight_helper_warns_missing_full_field_dictionary(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
     _write_minimal_feature(feature_dir, contract_text="# Contract\n")
@@ -566,6 +616,63 @@ def test_task_preflight_helper_warns_http_controller_first_violation(tmp_path):
     assert payload["execution_readiness"]["ready_for_task_generation"] is True
     warning_codes = [entry["code"] for entry in payload["execution_readiness"]["warnings"]]
     assert "controller_first_violation" in warning_codes
+
+
+def test_task_preflight_helper_blocks_unresolved_contract_placeholder_names(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(
+        feature_dir,
+        contract_text="""# Contract
+
+## Resolved Class Inventory (Required)
+
+| Role | Concrete Name | Resolution | Source / Evidence | Notes |
+|------|---------------|------------|-------------------|-------|
+| request-dto | <BoundaryRequestModel> | contract-defined | contract-local rationale | unresolved placeholder should block |
+
+## Full Field Dictionary (Operation-scoped)
+
+| Field | Owner Class | Dictionary Tier | Direction | Required/Optional | Default | Validation/Enum | Persisted | Contract-visible | Used in createTask | Source Anchor |
+|-------|-------------|-----------------|-----------|-------------------|---------|-----------------|-----------|------------------|--------------------|---------------|
+| taskId | CreateTaskResponse | operation-critical | output | required | none | uuid | no | yes | yes | `src/app/contracts.py::CreateTaskResponse.taskId` |
+
+## Runtime Correctness Check
+
+| Runtime Check Item | Required Evidence | Anchor | Status |
+|--------------------|-------------------|--------|--------|
+| Seed-vs-repo boundary drift classification | Seed tuple drift row exists and is explicit | BR-001 tuple | ok |
+| Field-dictionary tiering | Dictionary tier column exists and operation-critical rows lead | Field dictionary rows | ok |
+""",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "task_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+            "--test-matrix",
+            str(feature_dir / "test-matrix.md"),
+            "--contracts-dir",
+            str(feature_dir / "contracts"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["ready_unit_inventory"] == []
+    assert payload["execution_readiness"]["ready_for_task_generation"] is False
+    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
+    assert "contract_placeholder_names_present" in error_codes
 
 
 def test_task_preflight_helper_flags_missing_binding_projection_tuple_fields(tmp_path):

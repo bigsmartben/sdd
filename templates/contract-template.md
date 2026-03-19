@@ -48,7 +48,7 @@ Use stable IDs and short references only. Keep this section focused on the minim
 
 | Operation ID | Boundary Anchor | Operation / Interaction | IF Scope | Anchor Status | Repo Anchor | Repo Anchor Role | Implementation Entry Anchor | Implementation Entry Status | Upstream Ref(s) | Data Model Ref(s) |
 |--------------|-----------------|-------------------------|----------|---------------|-------------|------------------|-----------------------------|-----------------------------|-----------------|-------------------|
-| [operationId or N/A] | [HTTP `METHOD /path` / `event.topic` / `Facade.method` / `cli command` / `N/A`] | [name] | [IF-### or N/A] | [`existing` / `extended` / `new` / `todo`] | [`path/to/file.ext::Symbol` or `TODO(REPO_ANCHOR)`] | [`boundary-owner` / `state-source` / `projection-source` / `transport-carrier` / `context-carrier` / `partial-lineage`] | [`path/to/file.ext::Symbol` or `TODO(REPO_ANCHOR)`] | [`existing` / `extended` / `new` / `todo`] | [UC/FR/UIF/TM/TC refs needed downstream] | [Entity / INV / Lifecycle anchor ref] |
+| [operationId or N/A] | [HTTP `METHOD /path` / `event.topic` / `Facade.method` / `cli command` / `N/A`] | [name] | [IF-### or N/A] | [`existing` / `extended` / `new` / `todo`] | [`path/to/file.ext::Symbol` or `TODO(REPO_ANCHOR)`] | [`boundary-owner` / `state-source` / `projection-source` / `transport-carrier` / `context-carrier` / `partial-lineage`] | [`path/to/file.ext::Symbol` or `TODO(REPO_ANCHOR)`] | [`existing` / `extended` / `new` / `todo`] | [UC/FR/UIF/TM/TC refs needed downstream] | [shared semantic ref when required, otherwise `N/A`] |
 
 ### Seed Tuple vs Repo-Confirmed Boundary
 
@@ -84,6 +84,17 @@ If this operation does not participate in feature-level smoke flow, keep a row w
 | Smoke Candidate ID | IF Scope | Operation ID | Candidate Role | Depends On Candidate ID(s) | Trigger | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
 |--------------------|----------|--------------|----------------|----------------------------|---------|------------------|--------------------------|----------------------------|
 | [SMK-###] | [IF-### or N/A] | [operationId or N/A] | [`entry` / `middle` / `exit` / `none`] | [SMK-###, SMK-### or `N/A`] | [cross-interface trigger or `N/A`] | [cross-interface success signal or `N/A`] | [degraded/failure signal or `N/A`] | [smoke command/assertion signal or `N/A`] |
+
+## Resolved Class Inventory (Required)
+
+Use this section to close concrete naming before the contract is marked `done`.
+Every class/type/callable named anywhere in this artifact MUST appear here with a concrete name.
+Angle-bracket placeholders are template scaffolding only and MUST be fully replaced in final generated contracts.
+`contract-defined` is allowed only for operation-scoped types introduced in this stage; shared-semantic classes belong upstream in `data-model.md`.
+
+| Role | Concrete Name | Resolution | Source / Evidence | Notes |
+|------|---------------|------------|-------------------|-------|
+| [`boundary-entry` / `implementation-entry` / `request-dto` / `response-dto` / `entity` / `value-object` / `policy` / `service` / `collaborator` / `external-dependency`] | [`path/to/file.ext::Symbol` or concrete contract-defined name] | [`existing` / `extended` / `new` / `contract-defined`] | [binding packet / repo anchor / data-model ref / contract-local rationale] | [why this concrete name is final for this contract run] |
 
 ## Northbound Contract Summary
 
@@ -163,6 +174,7 @@ Each `Behavior Paths` row MUST map to one contiguous ordered step chain from tri
 Sequence MUST explicitly represent every mandatory repo-backed collaborator hop (including second-party/third-party call chain segments when they are part of the selected behavior path).
 Sequence MUST NOT merge multiple mandatory collaborators/dependencies into one synthetic participant label (for example `A + B`).
 `opt` blocks are allowed only for truly conditional branches; mandatory main-path collaborator/dependency calls MUST remain outside `opt`.
+Angle-bracket labels in the Mermaid examples below are template scaffolding only. Final contracts MUST replace every placeholder with concrete names or remove unused participants.
 If both controller and facade exist for this operation, show both participants in order with explicit handoff.
 When the boundary is an HTTP route, the controller method is the first repo-backed participant; any service/facade hop must appear after that handoff.
 If `Boundary Anchor` and `Implementation Entry Anchor` differ, render **Sequence Variant A** and show both forward and return handoff messages explicitly.
@@ -234,6 +246,7 @@ Every sequence call that invokes a class/interface operation MUST be represented
 Any newly introduced field/method/call (not already in anchored sources) MUST be explicitly marked as new and connected to both caller/callee or owner/consumer.
 For contract-visible request/response and behavior-significant fields, each field MUST have explicit UML ownership.
 UML request/response class labels should reuse anchored symbol names or repository boundary naming conventions; do not synthesize `RequestDTO` / `ResponseDTO` labels unless anchored symbols themselves use those names.
+Angle-bracket labels in the UML examples below are template scaffolding only. Final contracts MUST replace every placeholder with concrete names before the artifact can be `done`.
 If `Boundary Anchor` and `Implementation Entry Anchor` differ, render **UML Variant A**.
 If `Boundary Anchor` and `Implementation Entry Anchor` resolve to the same repo-backed symbol, render **UML Variant B only**: merge them into one UML class/interface and omit synthetic handoff relations.
 
@@ -344,7 +357,7 @@ Use the selected packet `Lifecycle Ref(s)` / `Invariant Ref(s)` as the default d
 
 - `spec.md`: [canonical source for UC / FR / UIF refs]
 - `test-matrix.md`: [TM / TC refs captured above; keep tuple values aligned]
-- `data-model.md`: [shared concepts, invariants, and lifecycle anchors]
+- `data-model.md`: [shared concepts, invariants, and lifecycle anchors when this contract depends on them]
 - repo anchors: [boundary/entry/request-response model/collaborator/dependency symbols]
 
 ## Boundary Notes

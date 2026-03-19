@@ -44,7 +44,7 @@ Do only two things:
 
 Keep the two-layer sharding model for planning runs:
 
-1. Stage sharding (fixed): `research -> data-model -> test-matrix -> contract`
+1. Stage sharding (fixed): default delivery path `research -> test-matrix -> contract`; `data-model` remains a queued on-demand shared-semantic alignment shard
 2. Binding sharding (fixed): `/sdd.plan.contract` consumes one `BindingRowID` row per run
 
 Do not collapse all planning work into one broad run.
@@ -113,6 +113,12 @@ Seed exactly three stage rows in fixed order:
 1. `research`
 2. `data-model`
 3. `test-matrix`
+
+Treat the `data-model` row as optional-by-default alignment work:
+
+- keep the row queued in `Stage Queue`
+- do not require it on the default `research -> test-matrix -> contract` path
+- use it only when a stage discovers a shared-semantic gap that cannot stay operation-scoped
 
 For each row include:
 

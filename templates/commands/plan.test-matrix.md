@@ -37,8 +37,9 @@ Use `.specify/templates/test-matrix-template.md` only. If the runtime template i
 3. Find the first `Stage Queue` row where:
    - `Stage ID = test-matrix`
    - `Status = pending`
-4. Require `research` and `data-model` rows to be `done`
-5. If prerequisites are not satisfied, stop and report the blocker
+4. Require the `research` row to be `done`
+5. Do not require `data-model` to be `done` before Stage 2
+6. If the selected row is explicitly blocked by a shared-semantic gap that cannot stay operation-scoped, stop and route to `/sdd.plan.data-model`
 
 ## Stage Packet (Test-Matrix Unit)
 
@@ -48,7 +49,6 @@ Build one bounded run-local packet for the selected `test-matrix` row from:
 - `Shared Context Snapshot` in resolved `PLAN_FILE`
 - resolved `FEATURE_SPEC` path
 - resolved `research.md` path
-- resolved `data-model.md` path
 - selected row source/output fingerprint fields
 
 Use this packet as the default context for generation and binding projection.
@@ -70,17 +70,29 @@ Read only:
 - `Shared Context Snapshot` from the resolved `PLAN_FILE` only
 - resolved `FEATURE_SPEC`
 - `research.md`
-- `data-model.md`
 - targeted controller/facade/service interface files strictly required to confirm `Boundary Anchor` and `Implementation Entry Anchor` for the selected binding rows
+- bounded repo evidence strictly required to confirm request/response DTO anchors and first-hop collaborator anchors for the selected binding rows
 
 When consuming allowed inputs, prefer section-level rereads over whole-file replay for the selected unit.
 
 `test-matrix.md` remains the authoritative source for verification semantics and stable tuple keys.
 `test-matrix.md` also carries the per-binding contract seed packet consumed by `/sdd.plan.contract`.
 `PLAN_FILE` receives only a compact binding projection index and artifact queue rows derived from that matrix.
-Treat `data-model.md` as authoritative for globally stable owner classes/fields/states that support shared projections, derivations, counters, badges, role labels, and lifecycle guards.
-When `data-model.md` provides anchor roles, only `owner`, `state-source`, and `projection-source` are valid sources for `State Owner Anchor(s)`.
-Use `spec.md` as the primary source for deciding which paths must be covered and what each path must prove; use `data-model.md` only to keep that strategy inside the declared model boundary.
+Use `spec.md` as the primary source for deciding which paths must be covered and what each path must prove.
+Use `research.md` to keep path decomposition and repo-facing assumptions aligned with upstream planning intent.
+Use bounded repo evidence only to confirm interface bindings that the current repository can already support; do not use Stage 2 to close shared class, owner, lifecycle, or invariant semantics.
+
+## Repo Evidence Guidance (Binding Only)
+
+Use repo evidence in this stage only to anchor interface binding packets to realistic repository entry points:
+
+- confirm the client-facing `Boundary Anchor`
+- confirm the repo-backed `Implementation Entry Anchor`
+- confirm request/response DTO anchors when they are directly visible from the selected boundary/entry slice
+- confirm one first-hop collaborator anchor when it is needed to keep downstream contract design grounded
+
+Stop once the interface binding is concrete enough for `/sdd.plan.contract`.
+Do not widen Stage 2 into shared class modeling, owner closure, field closure, lifecycle design, or invariant authoring.
 
 ## Binding Projection Rules
 
@@ -96,7 +108,7 @@ If a selected binding drifts away from controller-first HTTP placement, correct 
 Project only the minimum extra fields required to help `/sdd.plan.contract` select and validate the next unit without re-reading broad context.
 Keep DTO anchors, state-owner anchors, collaborator anchors, lifecycle/invariant refs, and other realization-detail evidence in `test-matrix.md`; do not mirror them into `PLAN_FILE`.
 Apply tuple legality and repo-anchor status rules exactly as defined by `.specify/templates/test-matrix-template.md`; this command only projects stable rows and routes upstream on gaps.
-Do not introduce new globally stable state owners, owner fields, or lifecycle vocabulary that are absent from `data-model.md`; when a selected binding needs them, keep the gap explicit and route upstream to `/sdd.plan.data-model`.
+Do not introduce new shared-semantic classes, owners, fields, lifecycle vocabulary, or invariants here; when a selected binding needs them, keep the gap explicit and route upstream to `/sdd.plan.data-model`.
 
 Required columns in each binding row:
 
@@ -118,7 +130,7 @@ Required columns in each binding row:
 
 For each stable binding in `test-matrix.md`, emit an authoritative contract seed packet that `/sdd.plan.contract` can consume without re-deriving the tuple from broad context.
 This packet remains authoritative in `test-matrix.md`; do not mirror it in full into `PLAN_FILE`.
-The packet MUST be sufficient to scope the operation-scoped `Full Field Dictionary` and the minimum targeted contract reads in `contracts/`, even when some field anchors remain explicit gaps.
+The packet MUST be sufficient to scope targeted contract reads in `contracts/` and seed interface-level realization design without reopening broad feature context.
 
 Each binding packet MUST include:
 
@@ -134,24 +146,18 @@ Each binding packet MUST include:
 - `Request DTO Anchor`
 - `Response DTO Anchor`
 - `Primary Collaborator Anchor`
-- `State Owner Anchor(s)`
 - `TM ID`
 - `TC IDs`
 - `Spec Ref(s)`
 - `Scenario Ref(s)`
 - `Success Ref(s)`
 - `Edge Ref(s)`
-- `Lifecycle Ref(s)`
-- `Invariant Ref(s)`
 - `Main Pass Anchor`
 - `Branch/Failure Anchor(s)`
 
 When the selected binding is HTTP-facing, keep the first downstream service/facade symbol in `Primary Collaborator Anchor`; if the controller symbol cannot be confirmed, set `Implementation Entry Anchor = TODO(REPO_ANCHOR)` and `Implementation Entry Anchor Status = todo` rather than guessing.
-`Primary Collaborator Anchor` MAY be `N/A`, but `State Owner Anchor(s)` MUST NOT be replaced by `Primary Collaborator Anchor`.
-`State Owner Anchor(s)` MUST identify the owner classes that this operation reads, writes, projects, or uses for state/default/validation decisions.
-When contract-visible behavior depends on lifecycle or invariant semantics, include the relevant `data-model.md` refs in `Lifecycle Ref(s)` and `Invariant Ref(s)`; otherwise keep those fields `N/A`.
 If `Boundary Anchor Status = new` or `Implementation Entry Anchor Status = new`, the matching strategy-evidence field MUST explicitly mention why `existing` was rejected and why `extended` was rejected or unsafe.
-If a required `State Owner Anchor(s)` row would introduce a new owner concept or owner field that `data-model.md` did not model as globally stable, block the selected row and send the issue back to `/sdd.plan.data-model` instead of widening Stage 2 scope.
+If bounded repo evidence shows that binding realism depends on a new shared-semantic class, owner/source, lifecycle, or invariant, block the selected row and send the issue back to `/sdd.plan.data-model` instead of widening Stage 2 scope.
 
 For each `BindingRowID`, initialize exactly one `Artifact Status` row:
 
@@ -181,8 +187,8 @@ Update only:
 
 Emit a `Handoff Decision` section in the runtime output with exactly these fields:
 
-- `Next Command`: `/sdd.plan.contract`
-- `Decision Basis`: `Binding Projection Index` and `Artifact Status` are refreshed from `test-matrix.md`, and the next planning unit starts at the first pending `contract` row
+- `Next Command`: `/sdd.plan.contract` by default; route `/sdd.plan.data-model` only when the selected Stage 2 run is blocked by a shared-semantic alignment gap
+- `Decision Basis`: stable binding packets hand off to `contract`; only explicit shared-semantic blockers reroute to `data-model`
 - `Selected Stage ID`: selected `test-matrix` stage row id
 - `Ready/Blocked`: `Ready` when binding rows and artifact rows are initialized successfully; otherwise `Blocked`
 

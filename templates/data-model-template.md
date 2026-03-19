@@ -34,6 +34,7 @@ Use this section to establish the overall shape of the model before filling in d
 - Implementation-layer decomposition (service/repository/module/class internals)
 - Persistence schema/table/index mappings
 - Operation-local behavior flows, sequence-level logic, or verification matrix design
+- Operation-scoped controller/service/DTO/class naming closure or detailed contract field closure
 
 Downstream `test-matrix.md` and `contracts/` MAY refine operation-scoped VO/DTO/field mappings from the backbone elements and owners declared here, but they MUST NOT mint new globally stable model concepts outside this boundary.
 

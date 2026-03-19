@@ -29,6 +29,7 @@ Generate exactly one `data-model.md` artifact by consuming the first pending `da
 This command is single-unit only and MUST NOT perform any other planning stage work.
 `spec.md` + `research.md` define model semantics; repo anchors are correction/traceability evidence only.
 The output MUST define the full spec-scoped backbone semantics set and stable boundary that downstream planning stages are allowed to reuse; introduce classes only when a stable owner or reusable contract boundary exists.
+Keep this stage at shared-semantic backbone scope: operation-scoped controller/service/DTO/class naming closure and detailed field closure belong to `/sdd.plan.contract`.
 Use `.specify/templates/data-model-template.md` only. If the runtime template is missing or unreadable, stop and report the blocker instead of inferring structure from mirrors or other `data-model.md` outputs.
 
 ## Selection Rules
@@ -153,8 +154,8 @@ After generating `data-model.md`, update the selected `Stage Queue` row only:
 
 Emit a `Handoff Decision` section in the runtime output with exactly these fields:
 
-- `Next Command`: `/sdd.plan.test-matrix`
-- `Decision Basis`: `Stage Queue` shows the selected `data-model` row is complete and the fixed next pending stage is `test-matrix`
+- `Next Command`: `/sdd.plan.test-matrix` when Stage 2 has not completed yet; otherwise `/sdd.plan.contract`
+- `Decision Basis`: the selected `data-model` row is complete and downstream planning returns to the first consumer that still needs refreshed shared semantics
 - `Selected Stage ID`: selected `data-model` stage row id
 - `Ready/Blocked`: `Ready` when the selected row is updated to `done`; otherwise `Blocked`
 

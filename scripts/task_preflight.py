@@ -31,6 +31,8 @@ ENTRY_ANCHOR_LABEL_RE = re.compile(
 )
 NON_CONTROLLER_ENTRY_RE = re.compile(r"(?i)(service|facade|manager|repository|dao|mapper)")
 ANCHOR_STATUS_VALUES = {"existing", "extended", "new", "todo"}
+UNRESOLVED_CONTRACT_NAME_RE = re.compile(r"<([A-Z][A-Za-z0-9]+)>")
+TASK_REQUIRED_STAGE_IDS = {"research", "test-matrix"}
 
 
 def is_placeholder_token(value: str) -> bool:
@@ -46,6 +48,8 @@ def inspect_contract_artifact(contract_path_abs: str, boundary_anchor: str) -> d
         "runtime_field_dictionary_tiering_check_present": False,
         "has_unresolved_field_gaps": False,
         "controller_first_violation": False,
+        "placeholder_names_present": False,
+        "placeholder_names": [],
     }
     if not contract_path_abs or not Path(contract_path_abs).is_file():
         return inspection
@@ -61,6 +65,9 @@ def inspect_contract_artifact(contract_path_abs: str, boundary_anchor: str) -> d
     inspection["runtime_seed_boundary_drift_check_present"] = "Seed-vs-repo boundary drift classification" in content
     inspection["runtime_field_dictionary_tiering_check_present"] = "Field-dictionary tiering" in content
     inspection["has_unresolved_field_gaps"] = "TODO(REPO_ANCHOR)" in content or re.search(r"(?i)\|\s*gap\s*\|", content) is not None
+    placeholder_names = sorted(set(UNRESOLVED_CONTRACT_NAME_RE.findall(content)))
+    inspection["placeholder_names_present"] = bool(placeholder_names)
+    inspection["placeholder_names"] = placeholder_names
     if boundary_anchor.startswith("HTTP "):
         entry_match = ENTRY_ANCHOR_LABEL_RE.search(content)
         entry_anchor = clean_cell(entry_match.group(1)) if entry_match else ""
@@ -450,6 +457,25 @@ def build_execution_readiness(
             }
         )
 
+    placeholder_names_present_rows = sorted(
+        [
+            {"binding_row_id": unit["binding_row_id"], "placeholder_names": unit["contract"]["placeholder_names"]}
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and unit["contract"]["placeholder_names_present"]
+        ],
+        key=lambda item: item["binding_row_id"],
+    )
+    if placeholder_names_present_rows:
+        errors.append(
+            {
+                "code": "contract_placeholder_names_present",
+                "message": "Some done contract rows still contain unresolved placeholder class/type names.",
+                "details": {"rows": placeholder_names_present_rows},
+            }
+        )
+
     missing_field_dictionary_rows = sorted(
         [
             unit["binding_row_id"]
@@ -713,6 +739,8 @@ def build_unit_inventory(
                 ],
                 "has_unresolved_field_gaps": contract_inspection["has_unresolved_field_gaps"],
                 "controller_first_violation": contract_inspection["controller_first_violation"],
+                "placeholder_names_present": contract_inspection["placeholder_names_present"],
+                "placeholder_names": contract_inspection["placeholder_names"],
             },
         }
         unit_inventory.append(unit)
@@ -734,6 +762,7 @@ def build_unit_inventory(
             and unit["contract"]["runtime_field_dictionary_tiering_check_present"]
             and not unit["contract"]["has_unresolved_field_gaps"]
             and not unit["contract"]["controller_first_violation"]
+            and not unit["contract"]["placeholder_names_present"]
         ):
             ready_unit_inventory.append(unit)
 
@@ -779,7 +808,13 @@ def main(argv: list[str] | None = None) -> int:
         for row in stage_rows
     ]
 
-    incomplete_stage_ids = normalize_stage_ids([row["stage_id"] for row in stage_queue if row["status"] != "done"])
+    incomplete_stage_ids = normalize_stage_ids(
+        [
+            row["stage_id"]
+            for row in stage_queue
+            if row["status"] != "done" and row["stage_id"] in TASK_REQUIRED_STAGE_IDS
+        ]
+    )
 
     binding_projection_index = [
         {
