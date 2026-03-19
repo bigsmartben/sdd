@@ -444,8 +444,56 @@ def test_task_preflight_helper_allows_pending_data_model_stage(tmp_path):
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
+    assert payload["data_model_required"] is False
+    assert payload["required_stage_ids_for_tasks"] == ["research", "test-matrix"]
     assert payload["incomplete_stage_ids"] == []
     assert payload["execution_readiness"]["ready_for_task_generation"] is True
+
+
+def test_task_preflight_helper_requires_pending_data_model_when_shared_alignment_is_explicit(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(feature_dir)
+
+    plan_path = feature_dir / "plan.md"
+    plan_text = plan_path.read_text(encoding="utf-8")
+    plan_path.write_text(
+        plan_text.replace(
+            "| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | done | a | b | [none] |",
+            "| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | pending | a | b | shared_semantic_alignment_required |",
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "task_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+            "--test-matrix",
+            str(feature_dir / "test-matrix.md"),
+            "--contracts-dir",
+            str(feature_dir / "contracts"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["data_model_required"] is True
+    assert payload["required_stage_ids_for_tasks"] == ["data-model", "research", "test-matrix"]
+    assert payload["incomplete_stage_ids"] == ["data-model"]
+    assert payload["execution_readiness"]["ready_for_task_generation"] is False
+    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
+    assert "incomplete_stage_queue" in error_codes
 
 
 def test_task_preflight_helper_warns_missing_full_field_dictionary(tmp_path):

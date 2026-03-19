@@ -96,7 +96,7 @@ Output exactly one decision:
 
 When `FAIL`, include blocker list with supporting facts and remediation owner command (`/sdd.constitution`, `/sdd.specify`, `/sdd.plan.*`, or `/sdd.tasks`).
 
-Default blocking classes include unresolved normative anchors (`BA-*`, `TODO(REPO_ANCHOR)`, `Anchor Status = todo`, `Implementation Entry Anchor Status = todo`), missing `Full Field Dictionary (Operation-scoped)`, unresolved contract projection drift, upstream tuple-seed drift across `plan.md` / `test-matrix.md`, controller-first violations, repository-first baseline gaps, and stale control-plane fingerprints.
+Default blocking classes include unresolved normative anchors (`BA-*`, `TODO(REPO_ANCHOR)`, `Anchor Status = todo`, `Implementation Entry Anchor Status = todo`), unresolved placeholder class/type labels in contract artifacts, missing `Full Field Dictionary (Operation-scoped)`, unresolved contract projection drift, upstream tuple-seed drift across `plan.md` / `test-matrix.md`, controller-first violations, repository-first baseline gaps, and stale control-plane fingerprints.
 
 Additional blocking requirement: any active tuple selecting `new` anchors without explicit rejection evidence for both `existing` and `extended` is `FAIL` and must route to the relevant `/sdd.plan.*` owner command.
 

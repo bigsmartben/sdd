@@ -154,8 +154,8 @@ After generating `data-model.md`, update the selected `Stage Queue` row only:
 
 Emit a `Handoff Decision` section in the runtime output with exactly these fields:
 
-- `Next Command`: `/sdd.plan.test-matrix` when Stage 2 has not completed yet; otherwise `/sdd.plan.contract`
-- `Decision Basis`: the selected `data-model` row is complete and downstream planning returns to the first consumer that still needs refreshed shared semantics
+- `Next Command`: `/sdd.plan.test-matrix`
+- `Decision Basis`: once shared semantics are aligned, refresh Stage 2 binding packets before any contract generation or regeneration
 - `Selected Stage ID`: selected `data-model` stage row id
 - `Ready/Blocked`: `Ready` when the selected row is updated to `done`; otherwise `Blocked`
 

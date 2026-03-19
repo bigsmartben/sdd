@@ -172,7 +172,7 @@ After generation, the selected artifact under `contracts/` becomes the authorita
 
 Stop local refinement and route upstream when continuing would require a new upstream shared semantic:
 
-- `/sdd.plan.data-model` when the contract would need a new shared-semantic class, new shared owner/source, new shared field, new lifecycle state/transition, new invariant, or a contract-visible field depends on shared semantics that remain undefined upstream
+- `/sdd.plan.data-model` when the contract would need a new shared semantic owner/source, a new backbone semantic element, a new cross-operation stable owner field, new shared lifecycle/invariant vocabulary, or a contract-visible field depends on shared semantics that remain undefined upstream
 - `/sdd.plan.test-matrix` when the selected binding packet is missing, the verification path/goal/signal seed is incomplete, or the tuple seed in `test-matrix.md` is inconsistent with `plan.md`
 
 Do not route upstream for operation-scoped field selection, VO/DTO projection shape, default/validation detail, or realization-design detail that can be derived from the existing upstream boundary.

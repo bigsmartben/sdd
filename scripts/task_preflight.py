@@ -33,6 +33,7 @@ NON_CONTROLLER_ENTRY_RE = re.compile(r"(?i)(service|facade|manager|repository|da
 ANCHOR_STATUS_VALUES = {"existing", "extended", "new", "todo"}
 UNRESOLVED_CONTRACT_NAME_RE = re.compile(r"<([A-Z][A-Za-z0-9]+)>")
 TASK_REQUIRED_STAGE_IDS = {"research", "test-matrix"}
+SHARED_SEMANTIC_ALIGNMENT_BLOCKER_CODE = "shared_semantic_alignment_required"
 
 
 def is_placeholder_token(value: str) -> bool:
@@ -156,6 +157,31 @@ def normalize_anchor_status(value: str) -> str:
 def has_required_strategy_evidence(value: str) -> bool:
     text = clean_cell(value).lower()
     return "existing" in text and "extended" in text
+
+
+def has_shared_semantic_alignment_blocker(value: str) -> bool:
+    return SHARED_SEMANTIC_ALIGNMENT_BLOCKER_CODE in clean_cell(value).lower()
+
+
+def is_active_status(status: str) -> bool:
+    return clean_cell(status).lower() != "done"
+
+
+def requires_data_model_alignment(
+    stage_queue: list[dict[str, str]],
+    artifact_status: list[dict[str, str]],
+) -> bool:
+    stage_signal = any(
+        is_active_status(row.get("status", ""))
+        and has_shared_semantic_alignment_blocker(row.get("blocker", ""))
+        for row in stage_queue
+    )
+    artifact_signal = any(
+        is_active_status(row.get("status", ""))
+        and has_shared_semantic_alignment_blocker(row.get("blocker", ""))
+        for row in artifact_status
+    )
+    return stage_signal or artifact_signal
 
 
 def parse_markdown_table(section: str | None) -> list[dict[str, str]]:
@@ -804,17 +830,10 @@ def main(argv: list[str] | None = None) -> int:
             "status": clean_cell(row.get("Status", "")),
             "output_path": clean_cell(row.get("Output Path", "")),
             "output_path_abs": resolve_target_path(feature_dir, row.get("Output Path", "")),
+            "blocker": clean_cell(row.get("Blocker", "")),
         }
         for row in stage_rows
     ]
-
-    incomplete_stage_ids = normalize_stage_ids(
-        [
-            row["stage_id"]
-            for row in stage_queue
-            if row["status"] != "done" and row["stage_id"] in TASK_REQUIRED_STAGE_IDS
-        ]
-    )
 
     binding_projection_index = [
         {
@@ -841,9 +860,23 @@ def main(argv: list[str] | None = None) -> int:
             "target_path": clean_cell(row.get("Target Path", "")),
             "target_path_abs": resolve_target_path(feature_dir, row.get("Target Path", "")),
             "status": clean_cell(row.get("Status", "")),
+            "blocker": clean_cell(row.get("Blocker", "")),
         }
         for row in artifact_rows
     ]
+
+    data_model_required = requires_data_model_alignment(stage_queue, artifact_status)
+    required_stage_ids = set(TASK_REQUIRED_STAGE_IDS)
+    if data_model_required:
+        required_stage_ids.add("data-model")
+
+    incomplete_stage_ids = normalize_stage_ids(
+        [
+            row["stage_id"]
+            for row in stage_queue
+            if is_active_status(row.get("status", "")) and row["stage_id"] in required_stage_ids
+        ]
+    )
 
     unit_inventory, ready_unit_inventory = build_unit_inventory(
         binding_rows,
@@ -871,6 +904,8 @@ def main(argv: list[str] | None = None) -> int:
         "missing_sections": missing_sections,
         "stage_queue": stage_queue,
         "stage_queue_status_summary": summarize_stage_queue(stage_queue),
+        "data_model_required": data_model_required,
+        "required_stage_ids_for_tasks": sorted(required_stage_ids),
         "incomplete_stage_ids": incomplete_stage_ids,
         "binding_row_count": len(binding_projection_index),
         "binding_projection_index": binding_projection_index,

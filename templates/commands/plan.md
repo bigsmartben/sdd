@@ -212,4 +212,4 @@ Always write or refresh `plan.md` first, then report:
 - initialized `Binding Projection Index` row count
 - initialized `Artifact Status` row count
 - explicit next command: `/sdd.plan.research`
-- explicit handoff order: `sdd.plan.research -> sdd.plan.data-model -> sdd.plan.test-matrix -> sdd.plan.contract`
+- explicit handoff order: default `sdd.plan.research -> sdd.plan.test-matrix -> sdd.plan.contract`; insert `sdd.plan.data-model` only when a queued blocker explicitly requires shared-semantic alignment

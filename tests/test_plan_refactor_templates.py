@@ -22,6 +22,7 @@ def test_plan_command_is_control_plane_only():
     assert "Planning Sharding Model (Mandatory)" in content
     assert "Stage sharding (fixed): default delivery path `research -> test-matrix -> contract`; `data-model` remains a queued on-demand shared-semantic alignment shard" in content
     assert "Binding sharding (fixed): `/sdd.plan.contract` consumes one `BindingRowID` row per run" in content
+    assert "explicit handoff order: default `sdd.plan.research -> sdd.plan.test-matrix -> sdd.plan.contract`; insert `sdd.plan.data-model` only when a queued blocker explicitly requires shared-semantic alignment" in content
 
 
 def test_plan_child_commands_are_contract_only():
@@ -104,7 +105,7 @@ def test_contract_command_uses_test_matrix_as_default_semantic_source():
     assert "## Concrete Naming Closure (Mandatory)" in content
     assert "Apply the same repository decision order used by `data-model`: `existing -> extended -> new`." in content
     assert "Stop local refinement and route upstream when continuing would require a new upstream shared semantic" in content
-    assert "new shared-semantic class, new shared owner/source, new shared field, new lifecycle state/transition, new invariant" in content
+    assert "new shared semantic owner/source, a new backbone semantic element, a new cross-operation stable owner field, new shared lifecycle/invariant vocabulary" in content
     assert "## Feature-Level Smoke Readiness (Queue-Complete Gate)" in content
     assert "Cross-Interface Smoke Candidate (Required)" in content
     assert "do not rewrite upstream planning artifacts from this command" in content
@@ -136,6 +137,8 @@ def test_research_data_model_and_test_matrix_are_packet_first():
     assert "Every selected `new` anchor in normative content MUST record:" in data_model
     assert "A planned-but-missing file path is not sufficient evidence for normative `new`" in data_model
     assert "downstream `test-matrix.md` and `contracts/` MUST NOT invent missing state owners or owner fields" in data_model
+    assert "- `Next Command`: `/sdd.plan.test-matrix`" in data_model
+    assert "refresh Stage 2 binding packets before any contract generation or regeneration" in data_model
 
     assert "Stage Packet (Test-Matrix Unit)" in test_matrix
     assert "Use this packet as the default context for generation and binding projection." in test_matrix
@@ -245,6 +248,7 @@ def test_analyze_routes_stale_contract_rows_only():
     assert "stale `contract` -> `/sdd.plan.contract`" in content
     assert "Tuple drift routing" in content
     assert "upstream tuple-seed drift across `plan.md` / `test-matrix.md`" in content
+    assert "unresolved placeholder class/type labels in contract artifacts" in content
     assert "CRITICAL/HIGH findings MUST cite the authoritative source artifact(s) with concise supporting facts." in content
     assert "interface-detail" not in content
     assert "contract/interface DTO drift" not in content
