@@ -27,6 +27,7 @@ Resolve `PLAN_FILE` from the current feature branch using `{SCRIPT}` defaults.
 
 Generate exactly one `test-matrix.md` artifact by consuming the first pending `test-matrix` row from `PLAN_FILE`.
 After writing `test-matrix.md`, initialize or refresh the `Binding Projection Index` and `Artifact Status` tables in `PLAN_FILE`.
+This stage owns feature-level test strategy: coverage scope, path decomposition, verification goals, observability signals, and the contract seed packets required downstream.
 Use `.specify/templates/test-matrix-template.md` only. If the runtime template is missing or unreadable, stop and report the blocker instead of inferring structure from mirrors or prior outputs.
 
 ## Selection Rules
@@ -76,6 +77,8 @@ When consuming allowed inputs, prefer section-level rereads over whole-file repl
 `test-matrix.md` remains the authoritative source for verification semantics and stable tuple keys.
 `test-matrix.md` also carries the per-binding contract seed packet consumed by `/sdd.plan.contract`.
 `PLAN_FILE` receives only a compact binding projection index and artifact queue rows derived from that matrix.
+Treat `data-model.md` as authoritative for globally stable owner classes/fields/states that support shared projections, derivations, counters, badges, role labels, and lifecycle guards.
+Use `spec.md` as the primary source for deciding which paths must be covered and what each path must prove; use `data-model.md` only to keep that strategy inside the declared model boundary.
 
 ## Binding Projection Rules
 
@@ -85,12 +88,9 @@ Project `Boundary Anchor` as the client-facing contract binding key only, preser
 For HTTP-facing bindings, keep the HTTP route as `Boundary Anchor` and the owning controller method as `Implementation Entry Anchor`.
 If a selected binding drifts away from controller-first HTTP placement, correct it back to `HTTP METHOD /path -> controller -> collaborator` and record the drift/blocker in the generation output rather than preserving the wrong tuple.
 Project only the minimum extra fields required to help `/sdd.plan.contract` select and validate the next unit without re-reading broad context.
-Keep DTO anchors, state-owner anchors, collaborator anchors, and other realization-detail evidence in `test-matrix.md`; do not mirror them into `PLAN_FILE`.
-Apply repo-anchor decision order `existing -> extended -> new -> todo`.
-`extended` is valid only for same-entity field/state expansion.
-`new` is normative only when explicit `path::symbol` target evidence is present.
-Rows with `Boundary Anchor Status = todo` or `Implementation Entry Anchor Status = todo` remain forward-looking/non-normative and MUST NOT be projected as main-path binding rows.
-`Request DTO Anchor`, `Response DTO Anchor`, and `State Owner Anchor(s)` MAY remain `TODO(REPO_ANCHOR)` only as explicit contract-gap sources; they MUST NOT trigger a fallback back to minimal-field contract output.
+Keep DTO anchors, state-owner anchors, collaborator anchors, lifecycle/invariant refs, and other realization-detail evidence in `test-matrix.md`; do not mirror them into `PLAN_FILE`.
+Apply tuple legality and repo-anchor status rules exactly as defined by `.specify/templates/test-matrix-template.md`; this command only projects stable rows and routes upstream on gaps.
+Do not introduce new globally stable state owners, owner fields, or lifecycle vocabulary that are absent from `data-model.md`; when a selected binding needs them, keep the gap explicit and route upstream to `/sdd.plan.data-model`.
 
 Required columns in each binding row:
 
@@ -112,7 +112,7 @@ Required columns in each binding row:
 
 For each stable binding in `test-matrix.md`, emit an authoritative contract seed packet that `/sdd.plan.contract` can consume without re-deriving the tuple from broad context.
 This packet remains authoritative in `test-matrix.md`; do not mirror it in full into `PLAN_FILE`.
-The packet MUST be sufficient to seed the operation-scoped `Full Field Dictionary` in `contracts/`, even when some field anchors remain explicit gaps.
+The packet MUST be sufficient to scope the operation-scoped `Full Field Dictionary` and the minimum targeted contract reads in `contracts/`, even when some field anchors remain explicit gaps.
 
 Each binding packet MUST include:
 
@@ -121,8 +121,10 @@ Each binding packet MUST include:
 - `IF Scope`
 - `Boundary Anchor`
 - `Boundary Anchor Status`
+- `Boundary Anchor Strategy Evidence`
 - `Implementation Entry Anchor`
 - `Implementation Entry Anchor Status`
+- `Implementation Entry Anchor Strategy Evidence`
 - `Request DTO Anchor`
 - `Response DTO Anchor`
 - `Primary Collaborator Anchor`
@@ -133,12 +135,17 @@ Each binding packet MUST include:
 - `Scenario Ref(s)`
 - `Success Ref(s)`
 - `Edge Ref(s)`
+- `Lifecycle Ref(s)`
+- `Invariant Ref(s)`
 - `Main Pass Anchor`
 - `Branch/Failure Anchor(s)`
 
 When the selected binding is HTTP-facing, keep the first downstream service/facade symbol in `Primary Collaborator Anchor`; if the controller symbol cannot be confirmed, set `Implementation Entry Anchor = TODO(REPO_ANCHOR)` and `Implementation Entry Anchor Status = todo` rather than guessing.
 `Primary Collaborator Anchor` MAY be `N/A`, but `State Owner Anchor(s)` MUST NOT be replaced by `Primary Collaborator Anchor`.
 `State Owner Anchor(s)` MUST identify the owner classes that this operation reads, writes, projects, or uses for state/default/validation decisions.
+When contract-visible behavior depends on lifecycle or invariant semantics, include the relevant `data-model.md` refs in `Lifecycle Ref(s)` and `Invariant Ref(s)`; otherwise keep those fields `N/A`.
+If `Boundary Anchor Status = new` or `Implementation Entry Anchor Status = new`, the matching strategy-evidence field MUST explicitly mention why `existing` was rejected and why `extended` was rejected or unsafe.
+If a required `State Owner Anchor(s)` row would introduce a new owner concept or owner field that `data-model.md` did not model as globally stable, block the selected row and send the issue back to `/sdd.plan.data-model` instead of widening Stage 2 scope.
 
 For each `BindingRowID`, initialize exactly one `Artifact Status` row:
 

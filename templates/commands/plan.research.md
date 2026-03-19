@@ -76,8 +76,8 @@ When conditional reads are required, prefer section-level rereads over whole-fil
 
 ### Repo Anchor Input Limits
 
-Read at most three repo-backed files per research run.
-If that cap is insufficient, keep unresolved findings explicit in `research.md` and set row `Blocker` instead of expanding scope.
+Keep repo-backed reads bounded to the selected unit and active blocker.
+If ambiguity/conflict remains after bounded reads, keep unresolved findings explicit in `research.md` and set row `Blocker` instead of expanding scope.
 
 `research.md` remains the authoritative output for research semantics.
 `PLAN_FILE` is queue state only.

@@ -119,7 +119,7 @@ In Git repositories, `/sdd.specify` resolves a feature branch and switches to it
 
 ### 4. Generate an interactive prototype (optional)
 
-Use **`/sdd.specify.ui-html`** when you need an HTML interaction prototype derived from the current feature branch `spec.md` before planning.
+Use **`/sdd.specify.ui-html`** as an optional sidecar command when you need an HTML interaction prototype derived from the current feature branch `spec.md`. Trigger it at your chosen time after `/sdd.specify`.
 
 `spec.md` remains the authoritative feature-semantics artifact. `ui.html` is a derived review artifact only.
 
@@ -335,7 +335,7 @@ Essential commands for the Spec-Driven Development workflow:
 | ----------------------- | ------------------------------------------------------------------------ |
 | `/sdd.constitution` | Create or update project governing principles and development guidelines |
 | `/sdd.specify`      | Define what you want to build (requirements and user stories)            |
-| `/sdd.specify.ui-html` | Generate a derived `ui.html` interaction prototype from active feature `spec.md` |
+| `/sdd.specify.ui-html` | Optional sidecar command: generate a derived `ui.html` interaction prototype from active feature `spec.md` when needed |
 | `/sdd.plan`         | Create `plan.md` as the planning control plane and Stage 0 shared context |
 | `/sdd.plan.research` | Generate the queued `research.md` artifact |
 | `/sdd.plan.data-model` | Generate the queued `data-model.md` artifact |
@@ -637,7 +637,7 @@ Run the child commands in queue order:
 /sdd.plan.contract
 ```
 
-`/sdd.plan.contract` is a repeated command. Each run processes one queued unit from `plan.md`, updates that unit's status, and then emits a `Handoff Decision` derived only from the post-writeback queue state in `plan.md`. The generated contract is the operation-scoped interface artifact, including the authoritative `Full Field Dictionary (Operation-scoped)` used downstream. The `Handoff Decision` should include the next command inferred from the same active feature branch queue state.
+`/sdd.plan.contract` is a repeated command. Each run processes one queued unit from `plan.md`, updates that unit's status, and then emits a `Handoff Decision` derived only from the post-update queue state in `plan.md`. The generated contract is the operation-scoped interface artifact, including the authoritative `Full Field Dictionary (Operation-scoped)` used downstream. The `Handoff Decision` should include the next command inferred from the same active feature branch queue state.
 
 Static command frontmatter `handoffs` are advisory metadata only. They may point to one unconditional next command, but they are not the authority for state-dependent routing.
 
@@ -698,9 +698,10 @@ This step creates a `tasks.md` file in your feature specification directory that
 
 `/sdd.tasks` consumes approved planning artifacts and turns them into execution orchestration. It does not reopen research, data-model, or contract design, and it does not perform the unified cross-artifact semantic audit.
 
-It should emit single-target work packages only: each task must carry one explicit path or command target plus one primary completion anchor. If required anchors are missing from `plan.md`, `contracts/`, or `test-matrix.md`, or if a selected contract is `blocked` / missing `Full Field Dictionary (Operation-scoped)`, `/sdd.tasks` should stop and route back to the relevant `/sdd.plan.*` command rather than inferring new semantics or emitting `blocked`/`todo` placeholder tasks.
+It should emit single-target work packages only: each task must carry one explicit path or command target plus one primary completion anchor. If required anchors are missing from `plan.md`, `contracts/`, or `test-matrix.md`, or if a selected contract is `blocked`, `/sdd.tasks` should stop and route back to the relevant `/sdd.plan.*` command rather than inferring new semantics or emitting `blocked`/`todo` placeholder tasks. Non-fatal contract hygiene issues (for example missing `Full Field Dictionary (Operation-scoped)` or tuple packet drift) should surface as preflight warnings and be routed as explicit upstream repair actions without hard-blocking task generation.
 
 For faster runs, the prerequisite script may pre-extract a compact `TASKS_BOOTSTRAP` packet from `plan.md` so `/sdd.tasks` can reuse a joined control-plane inventory instead of reparsing the planning tables during the same run.
+The same prerequisite payload also emits a `LOCAL_EXECUTION_PROTOCOL` packet for stable local tooling selection (for example: prefer `rg` for repo search, `git` for repo inspection, and `uv run python` when that runner is available) so execution-phase commands do not spend time guessing equivalent CLIs.
 
 Run `/sdd.analyze` after `/sdd.tasks` as the default pre-implementation audit pass for repo-anchor misuse, audit payload leakage, drift, contradictions, boundary violations, uncovered MUST requirements, and other cross-artifact issues.
 
@@ -715,6 +716,7 @@ Once ready, use the `/sdd.implement` command to execute your implementation plan
 ```
 
 The `/sdd.implement` command is execution plus runtime hard gates. It is not the unified semantic audit step; by default it requires current `/sdd.analyze` evidence with `Gate Decision: PASS` for the current task artifacts.
+It should also reuse the emitted `LOCAL_EXECUTION_PROTOCOL` and repo-backed task anchors for local commands instead of trial-and-error across search tools, package managers, or Python runners.
 Current analyze-pass evidence is read from the latest run block in `FEATURE_DIR/audits/analyze-history.md`; missing evidence, stale fingerprint mismatches, or `Gate Decision: FAIL` should block implementation unless the run includes an explicit analyze-gate waiver.
 
 The `/sdd.implement` command will:

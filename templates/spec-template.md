@@ -210,6 +210,11 @@ graph TD
 | UIP-UC001-01 | happy | UIF-UC001-N01 | UIF-UC001-N02 | [Guard] | S1 / FR-001 |
 | UIP-UC001-02 | exception | UIF-UC001-D01 | UIF-UC001-E01 | [Guard] | S3 / FR-002 / EC-001 |
 
+Reference rule:
+When this table cites an `EC-*`, that `EC-*` MUST describe the same user-visible edge semantics as the path trigger/guard.
+Do not point a retry path at a re-entry EC, or a permission path at a duplicate-click EC.
+If the edge semantics differ, add `EC-005+` instead of overloading an existing edge-case id.
+
 **Interaction Step Table**:
 
 | Step ID (UIF Node) | Actor/System | Action / Feedback | Decision / Guard | Next Step(s) | ref: Entity.field / FR / Scenario |
@@ -222,6 +227,10 @@ graph TD
 | Exception ID | Trigger Step | Trigger Condition | System Response | User Perception (UI Feedback) | ref |
 |-------------|--------------|------------------|-----------------|-------------------------------|-----|
 | E1 | [Step] | [Condition] | [Response] | [Feedback] | EC-001 |
+
+Reference rule:
+`Exception Paths` MUST keep `EC-*` references textually aligned with `N.2 Environment Edge Cases`.
+Do not reuse one `EC-*` across unrelated retry, re-entry, permission, duplicate, timeout, or validation behaviors.
 
 **Postconditions**:
 
@@ -327,10 +336,15 @@ graph TD
 
 ### N.2 Environment Edge Cases
 
-- **EC-001**: [Boundary/timeout/interruption edge case]
-- **EC-002**: [Data empty/error edge case]
-- **EC-003**: [Permission/re-entry/cancel edge case]
-- **EC-004**: [Failure/degrade edge case]
+`EC-*` identifiers are semantic anchors, not a fixed four-slot checklist.
+Add `EC-005+` whenever retry, re-entry, permission/access, duplicate/dedup, timeout/transport, validation, or recovery behaviors are distinct in user-visible semantics.
+Every `EC-*` cited from `Path Inventory`, `Exception Paths`, FR blocks, `test-matrix.md`, or `contracts/` MUST describe the same edge semantics textually.
+
+- **EC-001**: [Timeout / transport / interruption edge case]
+- **EC-002**: [Validation / empty / boundary-input edge case]
+- **EC-003**: [Duplicate / dedupe edge case]
+- **EC-004**: [Re-entry / recovery edge case]
+- **EC-005**: [Permission / access-control edge case]
 
 ---
 

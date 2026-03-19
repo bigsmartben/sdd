@@ -55,7 +55,7 @@ Project stable binding keys only; do not copy narrative scenario text.
 
 | BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | Boundary Anchor | Implementation Entry Anchor | Boundary Anchor Status | Implementation Entry Anchor Status | Test Scope |
 |--------------|-------|--------|-------|------------------|-------|--------|--------------|-----------------|-----------------------------|------------------------|------------------------------------|------------|
-| [BindingRowID-001] | [UC-001] | [UIF-001] | [FR-001] | [IF-001] | [TM-001] | [TC-001, TC-002] | [operationId] | [METHOD /path or symbol] | [path/to/file.ext::Symbol] | [existing] | [existing] | [Contract] |
+<!-- Keep table body empty until /sdd.plan.test-matrix projects stable binding rows. -->
 
 Rules:
 
@@ -64,6 +64,7 @@ Rules:
 - `Binding Projection Index` is a projection ledger only.
 - `Boundary Anchor` is the client-facing contract binding key projected from `test-matrix.md`; it is not the internal implementation handoff anchor.
 - `Implementation Entry Anchor`, `Boundary Anchor Status`, `Implementation Entry Anchor Status`, and `Test Scope` are compact bootstrap fields only; DTO anchors, collaborator anchors, and realization-detail evidence remain authoritative in `test-matrix.md`.
+- Keep this index aligned only from `/sdd.plan.test-matrix`; if tuple stability changes later, repair upstream and regenerate the projection instead of letting downstream commands rewrite it.
 - If a stable key is not confirmed, keep it out of the index.
 
 ## Artifact Status
@@ -72,7 +73,7 @@ Track minimum planning artifacts derived from each `BindingRowID`.
 
 | BindingRowID | Unit Type | Target Path | Status | Source Fingerprint | Output Fingerprint | Blocker |
 |--------------|-----------|-------------|--------|--------------------|--------------------|---------|
-| [BindingRowID-001] | contract | `contracts/[artifact].md` | pending | [fingerprint] | [fingerprint] | [none] |
+<!-- Keep table body empty until binding rows exist. -->
 
 Rules:
 

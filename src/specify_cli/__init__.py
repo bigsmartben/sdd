@@ -1130,7 +1130,7 @@ DEFAULT_SKILLS_DIR = ".agents/skills"
 # Enhanced descriptions for each SDD command skill
 SKILL_DESCRIPTIONS = {
     "specify": "Create or update feature specifications from natural language descriptions. Use when starting new features or refining requirements. Generates spec.md with user stories, functional requirements, and acceptance criteria following spec-driven development methodology.",
-    "specify.ui-html": "Generate the derived ui.html interactive prototype artifact from the current feature branch spec.md. Use `/sdd.specify.ui-html` after /sdd.specify when you need a reviewable interaction prototype without changing spec.md authority.",
+    "specify.ui-html": "Generate the derived ui.html interactive prototype artifact from the current feature branch spec.md. This is an optional sidecar command; invoke `/sdd.specify.ui-html` only when you want a reviewable interaction prototype without changing spec.md authority.",
     "plan": "Initialize the planning control plane from the current feature branch spec.md path. Use `/sdd.plan ...` after creating a spec to produce plan.md with Stage 0 shared context, queue state, and binding projection tracking for the /sdd.plan.* child commands.",
     "plan.research": "Generate the queued research.md artifact selected from the current feature branch plan.md. Use `/sdd.plan.research` after /sdd.plan to resolve the first pending research unit and emit the next runtime handoff decision.",
     "plan.data-model": "Generate the queued data-model.md artifact selected from the current feature branch plan.md. Use `/sdd.plan.data-model` after /sdd.plan.research to produce one backbone data model unit and emit the next runtime handoff decision.",
@@ -1751,7 +1751,7 @@ def init(
 
     steps_lines.append(f"   2.1 [cyan]/{COMMAND_NAMESPACE}.constitution[/] - Establish project principles")
     steps_lines.append(f"   2.2 [cyan]/{COMMAND_NAMESPACE}.specify[/] - Create baseline specification")
-    steps_lines.append(f"   2.3 [cyan]/{COMMAND_NAMESPACE}.specify.ui-html[/] - Generate an interactive prototype when needed")
+    steps_lines.append(f"   2.3 [cyan]/{COMMAND_NAMESPACE}.specify.ui-html[/] - Optional sidecar command; generate an interactive prototype when needed")
     steps_lines.append(f"   2.4 [cyan]/{COMMAND_NAMESPACE}.plan[/] - Initialize the planning control plane")
     steps_lines.append(f"   2.5 [cyan]/{COMMAND_NAMESPACE}.plan.research[/] - Start the planning queue")
     steps_lines.append(f"   2.6 Follow runtime Handoff Decision through [cyan]/{COMMAND_NAMESPACE}.plan.data-model[/], [cyan]/{COMMAND_NAMESPACE}.plan.test-matrix[/], and repeated [cyan]/{COMMAND_NAMESPACE}.plan.contract[/]")

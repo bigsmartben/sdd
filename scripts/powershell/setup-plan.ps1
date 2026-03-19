@@ -39,6 +39,23 @@ if (-not (Test-Path $paths.FEATURE_SPEC -PathType Leaf)) {
     exit 1 
 }
 
+$constitution = Join-Path $paths.REPO_ROOT '.specify/memory/constitution.md'
+$dependencyMatrix = Join-Path $paths.REPO_ROOT '.specify/memory/repository-first/technical-dependency-matrix.md'
+$moduleInvocation = Join-Path $paths.REPO_ROOT '.specify/memory/repository-first/module-invocation-spec.md'
+
+foreach ($requiredPath in @($constitution, $dependencyMatrix, $moduleInvocation)) {
+    if (-not (Test-Path $requiredPath -PathType Leaf)) {
+        Write-Error "Required constitution or repository-first baseline not found or not readable at $requiredPath. Run /sdd.constitution first."
+        exit 1
+    }
+
+    $item = Get-Item $requiredPath
+    if ($item.Length -le 0) {
+        Write-Error "Required constitution or repository-first baseline is empty at $requiredPath. Run /sdd.constitution first."
+        exit 1
+    }
+}
+
 # Ensure the feature directory exists
 New-Item -ItemType Directory -Path $paths.FEATURE_DIR -Force | Out-Null
 

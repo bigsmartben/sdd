@@ -22,10 +22,11 @@ It combines:
 - Allowed normative boundary-anchor forms are exactly: HTTP `METHOD /path`, event topic `event.topic`, RPC/Façade method `Facade.method`, CLI `command`, or explicit `N/A`.
 - `Boundary Anchor` MUST represent the first client-callable entry for this interaction, not an internal service/manager/mapper hop.
 - If clients call an HTTP route directly, use HTTP `METHOD /path` as `Boundary Anchor` and the owning controller method as `Implementation Entry Anchor`; do not skip to internal layers.
+- For HTTP-facing bindings, treat `Boundary Anchor` (`HTTP METHOD /path`) and `Implementation Entry Anchor` (owning controller method) as two aligned views of one northbound boundary semantic: external consumer entry vs internal realization entry. Keep both fields explicit and aligned; do not collapse either field.
 - If clients call a stable RPC/Façade surface, use repo-backed `Facade.method` as `Boundary Anchor`.
 - If both controller/HTTP and façade exist, select the consumer-visible first callable entry as normative `Boundary Anchor`.
 - `BA-*` labels are not valid normative boundary anchors. If used, treat them as local shorthand notes only and never as authoritative binding keys.
-- Apply repo-anchor decision order `existing -> extended -> new -> todo`.
+- Apply repo-anchor decision order `existing -> extended -> new`.
 - `extended` is valid only for same-entity field/state expansion.
 - `new` is normative only when explicit `path::symbol` target evidence is provided.
 - If explicit target evidence is missing, set corresponding anchor field to `TODO(REPO_ANCHOR)` and status to `todo`; treat that tuple as non-normative forward-looking only.
@@ -113,6 +114,7 @@ Request / Success Output / Failure Output MUST align with that anchored signatur
 ## Full Field Dictionary (Operation-scoped)
 
 This section is the only authoritative field-level contract surface for this operation.
+Treat the selected binding packet as the scoping input for tuple keys, owner surfaces, and lifecycle/invariant refs; close the remaining field-level details here with targeted repo/data-model reads instead of reopening broad feature context.
 It MUST cover request DTO fields, response DTO fields, and all fields on the selected state-owner classes that this operation reads, writes, projects, validates, defaults, or uses for state decisions.
 Fields not used by this operation MUST remain listed with `Used in [operationId] = no`; do not delete them from the owner view.
 If a field cannot be fully confirmed from the selected DTO/state-owner anchors, keep the field row with an explicit gap marker rather than shrinking the contract back to a minimal field set.
@@ -310,6 +312,7 @@ classDiagram
 ## Runtime Correctness Check
 
 All required rows in this section must be present; each row may remain `ok` or `gap` with explicit evidence.
+Use the selected packet `Lifecycle Ref(s)` / `Invariant Ref(s)` as the default data-model evidence path when lifecycle or invariant checks are relevant.
 
 | Runtime Check Item | Required Evidence | Anchor | Status |
 |--------------------|-------------------|--------|--------|

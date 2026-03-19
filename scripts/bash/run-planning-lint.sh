@@ -24,6 +24,10 @@ Supported rule kinds:
   - component_symbols_exist
   - anchor_status_allowed_values
   - northbound_controller_required
+  - repo_anchor_paths_exist
+  - plan_status_consistency
+  - binding_projection_stable_only
+  - binding_tuple_projection_sync
 EOF
 }
 
@@ -58,11 +62,90 @@ normalize_fs_path() {
     printf '%s\n' "$path"
 }
 
+detect_repo_root() {
+    local feature_dir="$1"
+    local parent_dir
+    parent_dir="$(dirname "$feature_dir")"
+
+    if [[ "$(basename "$parent_dir")" == "specs" ]]; then
+        dirname "$parent_dir"
+        return 0
+    fi
+
+    printf '%s\n' "$parent_dir"
+}
+
+resolve_anchor_target_path() {
+    local repo_root="$1"
+    local anchor_path="$2"
+    local normalized_path="${anchor_path//\\//}"
+
+    if [[ "$normalized_path" =~ ^[A-Za-z]:/ || "$normalized_path" == /* ]]; then
+        normalize_fs_path "$normalized_path"
+        return 0
+    fi
+
+    printf '%s/%s\n' "$repo_root" "$normalized_path"
+}
+
 trim() {
     local value="$1"
     # shellcheck disable=SC2001
     value="$(echo "$value" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
     printf '%s' "$value"
+}
+
+parse_markdown_cells() {
+    local line="$1"
+    MARKDOWN_CELLS=()
+
+    if [[ ! "$line" =~ ^[[:space:]]*\|.*\|[[:space:]]*$ ]]; then
+        return 1
+    fi
+
+    local line_trimmed
+    local content
+    local cell=''
+    local escaped=false
+    local idx
+    local ch
+
+    line_trimmed="$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    content="${line_trimmed#|}"
+    content="${content%|}"
+
+    for ((idx = 0; idx < ${#content}; idx++)); do
+        ch="${content:idx:1}"
+
+        if [[ "$escaped" == true ]]; then
+            if [[ "$ch" == "|" || "$ch" == "\\" ]]; then
+                cell+="$ch"
+            else
+                cell+="\\$ch"
+            fi
+            escaped=false
+            continue
+        fi
+
+        if [[ "$ch" == "\\" ]]; then
+            escaped=true
+            continue
+        fi
+
+        if [[ "$ch" == "|" ]]; then
+            MARKDOWN_CELLS+=("$(trim "$cell")")
+            cell=''
+            continue
+        fi
+
+        cell+="$ch"
+    done
+
+    if [[ "$escaped" == true ]]; then
+        cell+="\\"
+    fi
+    MARKDOWN_CELLS+=("$(trim "$cell")")
+    return 0
 }
 
 json_escape() {
@@ -110,8 +193,17 @@ normalize_regex_for_grep() {
         regex="${regex#(?i)}"
     fi
 
+    # grep -E does not support PCRE non-capturing groups; downgrade them to
+    # plain capture groups so one rules catalog can serve bash and PowerShell.
+    regex="${regex//\(\?:/(}"
+
     printf -v "$__out_regex_ref" '%s' "$regex"
     printf -v "$__out_case_insensitive_ref" '%s' "$case_insensitive"
+}
+
+stream_file_for_grep() {
+    local file_path="$1"
+    sed 's/\r$//' "$file_path"
 }
 
 contains_value() {
@@ -260,6 +352,29 @@ evaluate_northbound_anchor_pair() {
     return 1
 }
 
+normalize_markdown_scalar() {
+    local value
+    value="$(trim "$1")"
+    value="${value//\`/}"
+    printf '%s' "$(trim "$value")"
+}
+
+extract_anchor_status_token() {
+    local raw normalized token
+    raw="$1"
+    normalized="$(normalize_markdown_scalar "$raw")"
+    normalized="$(echo "$normalized" | tr '[:upper:]' '[:lower:]')"
+
+    for token in existing extended new todo; do
+        if grep -qiE "(^|[^A-Za-z])${token}([^A-Za-z]|$)" <<< "$normalized"; then
+            printf '%s' "$token"
+            return 0
+        fi
+    done
+
+    printf ''
+}
+
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -321,6 +436,8 @@ if [[ ! -f "$RULES_PATH" ]]; then
     exit 1
 fi
 
+REPO_ROOT_FOR_FEATURE="$(detect_repo_root "$FEATURE_DIR")"
+
 mapfile -t ALL_REL_FILES < <(cd "$FEATURE_DIR" && find . -type f -print | sed 's|^\./||' | sort)
 
 rules_total=0
@@ -369,7 +486,9 @@ get_matching_files() {
     done
 }
 
-while IFS=$'\t' read -r id enabled severity scope glob kind params message remediation _; do
+while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
+    raw_rule_line="${raw_rule_line%$'\r'}"
+    IFS=$'\x1f' read -r id enabled severity scope glob kind params message remediation _ <<< "${raw_rule_line//$'\t'/$'\x1f'}"
     [[ -z "${id:-}" ]] && continue
     [[ "$id" == "id" ]] && continue
     [[ "$id" =~ ^# ]] && continue
@@ -404,14 +523,14 @@ while IFS=$'\t' read -r id enabled severity scope glob kind params message remed
                         line_no="${match_line%%:*}"
                         rel_file="${file_path#$FEATURE_DIR/}"
                         add_finding "$id" "$severity" "$rel_file" "$line_no" "$message" "$remediation"
-                    done < <(grep -niE "$normalized_regex" "$file_path" || true)
+                    done < <(stream_file_for_grep "$file_path" | grep -niE "$normalized_regex" || true)
                 else
                     while IFS= read -r match_line; do
                         [[ -z "$match_line" ]] && continue
                         line_no="${match_line%%:*}"
                         rel_file="${file_path#$FEATURE_DIR/}"
                         add_finding "$id" "$severity" "$rel_file" "$line_no" "$message" "$remediation"
-                    done < <(grep -nE "$normalized_regex" "$file_path" || true)
+                    done < <(stream_file_for_grep "$file_path" | grep -nE "$normalized_regex" || true)
                 fi
             done
             ;;
@@ -430,12 +549,12 @@ while IFS=$'\t' read -r id enabled severity scope glob kind params message remed
             found_any=false
             for file_path in "${matched_files[@]}"; do
                 if [[ "$case_insensitive" == "true" ]]; then
-                    if grep -qiE "$normalized_regex" "$file_path"; then
+                    if stream_file_for_grep "$file_path" | grep -qiE "$normalized_regex"; then
                         found_any=true
                         break
                     fi
                 else
-                    if grep -qE "$normalized_regex" "$file_path"; then
+                    if stream_file_for_grep "$file_path" | grep -qE "$normalized_regex"; then
                         found_any=true
                         break
                     fi
@@ -471,7 +590,7 @@ while IFS=$'\t' read -r id enabled severity scope glob kind params message remed
             for symbol in "${symbols[@]}"; do
                 symbol_trimmed="$(trim "$symbol")"
                 [[ -z "$symbol_trimmed" ]] && continue
-                if ! grep -Fq -- "$symbol_trimmed" "$target_file"; then
+                if ! stream_file_for_grep "$target_file" | grep -Fq -- "$symbol_trimmed"; then
                     missing_symbols+=("$symbol_trimmed")
                 fi
             done
@@ -511,15 +630,8 @@ while IFS=$'\t' read -r id enabled severity scope glob kind params message remed
                         fi
                     fi
 
-                    if [[ "$line" =~ ^[[:space:]]*\|.*\|[[:space:]]*$ ]]; then
-                        line_trimmed="$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-                        content="${line_trimmed#|}"
-                        content="${content%|}"
-                        IFS='|' read -r -a raw_cells <<< "$content"
-                        cells=()
-                        for cell in "${raw_cells[@]}"; do
-                            cells+=("$(trim "$cell")")
-                        done
+                    if parse_markdown_cells "$line"; then
+                        cells=("${MARKDOWN_CELLS[@]}")
 
                         if [[ "$in_table" == false ]]; then
                             idx=0
@@ -607,7 +719,7 @@ while IFS=$'\t' read -r id enabled severity scope glob kind params message remed
                 continue
             fi
 
-            if ! grep -qiE "$trigger_regex" "$trigger_file"; then
+            if ! stream_file_for_grep "$trigger_file" | grep -qiE "$trigger_regex"; then
                 continue
             fi
 
@@ -665,15 +777,8 @@ while IFS=$'\t' read -r id enabled severity scope glob kind params message remed
                         continue
                     fi
 
-                    if [[ "$line" =~ ^[[:space:]]*\|.*\|[[:space:]]*$ ]]; then
-                        line_trimmed="$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-                        content="${line_trimmed#|}"
-                        content="${content%|}"
-                        IFS='|' read -r -a raw_cells <<< "$content"
-                        cells=()
-                        for cell in "${raw_cells[@]}"; do
-                            cells+=("$(trim "$cell")")
-                        done
+                    if parse_markdown_cells "$line"; then
+                        cells=("${MARKDOWN_CELLS[@]}")
 
                         if [[ "$in_table" == false ]]; then
                             boundary_col=-1
@@ -688,7 +793,7 @@ while IFS=$'\t' read -r id enabled severity scope glob kind params message remed
                                 fi
                                 idx=$((idx + 1))
                             done
-                            if [[ $boundary_col -ge 0 || $entry_col -ge 0 ]]; then
+                            if [[ $boundary_col -ge 0 && $entry_col -ge 0 ]]; then
                                 in_table=true
                             fi
                             continue
@@ -737,18 +842,526 @@ while IFS=$'\t' read -r id enabled severity scope glob kind params message remed
                 fi
 
                 if [[ "$rel_file" == contracts/* && "$has_http_boundary" == true ]]; then
-                    while IFS= read -r match_line; do
-                        [[ -z "$match_line" ]] && continue
-                        variant_line="${match_line%%:*}"
-                        add_finding "$id" "$severity" "$rel_file" "$variant_line" "$message HTTP boundary contracts must not render Sequence Variant B (Boundary == Entry)." "$remediation"
-                    done < <(grep -niE "$sequence_variant_b_regex" "$file_path" || true)
+                    sequence_variant_a_regex='(?i)Sequence[[:space:]]+Variant[[:space:]]+A'
+                    if ! stream_file_for_grep "$file_path" | grep -qiE "$sequence_variant_a_regex"; then
+                        while IFS= read -r match_line; do
+                            [[ -z "$match_line" ]] && continue
+                            variant_line="${match_line%%:*}"
+                            add_finding "$id" "$severity" "$rel_file" "$variant_line" "$message HTTP boundary contracts must not render Sequence Variant B (Boundary == Entry)." "$remediation"
+                        done < <(stream_file_for_grep "$file_path" | grep -niE "$sequence_variant_b_regex" || true)
+                    fi
                 fi
             done
             eval "$old_nocasematch"
             ;;
 
+        repo_anchor_paths_exist)
+            anchor_regex='`?([A-Za-z0-9_./\\-]+\.[A-Za-z0-9_-]+)::([A-Za-z_$][A-Za-z0-9_.$-]*)`?'
+
+            for file_path in "${matched_files[@]}"; do
+                rel_file="${file_path#$FEATURE_DIR/}"
+                line_no=0
+
+                while IFS= read -r line || [[ -n "$line" ]]; do
+                    line_no=$((line_no + 1))
+                    remaining="$line"
+
+                    while [[ "$remaining" =~ $anchor_regex ]]; do
+                        raw_anchor_path="${BASH_REMATCH[1]}"
+                        raw_anchor_token="${BASH_REMATCH[0]}"
+                        target_path="$(resolve_anchor_target_path "$REPO_ROOT_FOR_FEATURE" "$raw_anchor_path")"
+
+                        if [[ ! -f "$target_path" ]]; then
+                            add_finding "$id" "$severity" "$rel_file" "$line_no" "$message Missing file: $raw_anchor_path" "$remediation"
+                        fi
+
+                        remaining="${remaining#*"$raw_anchor_token"}"
+                    done
+                done < "$file_path"
+            done
+            ;;
+
+        plan_status_consistency)
+            for file_path in "${matched_files[@]}"; do
+                rel_file="${file_path#$FEATURE_DIR/}"
+                line_no=0
+                plan_status=""
+                plan_status_line=0
+                current_section=""
+                in_table=false
+                table_status_idx=-1
+                stage_statuses=()
+                artifact_statuses=()
+
+                while IFS= read -r line || [[ -n "$line" ]]; do
+                    line_no=$((line_no + 1))
+
+                    if [[ "$line" =~ ^##[[:space:]]+(.+)$ ]]; then
+                        current_section="$(trim "${BASH_REMATCH[1]}")"
+                        in_table=false
+                        table_status_idx=-1
+                        continue
+                    fi
+
+                    if [[ "$line" =~ ^[[:space:]]*-[[:space:]]*Status:[[:space:]]*(planning-not-started|planning-in-progress|planning-complete)[[:space:]]*$ ]]; then
+                        plan_status="${BASH_REMATCH[1]}"
+                        plan_status_line=$line_no
+                    fi
+
+                    if [[ "$current_section" != "Stage Queue" && "$current_section" != "Artifact Status" ]]; then
+                        continue
+                    fi
+
+                    if parse_markdown_cells "$line"; then
+                        cells=("${MARKDOWN_CELLS[@]}")
+
+                        if [[ "$in_table" == false ]]; then
+                            table_status_idx=-1
+                            idx=0
+                            for cell in "${cells[@]}"; do
+                                if [[ "$cell" == "Status" ]]; then
+                                    table_status_idx=$idx
+                                    break
+                                fi
+                                idx=$((idx + 1))
+                            done
+                            if [[ $table_status_idx -ge 0 ]]; then
+                                in_table=true
+                            fi
+                            continue
+                        fi
+
+                        is_separator=true
+                        for cell in "${cells[@]}"; do
+                            if [[ ! "$cell" =~ ^:?-{3,}:?$ ]]; then
+                                is_separator=false
+                                break
+                            fi
+                        done
+                        if [[ "$is_separator" == true ]]; then
+                            continue
+                        fi
+
+                        if [[ $table_status_idx -ge 0 && $table_status_idx -lt ${#cells[@]} ]]; then
+                            status_value="$(echo "${cells[$table_status_idx]}" | tr '[:upper:]' '[:lower:]')"
+                            status_value="$(trim "$status_value")"
+                            if [[ "$current_section" == "Stage Queue" ]]; then
+                                stage_statuses+=("$status_value")
+                            else
+                                artifact_statuses+=("$status_value")
+                            fi
+                        fi
+                        continue
+                    fi
+
+                    in_table=false
+                    table_status_idx=-1
+                done < "$file_path"
+
+                if [[ -z "$plan_status" ]]; then
+                    add_finding "$id" "$severity" "$rel_file" 0 "$message Missing `Feature Identity -> Status` marker." "$remediation"
+                    continue
+                fi
+
+                all_stage_pending=true
+                all_stage_done=true
+                for status_value in "${stage_statuses[@]}"; do
+                    [[ "$status_value" != "pending" ]] && all_stage_pending=false
+                    [[ "$status_value" != "done" ]] && all_stage_done=false
+                done
+
+                artifact_count=${#artifact_statuses[@]}
+                all_artifact_done=true
+                for status_value in "${artifact_statuses[@]}"; do
+                    [[ "$status_value" != "done" ]] && all_artifact_done=false
+                done
+
+                if [[ "$plan_status" == "planning-not-started" ]]; then
+                    if [[ "$all_stage_pending" == false || $artifact_count -gt 0 ]]; then
+                        add_finding "$id" "$severity" "$rel_file" "$plan_status_line" "$message `planning-not-started` is only valid before any stage progress or artifact queue initialization." "$remediation"
+                    fi
+                    continue
+                fi
+
+                if [[ "$plan_status" == "planning-complete" ]]; then
+                    if [[ "$all_stage_done" == false || "$all_artifact_done" == false ]]; then
+                        add_finding "$id" "$severity" "$rel_file" "$plan_status_line" "$message `planning-complete` requires all stage rows and artifact rows to be `done`." "$remediation"
+                    fi
+                    continue
+                fi
+
+                if [[ "$plan_status" == "planning-in-progress" ]]; then
+                    if [[ "$all_stage_pending" == true && $artifact_count -eq 0 ]]; then
+                        add_finding "$id" "$severity" "$rel_file" "$plan_status_line" "$message `planning-in-progress` is inconsistent when all stage rows remain `pending` and no artifact queue exists." "$remediation"
+                        continue
+                    fi
+
+                    if [[ "$all_stage_done" == true && "$all_artifact_done" == true ]]; then
+                        add_finding "$id" "$severity" "$rel_file" "$plan_status_line" "$message `planning-in-progress` is inconsistent when all stage rows and artifact rows are already `done`." "$remediation"
+                    fi
+                fi
+            done
+            ;;
+
+        binding_projection_stable_only)
+            for file_path in "${matched_files[@]}"; do
+                rel_file="${file_path#$FEATURE_DIR/}"
+                current_section=""
+                in_table=false
+                boundary_status_idx=-1
+                entry_status_idx=-1
+                line_no=0
+
+                while IFS= read -r line || [[ -n "$line" ]]; do
+                    line_no=$((line_no + 1))
+
+                    if [[ "$line" =~ ^##[[:space:]]+(.+)$ ]]; then
+                        current_section="$(trim "${BASH_REMATCH[1]}")"
+                        in_table=false
+                        boundary_status_idx=-1
+                        entry_status_idx=-1
+                        continue
+                    fi
+
+                    if [[ "$current_section" != "Binding Projection Index" ]]; then
+                        continue
+                    fi
+
+                    if parse_markdown_cells "$line"; then
+                        cells=("${MARKDOWN_CELLS[@]}")
+
+                        if [[ "$in_table" == false ]]; then
+                            boundary_status_idx=-1
+                            entry_status_idx=-1
+                            idx=0
+                            for cell in "${cells[@]}"; do
+                                if [[ "$cell" == "Boundary Anchor Status" ]]; then
+                                    boundary_status_idx=$idx
+                                fi
+                                if [[ "$cell" == "Implementation Entry Anchor Status" ]]; then
+                                    entry_status_idx=$idx
+                                fi
+                                idx=$((idx + 1))
+                            done
+                            if [[ $boundary_status_idx -ge 0 || $entry_status_idx -ge 0 ]]; then
+                                in_table=true
+                            fi
+                            continue
+                        fi
+
+                        is_separator=true
+                        for cell in "${cells[@]}"; do
+                            if [[ ! "$cell" =~ ^:?-{3,}:?$ ]]; then
+                                is_separator=false
+                                break
+                            fi
+                        done
+                        if [[ "$is_separator" == true ]]; then
+                            continue
+                        fi
+
+                        has_todo=false
+                        if [[ $boundary_status_idx -ge 0 && $boundary_status_idx -lt ${#cells[@]} ]]; then
+                            if grep -qiE '(^|[^A-Za-z])todo([^A-Za-z]|$)' <<< "${cells[$boundary_status_idx]}"; then
+                                has_todo=true
+                            fi
+                        fi
+                        if [[ $entry_status_idx -ge 0 && $entry_status_idx -lt ${#cells[@]} ]]; then
+                            if grep -qiE '(^|[^A-Za-z])todo([^A-Za-z]|$)' <<< "${cells[$entry_status_idx]}"; then
+                                has_todo=true
+                            fi
+                        fi
+
+                        if [[ "$has_todo" == true ]]; then
+                            add_finding "$id" "$severity" "$rel_file" "$line_no" "$message" "$remediation"
+                        fi
+                        continue
+                    fi
+
+                    in_table=false
+                    boundary_status_idx=-1
+                    entry_status_idx=-1
+                done < "$file_path"
+            done
+            ;;
+
+        binding_tuple_projection_sync)
+            for file_path in "${matched_files[@]}"; do
+                rel_file="${file_path#$FEATURE_DIR/}"
+                test_matrix_path="$FEATURE_DIR/test-matrix.md"
+
+                if [[ ! -f "$test_matrix_path" ]]; then
+                    add_finding "$id" "$severity" "$rel_file" 0 "$message Missing file: test-matrix.md" "$remediation"
+                    continue
+                fi
+
+                declare -A plan_boundary=()
+                declare -A plan_entry=()
+                declare -A plan_boundary_status=()
+                declare -A plan_entry_status=()
+                declare -A plan_line=()
+                declare -A artifact_target=()
+                declare -A packet_boundary=()
+                declare -A packet_entry=()
+                declare -A packet_boundary_status=()
+                declare -A packet_entry_status=()
+                declare -A packet_line=()
+
+                current_section=""
+                in_table=false
+                binding_row_idx=-1
+                boundary_idx=-1
+                entry_idx=-1
+                boundary_status_idx=-1
+                entry_status_idx=-1
+                unit_type_idx=-1
+                target_path_idx=-1
+                line_no=0
+
+                while IFS= read -r line || [[ -n "$line" ]]; do
+                    line_no=$((line_no + 1))
+
+                    if [[ "$line" =~ ^##[[:space:]]+(.+)$ ]]; then
+                        current_section="$(trim "${BASH_REMATCH[1]}")"
+                        in_table=false
+                        binding_row_idx=-1
+                        boundary_idx=-1
+                        entry_idx=-1
+                        boundary_status_idx=-1
+                        entry_status_idx=-1
+                        unit_type_idx=-1
+                        target_path_idx=-1
+                        continue
+                    fi
+
+                    if [[ "$current_section" != "Binding Projection Index" && "$current_section" != "Artifact Status" ]]; then
+                        continue
+                    fi
+
+                    if ! parse_markdown_cells "$line"; then
+                        in_table=false
+                        binding_row_idx=-1
+                        boundary_idx=-1
+                        entry_idx=-1
+                        boundary_status_idx=-1
+                        entry_status_idx=-1
+                        unit_type_idx=-1
+                        target_path_idx=-1
+                        continue
+                    fi
+
+                    cells=("${MARKDOWN_CELLS[@]}")
+
+                    if [[ "$in_table" == false ]]; then
+                        binding_row_idx=-1
+                        boundary_idx=-1
+                        entry_idx=-1
+                        boundary_status_idx=-1
+                        entry_status_idx=-1
+                        unit_type_idx=-1
+                        target_path_idx=-1
+
+                        idx=0
+                        for cell in "${cells[@]}"; do
+                            case "$cell" in
+                                "BindingRowID")
+                                    binding_row_idx=$idx
+                                    ;;
+                                "Boundary Anchor")
+                                    boundary_idx=$idx
+                                    ;;
+                                "Implementation Entry Anchor")
+                                    entry_idx=$idx
+                                    ;;
+                                "Boundary Anchor Status")
+                                    boundary_status_idx=$idx
+                                    ;;
+                                "Implementation Entry Anchor Status")
+                                    entry_status_idx=$idx
+                                    ;;
+                                "Unit Type")
+                                    unit_type_idx=$idx
+                                    ;;
+                                "Target Path")
+                                    target_path_idx=$idx
+                                    ;;
+                            esac
+                            idx=$((idx + 1))
+                        done
+
+                        if [[ "$current_section" == "Binding Projection Index" ]]; then
+                            if [[ $binding_row_idx -ge 0 ]]; then
+                                in_table=true
+                            fi
+                        else
+                            if [[ $binding_row_idx -ge 0 && $unit_type_idx -ge 0 && $target_path_idx -ge 0 ]]; then
+                                in_table=true
+                            fi
+                        fi
+                        continue
+                    fi
+
+                    is_separator=true
+                    for cell in "${cells[@]}"; do
+                        if [[ ! "$cell" =~ ^:?-{3,}:?$ ]]; then
+                            is_separator=false
+                            break
+                        fi
+                    done
+                    if [[ "$is_separator" == true ]]; then
+                        continue
+                    fi
+
+                    if [[ $binding_row_idx -lt 0 || $binding_row_idx -ge ${#cells[@]} ]]; then
+                        continue
+                    fi
+
+                    binding_id="$(normalize_markdown_scalar "${cells[$binding_row_idx]}")"
+                    [[ -z "$binding_id" ]] && continue
+
+                    if [[ "$current_section" == "Binding Projection Index" ]]; then
+                        plan_line["$binding_id"]=$line_no
+                        if [[ $boundary_idx -ge 0 && $boundary_idx -lt ${#cells[@]} ]]; then
+                            plan_boundary["$binding_id"]="$(normalize_markdown_scalar "${cells[$boundary_idx]}")"
+                        fi
+                        if [[ $entry_idx -ge 0 && $entry_idx -lt ${#cells[@]} ]]; then
+                            plan_entry["$binding_id"]="$(normalize_markdown_scalar "${cells[$entry_idx]}")"
+                        fi
+                        if [[ $boundary_status_idx -ge 0 && $boundary_status_idx -lt ${#cells[@]} ]]; then
+                            plan_boundary_status["$binding_id"]="$(extract_anchor_status_token "${cells[$boundary_status_idx]}")"
+                        fi
+                        if [[ $entry_status_idx -ge 0 && $entry_status_idx -lt ${#cells[@]} ]]; then
+                            plan_entry_status["$binding_id"]="$(extract_anchor_status_token "${cells[$entry_status_idx]}")"
+                        fi
+                    else
+                        if [[ $unit_type_idx -lt ${#cells[@]} ]] && [[ "$(normalize_markdown_scalar "${cells[$unit_type_idx]}")" == "contract" ]]; then
+                            artifact_target["$binding_id"]="$(normalize_markdown_scalar "${cells[$target_path_idx]}")"
+                        fi
+                    fi
+                done < "$file_path"
+
+                current_section=""
+                in_table=false
+                binding_row_idx=-1
+                boundary_idx=-1
+                entry_idx=-1
+                boundary_status_idx=-1
+                entry_status_idx=-1
+                line_no=0
+
+                while IFS= read -r line || [[ -n "$line" ]]; do
+                    line_no=$((line_no + 1))
+
+                    if [[ "$line" =~ ^##[[:space:]]+(.+)$ ]]; then
+                        current_section="$(trim "${BASH_REMATCH[1]}")"
+                        in_table=false
+                        binding_row_idx=-1
+                        boundary_idx=-1
+                        entry_idx=-1
+                        boundary_status_idx=-1
+                        entry_status_idx=-1
+                        continue
+                    fi
+
+                    if [[ "$current_section" != "Binding Contract Packets" ]]; then
+                        continue
+                    fi
+
+                    if ! parse_markdown_cells "$line"; then
+                        in_table=false
+                        binding_row_idx=-1
+                        boundary_idx=-1
+                        entry_idx=-1
+                        boundary_status_idx=-1
+                        entry_status_idx=-1
+                        continue
+                    fi
+
+                    cells=("${MARKDOWN_CELLS[@]}")
+
+                    if [[ "$in_table" == false ]]; then
+                        binding_row_idx=-1
+                        boundary_idx=-1
+                        entry_idx=-1
+                        boundary_status_idx=-1
+                        entry_status_idx=-1
+
+                        idx=0
+                        for cell in "${cells[@]}"; do
+                            case "$cell" in
+                                "BindingRowID")
+                                    binding_row_idx=$idx
+                                    ;;
+                                "Boundary Anchor")
+                                    boundary_idx=$idx
+                                    ;;
+                                "Implementation Entry Anchor")
+                                    entry_idx=$idx
+                                    ;;
+                                "Boundary Anchor Status")
+                                    boundary_status_idx=$idx
+                                    ;;
+                                "Implementation Entry Anchor Status")
+                                    entry_status_idx=$idx
+                                    ;;
+                            esac
+                            idx=$((idx + 1))
+                        done
+                        if [[ $binding_row_idx -ge 0 ]]; then
+                            in_table=true
+                        fi
+                        continue
+                    fi
+
+                    is_separator=true
+                    for cell in "${cells[@]}"; do
+                        if [[ ! "$cell" =~ ^:?-{3,}:?$ ]]; then
+                            is_separator=false
+                            break
+                        fi
+                    done
+                    if [[ "$is_separator" == true ]]; then
+                        continue
+                    fi
+
+                    if [[ $binding_row_idx -lt 0 || $binding_row_idx -ge ${#cells[@]} ]]; then
+                        continue
+                    fi
+
+                    binding_id="$(normalize_markdown_scalar "${cells[$binding_row_idx]}")"
+                    [[ -z "$binding_id" ]] && continue
+
+                    packet_line["$binding_id"]=$line_no
+                    if [[ $boundary_idx -ge 0 && $boundary_idx -lt ${#cells[@]} ]]; then
+                        packet_boundary["$binding_id"]="$(normalize_markdown_scalar "${cells[$boundary_idx]}")"
+                    fi
+                    if [[ $entry_idx -ge 0 && $entry_idx -lt ${#cells[@]} ]]; then
+                        packet_entry["$binding_id"]="$(normalize_markdown_scalar "${cells[$entry_idx]}")"
+                    fi
+                    if [[ $boundary_status_idx -ge 0 && $boundary_status_idx -lt ${#cells[@]} ]]; then
+                        packet_boundary_status["$binding_id"]="$(extract_anchor_status_token "${cells[$boundary_status_idx]}")"
+                    fi
+                    if [[ $entry_status_idx -ge 0 && $entry_status_idx -lt ${#cells[@]} ]]; then
+                        packet_entry_status["$binding_id"]="$(extract_anchor_status_token "${cells[$entry_status_idx]}")"
+                    fi
+                done < "$test_matrix_path"
+
+                for binding_id in "${!plan_line[@]}"; do
+                    if [[ -z "${packet_line[$binding_id]:-}" ]]; then
+                        add_finding "$id" "$severity" "$rel_file" "${plan_line[$binding_id]}" "$message BindingRowID $binding_id is present in `Binding Projection Index` but missing from `test-matrix.md` `Binding Contract Packets`." "$remediation"
+                        continue
+                    fi
+
+                    if [[ "${plan_boundary[$binding_id]:-}" != "${packet_boundary[$binding_id]:-}" || "${plan_entry[$binding_id]:-}" != "${packet_entry[$binding_id]:-}" || "${plan_boundary_status[$binding_id]:-}" != "${packet_boundary_status[$binding_id]:-}" || "${plan_entry_status[$binding_id]:-}" != "${packet_entry_status[$binding_id]:-}" ]]; then
+                        add_finding "$id" "$severity" "$rel_file" "${plan_line[$binding_id]}" "$message BindingRowID $binding_id differs from `test-matrix.md` `Binding Contract Packets` for boundary/entry tuple fields." "$remediation"
+                    fi
+
+                done
+            done
+            ;;
+
         *)
-            add_finding "$id" "$severity" "$glob" 0 "Unsupported rule kind: $kind" "Use one of: file_regex_forbidden, file_regex_required_any, component_symbols_exist, anchor_status_allowed_values, northbound_controller_required."
+            add_finding "$id" "$severity" "$glob" 0 "Unsupported rule kind: $kind" "Use one of: file_regex_forbidden, file_regex_required_any, component_symbols_exist, anchor_status_allowed_values, northbound_controller_required, repo_anchor_paths_exist, plan_status_consistency, binding_projection_stable_only, binding_tuple_projection_sync."
             ;;
     esac
 

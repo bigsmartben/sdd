@@ -46,7 +46,8 @@ The latest run block in `analyze-history.md` is the only authoritative analyze g
    - `.specify/memory/repository-first/technical-dependency-matrix.md`
    - `.specify/memory/repository-first/module-invocation-spec.md`
 5. Repository-first evidence checks MUST use:
-   - `Used By Module`, `Evidence`, and `SIG-*` governance signals including divergence, version-source-mix, and `unresolved`
+   - matrix dependency facts plus `SIG-*` governance signals including divergence, version-source-mix, and `unresolved`
+   - minimal supporting facts for conclusions (path-level default; line-level only when ambiguity/conflict requires precision)
    - invocation governance using concrete module-to-module rows as the primary representation
 
 ## Write Only
@@ -73,7 +74,12 @@ Mandatory stale-row routing:
 - stale `test-matrix` or missing binding rows -> `/sdd.plan.test-matrix`
 - stale `contract` -> `/sdd.plan.contract`
 
-CRITICAL/HIGH findings MUST cite the authoritative source artifact(s).
+Tuple drift routing:
+
+- if `Binding Projection Index` differs from the selected `Binding Contract Packets` row for the same `BindingRowID`, route `/sdd.plan.test-matrix` to repair the upstream tuple seed.
+- if a generated contract tuple differs from the upstream selected packet for the same `BindingRowID`, treat it as contract projection drift: repair the upstream owner first (`/sdd.plan.test-matrix` or `/sdd.plan.data-model`), then regenerate `/sdd.plan.contract`.
+
+CRITICAL/HIGH findings MUST cite the authoritative source artifact(s) with concise supporting facts.
 
 ## Gate Decision
 
@@ -82,9 +88,9 @@ Output exactly one decision:
 - `PASS`: no blocking findings
 - `FAIL`: one or more blocking findings remain
 
-When `FAIL`, include blocker list with evidence and remediation owner command (`/sdd.constitution`, `/sdd.specify`, `/sdd.plan.*`, or `/sdd.tasks`).
+When `FAIL`, include blocker list with supporting facts and remediation owner command (`/sdd.constitution`, `/sdd.specify`, `/sdd.plan.*`, or `/sdd.tasks`).
 
-Default blocking classes include unresolved normative anchors (`BA-*`, `TODO(REPO_ANCHOR)`, `Anchor Status = todo`, `Implementation Entry Anchor Status = todo`), missing `Full Field Dictionary (Operation-scoped)`, unresolved contract projection drift, controller-first violations, repository-first baseline gaps, and stale control-plane fingerprints.
+Default blocking classes include unresolved normative anchors (`BA-*`, `TODO(REPO_ANCHOR)`, `Anchor Status = todo`, `Implementation Entry Anchor Status = todo`), missing `Full Field Dictionary (Operation-scoped)`, unresolved contract projection drift, upstream tuple-seed drift across `plan.md` / `test-matrix.md`, controller-first violations, repository-first baseline gaps, and stale control-plane fingerprints.
 
 Additional blocking requirement: any active tuple selecting `new` anchors without explicit rejection evidence for both `existing` and `extended` is `FAIL` and must route to the relevant `/sdd.plan.*` owner command.
 

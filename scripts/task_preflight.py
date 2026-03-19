@@ -24,7 +24,17 @@ SECTION_HEADINGS = (
     "Artifact Status",
 )
 
-BOOTSTRAP_SCHEMA_VERSION = "1.1"
+BOOTSTRAP_SCHEMA_VERSION = "1.2"
+PLACEHOLDER_TOKEN_RE = re.compile(r"^\[[^\]]+\]$")
+ENTRY_ANCHOR_LABEL_RE = re.compile(
+    r"(?im)^\s*(?:[-*]\s*)?\*\*Implementation[ _-]*Entry[ _-]*Anchor(?:\s*\([^)]*\))?\*\*:\s*(.+?)\s*$"
+)
+NON_CONTROLLER_ENTRY_RE = re.compile(r"(?i)(service|facade|manager|repository|dao|mapper)")
+ANCHOR_STATUS_VALUES = {"existing", "extended", "new", "todo"}
+
+
+def is_placeholder_token(value: str) -> bool:
+    return bool(PLACEHOLDER_TOKEN_RE.fullmatch(clean_cell(value)))
 
 
 def inspect_contract_artifact(contract_path_abs: str, boundary_anchor: str) -> dict[str, Any]:
@@ -39,7 +49,18 @@ def inspect_contract_artifact(contract_path_abs: str, boundary_anchor: str) -> d
     content = Path(contract_path_abs).read_text(encoding="utf-8")
     inspection["full_field_dictionary_present"] = "## Full Field Dictionary (Operation-scoped)" in content
     inspection["has_unresolved_field_gaps"] = "TODO(REPO_ANCHOR)" in content or re.search(r"(?i)\|\s*gap\s*\|", content) is not None
-    inspection["controller_first_violation"] = boundary_anchor.startswith("HTTP ") and "#### Sequence Variant B (Boundary == Entry)" in content
+    if boundary_anchor.startswith("HTTP "):
+        entry_match = ENTRY_ANCHOR_LABEL_RE.search(content)
+        entry_anchor = clean_cell(entry_match.group(1)) if entry_match else ""
+        entry_anchor_lower = entry_anchor.lower()
+        inspection["controller_first_violation"] = (
+            entry_anchor_lower.startswith("http ")
+            or (
+                bool(NON_CONTROLLER_ENTRY_RE.search(entry_anchor_lower))
+                and "controller" not in entry_anchor_lower
+                and "todo(repo_anchor)" not in entry_anchor_lower
+            )
+        )
     return inspection
 
 
@@ -58,6 +79,40 @@ def clean_cell(value: str) -> str:
     return value.strip().strip("`").strip()
 
 
+def parse_markdown_cells(line: str) -> list[str]:
+    stripped = line.strip()
+    if not (stripped.startswith("|") and stripped.endswith("|")):
+        return []
+
+    content = stripped.strip("|")
+    cells: list[str] = []
+    current: list[str] = []
+    escaping = False
+
+    for ch in content:
+        if escaping:
+            if ch in {"|", "\\"}:
+                current.append(ch)
+            else:
+                current.append("\\")
+                current.append(ch)
+            escaping = False
+            continue
+        if ch == "\\":
+            escaping = True
+            continue
+        if ch == "|":
+            cells.append("".join(current))
+            current = []
+            continue
+        current.append(ch)
+
+    if escaping:
+        current.append("\\")
+    cells.append("".join(current))
+    return cells
+
+
 def split_csv_cell(value: str) -> list[str]:
     text = clean_cell(value)
     if text.startswith("[") and text.endswith("]"):
@@ -73,6 +128,15 @@ def extract_section(document: str, heading: str) -> str | None:
     if not match:
         return None
     return match.group(1).strip()
+
+
+def normalize_anchor_status(value: str) -> str:
+    return clean_cell(value).lower()
+
+
+def has_required_strategy_evidence(value: str) -> bool:
+    text = clean_cell(value).lower()
+    return "existing" in text and "extended" in text
 
 
 def parse_markdown_table(section: str | None) -> list[dict[str, str]]:
@@ -94,16 +158,45 @@ def parse_markdown_table(section: str | None) -> list[dict[str, str]]:
     if len(table_lines) < 2:
         return []
 
-    headers = [clean_cell(cell) for cell in table_lines[0].strip().strip("|").split("|")]
+    headers = [clean_cell(cell) for cell in parse_markdown_cells(table_lines[0])]
     rows: list[dict[str, str]] = []
     for line in table_lines[2:]:
-        cells = [clean_cell(cell) for cell in line.strip().strip("|").split("|")]
+        cells = [clean_cell(cell) for cell in parse_markdown_cells(line)]
         if len(cells) != len(headers):
             continue
         row = {header: cell for header, cell in zip(headers, cells)}
+        if cells and is_placeholder_token(cells[0]):
+            continue
         if any(value for value in row.values()):
             rows.append(row)
     return rows
+
+
+def load_binding_contract_packets(test_matrix_path: Path) -> dict[str, dict[str, str]]:
+    if not test_matrix_path.is_file():
+        return {}
+
+    document = test_matrix_path.read_text(encoding="utf-8")
+    packet_rows = parse_markdown_table(extract_section(document, "Binding Contract Packets"))
+    packets: dict[str, dict[str, str]] = {}
+    for row in packet_rows:
+        binding_row_id = clean_cell(row.get("BindingRowID", ""))
+        if not binding_row_id:
+            continue
+        packets[binding_row_id] = {
+            "binding_row_id": binding_row_id,
+            "boundary_anchor": clean_cell(row.get("Boundary Anchor", "")),
+            "boundary_anchor_status": normalize_anchor_status(row.get("Boundary Anchor Status", "")),
+            "implementation_entry_anchor": clean_cell(row.get("Implementation Entry Anchor", "")),
+            "implementation_entry_anchor_status": normalize_anchor_status(
+                row.get("Implementation Entry Anchor Status", "")
+            ),
+            "boundary_anchor_strategy_evidence": clean_cell(row.get("Boundary Anchor Strategy Evidence", "")),
+            "implementation_entry_anchor_strategy_evidence": clean_cell(
+                row.get("Implementation Entry Anchor Strategy Evidence", "")
+            ),
+        }
+    return packets
 
 
 def resolve_target_path(feature_dir: Path, raw_path: str) -> str:
@@ -173,6 +266,101 @@ def build_execution_readiness(
                 "code": "empty_binding_projection_index",
                 "message": "Binding Projection Index has no consumable rows.",
                 "details": {},
+            }
+        )
+
+    binding_projection_missing_required_fields = sorted(
+        [
+            {"binding_row_id": unit["binding_row_id"], "fields": unit["missing_binding_projection_fields"]}
+            for unit in unit_inventory
+            if unit["missing_binding_projection_fields"]
+        ],
+        key=lambda item: item["binding_row_id"],
+    )
+    if binding_projection_missing_required_fields:
+        errors.append(
+            {
+                "code": "binding_projection_missing_required_fields",
+                "message": "Some binding rows are missing required tuple projection fields.",
+                "details": {"rows": binding_projection_missing_required_fields},
+            }
+        )
+
+    invalid_anchor_status_rows = sorted(
+        [
+            {"binding_row_id": unit["binding_row_id"], "statuses": unit["invalid_anchor_statuses"]}
+            for unit in unit_inventory
+            if unit["invalid_anchor_statuses"]
+        ],
+        key=lambda item: item["binding_row_id"],
+    )
+    if invalid_anchor_status_rows:
+        errors.append(
+            {
+                "code": "invalid_anchor_status",
+                "message": "Some binding rows use invalid anchor status values.",
+                "details": {"rows": invalid_anchor_status_rows},
+            }
+        )
+
+    todo_anchor_status_rows = sorted(
+        [
+            unit["binding_row_id"]
+            for unit in unit_inventory
+            if unit["boundary_anchor_status"] == "todo" or unit["implementation_entry_anchor_status"] == "todo"
+        ]
+    )
+    if todo_anchor_status_rows:
+        errors.append(
+            {
+                "code": "todo_anchor_status_blocker",
+                "message": "Some binding rows still carry forward-looking todo anchor statuses.",
+                "details": {"binding_row_ids": todo_anchor_status_rows},
+            }
+        )
+
+    missing_binding_packet_rows = sorted(
+        [unit["binding_row_id"] for unit in unit_inventory if not unit["binding_packet"]["present"]]
+    )
+    if missing_binding_packet_rows:
+        warnings.append(
+            {
+                "code": "missing_binding_contract_packet",
+                "message": "Some binding rows have no matching Binding Contract Packet in test-matrix.md.",
+                "details": {"binding_row_ids": missing_binding_packet_rows},
+            }
+        )
+
+    binding_projection_packet_drift_rows = sorted(
+        [
+            unit["binding_row_id"]
+            for unit in unit_inventory
+            if unit["binding_packet"]["present"] and unit["binding_packet"]["has_tuple_drift"]
+        ]
+    )
+    if binding_projection_packet_drift_rows:
+        warnings.append(
+            {
+                "code": "binding_projection_packet_drift",
+                "message": "Some binding rows drift from their authoritative Binding Contract Packets.",
+                "details": {"binding_row_ids": binding_projection_packet_drift_rows},
+            }
+        )
+
+    new_anchor_strategy_evidence_missing_rows = sorted(
+        [
+            {"binding_row_id": unit["binding_row_id"], "anchors": unit["missing_new_anchor_strategy_evidence"]}
+            for unit in unit_inventory
+            if unit["missing_new_anchor_strategy_evidence"]
+        ],
+        key=lambda item: item["binding_row_id"],
+    )
+    if new_anchor_strategy_evidence_missing_rows:
+        errors.append(
+            {
+                "code": "new_anchor_strategy_evidence_missing",
+                "message": "Some executable tuples select `new` anchors without explicit rejection evidence for `existing` and `extended`.",
+                "details": {"rows": new_anchor_strategy_evidence_missing_rows},
             }
         )
 
@@ -260,7 +448,7 @@ def build_execution_readiness(
         ]
     )
     if missing_field_dictionary_rows:
-        errors.append(
+        warnings.append(
             {
                 "code": "full_field_dictionary_missing",
                 "message": "Some done contract rows are missing `Full Field Dictionary (Operation-scoped)`.",
@@ -278,7 +466,7 @@ def build_execution_readiness(
         ]
     )
     if unresolved_field_gap_rows:
-        errors.append(
+        warnings.append(
             {
                 "code": "contract_field_gap_unresolved",
                 "message": "Some done contract rows still carry unresolved field-level gaps.",
@@ -296,7 +484,7 @@ def build_execution_readiness(
         ]
     )
     if controller_first_violation_rows:
-        errors.append(
+        warnings.append(
             {
                 "code": "controller_first_violation",
                 "message": "Some HTTP contract rows violate controller-first boundary rules.",
@@ -334,6 +522,7 @@ def build_unit_inventory(
     binding_rows: list[dict[str, str]],
     artifact_rows: list[dict[str, str]],
     feature_dir: Path,
+    binding_packets: dict[str, dict[str, str]],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     artifacts_by_binding: dict[str, dict[str, dict[str, str]]] = {}
     for row in artifact_rows:
@@ -352,6 +541,51 @@ def build_unit_inventory(
         contract_target_path_abs = resolve_target_path(feature_dir, contract_row.get("Target Path", ""))
         contract_exists = bool(contract_target_path_abs) and Path(contract_target_path_abs).is_file()
         contract_inspection = inspect_contract_artifact(contract_target_path_abs, clean_cell(row.get("Boundary Anchor", "")))
+        boundary_anchor = clean_cell(row.get("Boundary Anchor", ""))
+        implementation_entry_anchor = clean_cell(row.get("Implementation Entry Anchor", ""))
+        boundary_anchor_status = normalize_anchor_status(row.get("Boundary Anchor Status", ""))
+        implementation_entry_anchor_status = normalize_anchor_status(row.get("Implementation Entry Anchor Status", ""))
+        test_scope = clean_cell(row.get("Test Scope", ""))
+        packet = binding_packets.get(binding_row_id, {})
+
+        missing_binding_projection_fields = [
+            field_name
+            for field_name, field_value in (
+                ("IF ID / IF Scope", clean_cell(row.get("IF ID / IF Scope", ""))),
+                ("TM ID", clean_cell(row.get("TM ID", ""))),
+                ("TC IDs", clean_cell(row.get("TC IDs", ""))),
+                ("Operation ID", clean_cell(row.get("Operation ID", ""))),
+                ("Boundary Anchor", boundary_anchor),
+                ("Implementation Entry Anchor", implementation_entry_anchor),
+                ("Boundary Anchor Status", boundary_anchor_status),
+                ("Implementation Entry Anchor Status", implementation_entry_anchor_status),
+                ("Test Scope", test_scope),
+            )
+            if not field_value
+        ]
+        invalid_anchor_statuses = [
+            field_name
+            for field_name, field_value in (
+                ("Boundary Anchor Status", boundary_anchor_status),
+                ("Implementation Entry Anchor Status", implementation_entry_anchor_status),
+            )
+            if field_value and field_value not in ANCHOR_STATUS_VALUES
+        ]
+        tuple_drift_checks = (
+            boundary_anchor != packet.get("boundary_anchor", ""),
+            boundary_anchor_status != packet.get("boundary_anchor_status", ""),
+            implementation_entry_anchor != packet.get("implementation_entry_anchor", ""),
+            implementation_entry_anchor_status != packet.get("implementation_entry_anchor_status", ""),
+        )
+        missing_new_anchor_strategy_evidence = []
+        if boundary_anchor_status == "new" and not has_required_strategy_evidence(
+            packet.get("boundary_anchor_strategy_evidence", "")
+        ):
+            missing_new_anchor_strategy_evidence.append("boundary_anchor")
+        if implementation_entry_anchor_status == "new" and not has_required_strategy_evidence(
+            packet.get("implementation_entry_anchor_strategy_evidence", "")
+        ):
+            missing_new_anchor_strategy_evidence.append("implementation_entry_anchor")
 
         unit = {
             "binding_row_id": binding_row_id,
@@ -359,7 +593,26 @@ def build_unit_inventory(
             "operation_id": clean_cell(row.get("Operation ID", "")),
             "tm_id": clean_cell(row.get("TM ID", "")),
             "tc_ids": split_csv_cell(row.get("TC IDs", "")),
-            "boundary_anchor": clean_cell(row.get("Boundary Anchor", "")),
+            "boundary_anchor": boundary_anchor,
+            "implementation_entry_anchor": implementation_entry_anchor,
+            "boundary_anchor_status": boundary_anchor_status,
+            "implementation_entry_anchor_status": implementation_entry_anchor_status,
+            "test_scope": test_scope,
+            "missing_binding_projection_fields": missing_binding_projection_fields,
+            "invalid_anchor_statuses": invalid_anchor_statuses,
+            "missing_new_anchor_strategy_evidence": missing_new_anchor_strategy_evidence,
+            "binding_packet": {
+                "present": bool(packet),
+                "boundary_anchor": packet.get("boundary_anchor", ""),
+                "boundary_anchor_status": packet.get("boundary_anchor_status", ""),
+                "implementation_entry_anchor": packet.get("implementation_entry_anchor", ""),
+                "implementation_entry_anchor_status": packet.get("implementation_entry_anchor_status", ""),
+                "boundary_anchor_strategy_evidence": packet.get("boundary_anchor_strategy_evidence", ""),
+                "implementation_entry_anchor_strategy_evidence": packet.get(
+                    "implementation_entry_anchor_strategy_evidence", ""
+                ),
+                "has_tuple_drift": bool(packet) and any(tuple_drift_checks),
+            },
             "contract": {
                 "status": clean_cell(contract_row.get("Status", "")),
                 "target_path": clean_cell(contract_row.get("Target Path", "")),
@@ -373,7 +626,14 @@ def build_unit_inventory(
         unit_inventory.append(unit)
 
         if (
-            unit["contract"]["status"] == "done"
+            not missing_binding_projection_fields
+            and not invalid_anchor_statuses
+            and not missing_new_anchor_strategy_evidence
+            and packet
+            and not unit["binding_packet"]["has_tuple_drift"]
+            and boundary_anchor_status != "todo"
+            and implementation_entry_anchor_status != "todo"
+            and unit["contract"]["status"] == "done"
             and contract_exists
             and unit["contract"]["full_field_dictionary_present"]
             and not unit["contract"]["has_unresolved_field_gaps"]
@@ -411,6 +671,7 @@ def main(argv: list[str] | None = None) -> int:
     stage_rows = parse_markdown_table(sections["Stage Queue"])
     binding_rows = parse_markdown_table(sections["Binding Projection Index"])
     artifact_rows = parse_markdown_table(sections["Artifact Status"])
+    binding_packets = load_binding_contract_packets(test_matrix_path)
 
     stage_queue = [
         {
@@ -432,6 +693,12 @@ def main(argv: list[str] | None = None) -> int:
             "tm_id": clean_cell(row.get("TM ID", "")),
             "tc_ids": split_csv_cell(row.get("TC IDs", "")),
             "boundary_anchor": clean_cell(row.get("Boundary Anchor", "")),
+            "implementation_entry_anchor": clean_cell(row.get("Implementation Entry Anchor", "")),
+            "boundary_anchor_status": normalize_anchor_status(row.get("Boundary Anchor Status", "")),
+            "implementation_entry_anchor_status": normalize_anchor_status(
+                row.get("Implementation Entry Anchor Status", "")
+            ),
+            "test_scope": clean_cell(row.get("Test Scope", "")),
         }
         for row in binding_rows
     ]
@@ -447,7 +714,12 @@ def main(argv: list[str] | None = None) -> int:
         for row in artifact_rows
     ]
 
-    unit_inventory, ready_unit_inventory = build_unit_inventory(binding_rows, artifact_rows, feature_dir)
+    unit_inventory, ready_unit_inventory = build_unit_inventory(
+        binding_rows,
+        artifact_rows,
+        feature_dir,
+        binding_packets,
+    )
     execution_readiness = build_execution_readiness(
         missing_sections=missing_sections,
         incomplete_stage_ids=incomplete_stage_ids,
@@ -471,6 +743,7 @@ def main(argv: list[str] | None = None) -> int:
         "incomplete_stage_ids": incomplete_stage_ids,
         "binding_row_count": len(binding_projection_index),
         "binding_projection_index": binding_projection_index,
+        "binding_contract_packet_count": len(binding_packets),
         "artifact_status": artifact_status,
         "artifact_status_summary": summarize_status_rows(artifact_rows),
         "unit_inventory": unit_inventory,

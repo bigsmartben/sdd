@@ -37,13 +37,16 @@ Record detection outcome in deterministic priority:
 - `Type` MUST be either `2nd` or `3rd`.
 - Classify organization-owned or organization-coordinated packages not produced inside the current repository as `2nd`; external ecosystem packages as `3rd`.
 - `Version Source` MUST be one of: `direct`, `dependencyManagement`, `module-dependencyManagement`, `unresolved`.
-- `Evidence` MUST bind to the exact dependency declaration occurrence that produced the row; do not reuse the first matching artifact line in the file.
-- If the same dependency is declared multiple times in one manifest, preserve one row per declaration occurrence with distinct line refs.
-- If a dependency declaration omits a local version but resolves from module, parent, or ancestor dependency management, keep `Evidence` at the declaration site and set `Version Source` to the version provider class.
+- `Evidence` MUST be a minimal fact reference that supports the row conclusion.
+  Path-level references are sufficient by default; include line-level precision
+  only when ambiguity/conflict requires it.
+- If a dependency declaration omits a local version but resolves from module,
+  parent, or ancestor dependency management, explain the provider class in
+  `Version Source` and keep `Evidence` concise.
 - Tooling-only manifests that are outside the product/runtime build surface SHOULD stay in detection notes and MUST NOT displace product dependency rows.
 - Keep version divergence and `unresolved` values visible as governance signals; do not silently normalize them.
 - Mark a row `unresolved` only when its effective version cannot be resolved from the declaration, the current module, or the detected in-repo ancestor manifest chain.
-- Every material version-source mix, version divergence, or unresolved signal MUST cite manifest paths and line refs.
+- Every material version-source mix, version divergence, or unresolved signal MUST cite enough facts for review (manifest path minimum).
 
 ## Dependency Matrix
 
@@ -52,7 +55,7 @@ Do not collapse multiple modules, version sources, scopes, or evidence locations
 
 | Dependency (G:A) | Type | Version | Scope | Version Source | Used By Module | Evidence |
 |------------------|------|---------|-------|----------------|----------------|----------|
-| [maven:group:artifact or ecosystem:package] | [2nd/3rd] | [x.y.z or `unresolved`] | [compile/runtime/test/provided/import/peer/dev/optional] | [direct/dependencyManagement/module-dependencyManagement/unresolved] | [module-a] | [manifest path + line refs] |
+| [maven:group:artifact or ecosystem:package] | [2nd/3rd] | [x.y.z or `unresolved`] | [compile/runtime/test/provided/import/peer/dev/optional] | [direct/dependencyManagement/module-dependencyManagement/unresolved] | [module-a] | [manifest path; line refs when needed] |
 
 ## Signal Derivation Rules
 
@@ -67,14 +70,12 @@ Record only material governance signals that downstream invocation governance mu
 
 | Signal ID | Dependency (G:A) | Signal Type | Affected Modules | Evidence | Handling Note |
 |-----------|------------------|-------------|------------------|----------|---------------|
-| [SIG-001] | [ecosystem:package] | [version-divergence / version-source-mix / unresolved] | [module-a, module-b] | [manifest paths + line refs] | [Rule impact for module invocation governance] |
+| [SIG-001] | [ecosystem:package] | [version-divergence / version-source-mix / unresolved] | [module-a, module-b] | [manifest paths or concise fact refs] | [Rule impact for module invocation governance] |
 
-## Post-Generation Self-Check
+## Signal Consistency Note
 
-- Verify no emitted row uses an `Evidence` line that belongs to a different declaration occurrence of the same dependency.
-- Verify every repeated declaration occurrence keeps a distinct line ref in `Evidence`.
-- Verify every `version-divergence` signal is backed by 2 or more distinct effective versions in emitted rows.
-- Verify every `unresolved` signal references at least one emitted row whose `Version Source` or `Version` is `unresolved`.
+- Keep each `SIG-*` entry explainable from emitted rows (`fact -> conclusion`).
+- If ambiguity/conflict remains after path-level evidence, add line-level precision for the affected facts only.
 
 ## Boundary Notes
 

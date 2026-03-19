@@ -33,6 +33,78 @@ IMPLEMENT_PREFLIGHT=false
 DATA_MODEL_PREFLIGHT=false
 PATHS_ONLY=false
 
+build_local_execution_protocol_json() {
+    local search_available=false
+    local search_tool="unavailable"
+    local list_files_cmd=""
+    local search_text_cmd=""
+    if command -v rg >/dev/null 2>&1; then
+        search_available=true
+        search_tool="rg"
+        list_files_cmd="rg --files"
+        search_text_cmd="rg -n --hidden --glob '!.git/*' -- <pattern>"
+    elif [[ "$HAS_GIT" == "true" ]] && command -v git >/dev/null 2>&1; then
+        search_available=true
+        search_tool="git"
+        list_files_cmd="git ls-files"
+        search_text_cmd="git grep -n -- <pattern>"
+    fi
+
+    local inspection_available=false
+    local status_cmd=""
+    local diff_cmd=""
+    local history_cmd=""
+    if [[ "$HAS_GIT" == "true" ]] && command -v git >/dev/null 2>&1; then
+        inspection_available=true
+        status_cmd="git status --short"
+        diff_cmd="git diff -- <path>"
+        history_cmd="git log --oneline -- <path>"
+    fi
+
+    local python_available=false
+    local python_tool="unavailable"
+    local python_runner_cmd=""
+    if command -v uv >/dev/null 2>&1; then
+        python_available=true
+        python_tool="uv"
+        python_runner_cmd="uv run python"
+    elif command -v python3 >/dev/null 2>&1; then
+        python_available=true
+        python_tool="python3"
+        python_runner_cmd="python3"
+    elif command -v python >/dev/null 2>&1; then
+        python_available=true
+        python_tool="python"
+        python_runner_cmd="python"
+    fi
+
+    local rules_json
+    rules_json="$(json_array \
+        "Reuse the emitted commands before trying alternates." \
+        "Do not install missing tools or mutate PATH during /sdd runs." \
+        "Use project-specific build/test commands only when they are task anchors or repo-backed scripts/configs." \
+    )"
+
+    printf '{'
+    printf '"schema_version":"1.0",'
+    printf '"rules":%s,' "$rules_json"
+    printf '"repo_search":{"available":%s,"tool":%s,"list_files_cmd":%s,"search_text_cmd":%s},' \
+        "$search_available" \
+        "$(json_string "$search_tool")" \
+        "$(json_string "$list_files_cmd")" \
+        "$(json_string "$search_text_cmd")"
+    printf '"repo_inspection":{"available":%s,"status_cmd":%s,"diff_cmd":%s,"history_cmd":%s},' \
+        "$inspection_available" \
+        "$(json_string "$status_cmd")" \
+        "$(json_string "$diff_cmd")" \
+        "$(json_string "$history_cmd")"
+    printf '"python":{"available":%s,"tool":%s,"runner_cmd":%s}' \
+        "$python_available" \
+        "$(json_string "$python_tool")" \
+        "$(json_string "$python_runner_cmd")"
+    printf '}'
+}
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --json)
@@ -197,9 +269,10 @@ fi
 if $JSON_MODE; then
     # Build JSON array of documents
     json_docs="$(json_array "${docs[@]}")"
+    local_execution_protocol="$(build_local_execution_protocol_json)"
 
     feature_json="$(json_string "$FEATURE_DIR")"
-    json_payload="{\"FEATURE_DIR\":${feature_json},\"AVAILABLE_DOCS\":${json_docs}"
+    json_payload="{\"FEATURE_DIR\":${feature_json},\"AVAILABLE_DOCS\":${json_docs},\"LOCAL_EXECUTION_PROTOCOL\":${local_execution_protocol}"
 
     if $DATA_MODEL_PREFLIGHT; then
         DATA_MODEL_PREFLIGHT_SCRIPT="$SCRIPT_DIR/../data_model_preflight.py"

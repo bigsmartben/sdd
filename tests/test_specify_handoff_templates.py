@@ -8,16 +8,17 @@ def read(rel_path: str) -> str:
     return (REPO_ROOT / rel_path).read_text(encoding="utf-8")
 
 
-def test_specify_command_keeps_current_flow_and_adds_ui_html_handoff():
+def test_specify_command_keeps_current_flow_and_treats_ui_html_as_optional_sidecar():
     specify = read("templates/commands/specify.md")
     ui_html = read("templates/commands/specify.ui-html.md")
 
     assert "Clarify Spec Requirements" in specify
-    assert "Generate Interactive Prototype" in specify
     assert "Build Technical Plan" in specify
     assert "Create or update the feature specification from a natural language feature description." in specify
     assert "`ui.html` generated later by `/sdd.specify.ui-html` is a derived prototype artifact" in specify
-    assert "run `/sdd.specify.ui-html` for an interactive prototype if needed" in specify
+    assert "`/sdd.specify` writes `spec.md` only and MUST NOT directly generate `ui.html`." in specify
+    assert "`/sdd.specify.ui-html` is an optional sidecar command; users decide if/when to invoke it." in specify
+    assert "run `/sdd.specify.ui-html` for an interactive prototype if needed" not in specify
 
     assert "Treat all `$ARGUMENTS` as optional prototype direction." in ui_html
     assert ".specify/templates/ui-html-template.html" in ui_html
@@ -44,6 +45,19 @@ def test_spec_template_stays_unsplit_and_ui_html_template_exists():
     assert "Entity.field" in ui_html_template
 
 
+def test_spec_and_commands_require_semantically_aligned_edge_case_refs():
+    spec_template = read("templates/spec-template.md")
+    specify = read("templates/commands/specify.md")
+    clarify = read("templates/commands/clarify.md")
+
+    assert "Treat `EC-*` as semantic anchors, not a fixed four-item bucket list." in specify
+    assert "EC-*` references remain semantically aligned across `Path Inventory`, `Exception Paths`, FR blocks, and `N.2 Environment Edge Cases`" in specify
+    assert "add `EC-005+` instead of overloading an unrelated edge-case id" in clarify
+    assert "`EC-*` identifiers are semantic anchors, not a fixed four-slot checklist." in spec_template
+    assert "Do not point a retry path at a re-entry EC, or a permission path at a duplicate-click EC." in spec_template
+    assert "Every `EC-*` cited from `Path Inventory`, `Exception Paths`, FR blocks, `test-matrix.md`, or `contracts/` MUST describe the same edge semantics textually." in spec_template
+
+
 def test_docs_and_cli_describe_optional_ui_html_command():
     readme = read("README.md")
     spec_driven = read("spec-driven.md")
@@ -57,7 +71,7 @@ def test_docs_and_cli_describe_optional_ui_html_command():
     assert "/sdd.specify.srs" not in spec_driven
     assert "/sdd.specify.ui specs/003-chat-system/spec.md" not in spec_driven
 
-    assert '"specify.ui-html": "Generate the derived ui.html interactive prototype artifact' in cli_init
+    assert '"specify.ui-html": "Generate the derived ui.html interactive prototype artifact from the current feature branch spec.md. This is an optional sidecar command' in cli_init
     assert '"specify.srs"' not in cli_init
     assert '"specify.ui": "Generate the derived ui.md artifact' not in cli_init
     assert '/{COMMAND_NAMESPACE}.specify.ui-html[/]' in cli_init

@@ -132,7 +132,7 @@ Total: ~12 hours of documentation work
 # - Generates specs/003-chat-system/spec.md
 # - Populates it with structured requirements
 
-# Step 1b: Optionally generate an interactive prototype
+# Step 1b: Optional sidecar command for interactive prototype (user chooses timing)
 /sdd.specify.ui-html
 
 # Step 2: Initialize planning control plane (5 minutes)
@@ -147,14 +147,14 @@ Total: ~12 hours of documentation work
 # Step 3: Generate executable tasks (5 minutes)
 /sdd.tasks
 
-# This automatically creates:
-# - specs/003-chat-system/ui.html (via /sdd.specify.ui-html)
+# This workflow creates:
 # - specs/003-chat-system/plan.md
 # - specs/003-chat-system/research.md (via /sdd.plan.research)
 # - specs/003-chat-system/data-model.md (via /sdd.plan.data-model)
 # - specs/003-chat-system/test-matrix.md (via /sdd.plan.test-matrix)
 # - specs/003-chat-system/contracts/ (via repeated /sdd.plan.contract)
 # - specs/003-chat-system/tasks.md (Task list derived from the plan)
+# - specs/003-chat-system/ui.html (only when /sdd.specify.ui-html is explicitly invoked)
 ```
 
 In 15 minutes, you have:
