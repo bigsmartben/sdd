@@ -13,4 +13,3 @@
 | 原型交付约束增强：`ui.html` 明确动作入口可执行性要求（无目标则禁止死链 CTA），并强调该阶段 `Ready/Blocked` 仅为本地就绪，不是全局门禁 | `templates/ui-html-template.html`, `templates/commands/specify.ui-html.md` |
 | 模板路径命名统一为 `feature-YYYYMMDD-slug`，减少分支/目录占位符歧义 | `templates/spec-template.md`, `templates/plan-template.md`, `templates/tasks-template.md` |
 | 版本说明同步至 `v2.0.26` 相关提交语义 | `release_notes.md` |
-

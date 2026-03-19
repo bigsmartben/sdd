@@ -94,8 +94,8 @@ Follow this execution flow:
      - Resolve impacted families from the change impact map first, then read/update only those families.
      - If the change is `governance-only`, skip downstream family reads unless an explicit user request asks for broader synchronization.
      - Do not run directory-wide or repository-wide exploratory scans to "double check" unaffected families.
-      - When a family is skipped, record `unchanged (not impacted)` in the Sync Impact Report.
-      - For command templates, prioritize active agent command files first and read/update only impacted files; inspect mirrors (`templates/commands/*`) only when active-agent files are absent.
+     - When a family is skipped, record `unchanged (not impacted)` in the Sync Impact Report.
+     - For command templates, prioritize active agent command files first and read/update only impacted files; inspect mirrors (`templates/commands/*`) only when active-agent files are absent.
      - Runtime guidance docs (`README.md`, `docs/quickstart.md`, agent docs) are **opt-in by trigger** only:
        - read/update only when renamed principles/terms or invocation guidance text changed
        - otherwise skip and mark `unchanged (not impacted)`
