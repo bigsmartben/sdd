@@ -799,11 +799,14 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                 fi
 
                 if [[ "$rel_file" == contracts/* && "$has_http_boundary" == true ]]; then
-                    while IFS= read -r match_line; do
-                        [[ -z "$match_line" ]] && continue
-                        variant_line="${match_line%%:*}"
-                        add_finding "$id" "$severity" "$rel_file" "$variant_line" "$message HTTP boundary contracts must not render Sequence Variant B (Boundary == Entry)." "$remediation"
-                    done < <(stream_file_for_grep "$file_path" | grep -niE "$sequence_variant_b_regex" || true)
+                    sequence_variant_a_regex='(?i)Sequence[[:space:]]+Variant[[:space:]]+A'
+                    if ! stream_file_for_grep "$file_path" | grep -qiE "$sequence_variant_a_regex"; then
+                        while IFS= read -r match_line; do
+                            [[ -z "$match_line" ]] && continue
+                            variant_line="${match_line%%:*}"
+                            add_finding "$id" "$severity" "$rel_file" "$variant_line" "$message HTTP boundary contracts must not render Sequence Variant B (Boundary == Entry)." "$remediation"
+                        done < <(stream_file_for_grep "$file_path" | grep -niE "$sequence_variant_b_regex" || true)
+                    fi
                 fi
             done
             eval "$old_nocasematch"

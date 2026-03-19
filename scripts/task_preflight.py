@@ -25,6 +25,15 @@ SECTION_HEADINGS = (
 )
 
 BOOTSTRAP_SCHEMA_VERSION = "1.1"
+PLACEHOLDER_TOKEN_RE = re.compile(r"^\[[^\]]+\]$")
+ENTRY_ANCHOR_LABEL_RE = re.compile(
+    r"(?im)^\s*(?:[-*]\s*)?\*\*Implementation[ _-]*Entry[ _-]*Anchor(?:\s*\([^)]*\))?\*\*:\s*(.+?)\s*$"
+)
+NON_CONTROLLER_ENTRY_RE = re.compile(r"(?i)(service|facade|manager|repository|dao|mapper)")
+
+
+def is_placeholder_token(value: str) -> bool:
+    return bool(PLACEHOLDER_TOKEN_RE.fullmatch(clean_cell(value)))
 
 
 def inspect_contract_artifact(contract_path_abs: str, boundary_anchor: str) -> dict[str, Any]:
@@ -39,7 +48,18 @@ def inspect_contract_artifact(contract_path_abs: str, boundary_anchor: str) -> d
     content = Path(contract_path_abs).read_text(encoding="utf-8")
     inspection["full_field_dictionary_present"] = "## Full Field Dictionary (Operation-scoped)" in content
     inspection["has_unresolved_field_gaps"] = "TODO(REPO_ANCHOR)" in content or re.search(r"(?i)\|\s*gap\s*\|", content) is not None
-    inspection["controller_first_violation"] = boundary_anchor.startswith("HTTP ") and "#### Sequence Variant B (Boundary == Entry)" in content
+    if boundary_anchor.startswith("HTTP "):
+        entry_match = ENTRY_ANCHOR_LABEL_RE.search(content)
+        entry_anchor = clean_cell(entry_match.group(1)) if entry_match else ""
+        entry_anchor_lower = entry_anchor.lower()
+        inspection["controller_first_violation"] = (
+            entry_anchor_lower.startswith("http ")
+            or (
+                bool(NON_CONTROLLER_ENTRY_RE.search(entry_anchor_lower))
+                and "controller" not in entry_anchor_lower
+                and "todo(repo_anchor)" not in entry_anchor_lower
+            )
+        )
     return inspection
 
 
@@ -101,6 +121,8 @@ def parse_markdown_table(section: str | None) -> list[dict[str, str]]:
         if len(cells) != len(headers):
             continue
         row = {header: cell for header, cell in zip(headers, cells)}
+        if cells and is_placeholder_token(cells[0]):
+            continue
         if any(value for value in row.values()):
             rows.append(row)
     return rows

@@ -1017,9 +1017,12 @@ foreach ($row in $rows) {
                 }
 
                 if ($file.RelPath -like 'contracts/*' -and $hasHttpBoundary) {
-                    $variantHits = Select-String -Path $file.FullPath -Pattern $sequenceVariantBRegex -ErrorAction SilentlyContinue
-                    foreach ($hit in $variantHits) {
-                        Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $hit.LineNumber -Message "$($row.message) HTTP boundary contracts must not render Sequence Variant B (Boundary == Entry)." -Remediation $row.remediation
+                    $hasVariantA = Select-String -Path $file.FullPath -Pattern '(?i)Sequence\s+Variant\s+A' -ErrorAction SilentlyContinue
+                    if (-not $hasVariantA) {
+                        $variantHits = Select-String -Path $file.FullPath -Pattern $sequenceVariantBRegex -ErrorAction SilentlyContinue
+                        foreach ($hit in $variantHits) {
+                            Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $hit.LineNumber -Message "$($row.message) HTTP boundary contracts must not render Sequence Variant B (Boundary == Entry)." -Remediation $row.remediation
+                        }
                     }
                 }
             }

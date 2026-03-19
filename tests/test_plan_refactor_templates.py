@@ -48,6 +48,9 @@ def test_plan_template_tracks_only_contract_artifacts():
     assert "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | Boundary Anchor | Implementation Entry Anchor | Boundary Anchor Status | Implementation Entry Anchor Status | Test Scope |" in content
     assert "compact bootstrap fields only" in content
     assert "regenerate the projection instead of letting downstream commands rewrite it" in content
+    assert "<!-- Keep table body empty until /sdd.plan.test-matrix projects stable binding rows. -->" in content
+    assert "<!-- Keep table body empty until binding rows exist. -->" in content
+    assert "[BindingRowID-001]" not in content
     assert "interface-detail" not in content
 
 

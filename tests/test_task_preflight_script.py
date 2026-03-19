@@ -414,8 +414,7 @@ def test_task_preflight_helper_flags_http_controller_first_violation(tmp_path):
 | Field | Owner Class | Direction | Required/Optional | Default | Validation/Enum | Persisted | Contract-visible | Used in createTask | Source Anchor |
 |-------|-------------|-----------|-------------------|---------|-----------------|-----------|------------------|--------------------|---------------|
 | taskId | CreateTaskResponse | output | required | none | uuid | no | yes | yes | `src/app/contracts.py::CreateTaskResponse.taskId` |
-
-#### Sequence Variant B (Boundary == Entry)
+**Implementation Entry Anchor (Required)**: src/app/task_service.py::TaskService.create_task
 """,
     )
 
@@ -446,6 +445,70 @@ def test_task_preflight_helper_flags_http_controller_first_violation(tmp_path):
     assert payload["ready_unit_inventory"] == []
     error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
     assert "controller_first_violation" in error_codes
+
+
+def test_task_preflight_helper_ignores_template_placeholder_binding_rows(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(feature_dir)
+    (feature_dir / "plan.md").write_text(
+        """# Planning Control Plane: Demo
+
+## Shared Context Snapshot
+
+- Feature: Demo
+
+## Stage Queue
+
+| Stage ID | Command | Required Inputs | Output Path | Status | Source Fingerprint | Output Fingerprint | Blocker |
+|----------|---------|-----------------|-------------|--------|--------------------|--------------------|---------|
+| research | `/sdd.plan.research` | `plan.md` | `research.md` | done | a | b | [none] |
+| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | done | a | b | [none] |
+| test-matrix | `/sdd.plan.test-matrix` | `plan.md` | `test-matrix.md` | done | a | b | [none] |
+
+## Binding Projection Index
+
+| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | Boundary Anchor |
+|--------------|-------|--------|-------|------------------|-------|--------|--------------|-----------------|
+| [BindingRowID-001] | [UC-001] | [UIF-001] | [FR-001] | [IF-001] | [TM-001] | [TC-001, TC-002] | [createTask] | [HTTP POST /tasks] |
+
+## Artifact Status
+
+| BindingRowID | Unit Type | Target Path | Status | Source Fingerprint | Output Fingerprint | Blocker |
+|--------------|-----------|-------------|--------|--------------------|--------------------|---------|
+| [BindingRowID-001] | [contract] | [contracts/create-task.md] | [pending] | [a] | [b] | [none] |
+""",
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "task_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+            "--test-matrix",
+            str(feature_dir / "test-matrix.md"),
+            "--contracts-dir",
+            str(feature_dir / "contracts"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["binding_row_count"] == 0
+    assert payload["artifact_status"] == []
+    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
+    assert "empty_binding_projection_index" in error_codes
+    assert "missing_contract_artifact_rows" in error_codes
 
 
 def test_bash_check_prerequisites_can_embed_tasks_bootstrap(tmp_path):
