@@ -71,7 +71,7 @@ def test_manifest_schema_contract_between_tasks_and_implement():
     assert "Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`" in tasks_command
     assert "`generated_from` keys: `plan_path`, `plan_source_fingerprint`, `contract_source_fingerprints`" in tasks_command
     assert "use `tasks.manifest.json` when schema validation passes" in implement_command
-    assert "fallback to `tasks.md` parsing is allowed when manifest is missing or invalid" in implement_command
+    assert "fallback to `tasks.md` parsing when manifest is missing or invalid" in implement_command
     assert "task keys: `task_id`, `dependencies`, `if_scope`, `refs`, `target_paths`, `completion_anchors`, `conflict_hints`, `topo_layer`, `status`" in implement_command
     assert "Active execution targets rely on `new` repo anchors without explicit rejection evidence for `existing` and `extended`." in implement_command
     assert "LOCAL_EXECUTION_PROTOCOL" in implement_command
@@ -88,3 +88,4 @@ def test_docs_describe_tasks_as_execution_decomposition_only():
     assert "hard-fails on missing execution anchors instead of supplementing design or writing placeholder tasks" in readme
     assert "projects the completed planning-stage design set into an executable task list" in spec_driven
     assert "does not supplement missing design or audit the feature end-to-end" in spec_driven
+

@@ -295,8 +295,7 @@ if $JSON_MODE; then
     SPECIFY_CMD="$(resolve_specify_cmd || true)"
 
     feature_json="$(json_string "$FEATURE_DIR")"
-    anchor_gate_payload="{\"script_path\":$(json_string "scripts/implement_anchor_gate.py"),\"history_path\":$(json_string "$FEATURE_DIR/audits/implement-history.md")}"
-    json_payload="{\"FEATURE_DIR\":${feature_json},\"AVAILABLE_DOCS\":${json_docs},\"LOCAL_EXECUTION_PROTOCOL\":${local_execution_protocol},\"IMPLEMENT_ANCHOR_GATE\":${anchor_gate_payload}"
+    json_payload="{\"FEATURE_DIR\":${feature_json},\"AVAILABLE_DOCS\":${json_docs},\"LOCAL_EXECUTION_PROTOCOL\":${local_execution_protocol}"
 
     if $DATA_MODEL_PREFLIGHT; then
         data_model_bootstrap="null"

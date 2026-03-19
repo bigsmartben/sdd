@@ -20,8 +20,6 @@ from typing import Any
 BOOTSTRAP_SCHEMA_VERSION = "1.0"
 RUN_BEGIN = "<!-- SDD_ANALYZE_RUN_BEGIN -->"
 RUN_END = "<!-- SDD_ANALYZE_RUN_END -->"
-IMPLEMENT_HISTORY_BEGIN = "<!-- SDD_IMPLEMENT_RUN_BEGIN -->"
-IMPLEMENT_HISTORY_END = "<!-- SDD_IMPLEMENT_RUN_END -->"
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -234,35 +232,6 @@ def main(argv: list[str] | None = None) -> int:
         analyze_history_path=analyze_history_path,
     )
 
-    execution_policy = {
-        "waiver_policy": {
-            "strict_mode_disallow_waive_analyze_gate": True,
-            "adaptive_mode_requires_waive_reason": True,
-        },
-        "runtime_source_policy": {
-            "strict_mode_requires_valid_tasks_manifest": True,
-            "adaptive_mode_allows_tasks_md_fallback": True,
-        },
-        "completion_anchor_policy": {
-            "required_for_completed_tasks": True,
-            "anchor_gate_script": "scripts/implement_anchor_gate.py",
-        },
-        "implement_history_policy": {
-            "required_append_only": True,
-            "run_begin": IMPLEMENT_HISTORY_BEGIN,
-            "run_end": IMPLEMENT_HISTORY_END,
-            "required_markers": [
-                "Run At (UTC):",
-                "Execution Mode:",
-                "Analyze Gate Status:",
-                "Manifest Validation:",
-                "Anchor Gate:",
-                "Completed Task IDs:",
-            ],
-            "history_path": str((feature_dir / "audits" / "implement-history.md").resolve()),
-        },
-    }
-
     payload = {
         "schema_version": BOOTSTRAP_SCHEMA_VERSION,
         "feature_dir": str(feature_dir),
@@ -273,7 +242,6 @@ def main(argv: list[str] | None = None) -> int:
         "current_fingerprints": current_fingerprints,
         "latest_run": latest_run,
         "analyze_readiness": analyze_readiness,
-        "execution_policy": execution_policy,
     }
 
     json.dump(payload, sys.stdout, ensure_ascii=True, separators=(",", ":"))
@@ -283,3 +251,4 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
