@@ -29,6 +29,9 @@
     ".pytest_cache/",
     ".specify/",
     ".venv/",
-    ".ruff_cache/"
+    ".ruff_cache/",
+    ".uv-test-env/",
+    ".uvtmp/",
+    ".venv-codex/"
   ]
 }

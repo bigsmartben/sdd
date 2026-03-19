@@ -31,6 +31,13 @@ Resolve `PLAN_FILE` from current feature branch using `{SCRIPT}` defaults.
 2. Emit a dependency-safe `Task DAG` and aligned `tasks.manifest.json`.
 3. Keep semantics in authoritative upstream artifacts; do not redesign in this command.
 
+## Governance Guardrails (Mandatory)
+
+- **Authority rule**: `tasks.md` is authoritative only for execution decomposition and scheduling metadata. It MUST NOT override semantic authority owned by `spec.md`, `plan.md`, `data-model.md`, `test-matrix.md`, or `contracts/`.
+- **Stage boundary rule**: `/sdd.tasks` maps approved design into executable work packages only. Do not backfill planning/design artifacts, assign implementation ownership semantics such as `Repo Anchor Role`, or rewrite contract/schema semantics.
+- **Gate ownership rule**: `/sdd.tasks` may enforce run-local execution safety gates only. Cross-artifact final PASS/FAIL remains owned by `/sdd.analyze`.
+- **Shared protocol rule**: apply **Unified Repository-First Gate Protocol (`URFGP`)** as the shared authority for repository-first gate semantics and command-to-command routing.
+
 ## Read Only
 
 1. Run `{SCRIPT}` once from repo root.
@@ -83,6 +90,7 @@ Stop immediately when any condition holds:
 5. Required canonical repository-first evidence for affected scope is missing, stale, or non-traceable.
 6. Active executable tuples select `new` repo anchors but lack explicit rejection evidence for `existing` and `extended` in authoritative upstream artifacts.
 7. Required repository discovery is blocked because `LOCAL_EXECUTION_PROTOCOL.repo_search.available = false`.
+8. Any selected `contract` row is missing `Full Field Dictionary (Operation-scoped)` or drifts from authoritative `Binding Contract Packets` for the same `BindingRowID`.
 
 Hard execution safety gates in this command are limited to:
 
@@ -91,8 +99,10 @@ Hard execution safety gates in this command are limited to:
 - repo-anchor strategy evidence completeness for executable tuples
 - DAG schedulability
 - task-line completeness
+- selected-contract field-dictionary completeness and binding-packet projection stability
 
 `/sdd.tasks` does **not** own comprehensive audit concerns (coverage completeness, ambiguity sweeps, contradiction analysis). Route those to `/sdd.analyze`.
+Do not claim cross-artifact final PASS/FAIL in this stage.
 
 ## Final Output
 
@@ -107,6 +117,13 @@ Return a concise execution summary:
 7. Module-edge explainable evidence: list only decision-relevant invocation-governance facts in `fact -> conclusion` format (path-level refs by default; add line refs only when ambiguity/conflict requires precision)
 8. upstream alignment repair actions (if any)
 9. analyze handoff note
+
+When evidence is emitted in this report, use **Repository-First Evidence Bundle (`RFEB`)**:
+
+- `fact -> conclusion`
+- `source_refs` (path-level by default; line-level only when ambiguity/conflict requires precision)
+- `signal_ids` (`SIG-*` rows used for dependency-governance conclusions)
+- `module_edge_ids` (module invocation edge rows used for module-governance conclusions)
 
 ## Hook Dispatch Protocol
 

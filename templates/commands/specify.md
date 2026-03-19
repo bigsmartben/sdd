@@ -34,6 +34,13 @@ When generating or updating `spec.md`, keep output backbone-first and scoped to 
 - Do **not** hardcode sample domains, entities, UC names, or project identifiers not grounded in current user input.
 - Keep template outputs reusable and domain-neutral unless the user gives explicit domain details.
 
+## Stage Boundary Rules (mandatory)
+
+- `/sdd.specify` owns feature semantics (`WHAT/WHY`) only.
+- Do **not** emit planning-stage governance payloads in `spec.md` (for example: repo-anchor strategy states, boundary tuple keys, `Repo Anchor Role`, contract packet schemas, or realization choreography).
+- Local quality checks are required for this artifact, but `/sdd.specify` MUST NOT produce cross-artifact final PASS/FAIL decisions.
+- Cross-artifact final PASS/FAIL ownership remains centralized in `/sdd.analyze`.
+
 ## Runtime Setup
 
 1. Generate a concise short name (2-4 words, action-noun style when possible).
@@ -90,6 +97,8 @@ Validate the generated `spec.md`:
 - success criteria are measurable and technology-agnostic
 - no unresolved `[NEEDS CLARIFICATION]` markers remain
 - `EC-*` references remain semantically aligned across `Path Inventory`, `Exception Paths`, FR blocks, and `N.2 Environment Edge Cases`
+- no planning-stage governance payload sections are introduced
+- no cross-artifact final PASS/FAIL conclusion is emitted
 
 Handling failures:
 

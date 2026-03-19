@@ -136,8 +136,8 @@ Use the **`/sdd.plan`** command to create `plan.md` as the planning control plan
 Use the `sdd.plan.*` child commands to generate planning artifacts one unit at a time:
 
 - `/sdd.plan.research`
-- `/sdd.plan.data-model`
 - `/sdd.plan.test-matrix`
+- `/sdd.plan.data-model`
 - repeated `/sdd.plan.contract`
 
 `plan.md` queue state is the sole authority for planning handoff decisions.
@@ -230,7 +230,7 @@ The `specify` command supports the following options:
 | Command | Description                                                                                                                                             |
 | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `init`  | Initialize a new Specify project from the latest template                                                                                               |
-| `check` | Check for installed tools (`git`, `claude`, `gemini`, `code`/`code-insiders`, `cursor-agent`, `cline`, `windsurf`, `qwen`, `opencode`, `codex`, `kiro-cli`, `shai`, `qodercli`, `vibe`, `kimi`) |
+| `check` | Check local tooling availability (`git`, supported agent CLIs, and `code`/`code-insiders`; IDE-only agents are reported as skipped) |
 
 ### `specify init` Arguments & Options
 
@@ -338,10 +338,11 @@ Essential commands for the Spec-Driven Development workflow:
 | `/sdd.specify.ui-html` | Optional sidecar command: generate a derived `ui.html` focused interaction tool from active feature `spec.md` when needed |
 | `/sdd.plan`         | Create `plan.md` as the planning control plane and Stage 0 shared context |
 | `/sdd.plan.research` | Generate the queued `research.md` artifact |
-| `/sdd.plan.data-model` | Generate the queued `data-model.md` artifact |
 | `/sdd.plan.test-matrix` | Generate the queued `test-matrix.md` artifact and binding rows |
+| `/sdd.plan.data-model` | Generate the queued `data-model.md` artifact |
 | `/sdd.plan.contract` | Generate one queued full-field contract artifact |
 | `/sdd.tasks` | Produce executable orchestration from approved planning artifacts (no unified semantic audit) |
+| `/sdd.analyze`   | Default pre-implementation unified audit entrypoint: lint-backed mechanical checks plus cross-artifact semantic findings across `spec.md`, `plan.md`, and `tasks.md` |
 | `/sdd.implement`    | Execute tasks with runtime hard gates (expects fresh `/sdd.analyze` `PASS` evidence; missing/stale or `FAIL` blocks by default unless explicitly waived) |
 
 #### Optional Commands
@@ -351,7 +352,6 @@ Additional commands for enhanced quality and validation:
 | Command              | Description                                                                                                                          |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `/sdd.clarify`   | Clarify underspecified areas (recommended before `/sdd.plan`; formerly `/quizme`) |
-| `/sdd.analyze`   | Lint-backed unified audit entrypoint: combines mechanical lint checks with cross-artifact semantic findings (traceability, drift, contradictions, and boundary violations) across `spec.md`, `plan.md`, and `tasks.md` |
 | `/sdd.checklist` | Generate standalone checklist artifacts in `checklists/*.md` as a vertical validation pass from active feature `plan.md` (does not backfill or redefine main-flow artifacts) |
 
 ### Environment Variables
@@ -467,7 +467,7 @@ specify init . --force --ai claude
 specify init --here --force --ai claude
 ```
 
-The CLI will check if you have Claude Code, Gemini CLI, Cursor CLI, Qwen CLI, opencode, Codex CLI, Qoder CLI, Tabnine CLI, Kiro CLI, or Mistral Vibe installed. If you do not, or you prefer to get the templates without checking for the right tools, use `--ignore-agent-tools` with your command:
+During `specify init`, the CLI validates only the selected `--ai` tool when that agent requires a CLI binary. If you prefer to scaffold templates without that check, use `--ignore-agent-tools`:
 
 ```bash
 specify init <project_name> --ai claude --ignore-agent-tools
@@ -632,8 +632,8 @@ Run the child commands in queue order:
 
 ```text
 /sdd.plan.research
-/sdd.plan.data-model
 /sdd.plan.test-matrix
+/sdd.plan.data-model
 /sdd.plan.contract
 ```
 
@@ -641,7 +641,7 @@ Run the child commands in queue order:
 
 Static command frontmatter `handoffs` are advisory metadata only. They may point to one unconditional next command, but they are not the authority for state-dependent routing.
 
-Check the resulting planning artifacts as they are generated. For example, validate `research.md` after `/sdd.plan.research`, then `data-model.md`, `test-matrix.md`, and the queued contract artifacts.
+Check the resulting planning artifacts as they are generated. For example, validate `research.md` after `/sdd.plan.research`, then `test-matrix.md`, `data-model.md`, and the queued contract artifacts.
 
 Additionally, you might want to ask Claude Code to research details about the chosen tech stack if it's something that is rapidly changing (e.g., .NET Aspire, JS frameworks), with a prompt like this:
 
@@ -668,21 +668,11 @@ That's way too untargeted research. The research needs to help you solve a speci
 > [!NOTE]
 > Claude Code might be over-eager and add components that you did not ask for. Ask it to clarify the rationale and the source of the change.
 
-### **STEP 6:** Audit model and optional checklist (`/sdd.analyze`, `/sdd.checklist`)
+### **STEP 6:** Generate task breakdown with `/sdd.tasks`
 
-With the plan in place, proceed to `/sdd.tasks` as the main flow. Avoid ad hoc audit prompts here. After `/sdd.tasks`, run `/sdd.analyze` as the default pre-implementation audit pass: it combines lint-backed mechanical checks with cross-artifact semantic findings across `spec.md`, `plan.md`, and `tasks.md` (drift, contradictions, repo-anchor misuse, audit payload leakage, uncovered MUST requirements, and boundary violations).
-Each `/sdd.analyze` run appends its report and gate decision to `FEATURE_DIR/audits/analyze-history.md` as an append-only audit history.
+With the plan in place, proceed to `/sdd.tasks` as the main-flow decomposition step. Avoid ad hoc audit prompts in this stage.
 
-If you want checklist-style validation, run `/sdd.checklist` as a separate standalone vertical pass rather than folding checklist burden back into the main-flow artifacts.
-
-You can also ask Claude Code (if you have the [GitHub CLI](https://docs.github.com/en/github-cli/github-cli) installed) to go ahead and create a pull request from your current branch to `main` with a detailed description, to make sure that the effort is properly tracked.
-
-> [!NOTE]
-> If you suspect over-engineered decisions or cross-artifact drift before implementation, use `/sdd.analyze` as the dedicated audit step and then adjust the upstream artifacts it flags. Ensure that Claude Code follows the [constitution](.specify/memory/constitution.md) as the foundational piece that it must adhere to when refining the plan. Repo semantic anchors come from source code plus `.specify/memory/constitution.md`; helper docs and prior generated artifacts are not repo anchors.
-
-### **STEP 7:** Generate task breakdown with `/sdd.tasks`
-
-With the implementation plan ready (and any optional vertical checks complete), you can now break down the plan into specific, actionable tasks that can be executed in the correct order. Use the `/sdd.tasks` command to automatically generate a detailed task breakdown from your implementation plan:
+Use the `/sdd.tasks` command to automatically generate a detailed task breakdown from your implementation plan:
 
 ```text
 /sdd.tasks
@@ -698,12 +688,23 @@ This step creates a `tasks.md` file in your feature specification directory that
 
 `/sdd.tasks` consumes approved planning artifacts and turns them into execution orchestration. It does not reopen research, data-model, or contract design, and it does not perform the unified cross-artifact semantic audit.
 
-It should emit single-target work packages only: each task must carry one explicit path or command target plus one primary completion anchor. If required anchors are missing from `plan.md`, `contracts/`, or `test-matrix.md`, or if a selected contract is `blocked`, `/sdd.tasks` should stop and route back to the relevant `/sdd.plan.*` command rather than inferring new semantics or emitting `blocked`/`todo` placeholder tasks. Non-fatal contract hygiene issues (for example missing `Full Field Dictionary (Operation-scoped)` or tuple packet drift) should surface as preflight warnings and be routed as explicit upstream repair actions without hard-blocking task generation.
+It should emit single-target work packages only: each task must carry one explicit path or command target plus one primary completion anchor. If required anchors are missing from `plan.md`, `contracts/`, or `test-matrix.md`, if a selected contract is `blocked`, or if contract hygiene blockers are present (for example missing `Full Field Dictionary (Operation-scoped)` or tuple packet drift), `/sdd.tasks` should stop and route back to the relevant `/sdd.plan.*` command rather than inferring new semantics or emitting `blocked`/`todo` placeholder tasks.
 
 For faster runs, the prerequisite script may pre-extract a compact `TASKS_BOOTSTRAP` packet from `plan.md` so `/sdd.tasks` can reuse a joined control-plane inventory instead of reparsing the planning tables during the same run.
 The same prerequisite payload also emits a `LOCAL_EXECUTION_PROTOCOL` packet as a run-local projection of constitution-defined execution policy. Its packaged SDD core runtime inventory is intentionally narrow: `specify-cli`, `git`, and `rg`. SDD-owned helpers run through explicit `specify-cli` entrypoints such as `specify internal-task-bootstrap`, `specify internal-data-model-bootstrap`, and `specify internal-implement-bootstrap` so execution-phase commands do not spend time guessing equivalent CLIs.
 
-Run `/sdd.analyze` after `/sdd.tasks` as the default pre-implementation audit pass for repo-anchor misuse, audit payload leakage, drift, contradictions, boundary violations, uncovered MUST requirements, and other cross-artifact issues.
+### **STEP 7:** Audit model and optional checklist (`/sdd.analyze`, `/sdd.checklist`)
+
+After `/sdd.tasks`, run `/sdd.analyze` as the default pre-implementation audit pass for repo-anchor misuse, audit payload leakage, drift, contradictions, boundary violations, uncovered MUST requirements, and other cross-artifact issues.
+
+Each `/sdd.analyze` run appends its report and gate decision to `FEATURE_DIR/audits/analyze-history.md` as an append-only audit history.
+
+If you want checklist-style validation, run `/sdd.checklist` as a separate standalone vertical pass rather than folding checklist burden back into the main-flow artifacts.
+
+You can also ask Claude Code (if you have the [GitHub CLI](https://docs.github.com/en/github-cli/github-cli) installed) to go ahead and create a pull request from your current branch to `main` with a detailed description, to make sure that the effort is properly tracked.
+
+> [!NOTE]
+> If you suspect over-engineered decisions or cross-artifact drift before implementation, use `/sdd.analyze` as the dedicated audit step and then adjust the upstream artifacts it flags. Ensure that Claude Code follows the [constitution](.specify/memory/constitution.md) as the foundational piece that it must adhere to when refining the plan. Repo semantic anchors come from source code plus `.specify/memory/constitution.md`; helper docs and prior generated artifacts are not repo anchors.
 
 The generated tasks.md provides a clear roadmap for the `/sdd.implement` command, ensuring systematic implementation that maintains code quality without turning the task artifact itself into an audit ledger.
 

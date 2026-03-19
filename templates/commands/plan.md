@@ -1,5 +1,5 @@
 ---
-description: Orchestrate the planning phase from the current feature branch by generating plan.md control-plane state, Stage 0 shared context, and the full handoff queue.
+description: Orchestrate the planning phase from the current feature branch by generating plan.md control-plane state, Stage 0 shared context, the stage queue, and empty downstream ledgers.
 handoffs:
   - label: Start Research Queue
     agent: sdd.plan.research
@@ -27,22 +27,32 @@ Resolve `SPEC_FILE` from the current feature branch using `{SCRIPT}` defaults.
 
 `/sdd.plan` is the planning control-plane entrypoint.
 
-Do only two things:
+Do only four things:
 
 1. Build the Stage 0 `Shared Context Snapshot` inside `plan.md`
-2. Initialize or refresh queue state, binding rows, artifact status, and fingerprints
+2. Seed the fixed `Stage Queue`
+3. Initialize an empty `Binding Projection Index`
+4. Initialize an empty `Artifact Status`
 
 `/sdd.plan` does **not** generate downstream planning-stage artifacts directly.
+`/sdd.plan` does **not** project binding rows, shared semantics, or interface-design conclusions.
+
+## Governance Guardrails (Mandatory)
+
+- **Authority rule**: `plan.md` is authoritative only for planning control-plane state (queue rows, binding-index projections, artifact status, fingerprints). It MUST NOT override semantic authority owned by `spec.md`, `research.md`, `data-model.md`, `test-matrix.md`, or `contracts/`.
+- **Stage boundary rule**: `/sdd.plan` is orchestration-only. Do not emit downstream stage bodies, shared-semantic conclusions, implementation ownership semantics, or contract schema details.
+- **Gate ownership rule**: `/sdd.plan` may report local orchestration readiness (`pending`, `in_progress`, `done`, `blocked`) only. Cross-artifact final PASS/FAIL is owned by `/sdd.analyze`.
 
 ## Planning Sharding Model (Mandatory)
 
 Keep the two-layer sharding model for planning runs:
 
-1. Stage sharding (fixed): `research -> data-model -> test-matrix -> contract`
+1. Stage sharding (fixed): delivery path `research -> test-matrix -> data-model`
 2. Binding sharding (fixed): `/sdd.plan.contract` consumes one `BindingRowID` row per run
 
 Do not collapse all planning work into one broad run.
 Optimization target is packet-first consumption with bounded inputs per shard, not shard removal.
+`contract` is not a `Stage Queue` row; it is a per-binding artifact queue unit derived from `Artifact Status`.
 
 ## Setup
 
@@ -55,6 +65,7 @@ Treat the resolved `IMPL_PLAN` as the canonical `PLAN_FILE` for all downstream p
 ## Repository-First Inputs (Mandatory)
 
 `/sdd.plan` MUST consume the canonical repository-first baseline produced by `/sdd.constitution`:
+`/sdd.plan` uses **Unified Repository-First Gate Protocol (`URFGP`)** as the shared authority for repository-first gate routing, evidence minimality, and canonical path enforcement.
 
 1. `.specify/memory/repository-first/technical-dependency-matrix.md`
 2. `.specify/memory/repository-first/module-invocation-spec.md`
@@ -82,16 +93,20 @@ Keep the snapshot to shared bootstrap facts only:
 - shared blockers and must-read anchors
 
 Do **not** write long summaries, audit payload, planning-stage prose, or execution logs into the snapshot.
+Do **not** place `test-matrix` scenario decomposition, `data-model` owner/lifecycle conclusions, contract tuples, repo anchors, DTO design, or audit conclusions into Stage 0.
 Do **not** perform repository-first completeness or consistency audit here; `/sdd.analyze` owns that responsibility.
 
 ## Planning Control Plane Requirements
 
 Use `.specify/templates/plan-template.md` as the structure source for `plan.md`. This runtime template path is mandatory; if the file is missing or non-consumable, stop and report the blocker. Do not substitute `templates/plan-template.md` or any other template location.
-The generated `plan.md` is the sole planning control plane and MUST contain exactly these dimensions:
+The generated `plan.md` is the sole planning control plane and MUST contain exactly these sections:
 
-1. downstream-consumption context: `Shared Context Snapshot`
-2. orchestration context: `Stage Queue` and `Artifact Status`
-3. binding-key context: `Binding Projection Index`
+1. `Summary`
+2. `Shared Context Snapshot`
+3. `Stage Queue`
+4. `Binding Projection Index`
+5. `Artifact Status`
+6. `Handoff Protocol`
 
 `plan.md` is a derived planning control plane. It is authoritative for planning queue state, binding-index rows, and source/output fingerprints only. It MUST NOT replace downstream planning artifacts as the semantic source of truth.
 Queue rows, binding rows, fingerprints, and other control-plane restatements are derived views only; they MUST NOT override upstream artifacts or downstream stage artifacts.
@@ -105,8 +120,15 @@ Initialize or refresh only these sections:
 Seed exactly three stage rows in fixed order:
 
 1. `research`
-2. `data-model`
-3. `test-matrix`
+2. `test-matrix`
+3. `data-model`
+
+Treat the `data-model` row as fixed shared-semantic alignment work:
+
+- keep the row queued in `Stage Queue`
+- run it after `test-matrix`
+- finish it before entering `contract`
+- keep it scoped to shared semantic alignment for the selected `BindingRowID` set, not boundary/DTO/repo-interface predesign
 
 For each row include:
 
@@ -133,11 +155,11 @@ Required columns:
 - `TM ID`
 - `TC IDs`
 - `Operation ID`
-- `Boundary Anchor`
-- `Implementation Entry Anchor`
-- `Boundary Anchor Status`
-- `Implementation Entry Anchor Status`
+- `UIF Path Ref(s)`
+- `UDD Ref(s)`
 - `Test Scope`
+
+Do not add `Boundary Anchor`, `Implementation Entry Anchor`, anchor statuses, DTO anchors, collaborator anchors, or other contract-design fields here.
 
 ### Artifact Status
 
@@ -162,11 +184,11 @@ State-dependent routing belongs in runtime `Handoff Decision`, not frontmatter.
 Child-command selection rules are non-negotiable:
 
 - `/sdd.plan.research` takes the first `research` row in `Stage Queue` with status `pending`
-- `/sdd.plan.data-model` takes the first `data-model` row in `Stage Queue` with status `pending`
 - `/sdd.plan.test-matrix` takes the first `test-matrix` row in `Stage Queue` with status `pending`
+- `/sdd.plan.data-model` takes the first `data-model` row in `Stage Queue` with status `pending`
 - `/sdd.plan.contract` takes the first `Artifact Status` row where `Unit Type = contract` and `Status = blocked`; if no blocked row exists, take the first row with `Status = pending`
 Child commands MUST NOT scan the repository to invent the next target.
-They MUST consume queue state from the resolved `PLAN_FILE` only.
+Child commands MUST consume queue state from the resolved `PLAN_FILE` only.
 
 ## Runtime Rules
 
@@ -174,9 +196,14 @@ They MUST consume queue state from the resolved `PLAN_FILE` only.
 - Keep queue rows and binding rows minimal and deterministic.
 - Record source fingerprints from the direct authoritative inputs of each queue row.
 - Record output fingerprints after each row completes.
-- Allow only minimal child-command writeback: status, output path, blocker, source fingerprint, output fingerprint.
+- Allow only minimal child-command writeback:
+  - `/sdd.plan.research`: selected `research` stage row only
+  - `/sdd.plan.test-matrix`: selected `test-matrix` stage row, `Binding Projection Index`, and `Artifact Status`
+  - `/sdd.plan.data-model`: selected `data-model` stage row and contract-readiness blocker/fingerprint updates in `Artifact Status` only
+  - `/sdd.plan.contract`: selected `Artifact Status` row only
 - Do not append long summaries or stage bodies back into `plan.md`.
 - `README.md`, `docs/**`, `specs/**`, `tests/**`, `plans/**`, `templates/**`, demos, and generated artifacts are supporting inputs only and MUST NOT be promoted into repo semantic anchors.
+- Do not claim cross-artifact final PASS/FAIL in this stage.
 
 ## Stop Conditions
 
@@ -199,4 +226,4 @@ Always write or refresh `plan.md` first, then report:
 - initialized `Binding Projection Index` row count
 - initialized `Artifact Status` row count
 - explicit next command: `/sdd.plan.research`
-- explicit handoff order: `sdd.plan.research -> sdd.plan.data-model -> sdd.plan.test-matrix -> sdd.plan.contract`
+- explicit handoff order: `sdd.plan.research -> sdd.plan.test-matrix -> sdd.plan.data-model -> sdd.plan.contract`

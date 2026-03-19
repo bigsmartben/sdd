@@ -21,6 +21,7 @@ def test_tasks_command_enforces_preflight_and_hard_stop():
     assert "`TASKS_BOOTSTRAP.execution_readiness.errors` contains blockers" in content
     assert "LOCAL_EXECUTION_PROTOCOL.repo_search.list_files_cmd" in content
     assert "Active executable tuples select `new` repo anchors but lack explicit rejection evidence for `existing` and `extended`" in content
+    assert "Unified Repository-First Gate Protocol (`URFGP`)" in content
     assert "/sdd.plan.interface-detail" not in content
 
 
@@ -42,6 +43,10 @@ def test_tasks_command_deterministic_mapping_and_manifest_schema():
     assert "one work package maps to exactly one primary completion anchor" in content
     assert "Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`" in content
     assert "`generated_from` keys: `plan_path`, `plan_source_fingerprint`, `contract_source_fingerprints`" in content
+    assert "Repository-First Evidence Bundle (`RFEB`)" in content
+    assert "`source_refs`" in content
+    assert "`signal_ids` (`SIG-*` rows" in content
+    assert "`module_edge_ids`" in content
 
 
 def test_tasks_template_requires_single_target_and_projection_repair():
@@ -71,6 +76,8 @@ def test_manifest_schema_contract_between_tasks_and_implement():
     assert "Active execution targets rely on `new` repo anchors without explicit rejection evidence for `existing` and `extended`." in implement_command
     assert "LOCAL_EXECUTION_PROTOCOL" in implement_command
     assert "no bypass of repo-anchor strategy priority (`existing -> extended -> new`)" in implement_command
+    assert "Unified Repository-First Gate Protocol (`URFGP`)" in implement_command
+    assert "Repository-First Evidence Bundle (`RFEB`)" in implement_command
 
 
 def test_docs_describe_tasks_as_execution_decomposition_only():
@@ -81,3 +88,4 @@ def test_docs_describe_tasks_as_execution_decomposition_only():
     assert "hard-fails on missing execution anchors instead of supplementing design or writing placeholder tasks" in readme
     assert "projects the completed planning-stage design set into an executable task list" in spec_driven
     assert "does not supplement missing design or audit the feature end-to-end" in spec_driven
+

@@ -31,7 +31,7 @@ def test_specify_and_plan_define_authority_vs_derived_views():
     assert "`/sdd.specify.ui-html` is an optional sidecar command; users decide if/when to invoke it." in specify
     assert "`plan.md` is the sole planning control plane" in plan
     assert "does **not** generate downstream planning-stage artifacts directly" in plan
-    assert "authoritative for planning queue state, binding-projection rows, and source/output fingerprints only" in plan_template
+    assert "orchestration authority for queue state, binding projection, and artifact execution status" in plan_template
 
 
 def test_tasks_implement_and_analyze_use_compact_contract_sections():
@@ -54,6 +54,11 @@ def test_tasks_implement_and_analyze_use_compact_contract_sections():
     assert "LOCAL_EXECUTION_PROTOCOL.python.runner_cmd" in tasks
     assert "LOCAL_EXECUTION_PROTOCOL.runtime_tools" in tasks
     assert "Repository-first explainable evidence" in tasks
+    assert "Unified Repository-First Gate Protocol (`URFGP`)" in tasks
+    assert "Repository-First Evidence Bundle (`RFEB`)" in tasks
+    assert "`source_refs`" in tasks
+    assert "`signal_ids` (`SIG-*`" in tasks
+    assert "`module_edge_ids`" in tasks
     assert "Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`" in tasks
 
     assert "Treat `IMPLEMENT_BOOTSTRAP.analyze_readiness` as the primary analyze hard gate." in implement
@@ -64,6 +69,8 @@ def test_tasks_implement_and_analyze_use_compact_contract_sections():
     assert "LOCAL_EXECUTION_PROTOCOL.python.runner_cmd" in implement
     assert "LOCAL_EXECUTION_PROTOCOL.runtime_tools" in implement
     assert "no bypass of repo-anchor strategy priority (`existing -> extended -> new`)" in implement
+    assert "Unified Repository-First Gate Protocol (`URFGP`)" in implement
+    assert "Repository-First Evidence Bundle (`RFEB`)" in implement
     assert "Read `plan.md` only as control-plane context (`Shared Context Snapshot`, `Stage Queue`, `Artifact Status`, `Binding Projection Index`)" in implement
     assert "Repository-first Validation Trace" in implement
 
@@ -73,6 +80,8 @@ def test_tasks_implement_and_analyze_use_compact_contract_sections():
     assert "any active tuple selecting `new` anchors without explicit rejection evidence for both `existing` and `extended` is `FAIL`" in analyze
     assert "matrix dependency facts plus `SIG-*` governance signals including divergence, version-source-mix, and `unresolved`" in analyze
     assert "using concrete module-to-module rows as the primary representation" in analyze
+    assert "Unified Repository-First Gate Protocol (`URFGP`)" in analyze
+    assert "Repository-First Evidence Bundle (`RFEB`)" in analyze
     assert "Gate Decision" in analyze
     assert "<!-- SDD_ANALYZE_RUN_BEGIN -->" in analyze
     assert "<!-- SDD_ANALYZE_RUN_END -->" in analyze

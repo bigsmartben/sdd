@@ -25,10 +25,9 @@ def _write_feature_fixture(
     packet_entry_status: str = "existing",
     include_research_trigger: bool = False,
     plan_feature_status: str = "planning-in-progress",
-    plan_boundary_anchor: str = "HTTP GET /demo",
-    plan_entry_anchor: str = "src/web/demo_controller.py::DemoController.handle",
-    plan_boundary_status: str = "existing",
-    plan_entry_status: str = "existing",
+    plan_uif_path_refs: str = "[UIF-Path-001]",
+    plan_udd_refs: str = "[UDD-001]",
+    plan_test_scope: str = "Integration",
 ) -> Path:
     feature_dir = tmp_path / "feature"
     (feature_dir / "contracts").mkdir(parents=True)
@@ -60,9 +59,9 @@ def _write_feature_fixture(
             [
                 "# Data Model",
                 "",
-                "| Domain Element | Kind | Anchor Status | Repo Anchor |",
-                "|---------------|------|---------------|-------------|",
-                "| DemoAggregate | Aggregate | existing | src/domain/demo.py::DemoAggregate |",
+                "| Domain Element | Kind | Anchor Status | Repo Anchor | Anchor Role |",
+                "|---------------|------|---------------|-------------|-------------|",
+                "| DemoAggregate | Aggregate | existing | src/domain/demo.py::DemoAggregate | owner |",
             ]
         ),
         encoding="utf-8",
@@ -77,21 +76,21 @@ def _write_feature_fixture(
                 "",
                 "State Owner Anchor(s): src/domain/demo.py::DemoAggregate",
                 "",
-                "| TM ID | Operation ID | Boundary Anchor | IF Scope | Repo Anchor | Anchor Status | Path Type |",
-                "|------|--------------|-----------------|----------|-------------|---------------|-----------|",
-                f"| TM-001 | demoOp | {test_matrix_boundary_anchor} | IF-001 | src/boundary/demo.py::DemoBoundary | {test_matrix_status} | Main |",
+                "| TM ID | Operation ID | Boundary Anchor | IF Scope | Repo Anchor | Repo Anchor Role | Anchor Status | Path Type |",
+                "|------|--------------|-----------------|----------|-------------|------------------|---------------|-----------|",
+                f"| TM-001 | demoOp | {test_matrix_boundary_anchor} | IF-001 | src/boundary/demo.py::DemoBoundary | boundary-owner | {test_matrix_status} | Main |",
                 "",
                 "## Verification Case Anchors",
                 "",
-                "| TC ID | TM ID | Operation ID | Boundary Anchor | IF Scope | Repo Anchor | Anchor Status | Verification Goal | Observability / Signal |",
-                "|-------|-------|--------------|-----------------|----------|-------------|---------------|-------------------|------------------------|",
-                f"| TC-001 | TM-001 | demoOp | {test_matrix_boundary_anchor} | IF-001 | src/boundary/demo.py::DemoBoundary | {test_matrix_status} | Verify demo payload | Demo payload is visible |",
+                "| TC ID | TM ID | Operation ID | Boundary Anchor | IF Scope | Repo Anchor | Repo Anchor Role | Anchor Status | Verification Goal | Observability / Signal |",
+                "|-------|-------|--------------|-----------------|----------|-------------|------------------|---------------|-------------------|------------------------|",
+                f"| TC-001 | TM-001 | demoOp | {test_matrix_boundary_anchor} | IF-001 | src/boundary/demo.py::DemoBoundary | boundary-owner | {test_matrix_status} | Verify demo payload | Demo payload is visible |",
                 "",
                 "## Binding Contract Packets",
                 "",
-                "| BindingRowID | Operation ID | IF Scope | Boundary Anchor | Boundary Anchor Status | Implementation Entry Anchor | Implementation Entry Anchor Status | Request DTO Anchor | Response DTO Anchor | Primary Collaborator Anchor | State Owner Anchor(s) | TM ID | TC IDs | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) | Lifecycle Ref(s) | Invariant Ref(s) | Main Pass Anchor | Branch/Failure Anchor(s) |",
-                "|--------------|--------------|----------|-----------------|------------------------|-----------------------------|------------------------------------|--------------------|--------------------|-----------------------------|-----------------------|-------|--------|-------------|-----------------|----------------|-------------|------------------|------------------|------------------|--------------------------|",
-                f"| BR-001 | demoOp | IF-001 | {packet_boundary_anchor} | {packet_boundary_status} | {packet_entry_anchor} | {packet_entry_status} | N/A | src/app/demo.py::DemoResponse | N/A | [src/domain/demo.py::DemoAggregate] | TM-001 | [TC-001] | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] | [Lifecycle: DemoAggregate] | [INV-001] | happy path | retry path |",
+                "| BindingRowID | Operation ID | IF Scope | UIF Path Ref(s) | UDD Ref(s) | Boundary Anchor | Boundary Anchor Status | Implementation Entry Anchor | Implementation Entry Anchor Status | Request DTO Anchor | Response DTO Anchor | Primary Collaborator Anchor | State Owner Anchor(s) | TM ID | TC IDs | Test Scope | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) | Lifecycle Ref(s) | Invariant Ref(s) | Main Pass Anchor | Branch/Failure Anchor(s) |",
+                "|--------------|--------------|----------|-----------------|------------|-----------------|------------------------|-----------------------------|------------------------------------|--------------------|--------------------|-----------------------------|-----------------------|-------|--------|------------|-------------|-----------------|----------------|-------------|------------------|------------------|------------------|--------------------------|",
+                f"| BR-001 | demoOp | IF-001 | [UIF-Path-001] | [UDD-001] | {packet_boundary_anchor} | {packet_boundary_status} | {packet_entry_anchor} | {packet_entry_status} | N/A | src/app/demo.py::DemoResponse | N/A | [src/domain/demo.py::DemoAggregate] | TM-001 | [TC-001] | Integration | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] | [Lifecycle: DemoAggregate] | [INV-001] | happy path | retry path |",
             ]
         ),
         encoding="utf-8",
@@ -100,21 +99,50 @@ def _write_feature_fixture(
     contract_lines = [
         "# Northbound Interface Design: Demo",
         "",
+        "**BindingRowID (Required)**: BR-001",
+        "**Operation ID (Required)**: demoOp",
+        "**IF Scope (Required)**: IF-001",
         f"**Boundary Anchor (Required)**: {contract_boundary_anchor}",
         f"**Anchor Status (Required)**: {contract_anchor_status}",
         "",
-        "## Northbound Contract Summary",
+        "## Binding Context",
         "",
-        "### External I/O Summary",
-        "- Request: GET /demo",
-        "- Success Output: demo payload",
-        "- Failure Output: error payload",
+        "| Field | Value |",
+        "|-------|-------|",
+        "| `BindingRowID` | BR-001 |",
+        "| `Operation ID` | demoOp |",
+        "| `IF Scope` | IF-001 |",
+        "| `UIF Path Ref(s)` | [UIF-Path-001] |",
+        "| `UDD Ref(s)` | [UDD-001] |",
+        "| `TM ID` | TM-001 |",
+        "| `TC IDs` | [TC-001] |",
+        "| `Test Scope` | Integration |",
+        "| `Spec Ref(s)` | [UC-001, FR-001] |",
+        "| `Scenario Ref(s)` | [S1] |",
+        "| `Success Ref(s)` | [SC-001] |",
+        "| `Edge Ref(s)` | [EC-001] |",
+        "",
+        "## Interface Definition",
+        "",
+        "### Contract Summary",
+        "| Aspect | Definition |",
+        "|--------|------------|",
+        "| External Input | GET /demo |",
+        "| Success Output | demo payload |",
+        "| Failure Output | error payload |",
+        "",
+        "### Resolved Type Inventory",
+        "| Role | Concrete Name | Resolution | Source / Evidence | Notes |",
+        "|------|---------------|------------|-------------------|-------|",
+        "| boundary-entry | src/web/demo_controller.py::DemoController.handle | existing | spec ref + repo anchor | controller entry |",
+        "| request-dto | src/app/demo.py::DemoRequest | contract-defined | contract-local rationale | demo request type |",
+        "| response-dto | src/app/demo.py::DemoResponse | existing | repo anchor | demo response type |",
         "",
         "## Full Field Dictionary (Operation-scoped)",
         "",
-        "| Field | Owner Class | Direction | Required/Optional | Default | Validation/Enum | Persisted | Contract-visible | Used in demoOp | Source Anchor |",
-        "|-------|-------------|-----------|-------------------|---------|-----------------|-----------|------------------|----------------|---------------|",
-        "| demoId | DemoResponse | output | required | none | uuid | no | yes | yes | `src/app/demo.py::DemoResponse.demoId` |",
+        "| Field | Owner Class | Dictionary Tier | Direction | Required/Optional | Default | Validation/Enum | Persisted | Contract-visible | Used in demoOp | Source Anchor |",
+        "|-------|-------------|-----------------|-----------|-------------------|---------|-----------------|-----------|------------------|----------------|---------------|",
+        "| demoId | DemoResponse | operation-critical | output | required | none | uuid | no | yes | yes | `src/app/demo.py::DemoResponse.demoId` |",
     ]
     if contract_entry_anchor is not None:
         contract_lines.append(f"**Implementation Entry Anchor (Required)**: {contract_entry_anchor}")
@@ -124,16 +152,36 @@ def _write_feature_fixture(
             "",
             "## Contract Binding",
             "- Repo Anchor: `src/boundary/demo.py::DemoBoundary`",
+            "- Repo Anchor Role: boundary-owner",
             "",
-            "## Runtime Correctness Check",
+            "## Sequence Design",
+            "- Boundary call enters controller and then reaches app handler.",
             "",
-            "| Runtime Check Item | Required Evidence | Anchor | Status |",
-            "|--------------------|-------------------|--------|--------|",
-            "| Boundary-to-entry reachability | sequence reaches entry | demo boundary chain | ok |",
-            "| End-to-end chain continuity | contiguous request/response chain | demo contiguous steps | ok |",
-            "| Field-ownership closure | contract fields mapped to UML owners | demo field owners | ok |",
-            "| Sequence-participant UML closure | sequence participants mapped to UML classes/methods | demo participant mappings | ok |",
-            "| New-field/method call linkage | new members and calls are marked and connected | demo new linkage | ok |",
+            "## Test Projection",
+            "",
+            "### Test Projection Slice",
+            "",
+            "| IF Scope | Operation ID | Test Scope | TM ID | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |",
+            "|----------|--------------|------------|-------|----------|------------------|--------------------------|----------------------------|",
+            "| IF-001 | demoOp | Integration | TM-001 | TC-001 | happy path | retry path | pytest -k demo |",
+            "",
+            "### Cross-Interface Smoke Candidate",
+            "",
+            "| Smoke Candidate ID | IF Scope | Operation ID | Candidate Role | Depends On Candidate ID(s) | Trigger | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |",
+            "|--------------------|----------|--------------|----------------|----------------------------|---------|------------------|--------------------------|----------------------------|",
+            "| SMK-001 | IF-001 | demoOp | entry | N/A | demo trigger | happy path | retry path | pytest -k demo |",
+            "",
+            "## Closure Check",
+            "",
+            "| Check Item | Required Evidence | Status |",
+            "|------------|-------------------|--------|",
+            "| Interface-definition closure | request/response surface + full field dictionary + shared semantic reuse are all present | ok |",
+            "| UML closure | class diagram and two-party package relations both present and consistent with sequence | ok |",
+            "| Sequence closure | success/failure paths include mandatory second-party, third-party, and middleware calls | ok |",
+            "| Test closure | `TM/TC`, pass/failure anchors, and command/assertion signal are present | ok |",
+            "",
+            "## Upstream References",
+            "- repo anchors: [src/boundary/demo.py::DemoBoundary, src/app/demo.py::DemoResponse]",
         ]
     )
     (feature_dir / "contracts" / "demo.md").write_text("\n".join(contract_lines), encoding="utf-8")
@@ -172,14 +220,14 @@ def _write_feature_fixture(
                 "| Stage ID | Command | Required Inputs | Output Path | Status | Source Fingerprint | Output Fingerprint | Blocker |",
                 "|----------|---------|-----------------|-------------|--------|--------------------|--------------------|---------|",
                 "| research | `/sdd.plan.research` | `plan.md`, `spec.md` | `research.md` | done | spec | research | none |",
-                "| data-model | `/sdd.plan.data-model` | `plan.md`, `spec.md`, `research.md` | `data-model.md` | done | spec+research | data-model | none |",
-                "| test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md`, `research.md`, `data-model.md` | `test-matrix.md` | done | spec+research+data-model | test-matrix | none |",
+                "| test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md` | `test-matrix.md` | done | spec | test-matrix | none |",
+                "| data-model | `/sdd.plan.data-model` | `plan.md`, `spec.md`, `test-matrix.md` | `data-model.md` | done | spec+test-matrix | data-model | none |",
                 "",
                 "## Binding Projection Index",
                 "",
-                "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | Boundary Anchor | Implementation Entry Anchor | Boundary Anchor Status | Implementation Entry Anchor Status | Test Scope |",
-                "|--------------|-------|--------|-------|------------------|-------|--------|--------------|-----------------|-----------------------------|------------------------|------------------------------------|------------|",
-                f"| BR-001 | UC-001 | UIF-001 | FR-001 | IF-001 | TM-001 | TC-001 | demoOp | {plan_boundary_anchor} | {plan_entry_anchor} | {plan_boundary_status} | {plan_entry_status} | Integration |",
+                "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | UIF Path Ref(s) | UDD Ref(s) | Test Scope |",
+                "|--------------|-------|--------|-------|------------------|-------|--------|--------------|-----------------|------------|------------|",
+                f"| BR-001 | UC-001 | UIF-001 | FR-001 | IF-001 | TM-001 | TC-001 | demoOp | {plan_uif_path_refs} | {plan_udd_refs} | {plan_test_scope} |",
                 "",
                 "## Artifact Status",
                 "",
@@ -192,12 +240,6 @@ def _write_feature_fixture(
                 "- `/sdd.plan` initializes this file and starts the queue.",
                 "- `/sdd.plan.contract` advances `Artifact Status` one row at a time.",
                 "- `/sdd.tasks` starts only after all required stage and artifact rows are `done`.",
-                "",
-                "## Complexity Tracking",
-                "",
-                "| Violation | Why Needed | Simpler Alternative Rejected Because |",
-                "|-----------|------------|-------------------------------------|",
-                "| none | n/a | n/a |",
             ]
         ),
         encoding="utf-8",
@@ -291,9 +333,11 @@ def test_anchor_status_allowed_values_rejects_composite_label_tokens(tmp_path: P
 @pytest.mark.parametrize(
     ("row_marker", "rule_id"),
     [
-        ("| End-to-end chain continuity |", "PLN-ID-007"),
-        ("| Sequence-participant UML closure |", "PLN-ID-008"),
-        ("| New-field/method call linkage |", "PLN-ID-009"),
+        ("| Sequence closure |", "PLN-ID-007"),
+        ("| UML closure |", "PLN-ID-008"),
+        ("| Test closure |", "PLN-ID-009"),
+        ("### Cross-Interface Smoke Candidate", "PLN-ID-014"),
+        ("### Resolved Type Inventory", "PLN-ID-015"),
     ],
 )
 def test_runtime_closure_rows_are_required_by_lint(tmp_path: Path, row_marker: str, rule_id: str):
@@ -306,6 +350,42 @@ def test_runtime_closure_rows_are_required_by_lint(tmp_path: Path, row_marker: s
     payload = _run_planning_lint(feature_dir)
     assert payload["findings_total"] > 0
     assert any(f["rule_id"] == rule_id for f in payload["findings"])
+
+
+def test_udd_refs_are_required_in_test_matrix(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    test_matrix = feature_dir / "test-matrix.md"
+    content = test_matrix.read_text(encoding="utf-8")
+    content = content.replace("UDD Ref(s)", "UDD References")
+    test_matrix.write_text(content, encoding="utf-8")
+
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-RA-012" for f in payload["findings"])
+
+
+def test_test_projection_slice_is_required_in_contract(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    contract = feature_dir / "contracts" / "demo.md"
+    content = contract.read_text(encoding="utf-8")
+    content = content.replace("### Test Projection Slice", "### Projection Slice")
+    contract.write_text(content, encoding="utf-8")
+
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-ID-012" for f in payload["findings"])
+
+
+def test_dictionary_tier_is_required_in_contract_field_dictionary(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    contract = feature_dir / "contracts" / "demo.md"
+    content = contract.read_text(encoding="utf-8")
+    content = content.replace("Dictionary Tier", "Tier")
+    contract.write_text(content, encoding="utf-8")
+
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-ID-013" for f in payload["findings"])
 
 
 def test_northbound_rule_flags_missing_label_entry_anchor_in_bash(tmp_path: Path):
@@ -349,7 +429,6 @@ def test_northbound_rule_accepts_escaped_pipe_in_boundary_anchor_cells_bash(tmp_
         contract_boundary_anchor=r"HTTP GET /demo\|v2",
         test_matrix_boundary_anchor=r"HTTP GET /demo\|v2",
         packet_boundary_anchor=r"HTTP GET /demo\|v2",
-        plan_boundary_anchor=r"HTTP GET /demo\|v2",
     )
     payload = _run_planning_lint(feature_dir)
     assert not any(f["rule_id"] == "PLN-NB-001" for f in payload["findings"])
@@ -362,7 +441,6 @@ def test_northbound_rule_accepts_escaped_pipe_in_boundary_anchor_cells_powershel
         contract_boundary_anchor=r"HTTP GET /demo\|v2",
         test_matrix_boundary_anchor=r"HTTP GET /demo\|v2",
         packet_boundary_anchor=r"HTTP GET /demo\|v2",
-        plan_boundary_anchor=r"HTTP GET /demo\|v2",
     )
     payload = _run_planning_lint_powershell(feature_dir)
     assert not any(f["rule_id"] == "PLN-NB-001" for f in payload["findings"])
@@ -377,8 +455,7 @@ def test_binding_tuple_projection_sync_accepts_aligned_artifacts(tmp_path: Path)
 def test_binding_tuple_projection_sync_flags_plan_projection_drift(tmp_path: Path):
     feature_dir = _write_feature_fixture(
         tmp_path,
-        plan_entry_status="new",
-        packet_entry_status="existing",
+        plan_udd_refs="[UDD-999]",
     )
     payload = _run_planning_lint(feature_dir)
     assert payload["findings_total"] > 0
@@ -424,7 +501,6 @@ def test_repo_anchor_paths_must_resolve_to_real_files_in_powershell(tmp_path: Pa
     [
         ("## Summary", "PLN-CP-001"),
         ("## Handoff Protocol", "PLN-CP-002"),
-        ("## Complexity Tracking", "PLN-CP-003"),
     ],
 )
 def test_plan_required_sections_are_enforced(section_marker: str, rule_id: str, tmp_path: Path):
@@ -446,7 +522,7 @@ def test_plan_required_sections_accept_crlf_line_endings(tmp_path: Path):
 
     payload = _run_planning_lint(feature_dir)
     assert not any(
-        f["rule_id"] in {"PLN-CP-001", "PLN-CP-002", "PLN-CP-003"}
+        f["rule_id"] in {"PLN-CP-001", "PLN-CP-002"}
         for f in payload["findings"]
     )
 
@@ -458,8 +534,16 @@ def test_plan_status_must_match_stage_and_artifact_progress(tmp_path: Path):
     assert any(f["rule_id"] == "PLN-CP-004" for f in payload["findings"])
 
 
-def test_binding_projection_index_rejects_todo_anchor_status_rows(tmp_path: Path):
-    feature_dir = _write_feature_fixture(tmp_path, plan_boundary_status="todo")
+def test_binding_projection_index_rejects_contract_design_columns(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    plan = feature_dir / "plan.md"
+    plan.write_text(
+        plan.read_text(encoding="utf-8").replace(
+            "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | UIF Path Ref(s) | UDD Ref(s) | Test Scope |",
+            "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | UIF Path Ref(s) | UDD Ref(s) | Boundary Anchor | Test Scope |",
+        ),
+        encoding="utf-8",
+    )
     payload = _run_planning_lint(feature_dir)
     assert payload["findings_total"] > 0
     assert any(f["rule_id"] == "PLN-BP-001" for f in payload["findings"])

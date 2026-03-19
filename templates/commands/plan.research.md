@@ -1,9 +1,9 @@
 ---
 description: Generate the pending research.md artifact selected from the current feature branch plan.md.
 handoffs:
-  - label: Continue Data Model Queue
-    agent: sdd.plan.data-model
-    prompt: Run /sdd.plan.data-model with the same active feature branch context.
+  - label: Continue Test Matrix Queue
+    agent: sdd.plan.test-matrix
+    prompt: Run /sdd.plan.test-matrix with the same active feature branch context.
     send: true
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json
@@ -31,8 +31,8 @@ Use `.specify/templates/research-template.md` only. If the runtime template is m
 
 ## Selection Rules
 
-1. Run `{SCRIPT}` once from repo root. Resolve `FEATURE_DIR`, `FEATURE_SPEC`, and `IMPL_PLAN`
-2. Read only the resolved `IMPL_PLAN`
+1. Run `{SCRIPT}` once from repo root. Resolve `FEATURE_DIR` and planning preflight context.
+2. Resolve `PLAN_FILE` as `<FEATURE_DIR>/plan.md` and `FEATURE_SPEC` as `<FEATURE_DIR>/spec.md`; read only the resolved `PLAN_FILE`
 3. Find the first `Stage Queue` row where:
    - `Stage ID = research`
    - `Status = pending`
@@ -98,10 +98,12 @@ Do not write long summaries or detailed research prose back into `PLAN_FILE`.
 
 Emit a `Handoff Decision` section in the runtime output with exactly these fields:
 
-- `Next Command`: `/sdd.plan.data-model`
-- `Decision Basis`: `Stage Queue` shows the selected `research` row is complete and the fixed next pending stage is `data-model`
+- `Next Command`: `/sdd.plan.test-matrix`
+- `Decision Basis`: `test-matrix` consumes `spec.md` as its semantic source and does not depend on `research.md` output to proceed
 - `Selected Stage ID`: selected `research` stage row id
 - `Ready/Blocked`: `Ready` when the selected row is updated to `done`; otherwise `Blocked`
+
+`Ready/Blocked` is stage-local readiness only and MUST NOT be treated as cross-artifact final PASS/FAIL; centralized final gating belongs to `/sdd.analyze`.
 
 ## Final Output
 

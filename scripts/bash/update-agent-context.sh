@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Update agent context files with information from plan.md
+# Update agent context files with information from stable project metadata
 #
 # This script maintains AI agent context files by parsing feature specifications 
 # and updating agent-specific configuration files with project information.
@@ -11,8 +11,9 @@
 #    - Checks for required plan.md files and templates
 #    - Validates file permissions and accessibility
 #
-# 2. Plan Data Extraction
-#    - Parses plan.md files to extract project metadata
+# 2. Project Metadata Extraction
+#    - Parses `.specify/config.yaml` as the primary metadata authority
+#    - Uses `spec.md` hints only as bounded fallback input
 #    - Identifies language/version, frameworks, databases, and project types
 #    - Handles missing or incomplete specification data gracefully
 #
@@ -55,7 +56,8 @@ source "$SCRIPT_DIR/common.sh"
 # Get all paths and variables from common functions
 eval "$(get_feature_paths)"
 
-NEW_PLAN="$IMPL_PLAN"  # Alias for compatibility with existing code
+NEW_PLAN="$IMPL_PLAN"  # Used for feature validation and compatibility checks
+NEW_SPEC="$FEATURE_SPEC"
 AGENT_TYPE="${1:-}"
 
 # Agent-specific file paths  
@@ -81,8 +83,9 @@ BOB_FILE="$REPO_ROOT/AGENTS.md"
 VIBE_FILE="$REPO_ROOT/.vibe/agents/specify-agents.md"
 KIMI_FILE="$REPO_ROOT/KIMI.md"
 
-# Template file
+# Template and metadata files
 TEMPLATE_FILE="$REPO_ROOT/.specify/templates/agent-file-template.md"
+CONFIG_FILE="$REPO_ROOT/.specify/config.yaml"
 
 # Global variables for parsed plan data
 NEW_LANG=""
@@ -156,46 +159,59 @@ validate_environment() {
 }
 
 #==============================================================================
-# Plan Parsing Functions
+# Metadata Parsing Functions
 #==============================================================================
 
-extract_plan_field() {
+extract_config_field() {
     local field_pattern="$1"
-    local plan_file="$2"
-    
-    grep "^\*\*${field_pattern}\*\*: " "$plan_file" 2>/dev/null | \
+    local config_file="$2"
+
+    grep -E "^[[:space:]]*${field_pattern}[[:space:]]*:" "$config_file" 2>/dev/null | \
         head -1 | \
-        sed "s|^\*\*${field_pattern}\*\*: ||" | \
+        sed -E "s|^[[:space:]]*${field_pattern}[[:space:]]*:[[:space:]]*||" | \
         sed 's/^[ \t]*//;s/[ \t]*$//' | \
         grep -v "NEEDS CLARIFICATION" | \
         grep -v "^N/A$" || echo ""
 }
 
-parse_plan_data() {
-    local plan_file="$1"
-    
-    if [[ ! -f "$plan_file" ]]; then
-        log_error "Plan file not found: $plan_file"
-        return 1
+extract_spec_hint_field() {
+    local label="$1"
+    local spec_file="$2"
+
+    grep -E "^[[:space:]\-*]*${label}[[:space:]]*:" "$spec_file" 2>/dev/null | \
+        head -1 | \
+        sed -E "s|^[[:space:]\-*]*${label}[[:space:]]*:[[:space:]]*||" | \
+        sed 's/^[ \t]*//;s/[ \t]*$//' | \
+        grep -v "NEEDS CLARIFICATION" | \
+        grep -v "^N/A$" || echo ""
+}
+
+parse_project_metadata() {
+    local spec_file="$1"
+    local config_file="$2"
+
+    if [[ -f "$config_file" ]] && [[ -r "$config_file" ]]; then
+        log_info "Parsing project metadata from $config_file"
+        NEW_LANG=$(extract_config_field "language" "$config_file")
+        NEW_FRAMEWORK=$(extract_config_field "framework" "$config_file")
+        NEW_DB=$(extract_config_field "database" "$config_file")
+        NEW_PROJECT_TYPE=$(extract_config_field "project_type" "$config_file")
+    else
+        log_warning "Project metadata file not found at $config_file; falling back to spec hints"
     fi
-    
-    if [[ ! -r "$plan_file" ]]; then
-        log_error "Plan file is not readable: $plan_file"
-        return 1
+
+    if [[ -f "$spec_file" ]] && [[ -r "$spec_file" ]]; then
+        [[ -z "$NEW_LANG" ]] && NEW_LANG=$(extract_spec_hint_field "Language" "$spec_file")
+        [[ -z "$NEW_FRAMEWORK" ]] && NEW_FRAMEWORK=$(extract_spec_hint_field "Framework" "$spec_file")
+        [[ -z "$NEW_DB" ]] && NEW_DB=$(extract_spec_hint_field "Storage" "$spec_file")
+        [[ -z "$NEW_PROJECT_TYPE" ]] && NEW_PROJECT_TYPE=$(extract_spec_hint_field "Project Type" "$spec_file")
     fi
-    
-    log_info "Parsing plan data from $plan_file"
-    
-    NEW_LANG=$(extract_plan_field "Language/Version" "$plan_file")
-    NEW_FRAMEWORK=$(extract_plan_field "Primary Dependencies" "$plan_file")
-    NEW_DB=$(extract_plan_field "Storage" "$plan_file")
-    NEW_PROJECT_TYPE=$(extract_plan_field "Project Type" "$plan_file")
     
     # Log what we found
     if [[ -n "$NEW_LANG" ]]; then
         log_info "Found language: $NEW_LANG"
     else
-        log_warning "No language information found in plan"
+        log_warning "No language information found in project metadata"
     fi
     
     if [[ -n "$NEW_FRAMEWORK" ]]; then
@@ -824,9 +840,9 @@ main() {
     
     log_info "=== Updating agent context files for feature $CURRENT_BRANCH ==="
     
-    # Parse the plan file to extract project information
-    if ! parse_plan_data "$NEW_PLAN"; then
-        log_error "Failed to parse plan data"
+    # Parse project metadata to extract technology context
+    if ! parse_project_metadata "$NEW_SPEC" "$CONFIG_FILE"; then
+        log_error "Failed to parse project metadata"
         exit 1
     fi
     

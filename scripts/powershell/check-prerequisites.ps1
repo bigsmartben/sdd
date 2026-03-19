@@ -31,6 +31,42 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+function Resolve-SpecifyCommand {
+    $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+    $repoShimDir = Join-Path $repoRoot '.test-bin'
+    $repoShimCandidates = @(
+        (Join-Path $repoShimDir 'specify'),
+        (Join-Path $repoShimDir 'specify.cmd'),
+        (Join-Path $repoShimDir 'specify.exe')
+    )
+    foreach ($candidate in $repoShimCandidates) {
+        if (Test-Path $candidate -PathType Leaf) {
+            return (Resolve-Path $candidate).Path
+        }
+    }
+
+    $override = $env:SDD_SPECIFY_CMD
+    if (-not [string]::IsNullOrWhiteSpace($override)) {
+        if (Test-Path $override -PathType Leaf) {
+            return (Resolve-Path $override).Path
+        }
+
+        $overrideCommand = Get-Command $override -ErrorAction SilentlyContinue
+        if ($overrideCommand) {
+            return $overrideCommand.Source
+        }
+
+        return $null
+    }
+
+    $specifyCommand = Get-Command specify -ErrorAction SilentlyContinue
+    if ($specifyCommand) {
+        return $specifyCommand.Source
+    }
+
+    return $null
+}
+
 function Get-LocalExecutionProtocol {
     param(
         [Parameter(Mandatory = $true)]
@@ -39,13 +75,8 @@ function Get-LocalExecutionProtocol {
 
     $hasRipgrep = [bool](Get-Command rg -ErrorAction SilentlyContinue)
     $hasGitCli = [bool](Get-Command git -ErrorAction SilentlyContinue)
-    $specifyOverride = $env:SDD_SPECIFY_CMD
-    $hasSpecify = $false
-    if (-not [string]::IsNullOrWhiteSpace($specifyOverride)) {
-        $hasSpecify = Test-Path $specifyOverride -PathType Leaf
-    } else {
-        $hasSpecify = [bool](Get-Command specify -ErrorAction SilentlyContinue)
-    }
+    $specifyCmd = Resolve-SpecifyCommand
+    $hasSpecify = -not [string]::IsNullOrWhiteSpace($specifyCmd)
 
     $repoSearch = [ordered]@{
         available = $false
@@ -86,19 +117,25 @@ function Get-LocalExecutionProtocol {
     }
     $runtimeTools = $null
     if ($hasSpecify) {
-        $specifyCmd = if (-not [string]::IsNullOrWhiteSpace($specifyOverride)) {
-            $specifyOverride
-        } else {
-            (Get-Command specify -ErrorAction SilentlyContinue).Source
-        }
+        $runtimeToolCandidates = @()
         if (-not [string]::IsNullOrWhiteSpace($specifyCmd)) {
+            $runtimeToolCandidates += $specifyCmd
+        }
+
+        $pathSpecify = Get-Command specify -ErrorAction SilentlyContinue
+        if ($pathSpecify -and ($runtimeToolCandidates -notcontains $pathSpecify.Source)) {
+            $runtimeToolCandidates += $pathSpecify.Source
+        }
+
+        foreach ($runtimeToolCandidate in $runtimeToolCandidates) {
             try {
-                $runtimeToolsJson = & $specifyCmd internal-runtime-tools
+                $runtimeToolsJson = & $runtimeToolCandidate internal-runtime-tools
                 if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($runtimeToolsJson)) {
                     $runtimeTools = $runtimeToolsJson | ConvertFrom-Json
                     $python.available = $true
                     $python.tool = 'specify-cli'
-                    $python.runner_cmd = 'specify <internal-helper-command>'
+                    $python.runner_cmd = 'specify internal-run-python --script <helper-script> -- <helper-args>'
+                    break
                 }
             } catch {
                 $runtimeTools = $null
@@ -194,6 +231,7 @@ if ($PathsOnly) {
             FEATURE_SPEC = $paths.FEATURE_SPEC
             IMPL_PLAN    = $paths.IMPL_PLAN
             TASKS        = $paths.TASKS
+            TASKS_MANIFEST = $paths.TASKS_MANIFEST
         } | ConvertTo-Json -Compress
     } else {
         Write-Output "REPO_ROOT: $($paths.REPO_ROOT)"
@@ -202,6 +240,7 @@ if ($PathsOnly) {
         Write-Output "FEATURE_SPEC: $($paths.FEATURE_SPEC)"
         Write-Output "IMPL_PLAN: $($paths.IMPL_PLAN)"
         Write-Output "TASKS: $($paths.TASKS)"
+        Write-Output "TASKS_MANIFEST: $($paths.TASKS_MANIFEST)"
     }
     exit 0
 }
@@ -256,7 +295,7 @@ if ($Json) {
 
     if ($DataModelPreflight) {
         $payload.DATA_MODEL_BOOTSTRAP = $null
-        $specifyCmd = if (-not [string]::IsNullOrWhiteSpace($env:SDD_SPECIFY_CMD)) { $env:SDD_SPECIFY_CMD } else { (Get-Command specify -ErrorAction SilentlyContinue).Source }
+        $specifyCmd = Resolve-SpecifyCommand
         if (-not [string]::IsNullOrWhiteSpace($specifyCmd)) {
             try {
                 $dataModelBootstrapJson = & $specifyCmd internal-data-model-bootstrap `
@@ -277,7 +316,7 @@ if ($Json) {
 
     if ($TaskPreflight) {
         $payload.TASKS_BOOTSTRAP = $null
-        $specifyCmd = if (-not [string]::IsNullOrWhiteSpace($env:SDD_SPECIFY_CMD)) { $env:SDD_SPECIFY_CMD } else { (Get-Command specify -ErrorAction SilentlyContinue).Source }
+        $specifyCmd = Resolve-SpecifyCommand
         if (-not [string]::IsNullOrWhiteSpace($specifyCmd)) {
             try {
                 $taskBootstrapJson = & $specifyCmd internal-task-bootstrap `
@@ -299,7 +338,8 @@ if ($Json) {
 
     if ($ImplementPreflight) {
         $payload.IMPLEMENT_BOOTSTRAP = $null
-        $specifyCmd = if (-not [string]::IsNullOrWhiteSpace($env:SDD_SPECIFY_CMD)) { $env:SDD_SPECIFY_CMD } else { (Get-Command specify -ErrorAction SilentlyContinue).Source }
+        $payload.TASKS_MANIFEST_BOOTSTRAP = $null
+        $specifyCmd = Resolve-SpecifyCommand
         if (-not [string]::IsNullOrWhiteSpace($specifyCmd)) {
             try {
                 $implementBootstrapJson = & $specifyCmd internal-implement-bootstrap `
@@ -312,8 +352,19 @@ if ($Json) {
                 if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($implementBootstrapJson)) {
                     $payload.IMPLEMENT_BOOTSTRAP = $implementBootstrapJson | ConvertFrom-Json
                 }
+
+                $tasksManifestBootstrapJson = & $specifyCmd internal-tasks-manifest-bootstrap `
+                    --feature-dir $paths.FEATURE_DIR `
+                    --plan $paths.IMPL_PLAN `
+                    --tasks $paths.TASKS `
+                    --tasks-manifest $paths.TASKS_MANIFEST
+
+                if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($tasksManifestBootstrapJson)) {
+                    $payload.TASKS_MANIFEST_BOOTSTRAP = $tasksManifestBootstrapJson | ConvertFrom-Json
+                }
             } catch {
                 $payload.IMPLEMENT_BOOTSTRAP = $null
+                $payload.TASKS_MANIFEST_BOOTSTRAP = $null
             }
         }
     }

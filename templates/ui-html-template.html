@@ -144,6 +144,18 @@
       text-transform: uppercase;
     }
 
+    .node-anchor {
+      display: inline-block;
+      margin-bottom: 8px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--accent-weak);
+      color: var(--accent);
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+
     .loop-node p {
       font-size: 0.92rem;
     }
@@ -204,6 +216,85 @@
       color: var(--ink);
     }
 
+    .trace-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .trace-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px;
+    }
+
+    .trace-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--accent-weak);
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .trace-card p {
+      margin: 10px 0 0;
+    }
+
+    .step-list,
+    .field-list {
+      margin: 14px 0 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .step-list {
+      padding-left: 20px;
+    }
+
+    .field-list {
+      list-style: none;
+      padding-left: 0;
+      display: grid;
+      gap: 12px;
+    }
+
+    .field-item {
+      border: 1px dashed var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fffcf8;
+    }
+
+    .field-item strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--ink);
+    }
+
+    .field-meta {
+      display: block;
+      margin-top: 6px;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .field-rule {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #f3ead8;
+      color: var(--warning);
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
     .flow {
       margin: 0;
       padding-left: 20px;
@@ -252,6 +343,28 @@
       background: #fff;
       color: var(--muted);
       font-size: 0.92rem;
+    }
+
+    .action-entry {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      padding: 0 14px;
+      border-radius: 10px;
+      border: 1px solid var(--accent);
+      background: var(--accent);
+      color: #f7f3eb;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .action-entry-note {
+      margin-top: 10px;
+      font-size: 0.86rem;
+      color: var(--muted);
+      line-height: 1.45;
     }
 
     @media (max-width: 640px) {
@@ -343,15 +456,51 @@
         </div>
       </article>
 
+      <article class="card">
+        <h2>UIF + UDD Focus</h2>
+        <div class="trace-grid">
+          <section class="trace-card">
+            <span class="trace-badge">UIF Interaction View</span>
+            <p>[Make the selected `UIP` path and current `UIF` nodes explicit so engineering can review the user-perspective operation flow, not just the final screen. Render one ordered item per selected `UIF` node.]</p>
+            <ol class="step-list">
+              <li>[Selected `UIP-*` path and why it is the dominant walkthrough.]</li>
+              <li>[First selected `UIF` node in execution order and the user-visible action or decision it represents.]</li>
+              <li>[Next selected `UIF` node or meaningful branch/recovery node in execution order.]</li>
+            </ol>
+          </section>
+
+          <section class="trace-card">
+            <span class="trace-badge">UDD-backed View State</span>
+            <p>[Show only the `Entity.field` rows that materially appear in the walkthrough, and map each selected `UIF` node to its step-level feedback and rule-driven state.]</p>
+            <ul class="field-list">
+              <li class="field-item">
+                <strong>[Entity.field]</strong>
+                [What the user sees at the first selected interaction step.]
+                <span class="field-meta">[Which `UIF` node causes this to appear and what feedback it provides.]</span>
+                <span class="field-rule">[Display / boundary / empty rule consumed from UDD]</span>
+              </li>
+              <li class="field-item">
+                <strong>[Entity.field]</strong>
+                [What changes at the next selected step or branch state.]
+                <span class="field-meta">[How the user perceives the change after acting.]</span>
+                <span class="field-rule">[Formatting / warning / error rule consumed from UDD]</span>
+              </li>
+            </ul>
+          </section>
+        </div>
+      </article>
+
       <section class="tool-shell">
         <article class="card tool-stage">
           <div class="loop-grid">
             <div class="loop-node node-context">
               <strong>Context</strong>
+              <div class="node-anchor">[UIF Entry Node / UIP Ref]</div>
               <p>[What the user knows before acting.]</p>
             </div>
             <div class="loop-node node-action">
               <strong>Action</strong>
+              <div class="node-anchor">[UIF Action Node / Control]</div>
               <p>[The one action that most directly expresses spec.md's main intent.]</p>
             </div>
             <div class="loop-core">
@@ -362,10 +511,12 @@
             </div>
             <div class="loop-node node-feedback">
               <strong>Feedback</strong>
+              <div class="node-anchor">[UIF Feedback Node / FR Ref]</div>
               <p>[Immediate system response or guidance that confirms the intended flow.]</p>
             </div>
             <div class="loop-node node-result">
               <strong>Result</strong>
+              <div class="node-anchor">[Entity.field / UDD Rule]</div>
               <p>[The completion content or changed state that proves spec.md's intended outcome.]</p>
             </div>
           </div>
@@ -375,6 +526,11 @@
           <article class="card">
             <h2>Action Surface</h2>
             <p>[Describe the input controls, CTA, or direct manipulation area that powers the main tool loop.]</p>
+            <a class="action-entry" href="[replace-with-target-route-or-handler]">[Primary Action Entry]</a>
+            <p class="action-entry-note">
+              [This action entry MUST map to explicit semantics: entryLabel, targetMeaning, and targetRoute or named handler.
+              If no executable target exists, render non-clickable explanatory text instead of a dead CTA.]
+            </p>
             <div class="rail">
               <span class="pill">Entry Context</span>
               <span class="pill">Primary Action</span>
@@ -383,8 +539,18 @@
           </article>
 
           <article class="card">
-            <h2>Critical Component + States</h2>
-            <p>[Describe the highest-value component and the completed user-visible data it must reveal during interaction.]</p>
+            <h2>UIF Interaction View</h2>
+            <p>[Name the current screen/view, enumerate the selected `UIF` node order, and call out the branch signal the reviewer should watch during the interaction.]</p>
+            <div class="rail">
+              <span class="pill">Current Path</span>
+              <span class="pill">Active UIF Node</span>
+              <span class="pill">Branch State</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <h2>UDD-backed View State</h2>
+            <p>[Describe the highest-value component and the completed user-visible data it must reveal during interaction, using only the selected `Entity.field` subset and mapping it to the selected `UIF` step order.]</p>
             <div class="status default">Default State</div>
             <div class="status empty">Empty State</div>
             <div class="status error">Error State</div>

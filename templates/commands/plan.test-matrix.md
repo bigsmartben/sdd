@@ -1,9 +1,9 @@
 ---
 description: Generate the pending test-matrix.md artifact and initialize binding rows from the current feature branch plan.md.
 handoffs:
-  - label: Continue Contract Queue
-    agent: sdd.plan.contract
-    prompt: Run /sdd.plan.contract with the same active feature branch context.
+  - label: Continue Data-Model Queue
+    agent: sdd.plan.data-model
+    prompt: Run /sdd.plan.data-model with the same active feature branch context.
     send: true
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json
@@ -27,18 +27,24 @@ Resolve `PLAN_FILE` from the current feature branch using `{SCRIPT}` defaults.
 
 Generate exactly one `test-matrix.md` artifact by consuming the first pending `test-matrix` row from `PLAN_FILE`.
 After writing `test-matrix.md`, initialize or refresh the `Binding Projection Index` and `Artifact Status` tables in `PLAN_FILE`.
-This stage owns feature-level test strategy: coverage scope, path decomposition, verification goals, observability signals, and the contract seed packets required downstream.
+This stage owns only two outputs:
+
+- stable binding projection from `spec.md`
+- test semantics for those bindings
+- one spec-derived `UIF Full Path (Mermaid)` section that completes the overview UIF by integrating relevant `UC`-local UIF paths into one replayable flow
+
 Use `.specify/templates/test-matrix-template.md` only. If the runtime template is missing or unreadable, stop and report the blocker instead of inferring structure from mirrors or prior outputs.
 
 ## Selection Rules
 
-1. Run `{SCRIPT}` once from repo root. Resolve `FEATURE_DIR`, `FEATURE_SPEC`, and `IMPL_PLAN`
-2. Read only the resolved `IMPL_PLAN`
+1. Run `{SCRIPT}` once from repo root. Resolve `FEATURE_DIR` and planning preflight context.
+2. Resolve `PLAN_FILE` as `<FEATURE_DIR>/plan.md` and `FEATURE_SPEC` as `<FEATURE_DIR>/spec.md`; read only the resolved `PLAN_FILE`
 3. Find the first `Stage Queue` row where:
    - `Stage ID = test-matrix`
    - `Status = pending`
-4. Require `research` and `data-model` rows to be `done`
-5. If prerequisites are not satisfied, stop and report the blocker
+4. Require resolved `FEATURE_SPEC` to be consumable
+5. Do not require `research` or `data-model` rows to be `done` before this stage
+6. Keep this stage scoped to spec-driven binding projection and test semantics only
 
 ## Stage Packet (Test-Matrix Unit)
 
@@ -47,8 +53,6 @@ Build one bounded run-local packet for the selected `test-matrix` row from:
 - selected `Stage Queue` row in resolved `PLAN_FILE`
 - `Shared Context Snapshot` in resolved `PLAN_FILE`
 - resolved `FEATURE_SPEC` path
-- resolved `research.md` path
-- resolved `data-model.md` path
 - selected row source/output fingerprint fields
 
 Use this packet as the default context for generation and binding projection.
@@ -69,28 +73,33 @@ Read only:
 - selected `Stage Queue` row from the resolved `PLAN_FILE` only
 - `Shared Context Snapshot` from the resolved `PLAN_FILE` only
 - resolved `FEATURE_SPEC`
-- `research.md`
-- `data-model.md`
 
 When consuming allowed inputs, prefer section-level rereads over whole-file replay for the selected unit.
 
-`test-matrix.md` remains the authoritative source for verification semantics and stable tuple keys.
-`test-matrix.md` also carries the per-binding contract seed packet consumed by `/sdd.plan.contract`.
-`PLAN_FILE` receives only a compact binding projection index and artifact queue rows derived from that matrix.
-Treat `data-model.md` as authoritative for globally stable owner classes/fields/states that support shared projections, derivations, counters, badges, role labels, and lifecycle guards.
-Use `spec.md` as the primary source for deciding which paths must be covered and what each path must prove; use `data-model.md` only to keep that strategy inside the declared model boundary.
+Do not consume `research.md`, `data-model.md`, repo anchors, or generated contract artifacts in this stage.
+`test-matrix.md` remains the authoritative source for verification semantics and stable binding packets.
+`PLAN_FILE` receives only the compact projection needed to select downstream contract work.
 
 ## Binding Projection Rules
 
 Project only stable and unique binding rows from `test-matrix.md` into `Binding Projection Index`.
 Do not copy scenario prose into `PLAN_FILE`.
-Project `Boundary Anchor` as the client-facing contract binding key only, preserving the first consumer-callable entry selected in `test-matrix.md`.
-For HTTP-facing bindings, keep the HTTP route as `Boundary Anchor` and the owning controller method as `Implementation Entry Anchor`.
-If a selected binding drifts away from controller-first HTTP placement, correct it back to `HTTP METHOD /path -> controller -> collaborator` and record the drift/blocker in the generation output rather than preserving the wrong tuple.
-Project only the minimum extra fields required to help `/sdd.plan.contract` select and validate the next unit without re-reading broad context.
-Keep DTO anchors, state-owner anchors, collaborator anchors, lifecycle/invariant refs, and other realization-detail evidence in `test-matrix.md`; do not mirror them into `PLAN_FILE`.
-Apply tuple legality and repo-anchor status rules exactly as defined by `.specify/templates/test-matrix-template.md`; this command only projects stable rows and routes upstream on gaps.
-Do not introduce new globally stable state owners, owner fields, or lifecycle vocabulary that are absent from `data-model.md`; when a selected binding needs them, keep the gap explicit and route upstream to `/sdd.plan.data-model`.
+
+One `BindingRowID` corresponds to one UIF-based consumer-visible interface binding unit.
+Determine uniqueness from:
+
+- consumer-visible interaction family
+- `Operation ID`
+- `IF Scope`
+- `UIF Path Ref(s)`
+
+Apply these rules exactly:
+
+- Merge happy / alternate / exception paths when they preserve the same interaction family, requirement projection, and external contract intent.
+- Represent merged-path differences only through `TC IDs`, `Scenario Ref(s)`, `Success Ref(s)`, and `Edge Ref(s)`.
+- Split bindings when UIF path family changes, UDD projection scope changes, or consumer-visible trigger/result semantics change.
+- Do not create a packet for pure internal steps.
+- Do not create a new packet for a branch or exception path that still belongs to the same binding.
 
 Required columns in each binding row:
 
@@ -102,50 +111,71 @@ Required columns in each binding row:
 - `TM ID`
 - `TC IDs`
 - `Operation ID`
-- `Boundary Anchor`
-- `Implementation Entry Anchor`
-- `Boundary Anchor Status`
-- `Implementation Entry Anchor Status`
+- `UIF Path Ref(s)`
+- `UDD Ref(s)`
 - `Test Scope`
+
+## Test Semantics Requirements
+
+`Scenario Matrix` and `Verification Case Anchors` define the bounded test semantics for each binding.
+Keep them spec-led and verification-led:
+
+- emit one `UIF Full Path (Mermaid)` section for the selected feature scope as a spec-derived overview UIF completion
+- integrate the relevant `UC`-internal UIF paths into one consumer-visible full-path map instead of leaving them fragmented across `UC` sections
+- derive that Mermaid section only from `spec.md`; do not treat it as repo realization, interface closure, or implementation sequencing
+- use the happy path as the backbone and extend it with alternate / exception / degraded branches only when they materially complete the same spec-defined path family
+- `Scenario Matrix` captures path type, preconditions, expected outcomes, and related spec refs
+- `Verification Case Anchors` captures what each case proves and how it is observed
+- use the smallest row set that still preserves materially distinct behavior
+- do not repeat `Operation ID` or `IF Scope` inside `TM/TC` rows when the owning binding packet already fixes them
+- keep `Observability / Signal` focused on pass/fail evidence
+- do not infer controllers, services, DTOs, collaborators, repository anchors, or shared-semantics ownership into the Mermaid or TM/TC outputs
 
 ## Binding Contract Packet Requirements
 
-For each stable binding in `test-matrix.md`, emit an authoritative contract seed packet that `/sdd.plan.contract` can consume without re-deriving the tuple from broad context.
+For each stable binding in `test-matrix.md`, emit one authoritative minimal packet for that binding.
 This packet remains authoritative in `test-matrix.md`; do not mirror it in full into `PLAN_FILE`.
-The packet MUST be sufficient to scope the operation-scoped `Full Field Dictionary` and the minimum targeted contract reads in `contracts/`, even when some field anchors remain explicit gaps.
+It identifies what the binding is and which spec/test slices belong to it.
 
 Each binding packet MUST include:
 
 - `BindingRowID`
 - `Operation ID`
 - `IF Scope`
-- `Boundary Anchor`
-- `Boundary Anchor Status`
-- `Boundary Anchor Strategy Evidence`
-- `Implementation Entry Anchor`
-- `Implementation Entry Anchor Status`
-- `Implementation Entry Anchor Strategy Evidence`
-- `Request DTO Anchor`
-- `Response DTO Anchor`
-- `Primary Collaborator Anchor`
-- `State Owner Anchor(s)`
+- `UIF Path Ref(s)`
+- `UDD Ref(s)`
 - `TM ID`
 - `TC IDs`
+- `Test Scope`
 - `Spec Ref(s)`
 - `Scenario Ref(s)`
 - `Success Ref(s)`
 - `Edge Ref(s)`
-- `Lifecycle Ref(s)`
-- `Invariant Ref(s)`
-- `Main Pass Anchor`
-- `Branch/Failure Anchor(s)`
 
-When the selected binding is HTTP-facing, keep the first downstream service/facade symbol in `Primary Collaborator Anchor`; if the controller symbol cannot be confirmed, set `Implementation Entry Anchor = TODO(REPO_ANCHOR)` and `Implementation Entry Anchor Status = todo` rather than guessing.
-`Primary Collaborator Anchor` MAY be `N/A`, but `State Owner Anchor(s)` MUST NOT be replaced by `Primary Collaborator Anchor`.
-`State Owner Anchor(s)` MUST identify the owner classes that this operation reads, writes, projects, or uses for state/default/validation decisions.
-When contract-visible behavior depends on lifecycle or invariant semantics, include the relevant `data-model.md` refs in `Lifecycle Ref(s)` and `Invariant Ref(s)`; otherwise keep those fields `N/A`.
-If `Boundary Anchor Status = new` or `Implementation Entry Anchor Status = new`, the matching strategy-evidence field MUST explicitly mention why `existing` was rejected and why `extended` was rejected or unsafe.
-If a required `State Owner Anchor(s)` row would introduce a new owner concept or owner field that `data-model.md` did not model as globally stable, block the selected row and send the issue back to `/sdd.plan.data-model` instead of widening Stage 2 scope.
+Field semantics MUST stay deterministic and stable:
+
+- `BindingRowID`: one stable downstream contract unit
+- `Operation ID`: spec-defined operation token
+- `IF Scope`: interface scope aligned to the same binding
+- `UIF Path Ref(s)`: consumer-visible path refs that define the interaction family
+- `UDD Ref(s)`: data refs that materially affect the binding; use `N/A` when none apply
+- `TM ID`: primary scenario row for the packet
+- `TC IDs`: ordered verification case ids for the same binding
+- `Test Scope`: concise statement of covered behavior surface
+- `Spec Ref(s)`: authoritative `UC / FR / UIF / UDD` refs
+- `Scenario Ref(s)`: scenario refs that materialize the packet
+- `Success Ref(s)`: refs proving main-path behavior
+- `Edge Ref(s)`: refs proving alternate / exception / degraded behavior
+
+Treat the packet as a spec-slice locator:
+
+- `Spec Ref(s)` must point to the authoritative `UC / FR / UIF / UDD` ids behind the binding
+- `UIF Path Ref(s)` must locate the exact consumer-visible path family that defines the binding
+- `UDD Ref(s)` must locate only the data semantics actually needed downstream
+- `Scenario Ref(s)`, `Success Ref(s)`, and `Edge Ref(s)` must be direct locator refs, not copied prose
+- the packet should eliminate rebinding work without becoming a second semantic authority beside `spec.md`
+
+If the selected packet cannot be closed from `spec.md` and selected plan-row context, keep the missing projection explicit in stage output and set blockers.
 
 For each `BindingRowID`, initialize exactly one `Artifact Status` row:
 
@@ -175,10 +205,12 @@ Update only:
 
 Emit a `Handoff Decision` section in the runtime output with exactly these fields:
 
-- `Next Command`: `/sdd.plan.contract`
-- `Decision Basis`: `Binding Projection Index` and `Artifact Status` are refreshed from `test-matrix.md`, and the next planning unit starts at the first pending `contract` row
+- `Next Command`: `/sdd.plan.data-model`
+- `Decision Basis`: `test-matrix` derives stable binding projections and test semantics from `spec.md`; `data-model` aligns shared semantics for those bindings before contract design
 - `Selected Stage ID`: selected `test-matrix` stage row id
 - `Ready/Blocked`: `Ready` when binding rows and artifact rows are initialized successfully; otherwise `Blocked`
+
+`Ready/Blocked` is stage-local readiness only and MUST NOT be treated as cross-artifact final PASS/FAIL; centralized final gating belongs to `/sdd.analyze`.
 
 ## Final Output
 

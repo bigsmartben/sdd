@@ -72,14 +72,14 @@ def test_constitution_command_groups_alignment_work_and_avoids_redundant_restate
 def test_constitution_command_uses_active_agent_command_directory_guidance():
     content = read("templates/commands/constitution.md")
 
-    assert "Read each command file in the active agent command directory" in content
+    assert "read only impacted command files in the active agent command directory" in content
     assert ".roo/commands/*.md" in content
     assert ".claude/commands/*.md" in content
     assert ".github/agents/*.agent.md" in content
     assert ".gemini/commands/*.toml" in content
-    assert "if `templates/commands/*.md` exists in this repository, review it as well" in content
+    assert "If `templates/commands/*.md` exists in this repository, treat it as mirror/reference and update only impacted files." in content
     assert "Runtime template authority path is `.specify/templates/`" in content
-    assert "use the `templates/` mirror for the same files" in content
+    assert "Runtime workspace rule" in content
 
 
 def test_constitution_command_uses_current_constitution_state_not_placeholder_premise():
@@ -91,8 +91,8 @@ def test_constitution_command_uses_current_constitution_state_not_placeholder_pr
     assert "Do not substitute `templates/constitution-template.md` or any other template location." in content
     assert "do not force a template-token rewrite pass" in content
     assert "This file is a TEMPLATE containing placeholder tokens" not in content
-    assert "Treat the target runtime repo and the Spec Kit source repo as different workspaces." in content
-    assert "do not create, inspect, or reconcile `.specify/memory/**` as if it were runtime output" in content
+    assert "This command runs against the runtime workspace only." in content
+    assert "Treat the target runtime repo and the Spec Kit source repo as different workspaces." not in content
 
 
 def test_constitution_command_owns_repository_first_baseline_pipeline():
@@ -151,6 +151,12 @@ def test_constitution_command_enforces_repo_anchor_priority_and_ownership_split(
     assert "`/sdd.analyze` validates `new`-anchor evidence and fails when missing" in content
     assert "`/sdd.tasks` and `/sdd.implement` block execution when active tuples remain unresolved or missing required strategy evidence" in content
     assert "Repo-anchor strategy wording preserves strict priority semantics (`existing -> extended -> new`) and explicit rejection-evidence requirements for `new`." in content
+    assert "Unified Repository-First Gate Protocol (`URFGP`)" in content
+    assert "/sdd.plan`, `/sdd.tasks`, `/sdd.implement`, and `/sdd.analyze` MUST reference `URFGP`" in content
+    assert "Repository-First Evidence Bundle (`RFEB`)" in content
+    assert "`source_refs`" in content
+    assert "`signal_ids` (`SIG-*`" in content
+    assert "`module_edge_ids`" in content
 
 
 def test_repository_first_templates_require_complete_and_explainable_outputs():

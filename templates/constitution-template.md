@@ -108,6 +108,23 @@ Writing guidance only; do not surface this scaffold in the runtime constitution:
 - "Hard Execution Gate" means minimum run-blocking checks required for safe execution.
 -->
 
+### Repo Anchor Role Taxonomy (Normative)
+
+- Canonical repo-anchor roles are:
+  - `owner`: canonical owner of identity/lifecycle/semantic boundary
+  - `state-source`: authoritative source of stable state vocabulary/values
+  - `projection-source`: authoritative source for stable read/projection semantics
+  - `boundary-owner`: authoritative first consumer-callable boundary evidence
+  - `transport-carrier`: request/response transport shell
+  - `context-carrier`: context-only carrier (params/session/request context)
+  - `carrier`: coarse carrier label allowed only when downstream template uses non-split carrier vocabulary
+  - `partial-lineage`: partial field lineage without full owner semantics
+- State-owner closure rule:
+  - only `owner`, `state-source`, and `projection-source` MAY close `State Owner Anchor(s)`
+  - `transport-carrier`, `context-carrier`, `carrier`, and `partial-lineage` are supporting evidence only and MUST NOT be silently upgraded to state-owner closure
+- Boundary-evidence rule:
+  - `boundary-owner` is boundary evidence only and MUST NOT be reused as a state-owner closure role unless independently qualified as `owner`/`state-source`/`projection-source`
+
 ### Repo-Anchor Evidence Protocol
 
 Constitution-level repository-first facts MUST define stable evidence classes,
@@ -125,6 +142,7 @@ commands.
     - target repo-backed `path::symbol` and required upstream synchronization actions
 - Ownership binding for this strategy (hard rule):
   - generation commands (`/sdd.plan.*`) own recording the evaluation and selected strategy
+  - generation commands MAY enforce stage-local readiness gates for selected rows/tuples, but these gates are not cross-artifact final PASS/FAIL decisions
   - `/sdd.analyze` owns compliance validation and MUST fail when `new` anchor evidence is missing
   - `/sdd.tasks` and `/sdd.implement` own execution blocking when active tuples still carry unresolved/todo anchors or missing strategy evidence
 - Repository-first analysis is limited to two conclusions:
@@ -235,6 +253,11 @@ These rules should focus on compatibility, simplicity, and controlled evolution.
 ## Compliance & Review Expectations
 
 This section defines lightweight expectations for constitution checks in downstream work.
+
+Local-vs-global gate boundary (hard rule):
+
+- stage-level checks in generation commands (for example `/sdd.plan.*` consistency/readiness checks) are local readiness gates only
+- cross-artifact final PASS/FAIL ownership remains centralized in `/sdd.analyze`
 
 <!--
 Writing guidance only; do not surface this scaffold in the runtime constitution:

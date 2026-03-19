@@ -1,79 +1,129 @@
 # Feature Verification Design: [FEATURE]
 
 **Stage**: Stage 2 Feature Verification Design
-**Inputs**: `spec.md`, `research.md`, `data-model.md`
+**Inputs**: `spec.md`
 
-Use this artifact to define scenario-oriented software test design for the feature. Cover main, branch, exception, and degraded behavior without turning the document into an audit ledger.
-Keep the matrix minimal-but-sufficient: merge pure permutations with identical observable outcomes, and add a new row only when path semantics, preconditions, or expected outcomes materially differ.
+Use this artifact to project spec-defined verification semantics into stable binding packets.
+`test-matrix.md` is authoritative for:
+
+- scenario-oriented test semantics
+- stable `BindingRowID` generation from `spec.md`
+- minimal binding packets for selected bindings
 
 ## Coverage Strategy
 
-- [Coverage scope: which spec paths must be verified and why]
-- [Path decomposition: which main / branch / failure / degraded paths must stay distinct]
-- [Verification goals and observability signals for each path family]
-- [How the selected strategy seeds downstream `Binding Contract Packets` and bounded contract reads]
-- [How `spec.md` scenarios are translated into verifiable paths]
-- [Where shared invariants, lifecycle, or role boundaries affect coverage]
-- [Where projections/derivations depend on globally stable owner classes or owner fields from `data-model.md`]
+- [Coverage scope: which `UC / FR / UIF / UDD` paths must be verified and why]
+- [Path decomposition: which happy / alternate / exception paths must stay distinct in test semantics]
+- [Binding strategy: how spec paths collapse into stable `BindingRowID` units]
+- [Observability strategy: which signals prove each path family]
 
-## Stable Binding Keys (Required)
+## UIF Full Path (Mermaid)
 
-- Keep `TM ID` and `TC ID` stable once referenced downstream.
-- For every scenario/case row, populate `Operation ID`, `Boundary Anchor`, `IF Scope`, `Repo Anchor`, and `Anchor Status` (use explicit `N/A` when not interface-scoped).
-- `Boundary Anchor` is normative only when it is one of: HTTP `METHOD /path`, `event.topic`, RPC/Façade method, CLI command, or explicit `N/A`.
-- `Boundary Anchor` MUST identify the first consumer-callable entry used for contract binding; do not project internal service/manager/mapper handoff symbols here.
-- If the consumer enters through HTTP, prefer `HTTP METHOD /path`; if the consumer enters through a stable RPC/Façade surface, use `Facade.method`.
-- `BA-*` labels are invalid as normative boundary anchors and may appear only as non-normative helper labels.
-- Apply repo-anchor decision order `existing -> extended -> new`.
-- `extended` is valid only for same-entity field/state expansion.
-- `new` is normative only when explicit `path::symbol` target evidence is provided.
-- If explicit target evidence is missing, set `Anchor Status = todo` and keep the row non-normative forward-looking only.
-- Keep `Operation ID` / `Boundary Anchor` / `IF Scope` values stable; `/sdd.plan.contract` MUST consume these tuple keys verbatim and MUST NOT redefine them.
-- `Implementation Entry Anchor` MUST NOT be added to `Scenario Matrix` or `Verification Case Anchors` tuple keys.
-- `Implementation Entry Anchor` is allowed only in `Binding Contract Packets` as a contract-seed field for `/sdd.plan.contract`.
-- For HTTP-facing bindings, `Boundary Anchor` MUST stay `HTTP METHOD /path`, `Implementation Entry Anchor` MUST stay the owning controller method, and downstream service/facade symbols MUST remain collaborators only.
-- `Request DTO Anchor`, `Response DTO Anchor`, and `State Owner Anchor(s)` MAY remain `TODO(REPO_ANCHOR)` only as explicit contract gap sources; they MUST NOT trigger a fallback back to minimal-field contract output.
-- Do not invent new globally stable owner classes, owner fields, or lifecycle vocabulary here; if verification semantics need them, route the gap back to `data-model.md`.
-- Main-path verification binding MUST use tuples with `Anchor Status = existing|extended|new`. Rows with `Anchor Status = todo` MUST NOT enter primary verification path rows.
+Purpose: spec-derived overview UIF completion for the selected feature scope. Integrate the consumer-visible UIF paths already defined inside relevant `UC` sections into one full-path interaction map from `spec.md`, not a repository realization or implementation sequence.
+
+```mermaid
+flowchart TD
+    Start["UIF Start"] --> Happy["Happy Path Backbone"]
+    Happy --> Success["Success Outcome"]
+    Happy --> Alternate["Alternate Branch"]
+    Happy --> Exception["Exception / Degraded Branch"]
+```
+
+Rules:
+
+- Derive this section only from `spec.md`.
+- Use this section to complete the overview-level UIF by integrating the relevant `UC`-internal UIF paths into one replayable consumer-visible map.
+- Use the happy path as the backbone of the full-path UIF.
+- Add alternate, exception, or degraded branches only when they materially complete the consumer-visible path family defined in spec.
+- Keep branch nodes aligned with the same path family unless the spec requires a different binding unit.
+- Cite node or edge labels with the same `UIF Path Ref(s)`, `Scenario Ref(s)`, `Success Ref(s)`, and `Edge Ref(s)` used by the binding packet where relevant.
+- Do not infer controllers, services, collaborators, DTOs, state owners, or repository hops here.
+- Do not treat this diagram as interface design evidence; it exists only to make spec-defined interaction flow replayable during downstream reads.
 
 ## Scenario Matrix
 
-| TM ID | Operation ID | Boundary Anchor | IF Scope | Repo Anchor | Anchor Status | Path Type | Scenario | Preconditions | Expected Outcome | Related Ref |
-|-------|--------------|-----------------|----------|-------------|---------------|-----------|----------|---------------|------------------|-------------|
-| TM-001 | [operationId or N/A] | [HTTP `METHOD /path` \| `event.topic` \| `Facade.method` \| `cli command` \| `N/A`] | [IF-### or N/A] | [`path/to/file.ext::Symbol` or `TODO(REPO_ANCHOR)`] | [`existing` \| `extended` \| `new` \| `todo`] | Main | [Scenario] | [State or setup] | [Observable result] | [UC / UIF / FR] |
+Purpose: test semantics only; no interface-design closure.
+
+| TM ID | Path Type | Scenario | Preconditions | Expected Outcome | Related Ref |
+|-------|-----------|----------|---------------|------------------|-------------|
+| TM-001 | [`Happy` \| `Alternate` \| `Exception` \| `Degraded`] | [Scenario summary] | [Required state/setup] | [Observable outcome] | [UC / UIF / FR / UDD / SC / EC refs] |
+
+Rules:
+
+- Keep rows minimal; add a new `TM ID` only when path semantics, preconditions, or expected outcomes materially differ.
+- `Related Ref` should cite the spec evidence that makes the scenario necessary.
+- `Scenario Matrix` rows may share one `BindingRowID`; scenario identity and binding identity are not the same thing.
+- Do not repeat `Operation ID` or `IF Scope` here when the owning binding packet already fixes them.
 
 ## Verification Case Anchors
 
-| TC ID | TM ID | Operation ID | Boundary Anchor | IF Scope | Repo Anchor | Anchor Status | Verification Goal | Observability / Signal |
-|-------|-------|--------------|-----------------|----------|-------------|---------------|-------------------|------------------------|
-| TC-001 | TM-001 | [operationId or N/A] | [same as scenario row or N/A] | [IF-### or N/A] | [same as scenario row] | [same as scenario row] | [What this case proves] | [Assertion, signal, or check] |
+Purpose: verification goals and observable checks for each scenario unit.
+
+| TC ID | TM ID | Verification Goal | Observability / Signal | Related Ref |
+|-------|-------|-------------------|------------------------|-------------|
+| TC-001 | TM-001 | [What this case proves] | [Assertion, signal, or measurable check] | [SC / EC / FR / UIF / UDD refs] |
+
+Rules:
+
+- Keep `TC ID` stable and reusable across reruns.
+- `Observability / Signal` should state what must be observed for the case to pass.
+- Use multiple `TC ID` rows when one scenario needs separate observable guarantees.
+- Do not repeat binding identity fields here when `TM ID` plus the owning packet already resolves the binding.
 
 ## Binding Contract Packets
 
-Use this section to emit the authoritative per-binding contract seed packet consumed by `/sdd.plan.contract`.
-Keep the packet compact and tuple-oriented; do not restate scenario prose or realization-design narrative here.
-This packet scopes the operation-scoped `Full Field Dictionary` and the minimum targeted contract reads in `contracts/`; it does not claim field-level closure on its own, and it does not authorize a fallback to minimal-field contract output.
-When either anchor status is `new`, the packet MUST carry concise strategy evidence showing why `existing` was rejected and why `extended` was rejected or unsafe.
+Purpose: minimal binding locator packet for the selected interaction unit.
 
-| BindingRowID | Operation ID | IF Scope | Boundary Anchor | Boundary Anchor Status | Boundary Anchor Strategy Evidence | Implementation Entry Anchor | Implementation Entry Anchor Status | Implementation Entry Anchor Strategy Evidence | Request DTO Anchor | Response DTO Anchor | Primary Collaborator Anchor | State Owner Anchor(s) | TM ID | TC IDs | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) | Lifecycle Ref(s) | Invariant Ref(s) | Main Pass Anchor | Branch/Failure Anchor(s) |
-|--------------|--------------|----------|-----------------|------------------------|-----------------------------------|-----------------------------|------------------------------------|-----------------------------------------------|--------------------|--------------------|-----------------------------|-----------------------|-------|--------|-------------|-----------------|----------------|-------------|------------------|------------------|------------------|--------------------------|
-| BR-001 | [operationId or N/A] | [IF-### or N/A] | [HTTP `METHOD /path` \| `event.topic` \| `Facade.method` \| `cli command` \| `N/A`] | [`existing` \| `extended` \| `new` \| `todo`] | [`existing: ...; extended: ...` or `N/A`] | [`path/to/file.ext::Symbol` or `TODO(REPO_ANCHOR)`] | [`existing` \| `extended` \| `new` \| `todo`] | [`existing: ...; extended: ...` or `N/A`] | [`path/to/file.ext::Symbol` or `N/A` or `TODO(REPO_ANCHOR)`] | [`path/to/file.ext::Symbol` or `N/A` or `TODO(REPO_ANCHOR)`] | [`path/to/file.ext::Symbol` or `N/A` or `TODO(REPO_ANCHOR)`] | [[`path/to/file.ext::Symbol`, `path/to/file.ext::Symbol`] or `N/A` or `TODO(REPO_ANCHOR)`] | [TM-001] | [TC-001, TC-002] | [UC / UIF / FR refs] | [SC / scenario refs] | [success refs] | [edge / EC refs] | [Lifecycle: EntityName or `N/A`] | [INV-001, INV-002 or `N/A`] | [primary success check] | [branch or failure checks] |
+| BindingRowID | Operation ID | IF Scope | UIF Path Ref(s) | UDD Ref(s) | TM ID | TC IDs | Test Scope | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) |
+|--------------|--------------|----------|-----------------|------------|-------|--------|------------|-------------|-----------------|----------------|-------------|
+| BR-001 | [operationId or N/A] | [IF-### or N/A] | [UIF path refs] | [UDD refs or `N/A`] | [TM-001] | [TC-001, TC-002] | [Binding-scoped test coverage summary] | [UC / FR / UIF / UDD refs] | [TM / SC refs] | [Success refs] | [Edge / EC refs or `N/A`] |
 
-## Boundary Notes
+## Binding Projection Protocol (Required)
 
-- Keep this artifact in the planning flow as feature-level test design only.
-- Prefer the smallest scenario/case set that still preserves meaningful path coverage and stable downstream bindings.
-- Emit one `Binding Contract Packets` row for every stable binding row that will enter the contract queue.
-- Keep tuple-key status semantics explicit: packet `Boundary Anchor Status` and `Implementation Entry Anchor Status` must be projected separately; do not collapse them into one ambiguous status token.
-- If either packet anchor status is `new`, the matching strategy-evidence column MUST explicitly mention both `existing` and `extended` rejection evidence; do not leave the cell empty or reduce it to a bare target path.
-- Bind TM/TC rows to tuples with `Anchor Status = existing|extended|new` for normative verification; keep rows with `Anchor Status = todo` out of the main validation path.
-- Treat `Boundary Anchor` as the client-facing contract entry only; keep internal implementation handoff anchors for contract realization design sections.
-- For HTTP-facing bindings, keep the controller method in `Implementation Entry Anchor` and the first downstream service/facade hop in `Primary Collaborator Anchor`.
-- `State Owner Anchor(s)` MUST identify the owner classes that this operation reads, writes, projects, or uses for state/default/validation decisions; do not substitute the collaborator list here.
-- `Lifecycle Ref(s)` and `Invariant Ref(s)` SHOULD point to `data-model.md` only when contract-visible behavior depends on lifecycle or invariant semantics; otherwise keep them `N/A`.
-- If later contract generation surfaces tuple drift, repair this packet via `/sdd.plan.test-matrix`; do not let downstream commands rewrite Stage 2 tuple seeds.
-- `State Owner Anchor(s)` MUST trace back to owner classes/fields already modeled as globally stable in `data-model.md`; contract stage may widen operation-scoped field coverage, but it MUST NOT mint a new owner concept.
-- `Primary Collaborator Anchor` MAY be `N/A`, but `State Owner Anchor(s)` MUST NOT be replaced by `Primary Collaborator Anchor`.
-- Contract-seed coverage is operation-scoped and bounded: it identifies request/response surfaces, owner surfaces, and model refs the contract must preserve without duplicating the full field dictionary.
-- Treat `BA-*` as non-normative shorthand only; never use it as a normative tuple key.
-- Do not redefine contract fields, interface internals, audit tables, or traceability ledgers here.
+- Keep `TM ID`, `TC ID`, and `BindingRowID` stable once referenced downstream.
+- One `BindingRowID` represents one consumer-visible northbound interface binding unit.
+- A binding unit is uniquely determined by:
+  - consumer-visible interaction family
+  - `Operation ID`
+  - `IF Scope`
+  - `UIF Path Ref(s)`
+- Merge happy / alternate / exception paths into one `BindingRowID` when they keep the same interaction family, requirement projection, and external contract intent.
+- Express path differences through `TC IDs`, `Scenario Ref(s)`, `Success Ref(s)`, and `Edge Ref(s)` instead of minting a new binding row.
+- Split into different `BindingRowID` values when any of these change materially:
+  - UIF path family
+  - UDD projection scope
+  - consumer-visible trigger/result semantics
+- Do not emit a binding packet for pure internal steps that do not create an independent consumer-visible interface binding.
+- Do not emit a new binding packet for a branch or exception path that still belongs to the same binding unit.
+- Read only spec-grounded semantics here.
+
+### Packet Field Semantics (Mandatory)
+
+- `BindingRowID`: stable binding projection key; one row equals one downstream contract unit
+- `Operation ID`: spec-level operation token for this binding unit
+- `IF Scope`: interface scope aligned to the same binding
+- `UIF Path Ref(s)`: consumer-visible UIF path refs that define the interaction family
+- `UDD Ref(s)`: data refs that materially affect this binding; use `N/A` when none apply
+- `TM ID`: primary scenario row that anchors the packet
+- `TC IDs`: ordered verification case ids that belong to the same binding
+- `Test Scope`: short statement of what behavior surface this packet must preserve
+- `Spec Ref(s)`: authoritative `UC / FR / UIF / UDD` refs for this binding
+- `Scenario Ref(s)`: scenario rows or spec scenario refs that materialize the packet
+- `Success Ref(s)`: refs that prove expected main-path behavior
+- `Edge Ref(s)`: refs that prove alternate / exception / degraded behavior
+
+### Spec Slice Locator Rules (Mandatory)
+
+- Treat every packet as a spec-slice locator, not as a prose summary of `spec.md`.
+- `Spec Ref(s)` MUST identify the authoritative `UC / FR / UIF / UDD` ids that define the binding; do not restate their text here.
+- `UIF Path Ref(s)` MUST point to the exact consumer-visible path family that made this binding executable.
+- `UDD Ref(s)` MUST point only to the data semantics actually needed for downstream design or shared-semantic alignment; do not copy unrelated data references.
+- `Scenario Ref(s)`, `Success Ref(s)`, and `Edge Ref(s)` MUST be direct locator refs, not paraphrased outcome text.
+- If a required spec slice cannot be located exactly, keep the gap explicit and block the packet rather than embedding a prose interpretation.
+
+## Notes
+
+- `test-matrix.md` is the stage that fixes the ref-level mapping from binding to spec/test slices.
+- `UIF Full Path (Mermaid)` completes the spec overview UIF by integrating `UC`-local UIF paths into one replay aid for the same binding/test semantics, not a second implementation authority.
+- Packets should remove rebinding work without duplicating `spec.md` prose.
+- Downstream stages may consume these packets, but they must not rewrite `BindingRowID` or binding meaning.

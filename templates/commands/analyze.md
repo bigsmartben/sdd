@@ -1,5 +1,5 @@
 ---
-description: Perform the centralized pre-implementation semantic audit and gate decision across spec.md, plan.md, and tasks.md.
+description: Perform the centralized pre-implementation semantic audit and cross-artifact gate decision, using spec.md/plan.md/tasks.md as mandatory core inputs.
 handoffs:
   - label: Proceed to Implementation
     agent: sdd.implement
@@ -28,6 +28,13 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 The latest run block in `analyze-history.md` is the only authoritative analyze gate input for `/sdd.implement`.
 
+## Governance Guardrails (Mandatory)
+
+- **Authority rule**: `/sdd.analyze` is the sole cross-artifact audit authority before implementation. It owns the final PASS/FAIL decision across mandatory core artifacts (`spec.md`, `plan.md`, `tasks.md`) and any existing planning artifacts required by the selected evidence path (`research.md`, `data-model.md`, `test-matrix.md`, `contracts/`).
+- **Stage boundary rule**: `/sdd.analyze` reports findings and remediation owners only. It MUST NOT rewrite semantic source artifacts or locally "repair" drift by mutating planning/design outputs.
+- **Gate ownership rule**: commands other than `/sdd.analyze` may emit local readiness checks, but cross-artifact final PASS/FAIL claims are valid only from this stage.
+- **Shared protocol rule**: treat **Unified Repository-First Gate Protocol (`URFGP`)** as the shared authority for repository-first gate evaluation and owner-command routing.
+
 ## Read Only
 
 1. Run `{SCRIPT}` once and resolve:
@@ -49,6 +56,10 @@ The latest run block in `analyze-history.md` is the only authoritative analyze g
    - matrix dependency facts plus `SIG-*` governance signals including divergence, version-source-mix, and `unresolved`
    - minimal supporting facts for conclusions (path-level default; line-level only when ambiguity/conflict requires precision)
    - invocation governance using concrete module-to-module rows as the primary representation
+   - **Repository-First Evidence Bundle (`RFEB`)** schema when persisting decision evidence:
+     - `fact -> conclusion`
+     - `source_refs`
+     - `signal_ids` and/or `module_edge_ids`
 
 ## Write Only
 
@@ -74,10 +85,11 @@ Mandatory stale-row routing:
 - stale `test-matrix` or missing binding rows -> `/sdd.plan.test-matrix`
 - stale `contract` -> `/sdd.plan.contract`
 
-Tuple drift routing:
+Projection drift routing:
 
-- if `Binding Projection Index` differs from the selected `Binding Contract Packets` row for the same `BindingRowID`, route `/sdd.plan.test-matrix` to repair the upstream tuple seed.
-- if a generated contract tuple differs from the upstream selected packet for the same `BindingRowID`, treat it as contract projection drift: repair the upstream owner first (`/sdd.plan.test-matrix` or `/sdd.plan.data-model`), then regenerate `/sdd.plan.contract`.
+- if `Binding Projection Index` differs from the selected `Binding Contract Packets` row for the same `BindingRowID`, route `/sdd.plan.test-matrix` to repair the upstream binding projection
+- if a generated contract contradicts the selected packet or selected `data-model` constraints for the same `BindingRowID`, treat it as contract projection drift and repair the upstream owner first (`/sdd.plan.test-matrix` for binding projection errors, `/sdd.plan.data-model` for shared semantic errors), then regenerate `/sdd.plan.contract`
+- if the generated contract only differs in inferred boundary/entry/DTO/collaborator realization while remaining consistent with binding projection and shared semantic constraints, treat it as contract-stage design output rather than upstream drift
 
 CRITICAL/HIGH findings MUST cite the authoritative source artifact(s) with concise supporting facts.
 
@@ -90,7 +102,7 @@ Output exactly one decision:
 
 When `FAIL`, include blocker list with supporting facts and remediation owner command (`/sdd.constitution`, `/sdd.specify`, `/sdd.plan.*`, or `/sdd.tasks`).
 
-Default blocking classes include unresolved normative anchors (`BA-*`, `TODO(REPO_ANCHOR)`, `Anchor Status = todo`, `Implementation Entry Anchor Status = todo`), missing `Full Field Dictionary (Operation-scoped)`, unresolved contract projection drift, upstream tuple-seed drift across `plan.md` / `test-matrix.md`, controller-first violations, repository-first baseline gaps, and stale control-plane fingerprints.
+Default blocking classes include unresolved normative anchors (`BA-*`, `TODO(REPO_ANCHOR)`, `Anchor Status = todo`, `Implementation Entry Anchor Status = todo`), unresolved placeholder class/type labels in contract artifacts, missing `Full Field Dictionary (Operation-scoped)`, unresolved contract projection drift, upstream binding-projection drift across `plan.md` / `test-matrix.md`, controller-first violations, repository-first baseline gaps, and stale control-plane fingerprints.
 
 Additional blocking requirement: any active tuple selecting `new` anchors without explicit rejection evidence for both `existing` and `extended` is `FAIL` and must route to the relevant `/sdd.plan.*` owner command.
 
@@ -108,6 +120,7 @@ Return one compact report with:
 4. metrics summary
 5. `Gate Decision:`
 6. next actions by owner command
+7. repository-first evidence bundles (`RFEB`) for blocking findings, when applicable
 
 ## Persist Analyze History
 

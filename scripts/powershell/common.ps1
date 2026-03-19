@@ -131,6 +131,7 @@ function New-FeaturePathsObject {
         FEATURE_SPEC          = $FeatureSpec
         IMPL_PLAN             = $ImplPlan
         TASKS                 = Join-Path $FeatureDir 'tasks.md'
+        TASKS_MANIFEST        = Join-Path $FeatureDir 'tasks.manifest.json'
         RESEARCH              = Join-Path $FeatureDir 'research.md'
         DATA_MODEL            = Join-Path $FeatureDir 'data-model.md'
         TEST_MATRIX           = Join-Path $FeatureDir 'test-matrix.md'

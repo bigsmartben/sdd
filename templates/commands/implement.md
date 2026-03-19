@@ -23,9 +23,16 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 Comprehensive audit ownership remains with `/sdd.analyze`.
 
+## Governance Guardrails (Mandatory)
+
+- **Authority rule**: `/sdd.implement` is authoritative only for runtime execution progress and task-state transitions. It MUST NOT override semantic authority in `spec.md`, `plan.md`, `data-model.md`, `test-matrix.md`, or `contracts/`.
+- **Stage boundary rule**: execute approved task packages only. Do not backfill planning/design artifacts, assign implementation ownership semantics such as `Repo Anchor Role`, or rewrite contract/schema semantics.
+- **Gate ownership rule**: this stage enforces run-local execution safety and analyze-readiness gating only. Cross-artifact final PASS/FAIL remains owned by `/sdd.analyze`.
+- **Shared protocol rule**: apply **Unified Repository-First Gate Protocol (`URFGP`)** as the shared authority for repository-first execution gating and remediation routing.
+
 ## Read Only
 
-1. Run `{SCRIPT}` once and parse `FEATURE_DIR`, `AVAILABLE_DOCS`, `LOCAL_EXECUTION_PROTOCOL`, and `IMPLEMENT_BOOTSTRAP`.
+1. Run `{SCRIPT}` once and parse `FEATURE_DIR`, `AVAILABLE_DOCS`, `LOCAL_EXECUTION_PROTOCOL`, `IMPLEMENT_BOOTSTRAP`, and `TASKS_MANIFEST_BOOTSTRAP`.
 2. Treat `IMPLEMENT_BOOTSTRAP.analyze_readiness` as the primary analyze hard gate.
 3. If `IMPLEMENT_BOOTSTRAP` is missing, malformed, or contradictory, perform one bounded fallback validation from latest `analyze-history.md` run block and current `spec.md` / `plan.md` / `tasks.md` SHA-256 values.
 4. Parse optional runtime mode:
@@ -34,6 +41,7 @@ Comprehensive audit ownership remains with `/sdd.analyze`.
 5. Parse optional explicit waiver: `waive-analyze-gate`.
 6. Runtime source preference:
    - use `tasks.manifest.json` when schema validation passes
+   - prefer `TASKS_MANIFEST_BOOTSTRAP.validation` as the packaged manifest gate when available
    - fallback to `tasks.md` parsing when manifest is missing or invalid
 7. Read `plan.md` only as control-plane context (`Shared Context Snapshot`, `Stage Queue`, `Artifact Status`, `Binding Projection Index`) and resolved artifact paths; do not treat it as a semantic source for architecture/contract/model requirements.
 8. Read support artifacts only when required by active tasks (`contracts/`, `data-model.md`, `test-matrix.md`, `research.md`).
@@ -80,6 +88,7 @@ Do not invent missing semantics in this command:
 - no conversion of `TODO(REPO_ANCHOR)` into executable semantics
 - no bypass of repo-anchor strategy priority (`existing -> extended -> new`)
 - no local CLI trial-and-error outside `LOCAL_EXECUTION_PROTOCOL` and repo-backed task anchors
+- no cross-artifact final PASS/FAIL claim in this stage
 
 ## Final Output
 
@@ -90,5 +99,8 @@ Return a concise execution summary:
 3. completed / failed / blocked tasks
 4. dependency-closure validation result
 5. completion-anchor validation result
-6. `Repository-first Validation Trace` with consumed canonical dependency and module-edge rows
+6. `Repository-first Validation Trace` with consumed canonical dependency and module-edge rows, formatted as **Repository-First Evidence Bundle (`RFEB`)** entries:
+   - `fact -> conclusion`
+   - `source_refs`
+   - `signal_ids` and/or `module_edge_ids`
 7. follow-up remediation owner command when execution cannot continue
