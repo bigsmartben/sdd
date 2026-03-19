@@ -48,6 +48,40 @@ def clean_cell(value: str) -> str:
     return value.strip().strip("`").strip()
 
 
+def parse_markdown_cells(line: str) -> list[str]:
+    stripped = line.strip()
+    if not (stripped.startswith("|") and stripped.endswith("|")):
+        return []
+
+    content = stripped.strip("|")
+    cells: list[str] = []
+    current: list[str] = []
+    escaping = False
+
+    for ch in content:
+        if escaping:
+            if ch in {"|", "\\"}:
+                current.append(ch)
+            else:
+                current.append("\\")
+                current.append(ch)
+            escaping = False
+            continue
+        if ch == "\\":
+            escaping = True
+            continue
+        if ch == "|":
+            cells.append("".join(current))
+            current = []
+            continue
+        current.append(ch)
+
+    if escaping:
+        current.append("\\")
+    cells.append("".join(current))
+    return cells
+
+
 def resolve_target_path(feature_dir: Path, raw_path: str) -> str:
     normalized = clean_cell(raw_path)
     if not normalized:
@@ -85,10 +119,10 @@ def parse_markdown_table(section: str | None) -> list[dict[str, str]]:
     if len(table_lines) < 2:
         return []
 
-    headers = [clean_cell(cell) for cell in table_lines[0].strip().strip("|").split("|")]
+    headers = [clean_cell(cell) for cell in parse_markdown_cells(table_lines[0])]
     rows: list[dict[str, str]] = []
     for line in table_lines[2:]:
-        cells = [clean_cell(cell) for cell in line.strip().strip("|").split("|")]
+        cells = [clean_cell(cell) for cell in parse_markdown_cells(line)]
         if len(cells) != len(headers):
             continue
         row = {header: cell for header, cell in zip(headers, cells)}

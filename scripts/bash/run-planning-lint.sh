@@ -95,6 +95,59 @@ trim() {
     printf '%s' "$value"
 }
 
+parse_markdown_cells() {
+    local line="$1"
+    MARKDOWN_CELLS=()
+
+    if [[ ! "$line" =~ ^[[:space:]]*\|.*\|[[:space:]]*$ ]]; then
+        return 1
+    fi
+
+    local line_trimmed
+    local content
+    local cell=''
+    local escaped=false
+    local idx
+    local ch
+
+    line_trimmed="$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    content="${line_trimmed#|}"
+    content="${content%|}"
+
+    for ((idx = 0; idx < ${#content}; idx++)); do
+        ch="${content:idx:1}"
+
+        if [[ "$escaped" == true ]]; then
+            if [[ "$ch" == "|" || "$ch" == "\\" ]]; then
+                cell+="$ch"
+            else
+                cell+="\\$ch"
+            fi
+            escaped=false
+            continue
+        fi
+
+        if [[ "$ch" == "\\" ]]; then
+            escaped=true
+            continue
+        fi
+
+        if [[ "$ch" == "|" ]]; then
+            MARKDOWN_CELLS+=("$(trim "$cell")")
+            cell=''
+            continue
+        fi
+
+        cell+="$ch"
+    done
+
+    if [[ "$escaped" == true ]]; then
+        cell+="\\"
+    fi
+    MARKDOWN_CELLS+=("$(trim "$cell")")
+    return 0
+}
+
 json_escape() {
     local s="$1"
     s=${s//\\/\\\\}
@@ -573,15 +626,8 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                         fi
                     fi
 
-                    if [[ "$line" =~ ^[[:space:]]*\|.*\|[[:space:]]*$ ]]; then
-                        line_trimmed="$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-                        content="${line_trimmed#|}"
-                        content="${content%|}"
-                        IFS='|' read -r -a raw_cells <<< "$content"
-                        cells=()
-                        for cell in "${raw_cells[@]}"; do
-                            cells+=("$(trim "$cell")")
-                        done
+                    if parse_markdown_cells "$line"; then
+                        cells=("${MARKDOWN_CELLS[@]}")
 
                         if [[ "$in_table" == false ]]; then
                             idx=0
@@ -727,15 +773,8 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                         continue
                     fi
 
-                    if [[ "$line" =~ ^[[:space:]]*\|.*\|[[:space:]]*$ ]]; then
-                        line_trimmed="$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-                        content="${line_trimmed#|}"
-                        content="${content%|}"
-                        IFS='|' read -r -a raw_cells <<< "$content"
-                        cells=()
-                        for cell in "${raw_cells[@]}"; do
-                            cells+=("$(trim "$cell")")
-                        done
+                    if parse_markdown_cells "$line"; then
+                        cells=("${MARKDOWN_CELLS[@]}")
 
                         if [[ "$in_table" == false ]]; then
                             boundary_col=-1
@@ -869,15 +908,8 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                         continue
                     fi
 
-                    if [[ "$line" =~ ^[[:space:]]*\|.*\|[[:space:]]*$ ]]; then
-                        line_trimmed="$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-                        content="${line_trimmed#|}"
-                        content="${content%|}"
-                        IFS='|' read -r -a raw_cells <<< "$content"
-                        cells=()
-                        for cell in "${raw_cells[@]}"; do
-                            cells+=("$(trim "$cell")")
-                        done
+                    if parse_markdown_cells "$line"; then
+                        cells=("${MARKDOWN_CELLS[@]}")
 
                         if [[ "$in_table" == false ]]; then
                             table_status_idx=-1
@@ -991,15 +1023,8 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                         continue
                     fi
 
-                    if [[ "$line" =~ ^[[:space:]]*\|.*\|[[:space:]]*$ ]]; then
-                        line_trimmed="$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-                        content="${line_trimmed#|}"
-                        content="${content%|}"
-                        IFS='|' read -r -a raw_cells <<< "$content"
-                        cells=()
-                        for cell in "${raw_cells[@]}"; do
-                            cells+=("$(trim "$cell")")
-                        done
+                    if parse_markdown_cells "$line"; then
+                        cells=("${MARKDOWN_CELLS[@]}")
 
                         if [[ "$in_table" == false ]]; then
                             boundary_status_idx=-1
@@ -1109,7 +1134,7 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                         continue
                     fi
 
-                    if [[ ! "$line" =~ ^[[:space:]]*\|.*\|[[:space:]]*$ ]]; then
+                    if ! parse_markdown_cells "$line"; then
                         in_table=false
                         binding_row_idx=-1
                         boundary_idx=-1
@@ -1121,14 +1146,7 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                         continue
                     fi
 
-                    line_trimmed="$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-                    content="${line_trimmed#|}"
-                    content="${content%|}"
-                    IFS='|' read -r -a raw_cells <<< "$content"
-                    cells=()
-                    for cell in "${raw_cells[@]}"; do
-                        cells+=("$(trim "$cell")")
-                    done
+                    cells=("${MARKDOWN_CELLS[@]}")
 
                     if [[ "$in_table" == false ]]; then
                         binding_row_idx=-1
@@ -1245,7 +1263,7 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                         continue
                     fi
 
-                    if [[ ! "$line" =~ ^[[:space:]]*\|.*\|[[:space:]]*$ ]]; then
+                    if ! parse_markdown_cells "$line"; then
                         in_table=false
                         binding_row_idx=-1
                         boundary_idx=-1
@@ -1255,14 +1273,7 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                         continue
                     fi
 
-                    line_trimmed="$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-                    content="${line_trimmed#|}"
-                    content="${content%|}"
-                    IFS='|' read -r -a raw_cells <<< "$content"
-                    cells=()
-                    for cell in "${raw_cells[@]}"; do
-                        cells+=("$(trim "$cell")")
-                    done
+                    cells=("${MARKDOWN_CELLS[@]}")
 
                     if [[ "$in_table" == false ]]; then
                         binding_row_idx=-1

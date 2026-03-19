@@ -84,9 +84,9 @@ def _write_feature_fixture(
                 "",
                 "## Binding Contract Packets",
                 "",
-                "| BindingRowID | Operation ID | IF Scope | Boundary Anchor | Boundary Anchor Status | Implementation Entry Anchor | Implementation Entry Anchor Status | Request DTO Anchor | Response DTO Anchor | Primary Collaborator Anchor | State Owner Anchor(s) | TM ID | TC IDs | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) | Main Pass Anchor | Branch/Failure Anchor(s) |",
-                "|--------------|--------------|----------|-----------------|------------------------|-----------------------------|------------------------------------|--------------------|--------------------|-----------------------------|-----------------------|-------|--------|-------------|-----------------|----------------|-------------|------------------|--------------------------|",
-                f"| BR-001 | demoOp | IF-001 | {packet_boundary_anchor} | {packet_boundary_status} | {packet_entry_anchor} | {packet_entry_status} | N/A | src/app/demo.py::DemoResponse | N/A | [src/domain/demo.py::DemoAggregate] | TM-001 | [TC-001] | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] | happy path | retry path |",
+                "| BindingRowID | Operation ID | IF Scope | Boundary Anchor | Boundary Anchor Status | Implementation Entry Anchor | Implementation Entry Anchor Status | Request DTO Anchor | Response DTO Anchor | Primary Collaborator Anchor | State Owner Anchor(s) | TM ID | TC IDs | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) | Lifecycle Ref(s) | Invariant Ref(s) | Main Pass Anchor | Branch/Failure Anchor(s) |",
+                "|--------------|--------------|----------|-----------------|------------------------|-----------------------------|------------------------------------|--------------------|--------------------|-----------------------------|-----------------------|-------|--------|-------------|-----------------|----------------|-------------|------------------|------------------|------------------|--------------------------|",
+                f"| BR-001 | demoOp | IF-001 | {packet_boundary_anchor} | {packet_boundary_status} | {packet_entry_anchor} | {packet_entry_status} | N/A | src/app/demo.py::DemoResponse | N/A | [src/domain/demo.py::DemoAggregate] | TM-001 | [TC-001] | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] | [Lifecycle: DemoAggregate] | [INV-001] | happy path | retry path |",
             ]
         ),
         encoding="utf-8",
@@ -335,6 +335,32 @@ def test_northbound_rule_flags_missing_label_entry_anchor_in_powershell(tmp_path
         f["rule_id"] == "PLN-NB-001" and "requires an Implementation Entry Anchor" in f["message"]
         for f in payload["findings"]
     )
+
+
+def test_northbound_rule_accepts_escaped_pipe_in_boundary_anchor_cells_bash(tmp_path: Path):
+    feature_dir = _write_feature_fixture(
+        tmp_path,
+        include_research_trigger=True,
+        contract_boundary_anchor=r"HTTP GET /demo\|v2",
+        test_matrix_boundary_anchor=r"HTTP GET /demo\|v2",
+        packet_boundary_anchor=r"HTTP GET /demo\|v2",
+        plan_boundary_anchor=r"HTTP GET /demo\|v2",
+    )
+    payload = _run_planning_lint(feature_dir)
+    assert not any(f["rule_id"] == "PLN-NB-001" for f in payload["findings"])
+
+
+def test_northbound_rule_accepts_escaped_pipe_in_boundary_anchor_cells_powershell(tmp_path: Path):
+    feature_dir = _write_feature_fixture(
+        tmp_path,
+        include_research_trigger=True,
+        contract_boundary_anchor=r"HTTP GET /demo\|v2",
+        test_matrix_boundary_anchor=r"HTTP GET /demo\|v2",
+        packet_boundary_anchor=r"HTTP GET /demo\|v2",
+        plan_boundary_anchor=r"HTTP GET /demo\|v2",
+    )
+    payload = _run_planning_lint_powershell(feature_dir)
+    assert not any(f["rule_id"] == "PLN-NB-001" for f in payload["findings"])
 
 
 def test_binding_tuple_projection_sync_accepts_aligned_artifacts(tmp_path: Path):

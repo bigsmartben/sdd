@@ -67,17 +67,14 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 ## Northbound Entry Selection (Client Entry First)
 
 - Treat this artifact as the northbound interface definition for the selected binding.
-- Select `Boundary Anchor` as the first consumer-callable entry, not an internal service/manager/mapper hop.
-- If the operation is consumer-called via HTTP, use `HTTP METHOD /path` as `Boundary Anchor` and the owning controller method as `Implementation Entry Anchor`; downstream service/facade symbols remain collaborators.
-- For HTTP-facing bindings, treat `Boundary Anchor` (`HTTP METHOD /path`) and `Implementation Entry Anchor` (owning controller method) as two aligned views of one northbound boundary semantic: external consumer entry vs internal realization entry. Keep both fields explicit and aligned; do not collapse either field.
-- If the operation is consumer-called via RPC/facade, use the anchored `Facade.method` surface.
-- If both HTTP/controller and facade symbols exist, keep the actual consumer-visible first callable entry as normative `Boundary Anchor`.
+- Use the northbound entry rules in `.specify/templates/contract-template.md` as the authority for boundary/entry semantics; this command adds only selection and routing constraints.
 - If an input packet or repo anchor contradicts controller-first HTTP placement, mark tuple drift, set an explicit blocker, and route `/sdd.plan.test-matrix`; do not locally rewrite upstream tuple seeds in this stage.
 
 ## Unified Design Requirements
 
 - `Northbound Contract Summary` is reader-oriented only: summarize external request/response, visible outcomes, and side effects without competing with field-level contract authority.
 - `Full Field Dictionary (Operation-scoped)` is the only authoritative field-level contract surface: it MUST cover request DTO fields, response DTO fields, selected state-owner fields, and the fields directly used for reads, writes, projections, validation, defaults, or state decisions.
+- The selected binding packet scopes tuple keys, owner surfaces, and model refs; use targeted repo/data-model reads to close remaining field-level details instead of re-deriving broad feature semantics.
 - This stage MAY refine operation-scoped VO/DTO/field mappings from the stable classes, owners, and seeds declared upstream; it MUST NOT mint new globally stable model concepts, owners, lifecycle vocabulary, or invariants.
 - Do not delete owner fields that this operation does not use; keep them in the field dictionary with `Used in <Operation ID> = no`.
 - Realization design scope is delivery-ready: internal handoff, failure propagation, sequence closure, UML ownership, and southbound dependency chain.
@@ -101,11 +98,8 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 
 ## Repo Anchor Decision Protocol (Mandatory)
 
-- Apply repo-anchor decision order `existing -> extended -> new`.
-- `extended` is valid only for same-entity field/state expansion.
-- `new` is normative only when explicit `path::symbol` target evidence is present.
-- If explicit target evidence is missing, set status to `todo` and keep the tuple forward-looking/non-normative.
-- Repo anchors in this stage are for naming/lifecycle correction and traceability only; do not invent business semantics from anchors.
+- Use the repo-anchor decision protocol in `.specify/templates/contract-template.md` as the authority for this stage.
+- In this command, apply that protocol only for bounded verification and routing; do not widen the semantic scope of the selected binding.
 
 ## Allowed Inputs
 
@@ -131,6 +125,7 @@ Read `spec.md` only if the selected binding packet is missing any of:
 
 Read `data-model.md` only if the selected binding packet explicitly depends on:
 
+- `Lifecycle Ref(s)` or `Invariant Ref(s)` that must be checked in this contract run
 - lifecycle transitions
 - state invariants
 - entity constraints required for contract-visible behavior

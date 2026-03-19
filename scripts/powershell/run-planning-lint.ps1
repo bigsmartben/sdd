@@ -250,11 +250,44 @@ function Get-MarkdownCells {
 
     $trimmed = $Line.Trim()
     $content = $trimmed.Trim('|')
-    $cells = @()
-    foreach ($raw in ($content -split '\|')) {
-        $cells += $raw.Trim()
+    $cells = New-Object System.Collections.Generic.List[string]
+    $cellBuilder = New-Object System.Text.StringBuilder
+    $escaping = $false
+
+    for ($idx = 0; $idx -lt $content.Length; $idx++) {
+        $ch = $content[$idx]
+
+        if ($escaping) {
+            if ($ch -eq '|' -or $ch -eq '\') {
+                [void]$cellBuilder.Append($ch)
+            } else {
+                [void]$cellBuilder.Append('\')
+                [void]$cellBuilder.Append($ch)
+            }
+            $escaping = $false
+            continue
+        }
+
+        if ($ch -eq '\') {
+            $escaping = $true
+            continue
+        }
+
+        if ($ch -eq '|') {
+            $cells.Add($cellBuilder.ToString().Trim()) | Out-Null
+            [void]$cellBuilder.Clear()
+            continue
+        }
+
+        [void]$cellBuilder.Append($ch)
     }
-    return $cells
+
+    if ($escaping) {
+        [void]$cellBuilder.Append('\')
+    }
+    $cells.Add($cellBuilder.ToString().Trim()) | Out-Null
+
+    return @($cells)
 }
 
 function Test-MarkdownSeparatorRow {

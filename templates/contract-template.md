@@ -114,6 +114,7 @@ Request / Success Output / Failure Output MUST align with that anchored signatur
 ## Full Field Dictionary (Operation-scoped)
 
 This section is the only authoritative field-level contract surface for this operation.
+Treat the selected binding packet as the scoping input for tuple keys, owner surfaces, and lifecycle/invariant refs; close the remaining field-level details here with targeted repo/data-model reads instead of reopening broad feature context.
 It MUST cover request DTO fields, response DTO fields, and all fields on the selected state-owner classes that this operation reads, writes, projects, validates, defaults, or uses for state decisions.
 Fields not used by this operation MUST remain listed with `Used in [operationId] = no`; do not delete them from the owner view.
 If a field cannot be fully confirmed from the selected DTO/state-owner anchors, keep the field row with an explicit gap marker rather than shrinking the contract back to a minimal field set.
@@ -311,6 +312,7 @@ classDiagram
 ## Runtime Correctness Check
 
 All required rows in this section must be present; each row may remain `ok` or `gap` with explicit evidence.
+Use the selected packet `Lifecycle Ref(s)` / `Invariant Ref(s)` as the default data-model evidence path when lifecycle or invariant checks are relevant.
 
 | Runtime Check Item | Required Evidence | Anchor | Status |
 |--------------------|-------------------|--------|--------|

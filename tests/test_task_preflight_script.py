@@ -511,6 +511,89 @@ def test_task_preflight_helper_ignores_template_placeholder_binding_rows(tmp_pat
     assert "missing_contract_artifact_rows" in error_codes
 
 
+def test_task_preflight_helper_parses_escaped_pipe_cells_in_artifact_status(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(feature_dir)
+
+    plan_path = feature_dir / "plan.md"
+    plan_text = plan_path.read_text(encoding="utf-8")
+    plan_path.write_text(
+        plan_text.replace(
+            "| BindingRowID-001 | contract | `contracts/create-task.md` | done | a | b | [none] |",
+            "| BindingRowID-001 | contract | `contracts/create-task.md` | done | test-matrix:abc\\|binding:BindingRowID-001 | b | [none] |",
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "task_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+            "--test-matrix",
+            str(feature_dir / "test-matrix.md"),
+            "--contracts-dir",
+            str(feature_dir / "contracts"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["artifact_status_summary"]["contract"]["done"] == 1
+    assert payload["execution_readiness"]["ready_for_task_generation"] is True
+
+
+def test_data_model_preflight_helper_parses_escaped_pipe_cells_in_stage_queue(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_data_model_feature(feature_dir)
+
+    plan_path = feature_dir / "plan.md"
+    plan_text = plan_path.read_text(encoding="utf-8")
+    plan_path.write_text(
+        plan_text.replace(
+            "| research | `/sdd.plan.research` | `plan.md`, `spec.md` | `research.md` | done | a | b | [none] |",
+            "| research | `/sdd.plan.research` | `plan.md`, `spec.md` | `research.md` | done | spec:abc\\|research:def | b | [none] |",
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "data_model_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--research",
+            str(feature_dir / "research.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["research_stage"]["status"] == "done"
+    assert payload["selected_stage"]["stage_id"] == "data-model"
+    assert payload["generation_readiness"]["ready_for_generation"] is True
+
+
 def test_bash_check_prerequisites_can_embed_tasks_bootstrap(tmp_path):
     repo_dir = tmp_path / "repo"
     scripts_bash = repo_dir / "scripts" / "bash"

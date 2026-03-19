@@ -71,11 +71,16 @@ def test_plan_and_test_matrix_templates_precompute_contract_bootstrap_inputs():
     assert "- `Implementation Entry Anchor Status`" in test_matrix_command
     assert "- `Request DTO Anchor`" in test_matrix_command
     assert "- `State Owner Anchor(s)`" in test_matrix_command
+    assert "- `Lifecycle Ref(s)`" in test_matrix_command
+    assert "- `Invariant Ref(s)`" in test_matrix_command
     assert "- `Branch/Failure Anchor(s)`" in test_matrix_command
+    assert "scope the operation-scoped `Full Field Dictionary`" in test_matrix_command
 
     assert "## Binding Contract Packets" in test_matrix_template
     assert "authoritative per-binding contract seed packet consumed by `/sdd.plan.contract`" in test_matrix_template
     assert "State Owner Anchor(s)" in test_matrix_template
+    assert "Lifecycle Ref(s)" in test_matrix_template
+    assert "Invariant Ref(s)" in test_matrix_template
     assert "MUST NOT be added to `Scenario Matrix` or `Verification Case Anchors` tuple keys" in test_matrix_template
     assert "| BindingRowID | Operation ID | IF Scope | Boundary Anchor | Boundary Anchor Status | Implementation Entry Anchor |" in test_matrix_template
 
@@ -87,11 +92,13 @@ def test_contract_command_uses_test_matrix_as_default_semantic_source():
     assert "if absent, stop and route back to `/sdd.plan.test-matrix`" in content
     assert "Do not read `spec.md`, `research.md`, or `data-model.md` unless the selected binding packet is missing required fields or cannot resolve contract-visible owner/source evidence." in content
     assert "mark tuple drift, set an explicit blocker, and route `/sdd.plan.test-matrix`" in content
+    assert "Use the northbound entry rules in `.specify/templates/contract-template.md` as the authority" in content
     assert "Keep repo-backed verification bounded to the selected `BindingRowID` and active blockers" in content
     assert "- request DTO anchor target, when present" in content
     assert "- response DTO anchor target, when present" in content
     assert "- one primary collaborator anchor, when required for contract-visible behavior" in content
     assert "- up to three `State Owner Anchor(s)` targets, when present" in content
+    assert "- `Lifecycle Ref(s)` or `Invariant Ref(s)` that must be checked in this contract run" in content
     assert "Sequence design MUST explicitly render every mandatory repo-backed collaborator hop" in content
     assert "Sequence design MUST NOT collapse multiple mandatory collaborators/dependencies into one synthetic participant label" in content
     assert "`opt` blocks are valid only for truly conditional branches" in content
@@ -147,6 +154,7 @@ def test_contract_template_contains_unified_realization_requirements():
     assert "## Runtime Correctness Check" in content
     assert "**Test Scope (Required)**" in content
     assert "## Downstream Projection Input (Required)" in content
+    assert "Treat the selected binding packet as the scoping input for tuple keys, owner surfaces, and lifecycle/invariant refs" in content
     assert "### Spec Projection Slice" in content
     assert "### Test Projection Slice" in content
     assert "### Cross-Interface Smoke Candidate (Required)" in content
@@ -184,11 +192,12 @@ def test_test_matrix_template_forbids_backfilling_missing_stage_one_model():
     content = read("templates/test-matrix-template.md")
 
     assert "[Coverage scope: which spec paths must be verified and why]" in content
-    assert "[How the selected strategy seeds downstream `Binding Contract Packets`]" in content
+    assert "[How the selected strategy seeds downstream `Binding Contract Packets` and bounded contract reads]" in content
     assert "/sdd.plan.contract` MUST consume these tuple keys verbatim and MUST NOT redefine them." in content
     assert "[Where projections/derivations depend on globally stable owner classes or owner fields from `data-model.md`]" in content
     assert "Do not invent new globally stable owner classes, owner fields, or lifecycle vocabulary here" in content
     assert "`State Owner Anchor(s)` MUST trace back to owner classes/fields already modeled as globally stable in `data-model.md`" in content
+    assert "`Lifecycle Ref(s)` and `Invariant Ref(s)` SHOULD point to `data-model.md`" in content
 
 
 def test_tasks_command_uses_contract_as_realization_source():
