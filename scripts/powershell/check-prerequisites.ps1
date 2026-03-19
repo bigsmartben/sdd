@@ -117,14 +117,25 @@ function Get-LocalExecutionProtocol {
     }
     $runtimeTools = $null
     if ($hasSpecify) {
+        $runtimeToolCandidates = @()
         if (-not [string]::IsNullOrWhiteSpace($specifyCmd)) {
+            $runtimeToolCandidates += $specifyCmd
+        }
+
+        $pathSpecify = Get-Command specify -ErrorAction SilentlyContinue
+        if ($pathSpecify -and ($runtimeToolCandidates -notcontains $pathSpecify.Source)) {
+            $runtimeToolCandidates += $pathSpecify.Source
+        }
+
+        foreach ($runtimeToolCandidate in $runtimeToolCandidates) {
             try {
-                $runtimeToolsJson = & $specifyCmd internal-runtime-tools
+                $runtimeToolsJson = & $runtimeToolCandidate internal-runtime-tools
                 if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($runtimeToolsJson)) {
                     $runtimeTools = $runtimeToolsJson | ConvertFrom-Json
                     $python.available = $true
                     $python.tool = 'specify-cli'
                     $python.runner_cmd = 'specify internal-run-python --script <helper-script> -- <helper-args>'
+                    break
                 }
             } catch {
                 $runtimeTools = $null
