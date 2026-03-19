@@ -40,6 +40,10 @@ def is_placeholder_token(value: str) -> bool:
 def inspect_contract_artifact(contract_path_abs: str, boundary_anchor: str) -> dict[str, Any]:
     inspection = {
         "full_field_dictionary_present": False,
+        "field_dictionary_tier_present": False,
+        "seed_tuple_boundary_section_present": False,
+        "runtime_seed_boundary_drift_check_present": False,
+        "runtime_field_dictionary_tiering_check_present": False,
         "has_unresolved_field_gaps": False,
         "controller_first_violation": False,
     }
@@ -48,6 +52,14 @@ def inspect_contract_artifact(contract_path_abs: str, boundary_anchor: str) -> d
 
     content = Path(contract_path_abs).read_text(encoding="utf-8")
     inspection["full_field_dictionary_present"] = "## Full Field Dictionary (Operation-scoped)" in content
+    inspection["field_dictionary_tier_present"] = re.search(
+        r"(?i)^\|\s*Field\s*\|\s*Owner\s+Class\s*\|\s*Dictionary\s+Tier\s*\|",
+        content,
+        flags=re.MULTILINE,
+    ) is not None
+    inspection["seed_tuple_boundary_section_present"] = "## Seed Tuple vs Repo-Confirmed Boundary" in content
+    inspection["runtime_seed_boundary_drift_check_present"] = "Seed-vs-repo boundary drift classification" in content
+    inspection["runtime_field_dictionary_tiering_check_present"] = "Field-dictionary tiering" in content
     inspection["has_unresolved_field_gaps"] = "TODO(REPO_ANCHOR)" in content or re.search(r"(?i)\|\s*gap\s*\|", content) is not None
     if boundary_anchor.startswith("HTTP "):
         entry_match = ENTRY_ANCHOR_LABEL_RE.search(content)
@@ -456,6 +468,78 @@ def build_execution_readiness(
             }
         )
 
+    missing_field_dictionary_tier_rows = sorted(
+        [
+            unit["binding_row_id"]
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and not unit["contract"]["field_dictionary_tier_present"]
+        ]
+    )
+    if missing_field_dictionary_tier_rows:
+        warnings.append(
+            {
+                "code": "field_dictionary_tier_missing",
+                "message": "Some done contract rows are missing `Dictionary Tier` in `Full Field Dictionary (Operation-scoped)`.",
+                "details": {"binding_row_ids": missing_field_dictionary_tier_rows},
+            }
+        )
+
+    missing_seed_tuple_boundary_rows = sorted(
+        [
+            unit["binding_row_id"]
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and not unit["contract"]["seed_tuple_boundary_section_present"]
+        ]
+    )
+    if missing_seed_tuple_boundary_rows:
+        warnings.append(
+            {
+                "code": "seed_tuple_boundary_section_missing",
+                "message": "Some done contract rows are missing `Seed Tuple vs Repo-Confirmed Boundary`.",
+                "details": {"binding_row_ids": missing_seed_tuple_boundary_rows},
+            }
+        )
+
+    missing_runtime_seed_drift_rows = sorted(
+        [
+            unit["binding_row_id"]
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and not unit["contract"]["runtime_seed_boundary_drift_check_present"]
+        ]
+    )
+    if missing_runtime_seed_drift_rows:
+        warnings.append(
+            {
+                "code": "runtime_seed_boundary_drift_check_missing",
+                "message": "Some done contract rows are missing runtime check row `Seed-vs-repo boundary drift classification`.",
+                "details": {"binding_row_ids": missing_runtime_seed_drift_rows},
+            }
+        )
+
+    missing_runtime_dictionary_tier_rows = sorted(
+        [
+            unit["binding_row_id"]
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and not unit["contract"]["runtime_field_dictionary_tiering_check_present"]
+        ]
+    )
+    if missing_runtime_dictionary_tier_rows:
+        warnings.append(
+            {
+                "code": "runtime_field_dictionary_tiering_check_missing",
+                "message": "Some done contract rows are missing runtime check row `Field-dictionary tiering`.",
+                "details": {"binding_row_ids": missing_runtime_dictionary_tier_rows},
+            }
+        )
+
     unresolved_field_gap_rows = sorted(
         [
             unit["binding_row_id"]
@@ -619,6 +703,14 @@ def build_unit_inventory(
                 "target_path_abs": contract_target_path_abs,
                 "exists": contract_exists,
                 "full_field_dictionary_present": contract_inspection["full_field_dictionary_present"],
+                "field_dictionary_tier_present": contract_inspection["field_dictionary_tier_present"],
+                "seed_tuple_boundary_section_present": contract_inspection["seed_tuple_boundary_section_present"],
+                "runtime_seed_boundary_drift_check_present": contract_inspection[
+                    "runtime_seed_boundary_drift_check_present"
+                ],
+                "runtime_field_dictionary_tiering_check_present": contract_inspection[
+                    "runtime_field_dictionary_tiering_check_present"
+                ],
                 "has_unresolved_field_gaps": contract_inspection["has_unresolved_field_gaps"],
                 "controller_first_violation": contract_inspection["controller_first_violation"],
             },
@@ -636,6 +728,10 @@ def build_unit_inventory(
             and unit["contract"]["status"] == "done"
             and contract_exists
             and unit["contract"]["full_field_dictionary_present"]
+            and unit["contract"]["field_dictionary_tier_present"]
+            and unit["contract"]["seed_tuple_boundary_section_present"]
+            and unit["contract"]["runtime_seed_boundary_drift_check_present"]
+            and unit["contract"]["runtime_field_dictionary_tiering_check_present"]
             and not unit["contract"]["has_unresolved_field_gaps"]
             and not unit["contract"]["controller_first_violation"]
         ):

@@ -4,5 +4,7 @@ This is the latest set of releases that you can use with your agent of choice. W
 
 ## Changelog
 
-- Refine ui-html release coverage guidance
+- chore: prepare v2.0.26 release
+- Align runtime bootstraps and templates across bash and powershell
+- Route helper scripts through specify-cli and refine ui-html guidance
 

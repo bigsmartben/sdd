@@ -43,10 +43,20 @@ It combines:
 ## Minimal Binding References
 
 Use stable IDs and short references only. Keep this section focused on the minimum downstream binding required for execution mapping.
+`Repo Anchor` is supporting evidence only and MUST NOT replace or redefine `Boundary Anchor`.
+`Repo Anchor Role` MUST be explicit: `boundary-owner`, `state-source`, `projection-source`, `transport-carrier`, `context-carrier`, or `partial-lineage`.
 
-| Operation ID | Boundary Anchor | Operation / Interaction | IF Scope | Anchor Status | Repo Anchor | Implementation Entry Anchor | Implementation Entry Status | Upstream Ref(s) | Data Model Ref(s) |
-|--------------|-----------------|-------------------------|----------|---------------|-------------|-----------------------------|-----------------------------|-----------------|-------------------|
-| [operationId or N/A] | [HTTP `METHOD /path` / `event.topic` / `Facade.method` / `cli command` / `N/A`] | [name] | [IF-### or N/A] | [`existing` / `extended` / `new` / `todo`] | [`path/to/file.ext::Symbol` or `TODO(REPO_ANCHOR)`] | [`path/to/file.ext::Symbol` or `TODO(REPO_ANCHOR)`] | [`existing` / `extended` / `new` / `todo`] | [UC/FR/UIF/TM/TC refs needed downstream] | [Entity / INV / Lifecycle anchor ref] |
+| Operation ID | Boundary Anchor | Operation / Interaction | IF Scope | Anchor Status | Repo Anchor | Repo Anchor Role | Implementation Entry Anchor | Implementation Entry Status | Upstream Ref(s) | Data Model Ref(s) |
+|--------------|-----------------|-------------------------|----------|---------------|-------------|------------------|-----------------------------|-----------------------------|-----------------|-------------------|
+| [operationId or N/A] | [HTTP `METHOD /path` / `event.topic` / `Facade.method` / `cli command` / `N/A`] | [name] | [IF-### or N/A] | [`existing` / `extended` / `new` / `todo`] | [`path/to/file.ext::Symbol` or `TODO(REPO_ANCHOR)`] | [`boundary-owner` / `state-source` / `projection-source` / `transport-carrier` / `context-carrier` / `partial-lineage`] | [`path/to/file.ext::Symbol` or `TODO(REPO_ANCHOR)`] | [`existing` / `extended` / `new` / `todo`] | [UC/FR/UIF/TM/TC refs needed downstream] | [Entity / INV / Lifecycle anchor ref] |
+
+### Seed Tuple vs Repo-Confirmed Boundary
+
+Keep tuple drift explicit and matchable for this binding without rewriting upstream tuple seeds in this stage.
+
+| BindingRowID | Operation ID | IF Scope | Seed Boundary Anchor | Repo-Confirmed Boundary Entry | Drift Type | Contract Handling Strategy | Upstream Route Required |
+|--------------|--------------|----------|----------------------|-------------------------------|------------|----------------------------|-------------------------|
+| [BR-###] | [operationId or N/A] | [IF-### or N/A] | [from selected packet] | [HTTP `METHOD /path` / `event.topic` / `Facade.method` / `cli command` / `TODO(REPO_ANCHOR)`] | [`none` / `naming` / `layering` / `missing`] | [how this contract presents boundary/entry while preserving tuple keys] | [`none` / `/sdd.plan.test-matrix` / `/sdd.plan.data-model`] |
 
 ## Downstream Projection Input (Required)
 
@@ -116,12 +126,13 @@ Request / Success Output / Failure Output MUST align with that anchored signatur
 This section is the only authoritative field-level contract surface for this operation.
 Treat the selected binding packet as the scoping input for tuple keys, owner surfaces, and lifecycle/invariant refs; close the remaining field-level details here with targeted repo/data-model reads instead of reopening broad feature context.
 It MUST cover request DTO fields, response DTO fields, and all fields on the selected state-owner classes that this operation reads, writes, projects, validates, defaults, or uses for state decisions.
+Classify each row as `Dictionary Tier = operation-critical|owner-residual`; list `operation-critical` rows first so primary contract behavior stays readable.
 Fields not used by this operation MUST remain listed with `Used in [operationId] = no`; do not delete them from the owner view.
 If a field cannot be fully confirmed from the selected DTO/state-owner anchors, keep the field row with an explicit gap marker rather than shrinking the contract back to a minimal field set.
 
-| Field | Owner Class | Direction | Required/Optional | Default | Validation/Enum | Persisted | Contract-visible | Used in [operationId] | Source Anchor |
-|-------|-------------|-----------|-------------------|---------|-----------------|-----------|------------------|-----------------------|---------------|
-| [fieldPath] | [RequestModel / ResponseModel / StateOwner] | [input / output / state / derived] | [required / optional / conditional] | [default / derivation / none / gap] | [validation rule / enum vocabulary / gap] | [yes / no / derived / gap] | [yes / no / indirect] | [yes / no] | [`path/to/file.ext::Symbol` or `TODO(REPO_ANCHOR)`] |
+| Field | Owner Class | Dictionary Tier | Direction | Required/Optional | Default | Validation/Enum | Persisted | Contract-visible | Used in [operationId] | Source Anchor |
+|-------|-------------|-----------------|-----------|-------------------|---------|-----------------|-----------|------------------|-----------------------|---------------|
+| [fieldPath] | [RequestModel / ResponseModel / StateOwner] | [`operation-critical` / `owner-residual`] | [input / output / state / derived] | [required / optional / conditional] | [default / derivation / none / gap] | [validation rule / enum vocabulary / gap] | [yes / no / derived / gap] | [yes / no / indirect] | [yes / no] | [`path/to/file.ext::Symbol` or `TODO(REPO_ANCHOR)`] |
 
 ## Contract Realization Design
 
@@ -317,6 +328,8 @@ Use the selected packet `Lifecycle Ref(s)` / `Invariant Ref(s)` as the default d
 | Runtime Check Item | Required Evidence | Anchor | Status |
 |--------------------|-------------------|--------|--------|
 | Boundary-to-entry reachability | Sequence reaches `Implementation Entry Anchor` from consumer/client entry within the first two request hops | [boundary/entry anchors + sequence steps] | [ok / gap] |
+| Seed-vs-repo boundary drift classification | `Seed Tuple vs Repo-Confirmed Boundary` row is present, drift type is explicit, and handling/upstream route matches tuple policy | [seed tuple row + handling + route] | [ok / gap] |
+| Field-dictionary tiering | `Full Field Dictionary` rows are explicitly tiered and `operation-critical` rows are listed before `owner-residual` rows | [dictionary rows + tier ordering] | [ok / gap] |
 | End-to-end chain continuity | Each declared behavior path maps to one contiguous request/response step chain with no disconnected hops | [behavior path ids + sequence step chains] | [ok / gap] |
 | Behavior-path closure | `Behavior Paths` trigger/outcome/failure is fully covered by `Sequence Ref` steps | [path + sequence steps + TM/TC] | [ok / gap] |
 | Collaborator-chain coverage | Every mandatory second-party/third-party collaborator hop in selected behavior paths is explicitly represented in sequence and UML without synthetic merged participants or optionalized main-path calls | [dependency notes + sequence steps + UML participants/relations] | [ok / gap] |

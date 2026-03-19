@@ -46,6 +46,9 @@ Use `.specify/templates/ui-html-template.html` only. If the runtime template is 
 - Treat `spec.md` as a fact ledger for prototype derivation, especially `1.3 UI Data Dictionary (UDD)`, `3.2 UX — User Interaction Flow`, `3.4 UI — UI Element Definitions`, and `3.5 Component-Data Dependency Overview`.
 - If the prototype exposes semantic gaps or contradictions, route the repair back to `/sdd.specify` or `/sdd.clarify`.
 - Do **not** invent new requirements, actors, entities, or product flows that are not traceable to `spec.md` or current user input.
+- Do **not** introduce planning-stage governance semantics in `ui.html` (for example: tuple dispatch keys, repo-anchor strategy states, `Repo Anchor Role`, or contract packet fields).
+- `Ready/Blocked` from this command is prototype-local readiness only; it MUST NOT be treated as cross-artifact final PASS/FAIL.
+- Cross-artifact final PASS/FAIL ownership remains centralized in `/sdd.analyze`.
 
 ## Action Entry Executability Rules (MUST)
 
@@ -271,6 +274,8 @@ Emit a `Handoff Decision` section in the runtime output with exactly these field
 - `Decision Basis`: `ui.html` is a derived interactive prototype from `spec.md`; use clarification to resolve remaining ambiguity before planning, otherwise proceed to `/sdd.plan`
 - `Selected Artifact`: `ui.html`
 - `Ready/Blocked`: `Ready` when `ui.html` is written successfully; otherwise `Blocked`
+
+Boundary note: This `Ready/Blocked` reflects `ui.html` generation readiness only and does not replace `/sdd.analyze` cross-artifact gating.
 
 ## Final Output
 

@@ -74,11 +74,14 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 
 - `Northbound Contract Summary` is reader-oriented only: summarize external request/response, visible outcomes, and side effects without competing with field-level contract authority.
 - `Full Field Dictionary (Operation-scoped)` is the only authoritative field-level contract surface: it MUST cover request DTO fields, response DTO fields, selected state-owner fields, and the fields directly used for reads, writes, projections, validation, defaults, or state decisions.
+- `Full Field Dictionary (Operation-scoped)` MUST classify rows using `Dictionary Tier = operation-critical|owner-residual`, and list `operation-critical` rows first.
 - The selected binding packet scopes tuple keys, owner surfaces, and model refs; use targeted repo/data-model reads to close remaining field-level details instead of re-deriving broad feature semantics.
 - This stage MAY refine operation-scoped VO/DTO/field mappings from the stable classes, owners, and seeds declared upstream; it MUST NOT mint new globally stable model concepts, owners, lifecycle vocabulary, or invariants.
+- `State Owner Anchor(s)` are valid only when evidence role is `owner`, `state-source`, or `projection-source`; treat `transport-carrier`, `context-carrier`, and `partial-lineage` as supporting evidence or explicit gaps, not owner closure.
 - Do not delete owner fields that this operation does not use; keep them in the field dictionary with `Used in <Operation ID> = no`.
 - Realization design scope is delivery-ready: internal handoff, failure propagation, sequence closure, UML ownership, and southbound dependency chain.
 - Fill `Downstream Projection Input (Required)` with one executable slice for the selected `IF Scope` / `Operation ID`: include `spec` refs (`UC/UIF/FR/SC/EC`) and `test` refs (`Test Scope`, `TM/TC`, pass/failure anchors, command/assertion signal).
+- Include one `Seed Tuple vs Repo-Confirmed Boundary` row that records `Seed Boundary Anchor`, `Repo-Confirmed Boundary Entry`, `Drift Type` (`none|naming|layering|missing`), and contract handling for this `BindingRowID`.
 - Fill `Cross-Interface Smoke Candidate (Required)` with exactly one row for the selected operation.
 - `Cross-Interface Smoke Candidate (Required)` row MUST declare one `Candidate Role` in `entry|middle|exit|none`.
 - If `Candidate Role != none`, `Main Pass Anchor` and `Command / Assertion Signal` MUST be explicit and executable.
@@ -201,6 +204,8 @@ Emit a `Handoff Decision` section in the runtime output with exactly these field
 - `Decision Basis`
 - `Selected BindingRowID`: selected `BindingRowID`
 - `Ready/Blocked`
+
+`Ready/Blocked` is stage-local readiness only and MUST NOT be treated as cross-artifact final PASS/FAIL; centralized final gating belongs to `/sdd.analyze`.
 
 Determine `Next Command` from the resolved `PLAN_FILE` state only after the selected contract row status update:
 

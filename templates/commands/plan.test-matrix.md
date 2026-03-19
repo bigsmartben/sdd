@@ -71,6 +71,7 @@ Read only:
 - resolved `FEATURE_SPEC`
 - `research.md`
 - `data-model.md`
+- targeted controller/facade/service interface files strictly required to confirm `Boundary Anchor` and `Implementation Entry Anchor` for the selected binding rows
 
 When consuming allowed inputs, prefer section-level rereads over whole-file replay for the selected unit.
 
@@ -78,6 +79,7 @@ When consuming allowed inputs, prefer section-level rereads over whole-file repl
 `test-matrix.md` also carries the per-binding contract seed packet consumed by `/sdd.plan.contract`.
 `PLAN_FILE` receives only a compact binding projection index and artifact queue rows derived from that matrix.
 Treat `data-model.md` as authoritative for globally stable owner classes/fields/states that support shared projections, derivations, counters, badges, role labels, and lifecycle guards.
+When `data-model.md` provides anchor roles, only `owner`, `state-source`, and `projection-source` are valid sources for `State Owner Anchor(s)`.
 Use `spec.md` as the primary source for deciding which paths must be covered and what each path must prove; use `data-model.md` only to keep that strategy inside the declared model boundary.
 
 ## Binding Projection Rules
@@ -85,7 +87,11 @@ Use `spec.md` as the primary source for deciding which paths must be covered and
 Project only stable and unique binding rows from `test-matrix.md` into `Binding Projection Index`.
 Do not copy scenario prose into `PLAN_FILE`.
 Project `Boundary Anchor` as the client-facing contract binding key only, preserving the first consumer-callable entry selected in `test-matrix.md`.
+Keep `Operation ID` as feature-level operation semantics; multiple `Operation ID` rows MAY share one repo-confirmed `Boundary Anchor` when they enter through the same consumer boundary.
+`Repo Anchor` is supporting evidence only and MUST NOT replace or redefine `Boundary Anchor`.
 For HTTP-facing bindings, keep the HTTP route as `Boundary Anchor` and the owning controller method as `Implementation Entry Anchor`.
+A normative `Boundary Anchor` MUST be repo-confirmed when a consumer-callable entry exists in allowed bounded reads; do not replace confirmed HTTP/controller entries with abstract facade operation names.
+If no repo-confirmed consumer-callable boundary can be established from bounded reads, set `Boundary Anchor = TODO(REPO_ANCHOR)` and keep the row non-normative or blocked instead of inventing operation/facade names.
 If a selected binding drifts away from controller-first HTTP placement, correct it back to `HTTP METHOD /path -> controller -> collaborator` and record the drift/blocker in the generation output rather than preserving the wrong tuple.
 Project only the minimum extra fields required to help `/sdd.plan.contract` select and validate the next unit without re-reading broad context.
 Keep DTO anchors, state-owner anchors, collaborator anchors, lifecycle/invariant refs, and other realization-detail evidence in `test-matrix.md`; do not mirror them into `PLAN_FILE`.
@@ -179,6 +185,8 @@ Emit a `Handoff Decision` section in the runtime output with exactly these field
 - `Decision Basis`: `Binding Projection Index` and `Artifact Status` are refreshed from `test-matrix.md`, and the next planning unit starts at the first pending `contract` row
 - `Selected Stage ID`: selected `test-matrix` stage row id
 - `Ready/Blocked`: `Ready` when binding rows and artifact rows are initialized successfully; otherwise `Blocked`
+
+`Ready/Blocked` is stage-local readiness only and MUST NOT be treated as cross-artifact final PASS/FAIL; centralized final gating belongs to `/sdd.analyze`.
 
 ## Final Output
 

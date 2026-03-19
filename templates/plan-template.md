@@ -1,7 +1,7 @@
 # Planning Control Plane: [FEATURE]
 
-**Branch**: `[feature-YYYYMMDD-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/specs/[YYYYMMDD-feature-name]/spec.md`
+**Branch**: `[feature-YYYYMMDD-slug]` | **Date**: [DATE] | **Spec**: [link]
+**Input**: Feature specification from `/specs/[YYYYMMDD-slug]/spec.md`
 
 ## Summary
 
@@ -10,6 +10,7 @@
 `plan.md` is the planning control plane for this feature.
 It is authoritative for planning queue state, binding-projection rows, and source/output fingerprints only.
 It is derived for planning semantics and MUST NOT supersede `research.md`, `data-model.md`, `test-matrix.md`, or `contracts/`.
+This stage reports local orchestration readiness only; cross-artifact final PASS/FAIL belongs to `/sdd.analyze`.
 
 ## Shared Context Snapshot
 

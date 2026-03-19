@@ -60,9 +60,9 @@ def _write_feature_fixture(
             [
                 "# Data Model",
                 "",
-                "| Domain Element | Kind | Anchor Status | Repo Anchor |",
-                "|---------------|------|---------------|-------------|",
-                "| DemoAggregate | Aggregate | existing | src/domain/demo.py::DemoAggregate |",
+                "| Domain Element | Kind | Anchor Status | Repo Anchor | Anchor Role |",
+                "|---------------|------|---------------|-------------|-------------|",
+                "| DemoAggregate | Aggregate | existing | src/domain/demo.py::DemoAggregate | owner |",
             ]
         ),
         encoding="utf-8",
@@ -77,15 +77,15 @@ def _write_feature_fixture(
                 "",
                 "State Owner Anchor(s): src/domain/demo.py::DemoAggregate",
                 "",
-                "| TM ID | Operation ID | Boundary Anchor | IF Scope | Repo Anchor | Anchor Status | Path Type |",
-                "|------|--------------|-----------------|----------|-------------|---------------|-----------|",
-                f"| TM-001 | demoOp | {test_matrix_boundary_anchor} | IF-001 | src/boundary/demo.py::DemoBoundary | {test_matrix_status} | Main |",
+                "| TM ID | Operation ID | Boundary Anchor | IF Scope | Repo Anchor | Repo Anchor Role | Anchor Status | Path Type |",
+                "|------|--------------|-----------------|----------|-------------|------------------|---------------|-----------|",
+                f"| TM-001 | demoOp | {test_matrix_boundary_anchor} | IF-001 | src/boundary/demo.py::DemoBoundary | boundary-owner | {test_matrix_status} | Main |",
                 "",
                 "## Verification Case Anchors",
                 "",
-                "| TC ID | TM ID | Operation ID | Boundary Anchor | IF Scope | Repo Anchor | Anchor Status | Verification Goal | Observability / Signal |",
-                "|-------|-------|--------------|-----------------|----------|-------------|---------------|-------------------|------------------------|",
-                f"| TC-001 | TM-001 | demoOp | {test_matrix_boundary_anchor} | IF-001 | src/boundary/demo.py::DemoBoundary | {test_matrix_status} | Verify demo payload | Demo payload is visible |",
+                "| TC ID | TM ID | Operation ID | Boundary Anchor | IF Scope | Repo Anchor | Repo Anchor Role | Anchor Status | Verification Goal | Observability / Signal |",
+                "|-------|-------|--------------|-----------------|----------|-------------|------------------|---------------|-------------------|------------------------|",
+                f"| TC-001 | TM-001 | demoOp | {test_matrix_boundary_anchor} | IF-001 | src/boundary/demo.py::DemoBoundary | boundary-owner | {test_matrix_status} | Verify demo payload | Demo payload is visible |",
                 "",
                 "## Binding Contract Packets",
                 "",
@@ -110,12 +110,18 @@ def _write_feature_fixture(
         "- Success Output: demo payload",
         "- Failure Output: error payload",
         "",
+        "## Seed Tuple vs Repo-Confirmed Boundary",
+        "",
+        "| BindingRowID | Operation ID | IF Scope | Seed Boundary Anchor | Repo-Confirmed Boundary Entry | Drift Type | Contract Handling Strategy | Upstream Route Required |",
+        "|--------------|--------------|----------|----------------------|-------------------------------|------------|----------------------------|-------------------------|",
+        "| BR-001 | demoOp | IF-001 | HTTP GET /demo | HTTP GET /demo | none | Keep tuple keys stable and controller-first boundary semantics | none |",
+        "",
         "## Full Field Dictionary (Operation-scoped)",
         "",
-        "| Field | Owner Class | Direction | Required/Optional | Default | Validation/Enum | Persisted | Contract-visible | Used in demoOp | Source Anchor |",
-        "|-------|-------------|-----------|-------------------|---------|-----------------|-----------|------------------|----------------|---------------|",
-        "| demoId | DemoResponse | output | required | none | uuid | no | yes | yes | `src/app/demo.py::DemoResponse.demoId` |",
-    ]
+        "| Field | Owner Class | Dictionary Tier | Direction | Required/Optional | Default | Validation/Enum | Persisted | Contract-visible | Used in demoOp | Source Anchor |",
+        "|-------|-------------|-----------------|-----------|-------------------|---------|-----------------|-----------|------------------|----------------|---------------|",
+        "| demoId | DemoResponse | operation-critical | output | required | none | uuid | no | yes | yes | `src/app/demo.py::DemoResponse.demoId` |",
+        ]
     if contract_entry_anchor is not None:
         contract_lines.append(f"**Implementation Entry Anchor (Required)**: {contract_entry_anchor}")
     contract_lines.extend(
@@ -124,12 +130,15 @@ def _write_feature_fixture(
             "",
             "## Contract Binding",
             "- Repo Anchor: `src/boundary/demo.py::DemoBoundary`",
+            "- Repo Anchor Role: boundary-owner",
             "",
             "## Runtime Correctness Check",
             "",
             "| Runtime Check Item | Required Evidence | Anchor | Status |",
             "|--------------------|-------------------|--------|--------|",
             "| Boundary-to-entry reachability | sequence reaches entry | demo boundary chain | ok |",
+            "| Seed-vs-repo boundary drift classification | seed tuple row exists and drift type is explicit | BR-001 tuple | ok |",
+            "| Field-dictionary tiering | dictionary rows are tiered and operation-critical rows lead | demo field tiers | ok |",
             "| End-to-end chain continuity | contiguous request/response chain | demo contiguous steps | ok |",
             "| Field-ownership closure | contract fields mapped to UML owners | demo field owners | ok |",
             "| Sequence-participant UML closure | sequence participants mapped to UML classes/methods | demo participant mappings | ok |",
@@ -294,6 +303,8 @@ def test_anchor_status_allowed_values_rejects_composite_label_tokens(tmp_path: P
         ("| End-to-end chain continuity |", "PLN-ID-007"),
         ("| Sequence-participant UML closure |", "PLN-ID-008"),
         ("| New-field/method call linkage |", "PLN-ID-009"),
+        ("| Seed-vs-repo boundary drift classification |", "PLN-ID-014"),
+        ("| Field-dictionary tiering |", "PLN-ID-015"),
     ],
 )
 def test_runtime_closure_rows_are_required_by_lint(tmp_path: Path, row_marker: str, rule_id: str):
@@ -306,6 +317,51 @@ def test_runtime_closure_rows_are_required_by_lint(tmp_path: Path, row_marker: s
     payload = _run_planning_lint(feature_dir)
     assert payload["findings_total"] > 0
     assert any(f["rule_id"] == rule_id for f in payload["findings"])
+
+
+def test_repo_anchor_role_is_required_in_test_matrix(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    test_matrix = feature_dir / "test-matrix.md"
+    content = test_matrix.read_text(encoding="utf-8")
+    content = content.replace("Repo Anchor Role", "Repo Role")
+    test_matrix.write_text(content, encoding="utf-8")
+
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-RA-012" for f in payload["findings"])
+
+
+def test_seed_tuple_boundary_section_is_required_in_contract(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    contract = feature_dir / "contracts" / "demo.md"
+    lines = contract.read_text(encoding="utf-8").splitlines()
+    filtered = []
+    skip = False
+    for line in lines:
+        if line == "## Seed Tuple vs Repo-Confirmed Boundary":
+            skip = True
+            continue
+        if skip and line.startswith("## "):
+            skip = False
+        if not skip:
+            filtered.append(line)
+    contract.write_text("\n".join(filtered) + "\n", encoding="utf-8")
+
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-ID-012" for f in payload["findings"])
+
+
+def test_dictionary_tier_is_required_in_contract_field_dictionary(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    contract = feature_dir / "contracts" / "demo.md"
+    content = contract.read_text(encoding="utf-8")
+    content = content.replace("Dictionary Tier", "Tier")
+    contract.write_text(content, encoding="utf-8")
+
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-ID-013" for f in payload["findings"])
 
 
 def test_northbound_rule_flags_missing_label_entry_anchor_in_bash(tmp_path: Path):

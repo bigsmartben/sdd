@@ -67,11 +67,24 @@ def _write_minimal_feature(
     if contract_text is None:
         contract_text = """# Contract
 
+## Seed Tuple vs Repo-Confirmed Boundary
+
+| BindingRowID | Operation ID | IF Scope | Seed Boundary Anchor | Repo-Confirmed Boundary Entry | Drift Type | Contract Handling Strategy | Upstream Route Required |
+|--------------|--------------|----------|----------------------|-------------------------------|------------|----------------------------|-------------------------|
+| BR-001 | createTask | IF-001 | HTTP POST /tasks | HTTP POST /tasks | none | Keep controller-first tuple and align contract entry anchor to controller method | none |
+
 ## Full Field Dictionary (Operation-scoped)
 
-| Field | Owner Class | Direction | Required/Optional | Default | Validation/Enum | Persisted | Contract-visible | Used in createTask | Source Anchor |
-|-------|-------------|-----------|-------------------|---------|-----------------|-----------|------------------|--------------------|---------------|
-| taskId | CreateTaskResponse | output | required | none | uuid | no | yes | yes | `src/app/contracts.py::CreateTaskResponse.taskId` |
+| Field | Owner Class | Dictionary Tier | Direction | Required/Optional | Default | Validation/Enum | Persisted | Contract-visible | Used in createTask | Source Anchor |
+|-------|-------------|-----------------|-----------|-------------------|---------|-----------------|-----------|------------------|--------------------|---------------|
+| taskId | CreateTaskResponse | operation-critical | output | required | none | uuid | no | yes | yes | `src/app/contracts.py::CreateTaskResponse.taskId` |
+
+## Runtime Correctness Check
+
+| Runtime Check Item | Required Evidence | Anchor | Status |
+|--------------------|-------------------|--------|--------|
+| Seed-vs-repo boundary drift classification | Seed tuple drift row exists and is explicit | BR-001 tuple | ok |
+| Field-dictionary tiering | Dictionary tier column exists and operation-critical rows lead | Field dictionary rows | ok |
 """
     (feature_dir / "contracts" / "create-task.md").write_text(contract_text, encoding="utf-8")
 
@@ -223,6 +236,10 @@ def test_task_preflight_helper_emits_contract_unit_inventory(tmp_path):
     assert unit["contract"]["target_path"] == "contracts/create-task.md"
     assert unit["contract"]["exists"] is True
     assert unit["contract"]["full_field_dictionary_present"] is True
+    assert unit["contract"]["field_dictionary_tier_present"] is True
+    assert unit["contract"]["seed_tuple_boundary_section_present"] is True
+    assert unit["contract"]["runtime_seed_boundary_drift_check_present"] is True
+    assert unit["contract"]["runtime_field_dictionary_tiering_check_present"] is True
     assert unit["contract"]["has_unresolved_field_gaps"] is False
     assert unit["contract"]["controller_first_violation"] is False
     assert "interface_detail" not in unit
@@ -413,6 +430,53 @@ def test_task_preflight_helper_warns_missing_full_field_dictionary(tmp_path):
     assert payload["execution_readiness"]["ready_for_task_generation"] is True
     warning_codes = [entry["code"] for entry in payload["execution_readiness"]["warnings"]]
     assert "full_field_dictionary_missing" in warning_codes
+
+
+def test_task_preflight_helper_warns_missing_contract_governance_markers(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(
+        feature_dir,
+        contract_text="""# Contract
+
+## Full Field Dictionary (Operation-scoped)
+
+| Field | Owner Class | Direction | Required/Optional | Default | Validation/Enum | Persisted | Contract-visible | Used in createTask | Source Anchor |
+|-------|-------------|-----------|-------------------|---------|-----------------|-----------|------------------|--------------------|---------------|
+| taskId | CreateTaskResponse | output | required | none | uuid | no | yes | yes | `src/app/contracts.py::CreateTaskResponse.taskId` |
+""",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "task_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+            "--test-matrix",
+            str(feature_dir / "test-matrix.md"),
+            "--contracts-dir",
+            str(feature_dir / "contracts"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["ready_unit_inventory"] == []
+    assert payload["execution_readiness"]["ready_for_task_generation"] is True
+    warning_codes = [entry["code"] for entry in payload["execution_readiness"]["warnings"]]
+    assert "field_dictionary_tier_missing" in warning_codes
+    assert "seed_tuple_boundary_section_missing" in warning_codes
+    assert "runtime_seed_boundary_drift_check_missing" in warning_codes
+    assert "runtime_field_dictionary_tiering_check_missing" in warning_codes
 
 
 def test_task_preflight_helper_warns_unresolved_contract_field_gaps(tmp_path):

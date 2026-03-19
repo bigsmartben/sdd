@@ -230,7 +230,7 @@ The `specify` command supports the following options:
 | Command | Description                                                                                                                                             |
 | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `init`  | Initialize a new Specify project from the latest template                                                                                               |
-| `check` | Check for installed tools (`git`, `claude`, `gemini`, `code`/`code-insiders`, `cursor-agent`, `cline`, `windsurf`, `qwen`, `opencode`, `codex`, `kiro-cli`, `shai`, `qodercli`, `vibe`, `kimi`) |
+| `check` | Check local tooling availability (`git`, supported agent CLIs, and `code`/`code-insiders`; IDE-only agents are reported as skipped) |
 
 ### `specify init` Arguments & Options
 
@@ -467,7 +467,7 @@ specify init . --force --ai claude
 specify init --here --force --ai claude
 ```
 
-The CLI will check if you have Claude Code, Gemini CLI, Cursor CLI, Qwen CLI, opencode, Codex CLI, Qoder CLI, Tabnine CLI, Kiro CLI, or Mistral Vibe installed. If you do not, or you prefer to get the templates without checking for the right tools, use `--ignore-agent-tools` with your command:
+During `specify init`, the CLI validates only the selected `--ai` tool when that agent requires a CLI binary. If you prefer to scaffold templates without that check, use `--ignore-agent-tools`:
 
 ```bash
 specify init <project_name> --ai claude --ignore-agent-tools

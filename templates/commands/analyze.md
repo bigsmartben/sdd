@@ -1,5 +1,5 @@
 ---
-description: Perform the centralized pre-implementation semantic audit and gate decision across spec.md, plan.md, and tasks.md.
+description: Perform the centralized pre-implementation semantic audit and cross-artifact gate decision, using spec.md/plan.md/tasks.md as mandatory core inputs.
 handoffs:
   - label: Proceed to Implementation
     agent: sdd.implement
@@ -27,6 +27,12 @@ You **MUST** consider the user input before proceeding (if not empty).
 3. Produce one authoritative `Gate Decision`.
 
 The latest run block in `analyze-history.md` is the only authoritative analyze gate input for `/sdd.implement`.
+
+## Governance Guardrails (Mandatory)
+
+- **Authority rule**: `/sdd.analyze` is the sole cross-artifact audit authority before implementation. It owns the final PASS/FAIL decision across mandatory core artifacts (`spec.md`, `plan.md`, `tasks.md`) and any existing planning artifacts required by the selected evidence path (`research.md`, `data-model.md`, `test-matrix.md`, `contracts/`).
+- **Stage boundary rule**: `/sdd.analyze` reports findings and remediation owners only. It MUST NOT rewrite semantic source artifacts or locally "repair" drift by mutating planning/design outputs.
+- **Gate ownership rule**: commands other than `/sdd.analyze` may emit local readiness checks, but cross-artifact final PASS/FAIL claims are valid only from this stage.
 
 ## Read Only
 

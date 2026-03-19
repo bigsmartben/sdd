@@ -25,6 +25,22 @@ Anti-solidification rule (mandatory): clarification must refine the current spec
 
 Note: This clarification workflow is expected to run (and be completed) BEFORE invoking `/sdd.plan`. If the user explicitly states they are skipping clarification (e.g., exploratory spike), you may proceed, but must warn that downstream rework risk increases.
 
+Authority rule (mandatory):
+
+- `FEATURE_SPEC` (`spec.md`) is the authoritative feature-semantics source during this command.
+- ambiguity map, question queue, and session notes are derived working views only and MUST NOT override `spec.md`.
+
+Stage boundary rule (mandatory):
+
+- `/sdd.clarify` refines feature semantics in `spec.md` only.
+- Do not introduce planning/contract/task governance payloads (for example: repo-anchor strategy states, boundary tuple keys, `Repo Anchor Role`, contract schema fields, task orchestration directives, or implementation choreography).
+
+Gate ownership rule (mandatory):
+
+- `/sdd.clarify` MAY report local clarification coverage (`Resolved/Deferred/Clear/Outstanding`) for this spec only.
+- `/sdd.clarify` MUST NOT emit cross-artifact final PASS/FAIL decisions.
+- Cross-artifact final PASS/FAIL ownership remains centralized in `/sdd.analyze`.
+
 Execution steps:
 
 1. Resolve file paths once by running `{SCRIPT}` from repo root (`--json --paths-only` / `-Json -PathsOnly`):
@@ -62,6 +78,8 @@ Execution steps:
    - `UC`, `FR`, `Scenario`, `UIF`, `SC`, and `EC` references stay textually consistent
    - `Assumptions / Open Questions` retains only truly blocking items
    - only allowed new headings: `## Clarifications`, `### Session YYYY-MM-DD`
+   - no planning/contract/task governance payload sections are introduced
+   - no cross-artifact final PASS/FAIL conclusion is emitted
 7. Write back `FEATURE_SPEC` and report:
    - questions asked/answered
    - updated spec path

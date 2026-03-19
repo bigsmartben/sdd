@@ -28,7 +28,7 @@ Resolve `PLAN_FILE` from the current feature branch using `{SCRIPT}` defaults.
 Generate exactly one `data-model.md` artifact by consuming the first pending `data-model` row from `PLAN_FILE`.
 This command is single-unit only and MUST NOT perform any other planning stage work.
 `spec.md` + `research.md` define model semantics; repo anchors are correction/traceability evidence only.
-The output MUST define the full spec-scoped abstract data-model class set and stable semantics boundary that downstream planning stages are allowed to reuse.
+The output MUST define the full spec-scoped backbone semantics set and stable boundary that downstream planning stages are allowed to reuse; introduce classes only when a stable owner or reusable contract boundary exists.
 Use `.specify/templates/data-model-template.md` only. If the runtime template is missing or unreadable, stop and report the blocker instead of inferring structure from mirrors or other `data-model.md` outputs.
 
 ## Selection Rules
@@ -90,8 +90,10 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 ## Repo Anchor Decision Protocol (Mandatory)
 
 - Apply strict decision order for every repo-anchor choice: `existing -> extended -> new`.
-- `extended` is valid only for same-entity field/state expansion.
+- `extended` is valid only when the anchor already owns the same business identity and most globally stable fields/states.
 - `new` is allowed in normative sections only when explicit `path::symbol` target evidence is provided.
+- Transport wrappers, request/response DTOs, controller params, and context carriers are not normative same-entity anchors unless they already own materially aligned identity, lifecycle, and stable fields.
+- If the closest repo evidence is carrier-only, keep the element `new` or `todo` and describe the carrier relationship narratively; do not upgrade anchor strength.
 - Every selected `new` anchor in normative content MUST record:
   - why `existing` cannot satisfy the required semantics
   - why `extended` is insufficient or unsafe
@@ -155,6 +157,8 @@ Emit a `Handoff Decision` section in the runtime output with exactly these field
 - `Decision Basis`: `Stage Queue` shows the selected `data-model` row is complete and the fixed next pending stage is `test-matrix`
 - `Selected Stage ID`: selected `data-model` stage row id
 - `Ready/Blocked`: `Ready` when the selected row is updated to `done`; otherwise `Blocked`
+
+`Ready/Blocked` is stage-local readiness only and MUST NOT be treated as cross-artifact final PASS/FAIL; centralized final gating belongs to `/sdd.analyze`.
 
 ## Final Output
 

@@ -31,6 +31,29 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+function Resolve-SpecifyCommand {
+    $override = $env:SDD_SPECIFY_CMD
+    if (-not [string]::IsNullOrWhiteSpace($override)) {
+        if (Test-Path $override -PathType Leaf) {
+            return (Resolve-Path $override).Path
+        }
+
+        $overrideCommand = Get-Command $override -ErrorAction SilentlyContinue
+        if ($overrideCommand) {
+            return $overrideCommand.Source
+        }
+
+        return $null
+    }
+
+    $specifyCommand = Get-Command specify -ErrorAction SilentlyContinue
+    if ($specifyCommand) {
+        return $specifyCommand.Source
+    }
+
+    return $null
+}
+
 function Get-LocalExecutionProtocol {
     param(
         [Parameter(Mandatory = $true)]
@@ -39,13 +62,8 @@ function Get-LocalExecutionProtocol {
 
     $hasRipgrep = [bool](Get-Command rg -ErrorAction SilentlyContinue)
     $hasGitCli = [bool](Get-Command git -ErrorAction SilentlyContinue)
-    $specifyOverride = $env:SDD_SPECIFY_CMD
-    $hasSpecify = $false
-    if (-not [string]::IsNullOrWhiteSpace($specifyOverride)) {
-        $hasSpecify = Test-Path $specifyOverride -PathType Leaf
-    } else {
-        $hasSpecify = [bool](Get-Command specify -ErrorAction SilentlyContinue)
-    }
+    $specifyCmd = Resolve-SpecifyCommand
+    $hasSpecify = -not [string]::IsNullOrWhiteSpace($specifyCmd)
 
     $repoSearch = [ordered]@{
         available = $false
@@ -86,11 +104,6 @@ function Get-LocalExecutionProtocol {
     }
     $runtimeTools = $null
     if ($hasSpecify) {
-        $specifyCmd = if (-not [string]::IsNullOrWhiteSpace($specifyOverride)) {
-            $specifyOverride
-        } else {
-            (Get-Command specify -ErrorAction SilentlyContinue).Source
-        }
         if (-not [string]::IsNullOrWhiteSpace($specifyCmd)) {
             try {
                 $runtimeToolsJson = & $specifyCmd internal-runtime-tools
@@ -98,7 +111,7 @@ function Get-LocalExecutionProtocol {
                     $runtimeTools = $runtimeToolsJson | ConvertFrom-Json
                     $python.available = $true
                     $python.tool = 'specify-cli'
-                    $python.runner_cmd = 'specify <internal-helper-command>'
+                    $python.runner_cmd = 'specify internal-run-python --script <helper-script> -- <helper-args>'
                 }
             } catch {
                 $runtimeTools = $null
@@ -256,7 +269,7 @@ if ($Json) {
 
     if ($DataModelPreflight) {
         $payload.DATA_MODEL_BOOTSTRAP = $null
-        $specifyCmd = if (-not [string]::IsNullOrWhiteSpace($env:SDD_SPECIFY_CMD)) { $env:SDD_SPECIFY_CMD } else { (Get-Command specify -ErrorAction SilentlyContinue).Source }
+        $specifyCmd = Resolve-SpecifyCommand
         if (-not [string]::IsNullOrWhiteSpace($specifyCmd)) {
             try {
                 $dataModelBootstrapJson = & $specifyCmd internal-data-model-bootstrap `
@@ -277,7 +290,7 @@ if ($Json) {
 
     if ($TaskPreflight) {
         $payload.TASKS_BOOTSTRAP = $null
-        $specifyCmd = if (-not [string]::IsNullOrWhiteSpace($env:SDD_SPECIFY_CMD)) { $env:SDD_SPECIFY_CMD } else { (Get-Command specify -ErrorAction SilentlyContinue).Source }
+        $specifyCmd = Resolve-SpecifyCommand
         if (-not [string]::IsNullOrWhiteSpace($specifyCmd)) {
             try {
                 $taskBootstrapJson = & $specifyCmd internal-task-bootstrap `
@@ -299,7 +312,7 @@ if ($Json) {
 
     if ($ImplementPreflight) {
         $payload.IMPLEMENT_BOOTSTRAP = $null
-        $specifyCmd = if (-not [string]::IsNullOrWhiteSpace($env:SDD_SPECIFY_CMD)) { $env:SDD_SPECIFY_CMD } else { (Get-Command specify -ErrorAction SilentlyContinue).Source }
+        $specifyCmd = Resolve-SpecifyCommand
         if (-not [string]::IsNullOrWhiteSpace($specifyCmd)) {
             try {
                 $implementBootstrapJson = & $specifyCmd internal-implement-bootstrap `

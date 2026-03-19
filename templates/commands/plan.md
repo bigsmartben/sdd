@@ -34,6 +34,12 @@ Do only two things:
 
 `/sdd.plan` does **not** generate downstream planning-stage artifacts directly.
 
+## Governance Guardrails (Mandatory)
+
+- **Authority rule**: `plan.md` is authoritative only for planning control-plane state (queue rows, binding-index projections, artifact status, fingerprints). It MUST NOT override semantic authority owned by `spec.md`, `research.md`, `data-model.md`, `test-matrix.md`, or `contracts/`.
+- **Stage boundary rule**: `/sdd.plan` is orchestration-only. Do not emit downstream stage bodies, implementation ownership semantics (including `Repo Anchor Role` assignment), or contract schema details.
+- **Gate ownership rule**: `/sdd.plan` may report local orchestration readiness (`pending`, `in_progress`, `done`, `blocked`) only. Cross-artifact final PASS/FAIL is owned by `/sdd.analyze`.
+
 ## Planning Sharding Model (Mandatory)
 
 Keep the two-layer sharding model for planning runs:
@@ -177,6 +183,7 @@ They MUST consume queue state from the resolved `PLAN_FILE` only.
 - Allow only minimal child-command writeback: status, output path, blocker, source fingerprint, output fingerprint.
 - Do not append long summaries or stage bodies back into `plan.md`.
 - `README.md`, `docs/**`, `specs/**`, `tests/**`, `plans/**`, `templates/**`, demos, and generated artifacts are supporting inputs only and MUST NOT be promoted into repo semantic anchors.
+- Do not claim cross-artifact final PASS/FAIL in this stage.
 
 ## Stop Conditions
 

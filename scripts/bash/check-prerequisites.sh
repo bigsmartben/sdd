@@ -91,7 +91,7 @@ build_local_execution_protocol_json() {
         if runtime_tools="$("$specify_cmd" internal-runtime-tools 2>/dev/null)"; then
             python_available=true
             python_tool="specify-cli"
-            python_runner_cmd="specify <internal-helper-command>"
+            python_runner_cmd="specify internal-run-python --script <helper-script> -- <helper-args>"
         else
             runtime_tools="null"
         fi

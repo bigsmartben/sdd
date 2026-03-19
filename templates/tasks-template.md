@@ -4,7 +4,7 @@ description: "Interface-delivery-oriented execution orchestration template for f
 
 # Tasks: [FEATURE NAME]
 
-**Input**: Upstream design artifacts from `/specs/[YYYYMMDD-feature-name]/`
+**Input**: Upstream design artifacts from `/specs/[YYYYMMDD-slug]/`
 **Outputs**: `tasks.md` (this document), `tasks.manifest.json` (machine-readable sidecar projection)
 
 ## 1) Document Purpose
@@ -17,6 +17,7 @@ description: "Interface-delivery-oriented execution orchestration template for f
 - `tasks.md` MUST NOT duplicate interface/data-model/test semantics from upstream documents.
 - `tasks.md` consumes approved planning artifacts and MUST NOT redesign research, data model, or contract semantics.
 - `tasks.md` MUST NOT supplement missing design, verification semantics, target paths, completion anchors, or dependency meaning.
+- `tasks.md` MUST NOT assign `Repo Anchor Role` semantics or declare cross-artifact final PASS/FAIL; centralized final PASS/FAIL belongs to `/sdd.analyze`.
 - Comprehensive cross-artifact auditing (consistency/coverage/ambiguity/drift/traceability hygiene) is owned by `/sdd.analyze`, not this task-orchestration artifact.
 
 Boundary ownership:

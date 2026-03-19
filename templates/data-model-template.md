@@ -12,14 +12,15 @@ Use this section to establish the overall shape of the model before filling in d
 ### This file should answer
 
 - What shared domain elements and vocabulary must remain consistent across operations
-- What full spec-scoped abstract data-model class set downstream stages are allowed to project from
+- What full spec-scoped backbone semantics set downstream stages are allowed to project from
 - Which globally stable fields, relationships, and derivations form the backbone model
 - What cross-operation invariants and lifecycle anchors downstream artifacts must respect
 - Which core classes/interfaces should appear in the backbone UML
 
 ### This file defines
 
-- The full spec-scoped abstract data-model class set for this feature
+- The full spec-scoped backbone semantics set for this feature
+- Core classes/interfaces only where stable owners or reusable contract boundaries exist
 - Shared domain elements and vocabulary reused across operations
 - Backbone ownership/composition/projection/derivation/dependency relationships
 - State-ownership closure for globally stable projections, derivations, counters, and lifecycle guards
@@ -34,20 +35,21 @@ Use this section to establish the overall shape of the model before filling in d
 - Persistence schema/table/index mappings
 - Operation-local behavior flows, sequence-level logic, or verification matrix design
 
-Downstream `test-matrix.md` and `contracts/` MAY refine operation-scoped VO/DTO/field mappings from the classes and owners declared here, but they MUST NOT mint new globally stable model concepts outside this boundary.
+Downstream `test-matrix.md` and `contracts/` MAY refine operation-scoped VO/DTO/field mappings from the backbone elements and owners declared here, but they MUST NOT mint new globally stable model concepts outside this boundary.
 
 ## Domain Inventory
 
 List only elements that carry shared planning semantics. Capture only globally stable fields here.
 Derive semantics from `spec.md` + `research.md`; use repo anchors only for naming/lifecycle correction and traceability.
 If a stable projection/derivation depends on owner classes or owner fields that downstream stages must read, write, project, validate, or default, declare that owner here or keep the gap non-normative.
+For each row, mark anchor role explicitly so target semantics and current repo evidence are not conflated.
 
-| Domain Element | Kind | Anchor Status (`existing`\|`extended`\|`new`\|`todo`) | Repo Anchor | Upstream Ref(s) | Global Responsibility | Globally Stable Fields Only |
-|----------------|------|--------------------------------------------------------|-------------|-----------------|-----------------------|-----------------------------|
-| `[OrderAggregate]` | `Aggregate` | `existing` | ``src/domain/order.py::OrderAggregate`` | `[spec.md#FR-001]` | [Backbone responsibility shared across operations] | `[id, customerId, status, version]` |
-| `[OrderAggregate.statusHistory]` | `Aggregate Field` | `extended` | ``src/domain/order.py::OrderAggregate.statusHistory`` | `[research.md#R-001]` | [Same-entity lifecycle trace extension] | `[statusHistory]` |
-| `[OrderSnapshotView]` | `Projection / View` | `new` | ``src/projection/order_snapshot.py::OrderSnapshotView`` | `[spec.md#FR-004]` | [Shared read-model responsibility] | `[orderId, state, updatedAt]` |
-| `[PendingModelGap]` | `Projection / View` | `todo` | `TODO(REPO_ANCHOR)` | `[spec.md#FR-009]` | [Deferred anchor resolution] | `[deferredField]` |
+| Domain Element | Kind | Anchor Status (`existing`\|`extended`\|`new`\|`todo`) | Repo Anchor | Anchor Role (`owner`\|`state-source`\|`projection-source`\|`carrier`\|`partial-lineage`) | Upstream Ref(s) | Global Responsibility | Globally Stable Fields Only |
+|----------------|------|--------------------------------------------------------|-------------|------------------------------------------------------------------------------------------------------|-----------------|-----------------------|-----------------------------|
+| `[OrderAggregate]` | `Aggregate` | `existing` | ``src/domain/order.py::OrderAggregate`` | `owner` | `[spec.md#FR-001]` | [Backbone responsibility shared across operations] | `[id, customerId, status, version]` |
+| `[OrderAggregate.statusHistory]` | `Aggregate Field` | `extended` | ``src/domain/order.py::OrderAggregate.statusHistory`` | `owner` | `[research.md#R-001]` | [Same-entity lifecycle trace extension] | `[statusHistory]` |
+| `[OrderSnapshotView]` | `Projection / View` | `new` | ``src/projection/order_snapshot.py::OrderSnapshotView`` | `projection-source` | `[spec.md#FR-004]` | [Shared read-model responsibility] | `[orderId, state, updatedAt]` |
+| `[PendingModelGap]` | `Projection / View` | `todo` | `TODO(REPO_ANCHOR)` | `carrier` | `[spec.md#FR-009]` | [Deferred anchor resolution] | `[deferredField]` |
 
 ## Backbone Structure
 
@@ -81,8 +83,9 @@ If downstream `test-matrix.md` or `contracts/` would need to introduce a new sta
 
 - Model semantics come from `spec.md` + `research.md`; repo anchors are correction/traceability evidence only.
 - For every anchor decision, apply strict order: `existing -> extended -> new`.
-- `extended` is valid only for same-entity field/state expansion.
+- `extended` is valid only when the anchor already owns the same business identity and most globally stable fields/states.
 - `new` is normative only when explicit `path::symbol` target evidence is provided.
+- Transport wrappers, request/response DTOs, controller params, and context carriers are not normative same-entity anchors unless they already own materially aligned identity, lifecycle, and stable fields.
 - Every normative `new` anchor MUST include explicit rejection evidence for both `existing` and `extended`, plus required upstream synchronization actions.
 - `todo` remains forward-looking and non-normative.
 - `INV-*` rules and lifecycle stable states MUST NOT depend on `todo` anchors.
@@ -94,9 +97,9 @@ If downstream `test-matrix.md` or `contracts/` would need to introduce a new sta
 Record one row for every `new` anchor used in normative content.
 Planned-but-missing files/symbols are not sufficient evidence for normative `new`; if the target repo-backed file cannot be confirmed, downgrade the item to `todo` and move it out of normative sections.
 
-| Candidate Anchor | Why `existing` Fails | Why `extended` Fails / Is Unsafe | Target `path::symbol` | Required Upstream Synchronization |
-|------------------|----------------------|----------------------------------|-----------------------|-----------------------------------|
-| `[ConversationThread.status]` | [Existing enum does not cover the required lifecycle semantics] | [Additive extension would overload an unrelated owner/vocabulary] | `[path/to/file.ext::Symbol]` | [Where downstream implementation must converge] |
+| Candidate Anchor | Why `existing` Fails | Why `extended` Fails / Is Unsafe | Target `path::symbol` | Owner Fit | Required Upstream Synchronization |
+|------------------|----------------------|----------------------------------|-----------------------|-----------|-----------------------------------|
+| `[ConversationThread.status]` | [Existing enum does not cover the required lifecycle semantics] | [Additive extension would overload an unrelated owner/vocabulary] | `[path/to/file.ext::Symbol]` | [Why this target is the owner boundary and nearby symbols are only carriers/partial lineage] | [Where downstream implementation must converge] |
 
 ## Shared Invariants
 
@@ -184,6 +187,7 @@ Apply the constitution state-machine applicability rule per lifecycle:
 ## Backbone UML
 
 Show core classes/interfaces plus globally stable fields and labeled relationships. Keep the diagram aligned with the sections above rather than introducing new model elements here.
+This diagram describes the target backbone model, not a claim that matching implementation classes already exist.
 
 ```mermaid
 classDiagram

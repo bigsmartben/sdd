@@ -23,6 +23,12 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 Comprehensive audit ownership remains with `/sdd.analyze`.
 
+## Governance Guardrails (Mandatory)
+
+- **Authority rule**: `/sdd.implement` is authoritative only for runtime execution progress and task-state transitions. It MUST NOT override semantic authority in `spec.md`, `plan.md`, `data-model.md`, `test-matrix.md`, or `contracts/`.
+- **Stage boundary rule**: execute approved task packages only. Do not backfill planning/design artifacts, assign implementation ownership semantics such as `Repo Anchor Role`, or rewrite contract/schema semantics.
+- **Gate ownership rule**: this stage enforces run-local execution safety and analyze-readiness gating only. Cross-artifact final PASS/FAIL remains owned by `/sdd.analyze`.
+
 ## Read Only
 
 1. Run `{SCRIPT}` once and parse `FEATURE_DIR`, `AVAILABLE_DOCS`, `LOCAL_EXECUTION_PROTOCOL`, and `IMPLEMENT_BOOTSTRAP`.
@@ -80,6 +86,7 @@ Do not invent missing semantics in this command:
 - no conversion of `TODO(REPO_ANCHOR)` into executable semantics
 - no bypass of repo-anchor strategy priority (`existing -> extended -> new`)
 - no local CLI trial-and-error outside `LOCAL_EXECUTION_PROTOCOL` and repo-backed task anchors
+- no cross-artifact final PASS/FAIL claim in this stage
 
 ## Final Output
 

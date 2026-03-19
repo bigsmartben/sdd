@@ -103,6 +103,8 @@ Emit a `Handoff Decision` section in the runtime output with exactly these field
 - `Selected Stage ID`: selected `research` stage row id
 - `Ready/Blocked`: `Ready` when the selected row is updated to `done`; otherwise `Blocked`
 
+`Ready/Blocked` is stage-local readiness only and MUST NOT be treated as cross-artifact final PASS/FAIL; centralized final gating belongs to `/sdd.analyze`.
+
 ## Final Output
 
 Report:

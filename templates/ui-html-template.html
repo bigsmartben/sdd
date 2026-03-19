@@ -254,6 +254,28 @@
       font-size: 0.92rem;
     }
 
+    .action-entry {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      padding: 0 14px;
+      border-radius: 10px;
+      border: 1px solid var(--accent);
+      background: var(--accent);
+      color: #f7f3eb;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .action-entry-note {
+      margin-top: 10px;
+      font-size: 0.86rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
     @media (max-width: 640px) {
       .shell { padding: 20px 14px 32px; }
       .hero, .panel { padding: 18px; }
@@ -375,6 +397,11 @@
           <article class="card">
             <h2>Action Surface</h2>
             <p>[Describe the input controls, CTA, or direct manipulation area that powers the main tool loop.]</p>
+            <a class="action-entry" href="[replace-with-target-route-or-handler]">[Primary Action Entry]</a>
+            <p class="action-entry-note">
+              [This action entry MUST map to explicit semantics: entryLabel, targetMeaning, and targetRoute or named handler.
+              If no executable target exists, render non-clickable explanatory text instead of a dead CTA.]
+            </p>
             <div class="rail">
               <span class="pill">Entry Context</span>
               <span class="pill">Primary Action</span>

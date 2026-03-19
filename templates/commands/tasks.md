@@ -31,6 +31,12 @@ Resolve `PLAN_FILE` from current feature branch using `{SCRIPT}` defaults.
 2. Emit a dependency-safe `Task DAG` and aligned `tasks.manifest.json`.
 3. Keep semantics in authoritative upstream artifacts; do not redesign in this command.
 
+## Governance Guardrails (Mandatory)
+
+- **Authority rule**: `tasks.md` is authoritative only for execution decomposition and scheduling metadata. It MUST NOT override semantic authority owned by `spec.md`, `plan.md`, `data-model.md`, `test-matrix.md`, or `contracts/`.
+- **Stage boundary rule**: `/sdd.tasks` maps approved design into executable work packages only. Do not backfill planning/design artifacts, assign implementation ownership semantics such as `Repo Anchor Role`, or rewrite contract/schema semantics.
+- **Gate ownership rule**: `/sdd.tasks` may enforce run-local execution safety gates only. Cross-artifact final PASS/FAIL remains owned by `/sdd.analyze`.
+
 ## Read Only
 
 1. Run `{SCRIPT}` once from repo root.
@@ -93,6 +99,7 @@ Hard execution safety gates in this command are limited to:
 - task-line completeness
 
 `/sdd.tasks` does **not** own comprehensive audit concerns (coverage completeness, ambiguity sweeps, contradiction analysis). Route those to `/sdd.analyze`.
+Do not claim cross-artifact final PASS/FAIL in this stage.
 
 ## Final Output
 

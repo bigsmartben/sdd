@@ -132,7 +132,7 @@ def test_research_data_model_and_test_matrix_are_packet_first():
     assert "Stage Packet (Data-Model Unit)" in data_model
     assert "Keep repo-backed reads bounded to the selected unit and lifecycle/invariant blockers." in data_model
     assert "Prefer section-level reads of `spec.md` and `research.md`" in data_model
-    assert "full spec-scoped abstract data-model class set" in data_model
+    assert "full spec-scoped backbone semantics set" in data_model
     assert "`DATA_MODEL_BOOTSTRAP.state_machine_policy`" in data_model
     assert "If `N > 3` or `T >= 2N`, emit a full FSM package" in data_model
     assert "Every selected `new` anchor in normative content MUST record:" in data_model
@@ -182,8 +182,8 @@ def test_contract_template_contains_unified_realization_requirements():
 def test_data_model_template_requires_new_anchor_evidence_and_owner_closure():
     content = read("templates/data-model-template.md")
 
-    assert "full spec-scoped abstract data-model class set" in content
-    assert "MAY refine operation-scoped VO/DTO/field mappings from the classes and owners declared here" in content
+    assert "full spec-scoped backbone semantics set" in content
+    assert "MAY refine operation-scoped VO/DTO/field mappings from the backbone elements and owners declared here" in content
     assert "## State Ownership Closure" in content
     assert "Every globally stable derived/projection semantic above MUST cite the owner class/field/state that sustains it." in content
     assert "route back to `/sdd.plan.data-model` instead of inventing the model later" in content
@@ -307,6 +307,13 @@ def test_lint_rules_for_unified_contract_runtime_rows():
     assert "PLN-ID-007" in content
     assert "PLN-ID-008" in content
     assert "PLN-ID-009" in content
+    assert "PLN-ID-012" in content
+    assert "PLN-ID-013" in content
+    assert "PLN-ID-014" in content
+    assert "PLN-ID-015" in content
+    assert "PLN-RA-011" in content
+    assert "PLN-RA-012" in content
+    assert "PLN-RA-013" in content
     assert "\tcontracts\tcontracts/*\t" in content
     assert "Interface details are missing" not in content
 

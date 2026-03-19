@@ -19,15 +19,19 @@ Keep the matrix minimal-but-sufficient: merge pure permutations with identical o
 ## Stable Binding Keys (Required)
 
 - Keep `TM ID` and `TC ID` stable once referenced downstream.
-- For every scenario/case row, populate `Operation ID`, `Boundary Anchor`, `IF Scope`, `Repo Anchor`, and `Anchor Status` (use explicit `N/A` when not interface-scoped).
+- For every scenario/case row, populate `Operation ID`, `Boundary Anchor`, `IF Scope`, `Repo Anchor`, `Repo Anchor Role`, and `Anchor Status` (use explicit `N/A` when not interface-scoped).
 - `Boundary Anchor` is normative only when it is one of: HTTP `METHOD /path`, `event.topic`, RPC/Façade method, CLI command, or explicit `N/A`.
 - `Boundary Anchor` MUST identify the first consumer-callable entry used for contract binding; do not project internal service/manager/mapper handoff symbols here.
+- `Operation ID` captures feature-level operation semantics; multiple `Operation ID` values MAY share the same repo-confirmed `Boundary Anchor`.
+- `Repo Anchor` is supporting evidence only and MUST NOT replace or redefine `Boundary Anchor`.
 - If the consumer enters through HTTP, prefer `HTTP METHOD /path`; if the consumer enters through a stable RPC/Façade surface, use `Facade.method`.
+- A normative `Boundary Anchor` MUST be repo-confirmed when a consumer-callable entry exists in allowed bounded reads; do not replace confirmed HTTP/controller entries with abstract facade operation names.
 - `BA-*` labels are invalid as normative boundary anchors and may appear only as non-normative helper labels.
 - Apply repo-anchor decision order `existing -> extended -> new`.
 - `extended` is valid only for same-entity field/state expansion.
 - `new` is normative only when explicit `path::symbol` target evidence is provided.
 - If explicit target evidence is missing, set `Anchor Status = todo` and keep the row non-normative forward-looking only.
+- `Repo Anchor Role` must be one of: `boundary-owner`, `state-source`, `projection-source`, `transport-carrier`, `context-carrier`, `partial-lineage`.
 - Keep `Operation ID` / `Boundary Anchor` / `IF Scope` values stable; `/sdd.plan.contract` MUST consume these tuple keys verbatim and MUST NOT redefine them.
 - `Implementation Entry Anchor` MUST NOT be added to `Scenario Matrix` or `Verification Case Anchors` tuple keys.
 - `Implementation Entry Anchor` is allowed only in `Binding Contract Packets` as a contract-seed field for `/sdd.plan.contract`.
@@ -38,15 +42,15 @@ Keep the matrix minimal-but-sufficient: merge pure permutations with identical o
 
 ## Scenario Matrix
 
-| TM ID | Operation ID | Boundary Anchor | IF Scope | Repo Anchor | Anchor Status | Path Type | Scenario | Preconditions | Expected Outcome | Related Ref |
-|-------|--------------|-----------------|----------|-------------|---------------|-----------|----------|---------------|------------------|-------------|
-| TM-001 | [operationId or N/A] | [HTTP `METHOD /path` \| `event.topic` \| `Facade.method` \| `cli command` \| `N/A`] | [IF-### or N/A] | [`path/to/file.ext::Symbol` or `TODO(REPO_ANCHOR)`] | [`existing` \| `extended` \| `new` \| `todo`] | Main | [Scenario] | [State or setup] | [Observable result] | [UC / UIF / FR] |
+| TM ID | Operation ID | Boundary Anchor | IF Scope | Repo Anchor | Repo Anchor Role | Anchor Status | Path Type | Scenario | Preconditions | Expected Outcome | Related Ref |
+|-------|--------------|-----------------|----------|-------------|------------------|---------------|-----------|----------|---------------|------------------|-------------|
+| TM-001 | [operationId or N/A] | [HTTP `METHOD /path` \| `event.topic` \| `Facade.method` \| `cli command` \| `N/A`] | [IF-### or N/A] | [`path/to/file.ext::Symbol` or `TODO(REPO_ANCHOR)`] | [`boundary-owner` \| `state-source` \| `projection-source` \| `transport-carrier` \| `context-carrier` \| `partial-lineage`] | [`existing` \| `extended` \| `new` \| `todo`] | Main | [Scenario] | [State or setup] | [Observable result] | [UC / UIF / FR] |
 
 ## Verification Case Anchors
 
-| TC ID | TM ID | Operation ID | Boundary Anchor | IF Scope | Repo Anchor | Anchor Status | Verification Goal | Observability / Signal |
-|-------|-------|--------------|-----------------|----------|-------------|---------------|-------------------|------------------------|
-| TC-001 | TM-001 | [operationId or N/A] | [same as scenario row or N/A] | [IF-### or N/A] | [same as scenario row] | [same as scenario row] | [What this case proves] | [Assertion, signal, or check] |
+| TC ID | TM ID | Operation ID | Boundary Anchor | IF Scope | Repo Anchor | Repo Anchor Role | Anchor Status | Verification Goal | Observability / Signal |
+|-------|-------|--------------|-----------------|----------|-------------|------------------|---------------|-------------------|------------------------|
+| TC-001 | TM-001 | [operationId or N/A] | [same as scenario row or N/A] | [IF-### or N/A] | [same as scenario row] | [same as scenario row] | [same as scenario row] | [What this case proves] | [Assertion, signal, or check] |
 
 ## Binding Contract Packets
 
@@ -70,6 +74,7 @@ When either anchor status is `new`, the packet MUST carry concise strategy evide
 - Treat `Boundary Anchor` as the client-facing contract entry only; keep internal implementation handoff anchors for contract realization design sections.
 - For HTTP-facing bindings, keep the controller method in `Implementation Entry Anchor` and the first downstream service/facade hop in `Primary Collaborator Anchor`.
 - `State Owner Anchor(s)` MUST identify the owner classes that this operation reads, writes, projects, or uses for state/default/validation decisions; do not substitute the collaborator list here.
+- `State Owner Anchor(s)` MUST use anchors that map to `owner`, `state-source`, or `projection-source` in `data-model.md`; `transport-carrier`, `context-carrier`, and `partial-lineage` are supporting evidence only.
 - `Lifecycle Ref(s)` and `Invariant Ref(s)` SHOULD point to `data-model.md` only when contract-visible behavior depends on lifecycle or invariant semantics; otherwise keep them `N/A`.
 - If later contract generation surfaces tuple drift, repair this packet via `/sdd.plan.test-matrix`; do not let downstream commands rewrite Stage 2 tuple seeds.
 - `State Owner Anchor(s)` MUST trace back to owner classes/fields already modeled as globally stable in `data-model.md`; contract stage may widen operation-scoped field coverage, but it MUST NOT mint a new owner concept.
