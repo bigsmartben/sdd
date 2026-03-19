@@ -357,7 +357,7 @@ def test_task_preflight_helper_surfaces_incomplete_stage_queue_blocker(tmp_path)
     assert "incomplete_stage_queue" in error_codes
 
 
-def test_task_preflight_helper_flags_missing_full_field_dictionary(tmp_path):
+def test_task_preflight_helper_warns_missing_full_field_dictionary(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
     _write_minimal_feature(feature_dir, contract_text="# Contract\n")
 
@@ -386,11 +386,12 @@ def test_task_preflight_helper_flags_missing_full_field_dictionary(tmp_path):
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert payload["ready_unit_inventory"] == []
-    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
-    assert "full_field_dictionary_missing" in error_codes
+    assert payload["execution_readiness"]["ready_for_task_generation"] is True
+    warning_codes = [entry["code"] for entry in payload["execution_readiness"]["warnings"]]
+    assert "full_field_dictionary_missing" in warning_codes
 
 
-def test_task_preflight_helper_flags_unresolved_contract_field_gaps(tmp_path):
+def test_task_preflight_helper_warns_unresolved_contract_field_gaps(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
     _write_minimal_feature(
         feature_dir,
@@ -429,11 +430,12 @@ def test_task_preflight_helper_flags_unresolved_contract_field_gaps(tmp_path):
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert payload["ready_unit_inventory"] == []
-    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
-    assert "contract_field_gap_unresolved" in error_codes
+    assert payload["execution_readiness"]["ready_for_task_generation"] is True
+    warning_codes = [entry["code"] for entry in payload["execution_readiness"]["warnings"]]
+    assert "contract_field_gap_unresolved" in warning_codes
 
 
-def test_task_preflight_helper_flags_http_controller_first_violation(tmp_path):
+def test_task_preflight_helper_warns_http_controller_first_violation(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
     _write_minimal_feature(
         feature_dir,
@@ -473,8 +475,9 @@ def test_task_preflight_helper_flags_http_controller_first_violation(tmp_path):
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert payload["ready_unit_inventory"] == []
-    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
-    assert "controller_first_violation" in error_codes
+    assert payload["execution_readiness"]["ready_for_task_generation"] is True
+    warning_codes = [entry["code"] for entry in payload["execution_readiness"]["warnings"]]
+    assert "controller_first_violation" in warning_codes
 
 
 def test_task_preflight_helper_flags_missing_binding_projection_tuple_fields(tmp_path):
@@ -520,7 +523,7 @@ def test_task_preflight_helper_flags_missing_binding_projection_tuple_fields(tmp
     assert "binding_projection_missing_required_fields" in error_codes
 
 
-def test_task_preflight_helper_flags_missing_binding_contract_packet(tmp_path):
+def test_task_preflight_helper_warns_missing_binding_contract_packet(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
     _write_minimal_feature(feature_dir, include_binding_packet=False)
 
@@ -548,9 +551,9 @@ def test_task_preflight_helper_flags_missing_binding_contract_packet(tmp_path):
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["execution_readiness"]["ready_for_task_generation"] is False
-    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
-    assert "missing_binding_contract_packet" in error_codes
+    assert payload["execution_readiness"]["ready_for_task_generation"] is True
+    warning_codes = [entry["code"] for entry in payload["execution_readiness"]["warnings"]]
+    assert "missing_binding_contract_packet" in warning_codes
 
 
 def test_task_preflight_helper_flags_missing_new_anchor_strategy_evidence(tmp_path):

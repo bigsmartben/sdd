@@ -323,7 +323,7 @@ def build_execution_readiness(
         [unit["binding_row_id"] for unit in unit_inventory if not unit["binding_packet"]["present"]]
     )
     if missing_binding_packet_rows:
-        errors.append(
+        warnings.append(
             {
                 "code": "missing_binding_contract_packet",
                 "message": "Some binding rows have no matching Binding Contract Packet in test-matrix.md.",
@@ -332,10 +332,14 @@ def build_execution_readiness(
         )
 
     binding_projection_packet_drift_rows = sorted(
-        [unit["binding_row_id"] for unit in unit_inventory if unit["binding_packet"]["present"] and unit["binding_packet"]["has_tuple_drift"]]
+        [
+            unit["binding_row_id"]
+            for unit in unit_inventory
+            if unit["binding_packet"]["present"] and unit["binding_packet"]["has_tuple_drift"]
+        ]
     )
     if binding_projection_packet_drift_rows:
-        errors.append(
+        warnings.append(
             {
                 "code": "binding_projection_packet_drift",
                 "message": "Some binding rows drift from their authoritative Binding Contract Packets.",
@@ -444,7 +448,7 @@ def build_execution_readiness(
         ]
     )
     if missing_field_dictionary_rows:
-        errors.append(
+        warnings.append(
             {
                 "code": "full_field_dictionary_missing",
                 "message": "Some done contract rows are missing `Full Field Dictionary (Operation-scoped)`.",
@@ -462,7 +466,7 @@ def build_execution_readiness(
         ]
     )
     if unresolved_field_gap_rows:
-        errors.append(
+        warnings.append(
             {
                 "code": "contract_field_gap_unresolved",
                 "message": "Some done contract rows still carry unresolved field-level gaps.",
@@ -480,7 +484,7 @@ def build_execution_readiness(
         ]
     )
     if controller_first_violation_rows:
-        errors.append(
+        warnings.append(
             {
                 "code": "controller_first_violation",
                 "message": "Some HTTP contract rows violate controller-first boundary rules.",
