@@ -801,6 +801,246 @@ def test_task_preflight_helper_blocks_unresolved_contract_placeholder_names(tmp_
     assert "contract_placeholder_names_present" in error_codes
 
 
+def test_task_preflight_helper_blocks_duplicate_required_contract_sections(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(
+        feature_dir,
+        contract_text="""# Contract
+**Boundary Anchor (Required)**: HTTP POST /tasks
+**Implementation Entry Anchor (Required)**: src/app/tasks_controller.py::TasksController.create_task
+
+## Binding Context
+| Field | Value |
+|-------|-------|
+| `UIF Path Ref(s)` | UIF-Path-001 |
+| `TM ID` | TM-001 |
+| `TC IDs` | TC-001, TC-002 |
+
+## Full Field Dictionary (Operation-scoped)
+| Field | Owner Class | Dictionary Tier | Direction | Required/Optional | Default | Validation/Enum | Persisted | Contract-visible | Used in createTask | Source Anchor |
+|-------|-------------|-----------------|-----------|-------------------|---------|-----------------|-----------|------------------|--------------------|---------------|
+| taskId | CreateTaskResponse | operation-critical | output | required | none | uuid | no | yes | yes | `src/app/contracts.py::CreateTaskResponse.taskId` |
+
+## UML Class Design
+### Resolved Type Inventory
+| Role | Concrete Name | Resolution | Source / Evidence | Notes |
+|------|---------------|------------|-------------------|-------|
+| boundary-entry | HTTP POST /tasks | existing | binding packet | boundary |
+| implementation-entry | src/app/tasks_controller.py::TasksController.create_task | existing | binding packet | entry |
+
+## Sequence Design
+### Behavior Paths
+| Path | Trigger | Key Steps | Outcome | Contract-Visible Failure | Sequence Ref | TM/TC Anchor |
+|------|---------|-----------|---------|--------------------------|--------------|--------------|
+| Main | create task | call controller | success | N/A | S1 | TM-001 / TC-001, TC-002 |
+
+## Test Projection
+### Test Projection Slice
+| IF Scope | Operation ID | Test Scope | TM ID | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
+|----------|--------------|------------|-------|----------|------------------|--------------------------|----------------------------|
+| IF-001 | createTask | Integration | TM-001 | TC-001, TC-002 | success | fail | pytest -k createTask |
+
+## Closure Check
+| Check Item | Required Evidence | Status |
+|------------|-------------------|--------|
+| Interface-definition closure | request/response surface + full field dictionary + shared semantic reuse are all present | ok |
+| UML closure | class diagram and two-party package relations both present and consistent with sequence | ok |
+| Sequence closure | success/failure paths include mandatory second-party, third-party, and middleware calls | ok |
+| Test closure | `TM/TC`, pass/failure anchors, and command/assertion signal are present | ok |
+
+## Sequence Design
+### Behavior Paths
+| Path | Trigger | Key Steps | Outcome | Contract-Visible Failure | Sequence Ref | TM/TC Anchor |
+|------|---------|-----------|---------|--------------------------|--------------|--------------|
+| Duplicate Section | duplicate heading | duplicated sequence section | drift | N/A | S2 | TM-001 / TC-001 |
+""",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "task_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+            "--test-matrix",
+            str(feature_dir / "test-matrix.md"),
+            "--contracts-dir",
+            str(feature_dir / "contracts"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["execution_readiness"]["ready_for_task_generation"] is False
+    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
+    assert "contract_duplicate_required_sections" in error_codes
+
+
+def test_task_preflight_helper_blocks_binding_context_coverage_drift(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(
+        feature_dir,
+        contract_text="""# Contract
+**Boundary Anchor (Required)**: HTTP POST /tasks
+**Implementation Entry Anchor (Required)**: src/app/tasks_controller.py::TasksController.create_task
+
+## Binding Context
+| Field | Value |
+|-------|-------|
+| `UIF Path Ref(s)` | UIF-Path-001, UIF-Path-002 |
+| `TM ID` | TM-001 |
+| `TC IDs` | TC-001, TC-002 |
+
+## Full Field Dictionary (Operation-scoped)
+| Field | Owner Class | Dictionary Tier | Direction | Required/Optional | Default | Validation/Enum | Persisted | Contract-visible | Used in createTask | Source Anchor |
+|-------|-------------|-----------------|-----------|-------------------|---------|-----------------|-----------|------------------|--------------------|---------------|
+| taskId | CreateTaskResponse | operation-critical | output | required | none | uuid | no | yes | yes | `src/app/contracts.py::CreateTaskResponse.taskId` |
+
+## UML Class Design
+### Resolved Type Inventory
+| Role | Concrete Name | Resolution | Source / Evidence | Notes |
+|------|---------------|------------|-------------------|-------|
+| boundary-entry | HTTP POST /tasks | existing | binding packet | boundary |
+| implementation-entry | src/app/tasks_controller.py::TasksController.create_task | existing | binding packet | entry |
+
+## Sequence Design
+### Behavior Paths
+| Path | Trigger | Key Steps | Outcome | Contract-Visible Failure | Sequence Ref | TM/TC Anchor |
+|------|---------|-----------|---------|--------------------------|--------------|--------------|
+| Main | create task | call controller | success | N/A | S1 | TM-001 / TC-001 |
+
+## Test Projection
+### Test Projection Slice
+| IF Scope | Operation ID | Test Scope | TM ID | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
+|----------|--------------|------------|-------|----------|------------------|--------------------------|----------------------------|
+| IF-001 | createTask | Integration | TM-001 | TC-001 | success | fail | pytest -k createTask |
+
+## Closure Check
+| Check Item | Required Evidence | Status |
+|------------|-------------------|--------|
+| Interface-definition closure | request/response surface + full field dictionary + shared semantic reuse are all present | ok |
+| UML closure | class diagram and two-party package relations both present and consistent with sequence | ok |
+| Sequence closure | success/failure paths include mandatory second-party, third-party, and middleware calls | ok |
+| Test closure | `TM/TC`, pass/failure anchors, and command/assertion signal are present | ok |
+""",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "task_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+            "--test-matrix",
+            str(feature_dir / "test-matrix.md"),
+            "--contracts-dir",
+            str(feature_dir / "contracts"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["execution_readiness"]["ready_for_task_generation"] is False
+    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
+    assert "contract_binding_context_coverage_drift" in error_codes
+
+
+def test_task_preflight_helper_blocks_anchor_inventory_mismatch(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(
+        feature_dir,
+        contract_text="""# Contract
+**Boundary Anchor (Required)**: HTTP POST /tasks
+**Implementation Entry Anchor (Required)**: src/app/tasks_controller.py::TasksController.create_task
+
+## Binding Context
+| Field | Value |
+|-------|-------|
+| `UIF Path Ref(s)` | UIF-Path-001 |
+| `TM ID` | TM-001 |
+| `TC IDs` | TC-001, TC-002 |
+
+## Full Field Dictionary (Operation-scoped)
+| Field | Owner Class | Dictionary Tier | Direction | Required/Optional | Default | Validation/Enum | Persisted | Contract-visible | Used in createTask | Source Anchor |
+|-------|-------------|-----------------|-----------|-------------------|---------|-----------------|-----------|------------------|--------------------|---------------|
+| taskId | CreateTaskResponse | operation-critical | output | required | none | uuid | no | yes | yes | `src/app/contracts.py::CreateTaskResponse.taskId` |
+
+## UML Class Design
+### Resolved Type Inventory
+| Role | Concrete Name | Resolution | Source / Evidence | Notes |
+|------|---------------|------------|-------------------|-------|
+| boundary-entry | src/app/tasks_controller.py::TasksController.create_task | existing | binding packet | mismatch with top boundary |
+| implementation-entry | src/app/tasks_controller.py::TasksController.create_task | existing | binding packet | entry |
+
+## Sequence Design
+### Behavior Paths
+| Path | Trigger | Key Steps | Outcome | Contract-Visible Failure | Sequence Ref | TM/TC Anchor |
+|------|---------|-----------|---------|--------------------------|--------------|--------------|
+| Main | create task | call controller | success | N/A | S1 | TM-001 / TC-001, TC-002 |
+
+## Test Projection
+### Test Projection Slice
+| IF Scope | Operation ID | Test Scope | TM ID | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
+|----------|--------------|------------|-------|----------|------------------|--------------------------|----------------------------|
+| IF-001 | createTask | Integration | TM-001 | TC-001, TC-002 | success | fail | pytest -k createTask |
+
+## Closure Check
+| Check Item | Required Evidence | Status |
+|------------|-------------------|--------|
+| Interface-definition closure | request/response surface + full field dictionary + shared semantic reuse are all present | ok |
+| UML closure | class diagram and two-party package relations both present and consistent with sequence | ok |
+| Sequence closure | success/failure paths include mandatory second-party, third-party, and middleware calls | ok |
+| Test closure | `TM/TC`, pass/failure anchors, and command/assertion signal are present | ok |
+""",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "task_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+            "--test-matrix",
+            str(feature_dir / "test-matrix.md"),
+            "--contracts-dir",
+            str(feature_dir / "contracts"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["execution_readiness"]["ready_for_task_generation"] is False
+    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
+    assert "contract_anchor_inventory_mismatch" in error_codes
+
+
 def test_task_preflight_helper_flags_missing_binding_projection_tuple_fields(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
     _write_minimal_feature(feature_dir)

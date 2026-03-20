@@ -507,7 +507,7 @@ def test_setup_plan_bash_handles_branch_inferred_spec_file_with_spaces_in_path(t
     assert normalize_path(payload["IMPL_PLAN"]) == normalize_path(feature_dir / "plan.md")
 
 
-def test_create_new_feature_bash_keeps_current_feature_branch(tmp_path):
+def test_create_new_feature_bash_switches_from_existing_feature_branch_to_generated_branch(tmp_path):
     repo_dir = tmp_path / "repo"
     (repo_dir / ".specify" / "templates").mkdir(parents=True)
     (repo_dir / ".specify" / "templates" / "spec-template.md").write_text("# Spec Template\n", encoding="utf-8")
@@ -522,14 +522,6 @@ def test_create_new_feature_bash_keeps_current_feature_branch(tmp_path):
     current_branch_name = "feature-20250708-demo-feature"
     subprocess.run(["git", "checkout", "-b", current_branch_name], cwd=repo_dir, check=True, capture_output=True, text=True)
 
-    before = subprocess.run(
-        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-        cwd=repo_dir,
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.strip()
-
     result = run_bash(
         script,
         repo_dir,
@@ -538,9 +530,10 @@ def test_create_new_feature_bash_keeps_current_feature_branch(tmp_path):
 
     assert result.returncode == 0
     payload = json.loads(result.stdout)
-    assert payload["BRANCH_NAME"] == current_branch_name
+    expected_key = f"{today_key()}-ignored"
+    assert payload["BRANCH_NAME"] == f"feature-{expected_key}"
 
-    spec_path = repo_dir / "specs" / "20250708-demo-feature" / "spec.md"
+    spec_path = repo_dir / "specs" / expected_key / "spec.md"
     assert spec_path.exists()
     assert spec_path.read_text(encoding="utf-8") == "# Spec Template\n"
 
@@ -551,7 +544,8 @@ def test_create_new_feature_bash_keeps_current_feature_branch(tmp_path):
         capture_output=True,
         text=True,
     ).stdout.strip()
-    assert after == before
+    assert after == payload["BRANCH_NAME"]
+    assert after != current_branch_name
 
 
 def test_create_new_feature_bash_switches_to_generated_branch_by_default(tmp_path):
@@ -704,7 +698,7 @@ def test_create_new_feature_bash_tracks_remote_only_branch(tmp_path):
     assert upstream == f"origin/{remote_branch_name}"
 
 
-def test_create_new_feature_bash_normalizes_feature_prefixed_branch_to_spec_key(tmp_path):
+def test_create_new_feature_bash_generates_new_branch_instead_of_reusing_existing_feature_branch(tmp_path):
     repo_dir = tmp_path / "repo"
     (repo_dir / ".specify" / "templates").mkdir(parents=True)
     (repo_dir / ".specify" / "templates" / "spec-template.md").write_text("# Spec Template\n", encoding="utf-8")
@@ -732,12 +726,12 @@ def test_create_new_feature_bash_normalizes_feature_prefixed_branch_to_spec_key(
 
     assert result.returncode == 0
     payload = json.loads(result.stdout)
-    assert payload["BRANCH_NAME"] == "feature-20250708-parent-hanxue-channel"
+    expected_key = f"{today_key()}-ignored"
+    assert payload["BRANCH_NAME"] == f"feature-{expected_key}"
 
-    spec_path = repo_dir / "specs" / "20250708-parent-hanxue-channel" / "spec.md"
+    spec_path = repo_dir / "specs" / expected_key / "spec.md"
     assert spec_path.exists()
     assert spec_path.read_text(encoding="utf-8") == "# Spec Template\n"
-    assert not (repo_dir / "specs" / "feature-20250708-parent-hanxue-channel").exists()
 
 
 def test_create_new_feature_bash_uses_current_date_instead_of_incrementing_spec_dir_dates(tmp_path):

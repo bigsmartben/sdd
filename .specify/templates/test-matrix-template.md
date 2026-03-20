@@ -17,7 +17,7 @@ Use this artifact to project spec-defined verification semantics into stable bin
 - [Binding strategy: how spec paths collapse into stable `BindingRowID` units]
 - [Observability strategy: which signals prove each path family]
 
-## UIF Full Path (Mermaid)
+## UIF Full Path Coverage Graph (Mermaid)
 
 Purpose: spec-derived overview UIF completion for the selected feature scope. Integrate the consumer-visible UIF paths already defined inside relevant `UC` sections into one full-path interaction map from `spec.md`, not a repository realization or implementation sequence.
 
@@ -39,6 +39,22 @@ Rules:
 - Cite node or edge labels with the same `UIF Path Ref(s)`, `Scenario Ref(s)`, `Success Ref(s)`, and `Edge Ref(s)` used by the binding packet where relevant.
 - Do not infer controllers, services, collaborators, DTOs, state owners, or repository hops here.
 - Do not treat this diagram as interface design evidence; it exists only to make spec-defined interaction flow replayable during downstream reads.
+
+## UIF Path Coverage Ledger
+
+Purpose: enforce full selected-scope UIF path accounting for the coverage graph.
+
+| UIF Path Ref | Path Type | Included in Graph | Omission Reason |
+|--------------|-----------|-------------------|-----------------|
+| [UIF-Path-001] | [Happy \| Alternate \| Exception \| Degraded] | [yes \| no] | [N/A when included; explicit reason when omitted] |
+
+Rules:
+
+- Every selected-scope `UIF Path Ref` MUST appear exactly once in this ledger.
+- `Included in Graph = yes` means the path is explicitly rendered in `UIF Full Path Coverage Graph (Mermaid)`.
+- `Included in Graph = no` is allowed only when omission keeps the graph readable and the path is still covered by `Scenario Matrix` / `Verification Case Anchors`.
+- Any omitted path MUST provide a concrete omission reason (for example: duplicated by same-family branch compression, or visually equivalent terminal state).
+- A path missing from both the Mermaid graph and this ledger is invalid.
 
 ## Scenario Matrix
 
@@ -124,6 +140,7 @@ Purpose: minimal binding locator packet for the selected interaction unit.
 ## Notes
 
 - `test-matrix.md` is the stage that fixes the ref-level mapping from binding to spec/test slices.
-- `UIF Full Path (Mermaid)` completes the spec overview UIF by integrating `UC`-local UIF paths into one replay aid for the same binding/test semantics, not a second implementation authority.
+- `UIF Full Path Coverage Graph (Mermaid)` completes the spec overview UIF by integrating `UC`-local UIF paths into one replay aid for the same binding/test semantics, not a second implementation authority.
+- `UIF Path Coverage Ledger` guarantees full selected-scope UIF path accounting even when the Mermaid graph intentionally compresses equivalent branches.
 - Packets should remove rebinding work without duplicating `spec.md` prose.
 - Downstream stages may consume these packets, but they must not rewrite `BindingRowID` or binding meaning.

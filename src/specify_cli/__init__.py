@@ -32,6 +32,7 @@ import tempfile
 import shutil
 import shlex
 import json
+import re
 import yaml
 from pathlib import Path
 from typing import Optional, Tuple
@@ -831,7 +832,57 @@ def merge_json_files(existing_path: Path, new_content: dict, verbose: bool = Fal
                 result[key] = value
         return result
 
+    def _looks_like_cmd_chcp_args(args: object) -> bool:
+        if isinstance(args, list):
+            normalized = " ".join(str(part).strip() for part in args).lower()
+            first = str(args[0]).strip().lower() if args else ""
+            has_cmd_k = first == "/k" or bool(re.search(r"(^|\\s)/k(\\s|$)", normalized))
+        elif isinstance(args, str):
+            normalized = args.strip().lower()
+            has_cmd_k = bool(re.search(r"(^|\\s)/k(\\s|$)", normalized))
+        else:
+            return False
+
+        return has_cmd_k and "chcp" in normalized and "65001" in normalized
+
+    def _is_powershell_profile(profile_name: str, profile: dict) -> bool:
+        fingerprint = " ".join(
+            [
+                str(profile_name or ""),
+                str(profile.get("path", "")),
+                str(profile.get("source", "")),
+            ]
+        ).lower()
+        return "powershell" in fingerprint or "pwsh" in fingerprint
+
+    def _sanitize_windows_terminal_args(settings: dict) -> None:
+        profiles = settings.get("terminal.integrated.profiles.windows")
+        if isinstance(profiles, dict):
+            for profile_name, profile in profiles.items():
+                if not isinstance(profile, dict):
+                    continue
+                profile_args = profile.get("args")
+                if _is_powershell_profile(profile_name, profile) and _looks_like_cmd_chcp_args(profile_args):
+                    profile["args"] = ["-NoExit", "-Command", "chcp 65001 > $null"]
+
+        default_profile = str(settings.get("terminal.integrated.defaultProfile.windows", "")).lower()
+        shell_windows = str(settings.get("terminal.integrated.shell.windows", "")).lower()
+        shell_args = settings.get("terminal.integrated.shellArgs.windows")
+        shell_is_powershell = (
+            "powershell" in default_profile
+            or "pwsh" in default_profile
+            or "powershell" in shell_windows
+            or "pwsh" in shell_windows
+        )
+        if shell_is_powershell and _looks_like_cmd_chcp_args(shell_args):
+            settings["terminal.integrated.shellArgs.windows"] = [
+                "-NoExit",
+                "-Command",
+                "chcp 65001 > $null",
+            ]
+
     merged = deep_merge(existing_content, new_content)
+    _sanitize_windows_terminal_args(merged)
 
     if verbose:
         console.print(f"[cyan]Merged JSON file:[/cyan] {existing_path.name}")

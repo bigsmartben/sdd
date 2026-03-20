@@ -52,7 +52,7 @@ This stage MUST NOT redefine how the binding was cut from `spec.md`; binding pro
 7. Require `test-matrix` stage row to be `done`
 8. Require `data-model` stage row to be `done`; if not, stop and route back to `/sdd.plan.data-model`
 9. Attempt to resolve one selected binding packet in `test-matrix.md` by the same `BindingRowID`; if absent, stop and route back to `/sdd.plan.test-matrix`
-10. Resolve the selected packet's `TM ID` and `TC IDs` in `test-matrix.md`; if they are missing or inconsistent, stop and route back to `/sdd.plan.test-matrix`
+10. Resolve the selected packet's `Primary TM IDs`, `TM IDs`, and `TC IDs` in `test-matrix.md`; if they are missing or inconsistent, stop and route back to `/sdd.plan.test-matrix`
 11. Resolve the selected packet's `Spec Ref(s)`, `Scenario Ref(s)`, `Success Ref(s)`, and `Edge Ref(s)`; if they are missing or inconsistent with the same `BindingRowID`, stop and route back to `/sdd.plan.test-matrix`
 
 ## Plan Control-Plane Input Path (Mandatory)
@@ -70,8 +70,8 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 - Build one run-local `Selected Binding Context` from:
   - selected `Artifact Status` row
   - matching `Binding Projection Index` row
-  - selected `Binding Contract Packet`
-  - selected `Scenario Matrix` row
+  - selected `Binding Packet`
+  - selected `Scenario Matrix` rows
   - selected `Verification Case Anchors` rows
   - resolved spec slices addressed by the selected refs
   - binding-scoped shared-semantic slices from `data-model.md`
@@ -84,9 +84,10 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 
 ### Requirement Projection
 
-- Treat the selected packet as demand projection only through `BindingRowID`, `Operation ID`, `IF Scope`, `UIF Path Ref(s)`, `UDD Ref(s)`, `TM ID`, `TC IDs`, `Spec Ref(s)`, `Scenario Ref(s)`, `Success Ref(s)`, and `Edge Ref(s)`.
+- Treat the selected packet as demand projection only through `BindingRowID`, `IF Scope`, `User Intent`, `Trigger Ref(s)`, `Request Semantics`, `Visible Result`, `Side Effect`, `Boundary Notes`, `Repo Landing Hint`, `UIF Path Ref(s)`, `UDD Ref(s)`, `Primary TM IDs`, `TM IDs`, `TC IDs`, `Spec Ref(s)`, `Scenario Ref(s)`, `Success Ref(s)`, and `Edge Ref(s)`.
 - Treat `Scenario Matrix` and `Verification Case Anchors` as the observable behavior boundary the contract must preserve.
-- Do not treat the selected packet as a predesigned contract seed.
+- Treat the selected packet as a downstream scope-reference packet, not as a predesigned contract seed.
+- `Operation ID` is finalized in this stage; it is not required as a precise upstream packet field.
 
 ### Spec Semantics
 
@@ -113,6 +114,7 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 - `Full Field Dictionary (Operation-scoped)` is the only authoritative field-level contract surface: it MUST cover request DTO fields, response DTO fields, selected state-owner fields, and the fields directly used for reads, writes, projections, validation, defaults, or state decisions.
 - `Full Field Dictionary (Operation-scoped)` MUST classify rows using `Dictionary Tier = operation-critical|owner-residual`, and list `operation-critical` rows first.
 - `contract` is the first stage that MUST produce:
+  - `Operation ID`
   - `Boundary Anchor`
   - `Implementation Entry Anchor`
   - request / response surface
@@ -128,7 +130,7 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 - Do not delete owner fields that this operation does not use; keep them in the field dictionary with `Used in <Operation ID> = no`.
 - Realization design scope is delivery-ready: internal handoff, failure propagation, sequence closure, UML ownership, and southbound dependency chain.
 - Fill `Downstream Projection Input (Required)` with one executable slice for the selected `IF Scope` / `Operation ID`.
-- Derive `Main Pass Anchor` and `Branch/Failure Anchor(s)` in this stage from `TM ID`, `TC IDs`, `Scenario Ref(s)`, `Success Ref(s)`, `Edge Ref(s)`, and the landed interface design; do not require `test-matrix.md` to pre-close them.
+- Derive `Main Pass Anchor` and `Branch/Failure Anchor(s)` in this stage from `Primary TM IDs`, `TM IDs`, `TC IDs`, `Scenario Ref(s)`, `Success Ref(s)`, `Edge Ref(s)`, and the landed interface design; do not require `test-matrix.md` to pre-close them.
 - Fill `Cross-Interface Smoke Candidate (Required)` with exactly one row for the selected operation.
 - `Cross-Interface Smoke Candidate (Required)` row MUST declare one `Candidate Role` in `entry|middle|exit|none`.
 - If `Candidate Role != none`, `Main Pass Anchor` and `Command / Assertion Signal` MUST be explicit and executable.
@@ -204,7 +206,7 @@ After generation, the selected artifact under `contracts/` becomes the authorita
 Stop local refinement and route upstream when continuing would require a new upstream shared semantic:
 
 - `/sdd.plan.data-model` when the contract would need a new shared semantic owner/source, a new backbone semantic element, a new cross-operation stable owner field, new shared lifecycle/invariant vocabulary, downstream contract constraints that are not yet declared, or a field would drift across bindings if invented locally
-- `/sdd.plan.test-matrix` only when the selected `BindingRowID`, `Operation ID`, `IF Scope`, `UIF Path Ref(s)`, `UDD Ref(s)`, `TM ID`, `TC IDs`, `Spec Ref(s)`, `Scenario Ref(s)`, `Success Ref(s)`, or `Edge Ref(s)` are missing, inconsistent, or projected to the wrong binding
+- `/sdd.plan.test-matrix` only when the selected `BindingRowID`, `IF Scope`, `User Intent`, `Trigger Ref(s)`, `Request Semantics`, `Visible Result`, `Side Effect`, `Boundary Notes`, `Repo Landing Hint`, `UIF Path Ref(s)`, `UDD Ref(s)`, `Primary TM IDs`, `TM IDs`, `TC IDs`, `Spec Ref(s)`, `Scenario Ref(s)`, `Success Ref(s)`, or `Edge Ref(s)` are missing, inconsistent, or projected to the wrong binding
 
 Do not route upstream for boundary/entry/DTO/collaborator inference, operation-scoped field selection, VO/DTO projection shape, default/validation detail, or realization-design detail that can be derived from the existing upstream boundary.
 Do not route upstream only because no existing repo entry was found; when shared semantics are stable, close locally with concrete `new(repo-backed)` or `contract-defined` design-final anchors.

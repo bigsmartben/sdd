@@ -15,9 +15,9 @@ You **MUST** consider the user input before proceeding (if not empty).
 Treat all `$ARGUMENTS` as optional prototype direction.
 Resolve `SPEC_FILE` from current feature branch using these defaults:
 
-- `feature-YYYYMMDD-slug` -> `repo/specs/YYYYMMDD-slug/spec.md`
-- `YYYYMMDD-slug` -> `repo/specs/YYYYMMDD-slug/spec.md`
-- legacy `NNN-slug` keeps legacy prefix mapping in `repo/specs/`
+- `feature-YYYYMMDD-slug` -> `specs/YYYYMMDD-slug/spec.md`
+- `YYYYMMDD-slug` -> `specs/YYYYMMDD-slug/spec.md`
+- legacy `NNN-slug` keeps legacy prefix mapping in `specs/`
 
 If branch-derived `SPEC_FILE` is missing or invalid, stop immediately and report the blocker.
 

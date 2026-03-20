@@ -36,14 +36,15 @@ Do not place stage prose, audit payload, or execution logs here.
 
 - Relevant dependency usage rows / `SIG-*`: [cite concrete rows only]
 - Relevant module-edge rules: [cite concrete module-to-module rows only]
+- Bounded repo candidate anchors: [only feature-relevant northbound entry candidates and semantic landing anchors; no contract conclusions]
 
 ## Stage Queue
 
 | Stage ID | Command | Required Inputs | Output Path | Status | Source Fingerprint | Output Fingerprint | Blocker |
 |----------|---------|-----------------|-------------|--------|--------------------|--------------------|---------|
 | research | `/sdd.plan.research` | `plan.md`, `spec.md`, constitution, targeted repo anchors | `research.md` | pending | [fingerprint] | [fingerprint] | [none] |
-| test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md` | `test-matrix.md` | pending | [fingerprint] | [fingerprint] | [none] |
-| data-model | `/sdd.plan.data-model` | `plan.md`, `spec.md`, `test-matrix.md` | `data-model.md` | pending | [fingerprint] | [fingerprint] | [none] |
+| test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md`, bounded repo slice | `test-matrix.md` | pending | [fingerprint] | [fingerprint] | [none] |
+| data-model | `/sdd.plan.data-model` | `plan.md`, `spec.md`, `test-matrix.md`, bounded repo semantic slice | `data-model.md` | pending | [fingerprint] | [fingerprint] | [none] |
 
 Rules:
 
@@ -58,8 +59,8 @@ Rules:
 Initialize empty until `test-matrix.md` creates stable rows.
 Project stable binding keys only; do not copy scenario text or contract-design conclusions.
 
-| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | UIF Path Ref(s) | UDD Ref(s) | Test Scope |
-|--------------|-------|--------|-------|------------------|-------|--------|--------------|-----------------|------------|------------|
+| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | Trigger Ref(s) | Primary TM IDs | TC IDs | UIF Path Ref(s) | UDD Ref(s) | Test Scope |
+|--------------|-------|--------|-------|------------------|----------------|----------------|--------|-----------------|------------|------------|
 <!-- Keep table body empty until /sdd.plan.test-matrix projects stable binding rows. -->
 
 Rules:
@@ -68,6 +69,7 @@ Rules:
 - `BindingRowID` is the plan-local identifier for one stable binding row projected from `test-matrix.md`.
 - `Binding Projection Index` is a projection ledger only.
 - Keep only the minimal selection and scheduling fields needed for downstream `plan.contract` and `plan.data-model`.
+- Do not mirror packet-level scope reference fields such as `User Intent`, `Request Semantics`, `Visible Result`, `Side Effect`, `Boundary Notes`, or `Repo Landing Hint` into this index; those remain authoritative only in `test-matrix.md`.
 - `Boundary Anchor`, `Implementation Entry Anchor`, anchor statuses, DTO anchors, collaborator anchors, lifecycle refs, invariant refs, and realization design remain downstream responsibilities.
 - Keep this index aligned only from `/sdd.plan.test-matrix`; if binding meaning changes later, repair upstream and regenerate the projection instead of letting downstream commands rewrite it.
 - If a stable key is not confirmed, keep it out of the index.

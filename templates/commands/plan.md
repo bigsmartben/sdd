@@ -89,11 +89,12 @@ Keep the snapshot to shared bootstrap facts only:
 - feature identity and scope anchors
 - actors, in-scope / out-of-scope, stable UC/UIF/FR references
 - constitution-level constraints that affect every downstream stage
-- repository-first consumption slice relevant to this feature, citing only concrete dependency usage rows, concrete module edges, and existing `SIG-*` rows needed for planning
+- repository-first consumption slice relevant to this feature, citing only concrete dependency usage rows, concrete module edges, existing `SIG-*` rows needed for planning, and bounded repo candidate anchors needed for later interface partitioning or shared-semantic landing
 - shared blockers and must-read anchors
 
 Do **not** write long summaries, audit payload, planning-stage prose, or execution logs into the snapshot.
-Do **not** place `test-matrix` scenario decomposition, `data-model` owner/lifecycle conclusions, contract tuples, repo anchors, DTO design, or audit conclusions into Stage 0.
+Do **not** place `test-matrix` scenario decomposition, `data-model` owner/lifecycle conclusions, contract tuples, final boundary/DTO design, or audit conclusions into Stage 0.
+Do **not** place unbounded repository dumps or free-form symbol inventories into Stage 0; bounded repo candidate anchors are allowed only as later-stage input hints, not as design conclusions.
 Do **not** perform repository-first completeness or consistency audit here; `/sdd.analyze` owns that responsibility.
 
 ## Planning Control Plane Requirements
@@ -152,14 +153,15 @@ Required columns:
 - `UIF ID`
 - `FR ID`
 - `IF ID / IF Scope`
-- `TM ID`
+- `Trigger Ref(s)`
+- `Primary TM IDs`
 - `TC IDs`
-- `Operation ID`
 - `UIF Path Ref(s)`
 - `UDD Ref(s)`
 - `Test Scope`
 
 Do not add `Boundary Anchor`, `Implementation Entry Anchor`, anchor statuses, DTO anchors, collaborator anchors, or other contract-design fields here.
+Do not mirror packet-level scope reference fields such as `User Intent`, `Request Semantics`, `Visible Result`, `Side Effect`, `Boundary Notes`, or `Repo Landing Hint` into this index; those remain authoritative only in `test-matrix.md`.
 
 ### Artifact Status
 

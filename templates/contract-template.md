@@ -37,15 +37,24 @@ Its core outputs are fixed:
 
 Purpose: fix exactly which upstream requirement-projection unit this contract closes.
 Keep this section locator-oriented; do not restate full upstream prose.
+Treat upstream packet scope-reference fields as binding-range inputs only. This stage finalizes `Operation ID`, boundary landing, concrete DTO naming, and realization design.
 
 | Field | Value |
 |-------|-------|
 | `BindingRowID` | [BR-###] |
 | `Operation ID` | [operationId or N/A] |
 | `IF Scope` | [IF-### or N/A] |
+| `User Intent` | [Northbound action summary] |
+| `Trigger Ref(s)` | [UIP / UIF / UC refs] |
+| `Request Semantics` | [Input semantics only; no DTO naming] |
+| `Visible Result` | [Visible result semantics] |
+| `Side Effect` | [Create / update / read / authorize / none] |
+| `Boundary Notes` | [Idempotent / permission-gated / state-transitioning / N/A] |
+| `Repo Landing Hint` | [Existing entry family or bounded repo hint] |
 | `UIF Path Ref(s)` | [UIF path refs] |
 | `UDD Ref(s)` | [UDD refs or `N/A`] |
-| `TM ID` | [TM-###] |
+| `Primary TM IDs` | [TM-###, TM-###] |
+| `TM IDs` | [TM-###, TM-###] |
 | `TC IDs` | [TC-###, TC-###] |
 | `Test Scope` | [binding-scoped test coverage summary] |
 | `Spec Ref(s)` | [UC / FR / UIF / UDD refs] |
@@ -237,7 +246,7 @@ Mandatory rules:
 - When `contract-defined` boundary/entry anchors hand off to an `existing` realization chain, the first hop MUST remain the contract-defined anchor and the reused repo-backed chain MUST appear as a subsequent explicit handoff.
 - Do not substitute the nearest `existing` controller/service for a `contract-defined` boundary when the new northbound interaction semantics are not identical.
 - `opt` blocks are allowed only for truly conditional branches; mandatory main-path calls MUST remain outside `opt`.
-- Main success path and key failure path MUST be traceable to `TM ID` / `TC IDs`.
+- Main success path and key failure path MUST be traceable to `Primary TM IDs` / `TM IDs` / `TC IDs`.
 
 ### Behavior Paths
 
@@ -302,13 +311,13 @@ sequenceDiagram
 ## Test Projection
 
 This section is the normalized downstream testing slice for `/sdd.tasks` and `/sdd.implement`.
-`Main Pass Anchor` and `Branch/Failure Anchor(s)` are generated here from `TM ID`, `TC IDs`, `Scenario Ref(s)`, `Success Ref(s)`, `Edge Ref(s)`, and the realized interface design.
+`Main Pass Anchor` and `Branch/Failure Anchor(s)` are generated here from `Primary TM IDs`, `TM IDs`, `TC IDs`, `Scenario Ref(s)`, `Success Ref(s)`, `Edge Ref(s)`, and the realized interface design.
 
 ### Test Projection Slice
 
-| IF Scope | Operation ID | Test Scope | TM ID | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
-|----------|--------------|------------|-------|----------|------------------|--------------------------|----------------------------|
-| [IF-### or N/A] | [operationId or N/A] | [`Contract` / `Integration` / `E2E` / `Mixed`] | [TM-###] | [TC-###, TC-###] | [primary success check inferred here] | [failure/branch checks inferred here] | [test command or assertion signal] |
+| IF Scope | Operation ID | Test Scope | Primary TM IDs | TM ID(s) | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
+|----------|--------------|------------|----------------|----------|----------|------------------|--------------------------|----------------------------|
+| [IF-### or N/A] | [operationId or N/A] | [`Contract` / `Integration` / `E2E` / `Mixed`] | [TM-###, TM-###] | [TM-###, TM-###] | [TC-###, TC-###] | [primary success check inferred here] | [failure/branch checks inferred here] | [test command or assertion signal] |
 
 ### Cross-Interface Smoke Candidate
 

@@ -1,5 +1,5 @@
 ---
-description: Generate the pending test-matrix.md artifact and initialize binding rows from the current feature branch plan.md.
+description: Generate the pending test-matrix.md artifact, derive stable northbound interface partitions, and initialize binding rows from the current feature branch plan.md.
 handoffs:
   - label: Continue Data-Model Queue
     agent: sdd.plan.data-model
@@ -27,11 +27,12 @@ Resolve `PLAN_FILE` from the current feature branch using `{SCRIPT}` defaults.
 
 Generate exactly one `test-matrix.md` artifact by consuming the first pending `test-matrix` row from `PLAN_FILE`.
 After writing `test-matrix.md`, initialize or refresh the `Binding Projection Index` and `Artifact Status` tables in `PLAN_FILE`.
-This stage owns only two outputs:
+This stage owns these outputs:
 
-- stable binding projection from `spec.md`
-- test semantics for those bindings
-- one spec-derived `UIF Full Path (Mermaid)` section that completes the overview UIF by integrating relevant `UC`-local UIF paths into one replayable flow
+- stable northbound interface partition decisions from `spec.md` plus bounded repo evidence
+- stable binding projection for those interface units
+- test semantics attached to those bindings
+- one spec-derived `UIF Full Path Coverage Graph (Mermaid)` plus `UIF Path Coverage Ledger` that provide full-path coverage over selected-scope UIF paths
 
 Use `.specify/templates/test-matrix-template.md` only. If the runtime template is missing or unreadable, stop and report the blocker instead of inferring structure from mirrors or prior outputs.
 
@@ -44,7 +45,7 @@ Use `.specify/templates/test-matrix-template.md` only. If the runtime template i
    - `Status = pending`
 4. Require resolved `FEATURE_SPEC` to be consumable
 5. Do not require `research` or `data-model` rows to be `done` before this stage
-6. Keep this stage scoped to spec-driven binding projection and test semantics only
+6. Keep this stage scoped to spec-led interface partitioning plus bounded repo-informed landing hints; do not perform contract closure in this stage
 
 ## Stage Packet (Test-Matrix Unit)
 
@@ -52,6 +53,7 @@ Build one bounded run-local packet for the selected `test-matrix` row from:
 
 - selected `Stage Queue` row in resolved `PLAN_FILE`
 - `Shared Context Snapshot` in resolved `PLAN_FILE`
+- `Repository-First Consumption Slice` in resolved `PLAN_FILE`
 - resolved `FEATURE_SPEC` path
 - selected row source/output fingerprint fields
 
@@ -72,45 +74,68 @@ Read only:
 - `.specify/templates/test-matrix-template.md` for output structure
 - selected `Stage Queue` row from the resolved `PLAN_FILE` only
 - `Shared Context Snapshot` from the resolved `PLAN_FILE` only
+- `Repository-First Consumption Slice` from the resolved `PLAN_FILE` only
 - resolved `FEATURE_SPEC`
+- bounded repo evidence needed to decide whether candidate user actions land on the same northbound entry family:
+  - existing northbound entry candidates
+  - adjacent request / response models
+  - permission / idempotency / transaction / side-effect evidence
+  - only when those reads are directly relevant to the selected feature scope
 
 When consuming allowed inputs, prefer section-level rereads over whole-file replay for the selected unit.
 
-Do not consume `research.md`, `data-model.md`, repo anchors, or generated contract artifacts in this stage.
+Do not consume `data-model.md` or generated contract artifacts in this stage.
 `test-matrix.md` remains the authoritative source for verification semantics and stable binding packets.
 `PLAN_FILE` receives only the compact projection needed to select downstream contract work.
+
+## Interface Partition Rules
+
+Derive northbound interface partitions before writing test packets.
+This stage answers "how many northbound interface units exist for this feature slice?" before it answers "which TM/TC rows verify them?"
+
+One `BindingRowID` corresponds to one client-callable northbound interface unit.
+It is not a page-state bucket and not a path-family bucket.
+
+Determine partition uniqueness from:
+
+- user intent / northbound action
+- consumer-visible trigger boundary
+- request semantics
+- visible result semantics
+- side-effect type
+- permission / idempotency / transaction boundary
+- bounded repo landing hint
+
+Apply these rules exactly:
+
+- Split bindings when user intent, request semantics, side effect, permission boundary, idempotency semantics, transaction boundary, or repo landing family materially differ.
+- Merge happy / alternate / exception / duplicate / timeout paths when they still exercise the same northbound action boundary.
+- Do not split a binding only because page state, button state, reminder behavior, or branch path differs under the same northbound action.
+- Do not split a binding only because one action has multiple validation or duplicate branches.
 
 ## Binding Projection Rules
 
 Project only stable and unique binding rows from `test-matrix.md` into `Binding Projection Index`.
 Do not copy scenario prose into `PLAN_FILE`.
 
-One `BindingRowID` corresponds to one UIF-based consumer-visible interface binding unit.
-Determine uniqueness from:
-
-- consumer-visible interaction family
-- `Operation ID`
-- `IF Scope`
-- `UIF Path Ref(s)`
-
 Apply these rules exactly:
 
-- Merge happy / alternate / exception paths when they preserve the same interaction family, requirement projection, and external contract intent.
+- Merge TM/TC branches when they preserve the same northbound action boundary, requirement projection, and repo landing hint.
 - Represent merged-path differences only through `TC IDs`, `Scenario Ref(s)`, `Success Ref(s)`, and `Edge Ref(s)`.
-- Split bindings when UIF path family changes, UDD projection scope changes, or consumer-visible trigger/result semantics change.
+- Split bindings when the upstream interface partition rules identify a different northbound action unit.
 - Do not create a packet for pure internal steps.
 - Do not create a new packet for a branch or exception path that still belongs to the same binding.
 
-Required columns in each binding row:
+Required columns in each `Binding Projection Index` row:
 
 - `BindingRowID`
 - `UC ID`
 - `UIF ID`
 - `FR ID`
 - `IF ID / IF Scope`
-- `TM ID`
+- `Trigger Ref(s)`
+- `Primary TM IDs`
 - `TC IDs`
-- `Operation ID`
 - `UIF Path Ref(s)`
 - `UDD Ref(s)`
 - `Test Scope`
@@ -120,14 +145,18 @@ Required columns in each binding row:
 `Scenario Matrix` and `Verification Case Anchors` define the bounded test semantics for each binding.
 Keep them spec-led and verification-led:
 
-- emit one `UIF Full Path (Mermaid)` section for the selected feature scope as a spec-derived overview UIF completion
+- emit one `UIF Full Path Coverage Graph (Mermaid)` section for the selected feature scope as a spec-derived overview UIF completion
 - integrate the relevant `UC`-internal UIF paths into one consumer-visible full-path map instead of leaving them fragmented across `UC` sections
 - derive that Mermaid section only from `spec.md`; do not treat it as repo realization, interface closure, or implementation sequencing
 - use the happy path as the backbone and extend it with alternate / exception / degraded branches only when they materially complete the same spec-defined path family
-- `Scenario Matrix` captures path type, preconditions, expected outcomes, and related spec refs
+- require full selected-scope UIF path accounting via `UIF Path Coverage Ledger`:
+  - every selected-scope `UIF Path Ref` is present exactly once in the ledger
+  - rows rendered in Mermaid must be marked `Included in Graph = yes`
+  - rows intentionally omitted from Mermaid must be marked `Included in Graph = no` with explicit omission reason
+- `Scenario Matrix` captures path type, preconditions, expected outcomes, related spec refs, and the owning `BindingRowID`
 - `Verification Case Anchors` captures what each case proves and how it is observed
 - use the smallest row set that still preserves materially distinct behavior
-- do not repeat `Operation ID` or `IF Scope` inside `TM/TC` rows when the owning binding packet already fixes them
+- do not let `TM/TC` rows redefine interface partition boundaries; they attach to the already-decided `BindingRowID`
 - keep `Observability / Signal` focused on pass/fail evidence
 - do not infer controllers, services, DTOs, collaborators, repository anchors, or shared-semantics ownership into the Mermaid or TM/TC outputs
 
@@ -140,11 +169,18 @@ It identifies what the binding is and which spec/test slices belong to it.
 Each binding packet MUST include:
 
 - `BindingRowID`
-- `Operation ID`
 - `IF Scope`
+- `User Intent`
+- `Trigger Ref(s)`
+- `Request Semantics`
+- `Visible Result`
+- `Side Effect`
+- `Boundary Notes`
+- `Repo Landing Hint`
 - `UIF Path Ref(s)`
 - `UDD Ref(s)`
-- `TM ID`
+- `Primary TM IDs`
+- `TM IDs`
 - `TC IDs`
 - `Test Scope`
 - `Spec Ref(s)`
@@ -155,11 +191,18 @@ Each binding packet MUST include:
 Field semantics MUST stay deterministic and stable:
 
 - `BindingRowID`: one stable downstream contract unit
-- `Operation ID`: spec-defined operation token
 - `IF Scope`: interface scope aligned to the same binding
+- `User Intent`: concise statement of the northbound action this binding exists to serve
+- `Trigger Ref(s)`: user-visible trigger refs that identify the northbound action boundary
+- `Request Semantics`: behavior-significant input semantics only; do not use DTO or class names
+- `Visible Result`: the contract-visible result class of the binding from the user's perspective
+- `Side Effect`: the externally meaningful state change, persistence, authorization, or transition effect; use `none` for read-only bindings
+- `Boundary Notes`: lightweight notes about idempotency, permission, transaction, or state-transition characteristics that influenced the split
+- `Repo Landing Hint`: bounded hint about the likely northbound entry family; not a final boundary anchor
 - `UIF Path Ref(s)`: consumer-visible path refs that define the interaction family
 - `UDD Ref(s)`: data refs that materially affect the binding; use `N/A` when none apply
-- `TM ID`: primary scenario row for the packet
+- `Primary TM IDs`: the primary scenario rows that prove the main binding surface
+- `TM IDs`: the full scenario set attached to the binding
 - `TC IDs`: ordered verification case ids for the same binding
 - `Test Scope`: concise statement of covered behavior surface
 - `Spec Ref(s)`: authoritative `UC / FR / UIF / UDD` refs
@@ -170,6 +213,9 @@ Field semantics MUST stay deterministic and stable:
 Treat the packet as a spec-slice locator:
 
 - `Spec Ref(s)` must point to the authoritative `UC / FR / UIF / UDD` ids behind the binding
+- `User Intent`, `Request Semantics`, `Visible Result`, `Side Effect`, and `Boundary Notes` are downstream scope references only; they do not replace contract design authority
+- `Trigger Ref(s)` must locate the exact user-visible trigger set that caused the interface partition decision
+- `Repo Landing Hint` must stay at entry-family granularity; it must not name final controller/facade/DTO anchors
 - `UIF Path Ref(s)` must locate the exact consumer-visible path family that defines the binding
 - `UDD Ref(s)` must locate only the data semantics actually needed downstream
 - `Scenario Ref(s)`, `Success Ref(s)`, and `Edge Ref(s)` must be direct locator refs, not copied prose

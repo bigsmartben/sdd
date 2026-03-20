@@ -241,40 +241,22 @@ else
     BRANCH_SUFFIX=$(generate_branch_name "$FEATURE_DESCRIPTION")
 fi
 
-BRANCH_NAME=""
-CURRENT_BRANCH_LEAF=""
+FEATURE_DATE=$(current_date_key)
+BRANCH_PREFIX="feature-${FEATURE_DATE}-"
+BRANCH_NAME="${BRANCH_PREFIX}${BRANCH_SUFFIX}"
 
-if [ "$HAS_GIT" = true ]; then
-    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)
-    if [ -n "$CURRENT_BRANCH" ] && [ "$CURRENT_BRANCH" != "HEAD" ]; then
-        CURRENT_BRANCH_LEAF="${CURRENT_BRANCH##*/}"
-        if echo "$CURRENT_BRANCH_LEAF" | grep -qE '^feature-[0-9]{8}-[a-z0-9][a-z0-9-]*$'; then
-            BRANCH_NAME="$CURRENT_BRANCH_LEAF"
-        else
-            >&2 echo "[specify] Warning: current branch '$CURRENT_BRANCH' does not match 'feature-YYYYMMDD-short-name'; using fallback generated feature key"
-        fi
-    fi
-fi
+MAX_BRANCH_LENGTH=244
+if [ ${#BRANCH_NAME} -gt $MAX_BRANCH_LENGTH ]; then
+    MAX_SUFFIX_LENGTH=$((MAX_BRANCH_LENGTH - ${#BRANCH_PREFIX}))
+    TRUNCATED_SUFFIX=$(echo "$BRANCH_SUFFIX" | cut -c1-$MAX_SUFFIX_LENGTH)
+    TRUNCATED_SUFFIX=$(echo "$TRUNCATED_SUFFIX" | sed 's/-$//')
 
-if [ -z "$BRANCH_NAME" ]; then
-    FEATURE_DATE=$(current_date_key)
-    BRANCH_PREFIX="feature-${FEATURE_DATE}-"
-    BRANCH_NAME="${BRANCH_PREFIX}${BRANCH_SUFFIX}"
+    ORIGINAL_BRANCH_NAME="$BRANCH_NAME"
+    BRANCH_NAME="${BRANCH_PREFIX}${TRUNCATED_SUFFIX}"
 
-    MAX_BRANCH_LENGTH=244
-    if [ ${#BRANCH_NAME} -gt $MAX_BRANCH_LENGTH ]; then
-        MAX_SUFFIX_LENGTH=$((MAX_BRANCH_LENGTH - ${#BRANCH_PREFIX}))
-        TRUNCATED_SUFFIX=$(echo "$BRANCH_SUFFIX" | cut -c1-$MAX_SUFFIX_LENGTH)
-        TRUNCATED_SUFFIX=$(echo "$TRUNCATED_SUFFIX" | sed 's/-$//')
-
-        ORIGINAL_BRANCH_NAME="$BRANCH_NAME"
-        BRANCH_NAME="${BRANCH_PREFIX}${TRUNCATED_SUFFIX}"
-
-        >&2 echo "[specify] Warning: Branch name exceeded GitHub's 244-byte limit"
-        >&2 echo "[specify] Original: $ORIGINAL_BRANCH_NAME (${#ORIGINAL_BRANCH_NAME} bytes)"
-        >&2 echo "[specify] Truncated to: $BRANCH_NAME (${#BRANCH_NAME} bytes)"
-    fi
-
+    >&2 echo "[specify] Warning: Branch name exceeded GitHub's 244-byte limit"
+    >&2 echo "[specify] Original: $ORIGINAL_BRANCH_NAME (${#ORIGINAL_BRANCH_NAME} bytes)"
+    >&2 echo "[specify] Truncated to: $BRANCH_NAME (${#BRANCH_NAME} bytes)"
 fi
 
 FEATURE_PREFIX="${BRANCH_NAME%%-*}"

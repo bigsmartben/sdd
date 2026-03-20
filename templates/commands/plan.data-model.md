@@ -28,10 +28,12 @@ Resolve `PLAN_FILE` from the current feature branch using `{SCRIPT}` defaults.
 Generate exactly one `data-model.md` artifact by consuming the first pending `data-model` row from `PLAN_FILE`.
 This command is single-unit only and MUST NOT perform any other planning stage work.
 This stage performs shared semantic alignment for the selected `BindingRowID` set, not interface predesign.
-Primary semantic inputs are `spec.md` and `test-matrix.md`:
+Primary semantic inputs are `spec.md`, `test-matrix.md`, and bounded repo semantic landing evidence:
 
-- `Binding Contract Packets` are the default downstream-demand projection input
+- `Interface Partition Decisions` explain why bindings were split and which semantics stay interface-local
+- `Binding Packets` are the default downstream-demand projection input, including scope reference fields such as `User Intent`, `Request Semantics`, `Visible Result`, `Side Effect`, `Boundary Notes`, and `Repo Landing Hint`
 - `Scenario Matrix` / `Verification Case Anchors` are conditional inputs only when needed to confirm whether a semantic is shared or binding-local
+- bounded repo semantic landing evidence is mandatory when this stage materializes a final semantic owner, lifecycle owner, or UML/class node
 
 `research.md` is optional clarification input only and MUST NOT be treated as the primary semantic source for this stage.
 The output MUST define only the shared, stable, reusable semantics that downstream `contract` work must reuse across bindings: shared entities, value objects, projections, owner/source alignment, lifecycle vocabulary, invariants, and any necessary new shared classes.
@@ -53,9 +55,11 @@ Build one bounded run-local packet for the selected `data-model` row from:
 
 - selected `Stage Queue` row in resolved `PLAN_FILE`
 - `Shared Context Snapshot` in resolved `PLAN_FILE`
+- `Repository-First Consumption Slice` in resolved `PLAN_FILE`
 - resolved `FEATURE_SPEC` path
-- resolved `test-matrix.md` path, with `Binding Contract Packets` as mandatory input
+- resolved `test-matrix.md` path, with `Interface Partition Decisions` and `Binding Packets` as mandatory inputs
 - `Scenario Matrix` / `Verification Case Anchors` only when required to confirm whether a semantic is shared across bindings or remains binding-local
+- bounded repo semantic landing evidence referenced by the selected feature slice
 - optional `research.md` path only when `spec.md` + `test-matrix.md` wording leaves the shared-semantic boundary ambiguous
 - selected row source/output fingerprint fields
 
@@ -90,9 +94,9 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 
 - Stay inside the resolved `FEATURE_DIR` plus the explicit files listed in `Allowed Inputs`
 - Derive shared semantic elements from `FEATURE_SPEC` and `test-matrix.md` first
-- Use `Binding Contract Packets` as the default downstream-demand projection input; use `Scenario Matrix` / `Verification Case Anchors` only to confirm whether a semantic is shared or binding-local
+- Use `Interface Partition Decisions` plus `Binding Packets` as the default downstream-demand projection input; use packet scope reference fields primarily to exclude interface-local detail from the shared model, and use `Scenario Matrix` / `Verification Case Anchors` only to confirm whether a semantic is shared or binding-local
 - Treat `research.md` as optional clarification only; do not let it override `spec.md` or `test-matrix.md`
-- Apply repo-first only as the landing strategy for final semantic owners, lifecycle owners, and UML/class nodes; it is not the primary semantic input source for this stage
+- Apply repo-first only as the landing strategy for final semantic owners, lifecycle owners, and UML/class nodes; it is not the primary semantic input source for this stage, but bounded repo landing evidence is still required when such nodes are materialized
 - Finish row selection and prerequisite checks before any broader reads; do not scan the repository for additional context, alternate `plan.md` paths, or other feature folders
 - Do not use any existing `data-model.md` outside the current target artifact path as an input or style source
 - Prefer section-level reads of `spec.md` and `test-matrix.md` that are relevant to the selected unit; avoid whole-file replay unless the selected row is blocked by missing local context
@@ -100,12 +104,14 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 ## Shared-Semantic Alignment Rules (Mandatory)
 
 - Output only shared, stable, reusable semantics
-- A semantic used by two or more `BindingRowID` values SHOULD enter `data-model.md` by default
+- Do not treat "used by two or more `BindingRowID` values" as sufficient proof of shared-semantic status by itself
+- A semantic used by two or more `BindingRowID` values SHOULD enter `data-model.md` only when it remains business-stable across those bindings and is not merely trigger-local, request-local, side-effect-local, or interface-partition-local detail
 - A semantic used by only one `BindingRowID` SHOULD stay in `/sdd.plan.contract` unless it is a globally stable business object, stable projection, or stable lifecycle that downstream contracts must not redefine independently
 - Include shared owner/source/lifecycle/invariant/projection vocabulary when contract runs would otherwise drift
 - If a shared semantic is materialized as a class, semantic owner, lifecycle owner, or UML node, it MUST follow repo-first landing order `existing -> extended -> new`
 - If `existing` and `extended` are both insufficient, `new` is the required outcome for this stage; do not defer that class/owner decision downstream
-- Do not include single-binding request/response shapes, controller/service/facade naming, operation-specific DTO/command/result models, single-interface local validation detail, or realization-level collaborator chains
+- Do not include interface-partition-only trigger semantics, request semantics, side-effect descriptions, single-binding request/response shapes, controller/service/facade naming, operation-specific DTO/command/result models, single-interface local validation detail, or realization-level collaborator chains
+- Treat `User Intent`, `Request Semantics`, `Visible Result`, `Side Effect`, `Boundary Notes`, and `Repo Landing Hint` as downstream scope-reference helpers only; they may justify exclusion from the shared model but they do not become shared semantics by themselves
 - Shared semantics that are confirmed by `spec.md` + `test-matrix.md` MUST be closed here at owner/source/lifecycle level; use `gap` only for genuine input/evidence blockers, not for unresolved ownership of an already-confirmed shared semantic
 
 ## Shared-Semantic Consistency Checks (Lightweight)
@@ -113,6 +119,8 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 Before writing `done` status for the selected row, validate:
 
 - Every shared semantic element cites primary `UDD` / spec refs and the `BindingRowID(s)` that consume it
+- Every semantic elevated from `test-matrix.md` is justified as business-stable shared meaning rather than as repeated interface-partition metadata
+- Packet scope reference fields are used only to explain why a semantic stayed local or became shared; they are not copied verbatim into shared owner/source/vocabulary rows unless grounded by stable business semantics
 - Every owner/source alignment row resolves who owns the semantic and whether the downstream field/concept is authoritative, derived, or projected
 - Shared field vocabulary stays vocabulary-only; do not expand it into a full per-contract field dictionary
 - Lifecycle and invariant sections appear only when the state semantics are shared or globally stable for downstream reuse
@@ -129,8 +137,10 @@ Read only:
 - `.specify/templates/data-model-template.md` for output structure
 - selected `Stage Queue` row from the resolved `PLAN_FILE` only
 - `Shared Context Snapshot` from the resolved `PLAN_FILE` only
+- `Repository-First Consumption Slice` from the resolved `PLAN_FILE` only
 - resolved `FEATURE_SPEC`
-- resolved `test-matrix.md` (`Binding Contract Packets` required; `Scenario Matrix` / `Verification Case Anchors` conditional)
+- resolved `test-matrix.md` (`Interface Partition Decisions` and `Binding Packets` required; `Scenario Matrix` / `Verification Case Anchors` conditional)
+- bounded repo semantic landing evidence referenced by the selected feature slice
 - optional `research.md`
 
 ### Conditional Inputs
@@ -154,7 +164,7 @@ After generating `data-model.md`, update only:
 Emit a `Handoff Decision` section in the runtime output with exactly these fields:
 
 - `Next Command`: `/sdd.plan.contract`
-- `Decision Basis`: Stage 2 binding packets remain authoritative for binding identity and test semantics; once shared semantic refs and constraints are aligned here, continue contract generation directly without rerunning `test-matrix`
+- `Decision Basis`: Stage 2 interface partition decisions and binding packets remain authoritative for binding identity and test semantics; once shared semantic refs and constraints are aligned here, continue contract generation directly without rerunning `test-matrix`
 - `Selected Stage ID`: selected `data-model` stage row id
 - `Ready/Blocked`: `Ready` when the selected row is updated to `done`; otherwise `Blocked`
 

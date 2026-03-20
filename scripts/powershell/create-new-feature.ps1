@@ -225,45 +225,23 @@ if ($ShortName) {
     $branchSuffix = Get-BranchName -Description $featureDesc
 }
 
-$branchName = $null
-$currentBranchLeaf = $null
+$featureDate = Get-CurrentDateKey
+$branchPrefix = "feature-$featureDate-"
+$branchName = "$branchPrefix$branchSuffix"
 
-if ($hasGit) {
-    try {
-        $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
-        if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($currentBranch) -and $currentBranch -ne 'HEAD') {
-            $currentBranchLeaf = ($currentBranch -replace '^.*/', '')
-            if ($currentBranchLeaf -match '^feature-[0-9]{8}-[a-z0-9][a-z0-9-]*$') {
-                $branchName = $currentBranchLeaf
-            } else {
-                Write-Warning "[specify] Current branch '$currentBranch' does not match 'feature-YYYYMMDD-short-name'; using fallback generated feature key"
-            }
-        }
-    } catch {
-        Write-Verbose "Could not read current git branch: $_"
-    }
-}
+# GitHub enforces a 244-byte limit on branch names
+$maxBranchLength = 244
+if ($branchName.Length -gt $maxBranchLength) {
+    $maxSuffixLength = $maxBranchLength - $branchPrefix.Length
+    $truncatedSuffix = $branchSuffix.Substring(0, [Math]::Min($branchSuffix.Length, $maxSuffixLength))
+    $truncatedSuffix = $truncatedSuffix -replace '-$', ''
 
-if (-not $branchName) {
-    $featureDate = Get-CurrentDateKey
-    $branchPrefix = "feature-$featureDate-"
-    $branchName = "$branchPrefix$branchSuffix"
+    $originalBranchName = $branchName
+    $branchName = "$branchPrefix$truncatedSuffix"
 
-    # GitHub enforces a 244-byte limit on branch names
-    $maxBranchLength = 244
-    if ($branchName.Length -gt $maxBranchLength) {
-        $maxSuffixLength = $maxBranchLength - $branchPrefix.Length
-        $truncatedSuffix = $branchSuffix.Substring(0, [Math]::Min($branchSuffix.Length, $maxSuffixLength))
-        $truncatedSuffix = $truncatedSuffix -replace '-$', ''
-
-        $originalBranchName = $branchName
-        $branchName = "$branchPrefix$truncatedSuffix"
-
-        Write-Warning "[specify] Branch name exceeded GitHub's 244-byte limit"
-        Write-Warning "[specify] Original: $originalBranchName ($($originalBranchName.Length) bytes)"
-        Write-Warning "[specify] Truncated to: $branchName ($($branchName.Length) bytes)"
-    }
-
+    Write-Warning "[specify] Branch name exceeded GitHub's 244-byte limit"
+    Write-Warning "[specify] Original: $originalBranchName ($($originalBranchName.Length) bytes)"
+    Write-Warning "[specify] Truncated to: $branchName ($($branchName.Length) bytes)"
 }
 
 $featurePrefix = ($branchName -split '-', 2)[0]

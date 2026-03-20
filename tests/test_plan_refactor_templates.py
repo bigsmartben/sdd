@@ -153,6 +153,8 @@ def test_research_data_model_and_test_matrix_are_packet_first():
     assert "Stage Packet (Test-Matrix Unit)" in test_matrix
     assert "Use this packet as the default context for generation and binding projection." in test_matrix
     assert "stable binding projection from `spec.md`" in test_matrix
+    assert "`UIF Full Path Coverage Graph (Mermaid)`" in test_matrix
+    assert "`UIF Path Coverage Ledger`" in test_matrix
     assert "prefer section-level rereads over whole-file replay for the selected unit" in test_matrix
     assert "Do not require `research` or `data-model` rows to be `done` before this stage" in test_matrix
     assert "Do not consume `research.md`, `data-model.md`, repo anchors, or generated contract artifacts in this stage." in test_matrix
@@ -225,6 +227,9 @@ def test_test_matrix_template_forbids_backfilling_missing_stage_one_model():
     content = read("templates/test-matrix-template.md")
 
     assert "**Inputs**: `spec.md`" in content
+    assert "## UIF Full Path Coverage Graph (Mermaid)" in content
+    assert "## UIF Path Coverage Ledger" in content
+    assert "Every selected-scope `UIF Path Ref` MUST appear exactly once in this ledger." in content
     assert "[Coverage scope: which `UC / FR / UIF / UDD` paths must be verified and why]" in content
     assert "Downstream stages may consume these packets, but they must not rewrite `BindingRowID` or binding meaning." in content
     assert "Do not emit a binding packet for pure internal steps" in content

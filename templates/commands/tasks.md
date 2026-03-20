@@ -90,7 +90,7 @@ Stop immediately when any condition holds:
 5. Required canonical repository-first evidence for affected scope is missing, stale, or non-traceable.
 6. Active executable tuples select `new` repo anchors but lack explicit rejection evidence for `existing` and `extended` in authoritative upstream artifacts.
 7. Required repository discovery is blocked because `LOCAL_EXECUTION_PROTOCOL.repo_search.available = false`.
-8. Any selected `contract` row is missing `Full Field Dictionary (Operation-scoped)` or drifts from authoritative `Binding Contract Packets` for the same `BindingRowID`.
+8. Any selected `contract` row is missing `Full Field Dictionary (Operation-scoped)` or drifts from authoritative `Binding Packets` for the same `BindingRowID`.
 
 Hard execution safety gates in this command are limited to:
 
