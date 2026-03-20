@@ -33,10 +33,11 @@ Reference precedence:
 - Contract semantics: `contracts/`
 - Global model semantics: `data-model.md`
 - Feature verification semantics: `test-matrix.md`
-- Downstream execution projection authority (per IF unit): selected contract `Spec Projection Slice` + `Test Projection Slice`
+- Downstream execution projection authority (per IF unit): selected contract `Binding Context` + `Test Projection Slice`
 - `tasks.md`: execution mapping only; must not redefine the above semantics
 - Inline task summaries, local execution notes, and other derived views must yield to the authoritative artifacts above when conflicts appear.
 - If contract projection slices drift from `spec.md` or `test-matrix.md`, keep contract projection as execution truth for this run and emit explicit upstream writeback repair actions (no local semantic merge).
+- If projection drift is detected, keep this run blocked after recording upstream repair actions; do not continue with merged semantics in task generation.
 
 Stage boundary guard:
 
@@ -64,7 +65,7 @@ Only include this section when drift exists between contract projection slices a
 
 | Drift Type | Contract Projection Evidence | Upstream Target | Owner Command | Required Repair |
 | --- | --- | --- | --- | --- |
-| `spec` drift | [operationId + `Spec Projection Slice` refs] | `spec.md` | `/sdd.specify` | [align `spec.md` refs/phrasing to contract projection] |
+| `spec` drift | [operationId + contract `Binding Context` `Spec Ref(s)`] | `spec.md` | `/sdd.specify` | [align `spec.md` refs/phrasing to contract projection] |
 | `test` drift | [operationId + `Test Projection Slice` refs] | `test-matrix.md` | `/sdd.plan.test-matrix` | [align TM/TC rows and anchors to contract projection] |
 
 Rules:
@@ -150,7 +151,7 @@ Interface delivery units are IF-scoped execution work packages. Keep them execut
 - Goal: [one-line delivery goal; short execution-only reference]
 - Contract: [single operationId / boundary anchor]
 - Implementation Entry: [single repo-backed entry anchor from contract realization section, or same as contract boundary]
-- Spec Slice: [UC/UIF/FR/SC/EC refs projected from contract `Spec Projection Slice`]
+- Spec Slice: [UC/UIF/FR/SC/EC refs projected from contract `Binding Context` `Spec Ref(s)` / success-edge refs]
 - Test Slice: [Test Scope + TM/TC + pass/failure anchors projected from contract `Test Projection Slice`]
 - Primary Refs: [short refs that help execution or completion checks]
 
@@ -171,7 +172,7 @@ Rules:
 - Each IF unit SHOULD form a verification-implementation-completion loop (document exceptions).
 - Keep IF sections reference-oriented; do not copy upstream design prose or add design explanation paragraphs.
 - Use `Contract` as the client-facing binding reference and `Implementation Entry` as the internal execution-target reference when they differ.
-- `Spec Slice` and `Test Slice` are mandatory per IF unit and are the authoritative downstream execution projection slices from contract; they are not optional narrative notes.
+- `Spec Slice` and `Test Slice` are mandatory per IF unit and are the authoritative downstream execution projection slices from contract `Binding Context` + `Test Projection Slice`; they are not optional narrative notes.
 - Keep `Goal`, `Contract`, `Implementation Entry`, and `Primary Refs` as short execution references only.
 - If multiple operations share an `IF Scope`, keep them as separate work packages inside the same IF unit; do not merge them into a composite task.
 - Use `CaseID/TM/TC` as completion anchors only when they help prove delivery.
@@ -198,6 +199,7 @@ Rules:
 - `tasks.manifest.json` should be refreshed from the same run-local execution graph used to render `tasks.md`, so both outputs stay atomically aligned for a run.
 - `tasks.manifest.json` top-level keys MUST include `schema_version`, `generated_at`, `generated_from`, and `tasks`.
 - `generated_from` MUST include `plan_path`, `plan_source_fingerprint`, and `contract_source_fingerprints`.
+- Each manifest task row MUST include: `task_id`, `dependencies`, `if_scope`, `refs`, `target_paths`, `completion_anchors`, `conflict_hints`, `topo_layer`, `status`.
 - `tasks.manifest.json` task IDs and dependencies must stay aligned with the `tasks.md` lines rendered from the same execution graph.
 - Required consumable sections in `tasks.md` (authoritative fallback + human review):
   - `Upstream Inputs (Execution References)`

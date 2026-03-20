@@ -59,9 +59,48 @@ def _write_feature_fixture(
             [
                 "# Data Model",
                 "",
+                "## Shared Semantic Class Model",
+                "",
+                "```mermaid",
+                "classDiagram",
+                "    class DemoAggregate",
+                "```",
+                "",
+                "## Shared Lifecycle State Machines",
+                "",
+                "### Lifecycle Summary",
+                "",
+                "| Lifecycle Ref | State Owner | Stable States | Invariant Ref(s) | Consumed By BindingRowID(s) | Required Model |",
+                "|---------------|-------------|---------------|------------------|-----------------------------|----------------|",
+                "| LC-001 | DemoAggregate.status | [`Open`, `Closed`] | [INV-001] | [BR-001] | Lightweight |",
+                "",
+                "### State Transition Table",
+                "",
+                "| Lifecycle Ref | From State | Trigger / Condition | To State | Transition Type | Notes / Invariant Ref(s) | Consumed By BindingRowID(s) |",
+                "|---------------|------------|---------------------|----------|-----------------|--------------------------|-----------------------------|",
+                "| LC-001 | `Open` | complete | `Closed` | allowed | [INV-001] | [BR-001] |",
+                "",
                 "| SSE ID | Kind | Name | Business Meaning | Primary UDD Ref(s) | Primary Spec Ref(s) | Consumed By BindingRowID(s) | Anchor Status | Repo Anchor | Anchor Role | Status |",
                 "|--------|------|------|------------------|--------------------|---------------------|-----------------------------|---------------|-------------|-------------|--------|",
                 f"| SSE-001 | entity | DemoAggregate | demo | [UDD-001] | [FR-001] | [BR-001] | {test_matrix_status} | src/domain/demo.py::DemoAggregate | owner | defined |",
+                "",
+                "## Owner / Source Alignment",
+                "",
+                "| OSA ID | Semantic Ref | Owner Class / Semantic Owner | Source Type | Source Ref(s) | Consumed Field / Concept | Consumed By BindingRowID(s) | Notes |",
+                "|--------|--------------|------------------------------|-------------|---------------|--------------------------|-----------------------------|-------|",
+                "| OSA-001 | SSE-001 | DemoAggregate | authoritative | [UDD-001] | Demo aggregate | [BR-001] | Stable owner |",
+                "",
+                "## Shared Field Vocabulary",
+                "",
+                "| SFV ID | Semantic Owner | Meaning | Primary UDD Ref(s) | Required Semantics | Null / Boundary Rule | Shared By BindingRowID(s) |",
+                "|--------|----------------|---------|--------------------|--------------------|----------------------|---------------------------|",
+                "| SFV-001 | DemoAggregate.demoId | Demo identifier | [UDD-001] | Stable demo identity | Never null | [BR-001] |",
+                "",
+                "## Downstream Contract Constraints",
+                "",
+                "| DCC ID | BindingRowID | Required Shared Semantic Ref(s) | Constraint Type | Contract Impact |",
+                "|--------|--------------|---------------------------------|-----------------|-----------------|",
+                "| DCC-001 | BR-001 | [SSE-001, OSA-001, SFV-001] | owner | Reuse shared demo aggregate semantics |",
             ]
         ),
         encoding="utf-8",
@@ -71,6 +110,25 @@ def _write_feature_fixture(
         "\n".join(
             [
                 "# Test Matrix",
+                "",
+                "## Interface Partition Decisions",
+                "",
+                "| BindingRowID | User Intent | Trigger Ref(s) | Request Semantics | Visible Result | Side Effect | Repo Landing Hint | Split Rationale |",
+                "|--------------|-------------|----------------|-------------------|----------------|-------------|-------------------|-----------------|",
+                "| BR-001 | Demo intent | [UIF-001.trigger] | Input semantics only | Visible demo result | none | demo-entry-family | Single northbound demo action |",
+                "",
+                "## UIF Full Path Coverage Graph (Mermaid)",
+                "",
+                "```mermaid",
+                "flowchart TD",
+                "    Start --> Success",
+                "```",
+                "",
+                "## UIF Path Coverage Ledger",
+                "",
+                "| UIF Path Ref | Path Type | Included in Graph | Omission Reason |",
+                "|--------------|-----------|-------------------|-----------------|",
+                "| UIF-Path-001 | Happy | yes | N/A |",
                 "",
                 "## Scenario Matrix",
                 "",
@@ -132,6 +190,8 @@ def _write_feature_fixture(
         "| Success Output | demo payload |",
         "| Failure Output | error payload |",
         "",
+        "## UML Class Design",
+        "",
         "### Resolved Type Inventory",
         "| Role | Concrete Name | Resolution | Source / Evidence | Notes |",
         "|------|---------------|------------|-------------------|-------|",
@@ -151,10 +211,6 @@ def _write_feature_fixture(
         [
             f"**Implementation Entry Anchor Status (Required)**: {contract_entry_status}",
             "",
-            "## Contract Binding",
-            "- Repo Anchor: `src/boundary/demo.py::DemoBoundary`",
-            "- Repo Anchor Role: boundary-owner",
-            "",
             "## Sequence Design",
             "- Boundary call enters controller and then reaches app handler.",
             "",
@@ -166,7 +222,7 @@ def _write_feature_fixture(
             "|----------|--------------|------------|----------------|----------|----------|------------------|--------------------------|----------------------------|",
             "| IF-001 | demoOp | Integration | [TM-001] | [TM-001] | [TC-001] | happy path | retry path | pytest -k demo |",
             "",
-            "### Cross-Interface Smoke Candidate",
+            "### Cross-Interface Smoke Candidate (Required)",
             "",
             "| Smoke Candidate ID | IF Scope | Operation ID | Candidate Role | Depends On Candidate ID(s) | Trigger | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |",
             "|--------------------|----------|--------------|----------------|----------------------------|---------|------------------|--------------------------|----------------------------|",
@@ -183,6 +239,9 @@ def _write_feature_fixture(
             "",
             "## Upstream References",
             "- repo anchors: [src/boundary/demo.py::DemoBoundary, src/app/demo.py::DemoResponse]",
+            "",
+            "## Boundary Notes",
+            "- Demo contract stays controller-first and keeps shared semantics upstream.",
         ]
     )
     (feature_dir / "contracts" / "demo.md").write_text("\n".join(contract_lines), encoding="utf-8")
@@ -355,7 +414,7 @@ def test_anchor_status_allowed_values_rejects_composite_label_tokens(tmp_path: P
         ("| Sequence closure |", "PLN-ID-007"),
         ("| UML closure |", "PLN-ID-008"),
         ("| Test closure |", "PLN-ID-009"),
-        ("### Cross-Interface Smoke Candidate", "PLN-ID-014"),
+        ("### Cross-Interface Smoke Candidate (Required)", "PLN-ID-014"),
         ("### Resolved Type Inventory", "PLN-ID-015"),
     ],
 )
@@ -381,6 +440,50 @@ def test_udd_refs_are_required_in_test_matrix(tmp_path: Path):
     payload = _run_planning_lint(feature_dir)
     assert payload["findings_total"] > 0
     assert any(f["rule_id"] == "PLN-RA-012" for f in payload["findings"])
+
+
+@pytest.mark.parametrize(
+    ("section_marker", "rule_id"),
+    [
+        ("## Interface Partition Decisions", "PLN-TM-001"),
+        ("## UIF Full Path Coverage Graph (Mermaid)", "PLN-TM-002"),
+        ("## UIF Path Coverage Ledger", "PLN-TM-003"),
+        ("## Scenario Matrix", "PLN-TM-004"),
+        ("## Verification Case Anchors", "PLN-TM-005"),
+    ],
+)
+def test_latest_test_matrix_sections_are_required_by_lint(tmp_path: Path, section_marker: str, rule_id: str):
+    feature_dir = _write_feature_fixture(tmp_path)
+    test_matrix = feature_dir / "test-matrix.md"
+    lines = test_matrix.read_text(encoding="utf-8").splitlines()
+    filtered = [line for line in lines if line != section_marker]
+    test_matrix.write_text("\n".join(filtered) + "\n", encoding="utf-8")
+
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == rule_id for f in payload["findings"])
+
+
+@pytest.mark.parametrize(
+    ("section_marker", "rule_id"),
+    [
+        ("## Shared Semantic Class Model", "PLN-DM-001"),
+        ("## Owner / Source Alignment", "PLN-DM-002"),
+        ("## Shared Field Vocabulary", "PLN-DM-003"),
+        ("## Downstream Contract Constraints", "PLN-DM-004"),
+        ("### State Transition Table", "PLN-DM-005"),
+    ],
+)
+def test_latest_data_model_sections_are_required_by_lint(tmp_path: Path, section_marker: str, rule_id: str):
+    feature_dir = _write_feature_fixture(tmp_path)
+    data_model = feature_dir / "data-model.md"
+    lines = data_model.read_text(encoding="utf-8").splitlines()
+    filtered = [line for line in lines if line != section_marker]
+    data_model.write_text("\n".join(filtered) + "\n", encoding="utf-8")
+
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == rule_id for f in payload["findings"])
 
 
 def test_test_projection_slice_is_required_in_contract(tmp_path: Path):
@@ -595,6 +698,20 @@ def test_plan_status_must_match_stage_and_artifact_progress(tmp_path: Path):
     payload = _run_planning_lint(feature_dir)
     assert payload["findings_total"] > 0
     assert any(f["rule_id"] == "PLN-CP-004" for f in payload["findings"])
+
+
+def test_plan_status_missing_marker_reports_clean_message_in_bash(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    plan = feature_dir / "plan.md"
+    plan.write_text(
+        plan.read_text(encoding="utf-8").replace("- Status: planning-in-progress\n", ""),
+        encoding="utf-8",
+    )
+
+    payload = _run_planning_lint(feature_dir)
+    finding = next(f for f in payload["findings"] if f["rule_id"] == "PLN-CP-004")
+    assert "Feature Identity -> Status" in finding["message"]
+    assert "command not found" not in finding["message"]
 
 
 def test_binding_projection_index_rejects_contract_design_columns(tmp_path: Path):

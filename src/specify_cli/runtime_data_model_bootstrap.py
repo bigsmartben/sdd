@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,29 @@ DATA_MODEL_SECTION_HEADINGS = (
     "Binding Projection Index",
     "Artifact Status",
     "Handoff Protocol",
+)
+DATA_MODEL_TEST_MATRIX_REQUIRED_SECTIONS = (
+    "Interface Partition Decisions",
+    "UIF Full Path Coverage Graph (Mermaid)",
+    "UIF Path Coverage Ledger",
+    "Scenario Matrix",
+    "Verification Case Anchors",
+    "Binding Packets",
+)
+DATA_MODEL_BINDING_PACKET_REQUIRED_FIELDS = (
+    "BindingRowID",
+    "IF Scope",
+    "Trigger Ref(s)",
+    "UIF Path Ref(s)",
+    "UDD Ref(s)",
+    "Primary TM IDs",
+    "TM IDs",
+    "TC IDs",
+    "Test Scope",
+    "Spec Ref(s)",
+    "Scenario Ref(s)",
+    "Success Ref(s)",
+    "Edge Ref(s)",
 )
 STATE_MACHINE_POLICY = {
     "decision_owner": "/sdd.plan.data-model",
@@ -53,6 +77,53 @@ def build_stage_row(feature_dir: Path, row: dict[str, str] | None) -> dict[str, 
     }
 
 
+def build_test_matrix_validation(test_matrix_path: Path, binding_row_ids: list[str]) -> dict[str, Any]:
+    required_sections = {heading: False for heading in DATA_MODEL_TEST_MATRIX_REQUIRED_SECTIONS}
+    validation = {
+        "required_sections": required_sections,
+        "missing_required_sections": list(DATA_MODEL_TEST_MATRIX_REQUIRED_SECTIONS),
+        "binding_packet_count": 0,
+        "missing_binding_row_ids": [],
+        "incomplete_binding_packets": [],
+    }
+    if not test_matrix_path.is_file():
+        return validation
+
+    document = test_matrix_path.read_text(encoding="utf-8")
+    for heading in DATA_MODEL_TEST_MATRIX_REQUIRED_SECTIONS:
+        required_sections[heading] = extract_section(document, heading) is not None
+    validation["missing_required_sections"] = [
+        heading for heading, present in required_sections.items() if not present
+    ]
+
+    packet_rows = parse_markdown_table(
+        extract_section(document, "Binding Packets"),
+        filter_placeholder_first_cell=True,
+    )
+    packets_by_binding: dict[str, dict[str, str]] = {}
+    incomplete_packets: list[dict[str, Any]] = []
+    for row in packet_rows:
+        binding_row_id = clean_cell(row.get("BindingRowID", ""))
+        if not binding_row_id:
+            continue
+        packets_by_binding[binding_row_id] = row
+        missing_fields = [
+            field_name for field_name in DATA_MODEL_BINDING_PACKET_REQUIRED_FIELDS if not clean_cell(row.get(field_name, ""))
+        ]
+        if missing_fields:
+            incomplete_packets.append({"binding_row_id": binding_row_id, "fields": missing_fields})
+
+    validation["binding_packet_count"] = len(packets_by_binding)
+    validation["missing_binding_row_ids"] = [
+        binding_row_id for binding_row_id in binding_row_ids if binding_row_id not in packets_by_binding
+    ]
+    validation["incomplete_binding_packets"] = sorted(
+        incomplete_packets,
+        key=lambda item: item["binding_row_id"],
+    )
+    return validation
+
+
 def build_generation_readiness(
     *,
     missing_sections: list[str],
@@ -63,6 +134,7 @@ def build_generation_readiness(
     research_stage: dict[str, Any] | None,
     test_matrix_stage: dict[str, Any] | None,
     selected_stage: dict[str, Any] | None,
+    test_matrix_validation: dict[str, Any],
 ) -> dict[str, Any]:
     errors: list[dict[str, Any]] = []
     warnings: list[dict[str, Any]] = []
@@ -85,6 +157,30 @@ def build_generation_readiness(
                 "code": "test_matrix_missing",
                 "message": "test-matrix.md is missing for the selected feature.",
                 "details": {"path": str(test_matrix_path)},
+            }
+        )
+    elif test_matrix_validation["missing_required_sections"]:
+        errors.append(
+            {
+                "code": "test_matrix_required_sections_missing",
+                "message": "test-matrix.md is missing required sections for /sdd.plan.data-model.",
+                "details": {"sections": test_matrix_validation["missing_required_sections"]},
+            }
+        )
+    elif test_matrix_validation["missing_binding_row_ids"]:
+        errors.append(
+            {
+                "code": "binding_packets_missing_for_projection_rows",
+                "message": "test-matrix.md is missing Binding Packets for one or more projected binding rows.",
+                "details": {"binding_row_ids": test_matrix_validation["missing_binding_row_ids"]},
+            }
+        )
+    elif test_matrix_validation["incomplete_binding_packets"]:
+        errors.append(
+            {
+                "code": "binding_packets_missing_required_fields",
+                "message": "One or more Binding Packets are missing required fields for /sdd.plan.data-model.",
+                "details": {"rows": test_matrix_validation["incomplete_binding_packets"]},
             }
         )
 
@@ -182,9 +278,14 @@ def build_data_model_bootstrap_payload(
 
     document = plan_path.read_text(encoding="utf-8")
     sections = {heading: extract_section(document, heading) for heading in DATA_MODEL_SECTION_HEADINGS}
+    shared_context_snapshot = sections["Shared Context Snapshot"] or ""
+    has_repository_first_consumption_slice = bool(
+        re.search(r"(?m)^###\s+Repository-First Consumption Slice\s*$", shared_context_snapshot)
+    )
     required_sections = {
         "summary": sections["Summary"] is not None,
         "shared_context_snapshot": sections["Shared Context Snapshot"] is not None,
+        "repository_first_consumption_slice": has_repository_first_consumption_slice,
         "stage_queue": sections["Stage Queue"] is not None,
         "binding_projection_index": sections["Binding Projection Index"] is not None,
         "artifact_status": sections["Artifact Status"] is not None,
@@ -193,6 +294,7 @@ def build_data_model_bootstrap_payload(
     missing_sections = [name for name, present in required_sections.items() if not present]
 
     stage_rows = parse_markdown_table(sections["Stage Queue"])
+    binding_rows = parse_markdown_table(sections["Binding Projection Index"], filter_placeholder_first_cell=True)
     research_stage = build_stage_row(
         feature_dir,
         next((row for row in stage_rows if clean_cell(row.get("Stage ID", "")) == "research"), None),
@@ -219,6 +321,12 @@ def build_data_model_bootstrap_payload(
         if test_matrix_stage and test_matrix_stage["output_path_abs"]
         else feature_dir / "test-matrix.md"
     )
+    binding_row_ids = [
+        clean_cell(row.get("BindingRowID", ""))
+        for row in binding_rows
+        if clean_cell(row.get("BindingRowID", ""))
+    ]
+    test_matrix_validation = build_test_matrix_validation(test_matrix_path, binding_row_ids)
 
     current_fingerprints = {
         "plan_sha256": compute_sha256(plan_path),
@@ -237,6 +345,7 @@ def build_data_model_bootstrap_payload(
         research_stage=research_stage,
         test_matrix_stage=test_matrix_stage,
         selected_stage=selected_stage,
+        test_matrix_validation=test_matrix_validation,
     )
 
     return {
@@ -252,6 +361,7 @@ def build_data_model_bootstrap_payload(
         "research_stage": research_stage,
         "test_matrix_stage": test_matrix_stage,
         "selected_stage": selected_stage,
+        "test_matrix_validation": test_matrix_validation,
         "repo_anchor_policy": {
             "decision_order": ["existing", "extended", "new"],
             "repo_anchor_input_limit": 5,

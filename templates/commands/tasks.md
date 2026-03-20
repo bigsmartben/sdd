@@ -71,6 +71,7 @@ Resolve `PLAN_FILE` from current feature branch using `{SCRIPT}` defaults.
 6. On projection drift, emit upstream writeback actions only:
    - `/sdd.specify` for spec drift
    - `/sdd.plan.test-matrix` for test-matrix drift
+   - projection drift is blocking for this run; do not merge conflicting semantics locally
 7. Do not re-parse the just-written markdown to construct the manifest.
 8. Invalidate run-local derived views after write/report.
 
@@ -78,6 +79,7 @@ Manifest requirements:
 
 - Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`
 - `generated_from` keys: `plan_path`, `plan_source_fingerprint`, `contract_source_fingerprints`
+- Per-task required keys: `task_id`, `dependencies`, `if_scope`, `refs`, `target_paths`, `completion_anchors`, `conflict_hints`, `topo_layer`, `status`
 
 ## Stop Conditions
 
@@ -90,7 +92,7 @@ Stop immediately when any condition holds:
 5. Required canonical repository-first evidence for affected scope is missing, stale, or non-traceable.
 6. Active executable tuples select `new` repo anchors but lack explicit rejection evidence for `existing` and `extended` in authoritative upstream artifacts.
 7. Required repository discovery is blocked because `LOCAL_EXECUTION_PROTOCOL.repo_search.available = false`.
-8. Any selected `contract` row is missing `Full Field Dictionary (Operation-scoped)` or drifts from authoritative `Binding Packets` for the same `BindingRowID`.
+8. Any selected `contract` row is missing `Full Field Dictionary (Operation-scoped)`, or any selected `Binding Projection Index` row drifts from authoritative `Binding Packets` for the same `BindingRowID`.
 
 Hard execution safety gates in this command are limited to:
 

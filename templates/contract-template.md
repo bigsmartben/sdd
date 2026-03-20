@@ -6,8 +6,10 @@
 **IF Scope (Required)**: [IF-### or N/A]
 **Boundary Anchor (Required)**: [HTTP `METHOD /path` \| `event.topic` \| `Facade.method` \| `cli command` \| `ConcreteBoundary.method` \| `TODO(REPO_ANCHOR)`]
 **Anchor Status (Required)**: [`existing` \| `extended` \| `new` \| `todo`]
+**Boundary Anchor Strategy Evidence (Required)**: [`existing rejected: ...; extended rejected: ...` \| `N/A` when `Anchor Status (Required) != new`]
 **Implementation Entry Anchor (Required)**: [`path/to/file.ext::Symbol` \| `ConcreteEntry.method` \| `TODO(REPO_ANCHOR)`]
 **Implementation Entry Anchor Status (Required)**: [`existing` \| `extended` \| `new` \| `todo`]
+**Implementation Entry Anchor Strategy Evidence (Required)**: [`existing rejected: ...; extended rejected: ...` \| `N/A` when `Implementation Entry Anchor Status (Required) != new`]
 
 This artifact is the single authoritative interface-design closure for one `BindingRowID`.
 Its core outputs are fixed:
@@ -30,6 +32,9 @@ Its core outputs are fixed:
 - Apply anchor decision order `existing -> extended -> new -> todo`.
 - `extended` is valid only for same-entity field/state expansion.
 - `new` is normative only when selected `spec.md` / `data-model.md` / `test-matrix.md` slices plus bounded repo reads fully close the binding design and this stage can assign one concrete repository-facing boundary/entry target for implementation.
+- When `Anchor Status (Required) = new`, `Boundary Anchor Strategy Evidence (Required)` MUST include explicit rejection evidence for both `existing` and `extended`.
+- When `Implementation Entry Anchor Status (Required) = new`, `Implementation Entry Anchor Strategy Evidence (Required)` MUST include explicit rejection evidence for both `existing` and `extended`.
+- When an anchor status is not `new`, set the corresponding strategy evidence field to `N/A`.
 - If bounded evidence cannot close `existing`, `extended`, or one concrete `new` target, set the corresponding anchor field to `TODO(REPO_ANCHOR)` and status to `todo`.
 
 ## Binding Context
@@ -318,7 +323,7 @@ This section is the normalized downstream testing slice for `/sdd.tasks` and `/s
 |----------|--------------|------------|----------------|----------|----------|------------------|--------------------------|----------------------------|
 | [IF-### or N/A] | [operationId or N/A] | [`Contract` / `Integration` / `E2E` / `Mixed`] | [TM-###, TM-###] | [TM-###, TM-###] | [TC-###, TC-###] | [primary success check inferred here] | [failure/branch checks inferred here] | [test command or assertion signal] |
 
-### Cross-Interface Smoke Candidate
+### Cross-Interface Smoke Candidate (Required)
 
 Keep exactly one row for the selected operation.
 If this operation does not participate in feature-level smoke flow, keep `Candidate Role = none` with explicit `N/A` values.

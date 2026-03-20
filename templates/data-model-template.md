@@ -1,7 +1,7 @@
 # Data Model: [FEATURE]
 
 **Stage**: Stage 3 Shared Semantic Alignment
-**Inputs**: `spec.md`, `test-matrix.md` (`Interface Partition Decisions` and `Binding Packets` required; `Scenario Matrix` / `Verification Case Anchors` when needed), bounded repo semantic landing slice
+**Inputs**: `spec.md`, `test-matrix.md` (`Interface Partition Decisions`, `UIF Full Path Coverage Graph (Mermaid)`, `UIF Path Coverage Ledger`, `Scenario Matrix`, `Verification Case Anchors`, and `Binding Packets` required), bounded repo semantic landing slice
 
 Use this artifact to align the shared semantic backbone consumed by multiple `BindingRowID` values. This file is authoritative for shared semantic elements and downstream reuse constraints. It is not an interface predesign artifact.
 

@@ -968,7 +968,7 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                 done < "$file_path"
 
                 if [[ -z "$plan_status" ]]; then
-                    add_finding "$id" "$severity" "$rel_file" 0 "$message Missing `Feature Identity -> Status` marker." "$remediation"
+                    add_finding "$id" "$severity" "$rel_file" 0 "$message Missing Feature Identity -> Status marker." "$remediation"
                     continue
                 fi
 

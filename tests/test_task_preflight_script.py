@@ -60,34 +60,120 @@ def _write_minimal_feature(
         (feature_dir / "test-matrix.md").write_text(
             f"""# Test Matrix
 
+## Interface Partition Decisions
+
+| BindingRowID | User Intent | Trigger Ref(s) | Request Semantics | Visible Result | Side Effect | Repo Landing Hint | Split Rationale |
+|--------------|-------------|----------------|-------------------|----------------|-------------|-------------------|-----------------|
+| BindingRowID-001 | Create task | [UIF-001.trigger] | Input semantics only | Task created | create | task-entry-family | Single northbound action |
+
+## UIF Full Path Coverage Graph (Mermaid)
+
+```mermaid
+flowchart TD
+    Start --> Success
+```
+
+## UIF Path Coverage Ledger
+
+| UIF Path Ref | Path Type | Included in Graph | Omission Reason |
+|--------------|-----------|-------------------|-----------------|
+| UIF-Path-001 | Happy | yes | N/A |
+
+## Scenario Matrix
+
+| TM ID | BindingRowID | Path Type | Scenario | Preconditions | Expected Outcome | Related Ref |
+|-------|--------------|-----------|----------|---------------|------------------|-------------|
+| TM-001 | BindingRowID-001 | Happy | Create task succeeds | Valid request | Task is created | [UC-001, FR-001] |
+
+## Verification Case Anchors
+
+| TC ID | BindingRowID | TM ID | Verification Goal | Observability / Signal | Related Ref |
+|-------|--------------|-------|-------------------|------------------------|-------------|
+| TC-001 | BindingRowID-001 | TM-001 | Verify success | Task created signal | [SC-001] |
+| TC-002 | BindingRowID-001 | TM-001 | Verify failure handling | Error signal | [EC-001] |
+
 ## Binding Packets
 
-| BindingRowID | IF Scope | Trigger Ref(s) | UIF Path Ref(s) | UDD Ref(s) | Boundary Anchor | Boundary Anchor Status | Boundary Anchor Strategy Evidence | Implementation Entry Anchor | Implementation Entry Anchor Status | Implementation Entry Anchor Strategy Evidence | Request DTO Anchor | Response DTO Anchor | Primary Collaborator Anchor | Primary TM IDs | TC IDs | Test Scope | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) | Main Pass Anchor | Branch/Failure Anchor(s) |
-|--------------|----------|----------------|-----------------|------------|-----------------|------------------------|-----------------------------------|-----------------------------|------------------------------------|-----------------------------------------------|--------------------|--------------------|-----------------------------|----------------|--------|------------|-------------|-----------------|----------------|-------------|------------------|--------------------------|
-| BindingRowID-001 | IF-001 | [UIF-001.trigger] | [UIF-Path-001] | [UDD-001] | HTTP POST /tasks | {boundary_anchor_status} | {boundary_anchor_strategy_evidence} | {implementation_entry_anchor} | {implementation_entry_anchor_status} | {implementation_entry_anchor_strategy_evidence} | src/app/contracts.py::CreateTaskRequest | src/app/contracts.py::CreateTaskResponse | src/app/task_service.py::TaskService.create_task | [TM-001] | [TC-001, TC-002] | {test_scope} | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] | TC-001 pass | TC-002 fail |
+| BindingRowID | IF Scope | User Intent | Trigger Ref(s) | Request Semantics | Visible Result | Side Effect | Boundary Notes | Repo Landing Hint | UIF Path Ref(s) | UDD Ref(s) | Primary TM IDs | TM IDs | TC IDs | Test Scope | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) |
+|--------------|----------|-------------|----------------|-------------------|----------------|-------------|----------------|-------------------|-----------------|------------|----------------|--------|--------|------------|-------------|-----------------|----------------|-------------|
+| BindingRowID-001 | IF-001 | Create task | [UIF-001.trigger] | Input semantics only | Task created | create | permission-gated | task-entry-family | [UIF-Path-001] | [UDD-001] | [TM-001] | [TM-001] | [TC-001, TC-002] | {test_scope} | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] |
 """,
             encoding="utf-8",
         )
     else:
         (feature_dir / "test-matrix.md").write_text("# Test Matrix\n", encoding="utf-8")
     if contract_text is None:
-        contract_text = """# Contract
+        contract_text = f"""# Northbound Interface Design: BindingRowID-001
 
+**BindingRowID (Required)**: BindingRowID-001
 **Operation ID (Required)**: createTask
+**IF Scope (Required)**: IF-001
+**Boundary Anchor (Required)**: HTTP POST /tasks
+**Anchor Status (Required)**: `{boundary_anchor_status}`
+**Boundary Anchor Strategy Evidence (Required)**: {boundary_anchor_strategy_evidence}
+**Implementation Entry Anchor (Required)**: {implementation_entry_anchor}
+**Implementation Entry Anchor Status (Required)**: `{implementation_entry_anchor_status}`
+**Implementation Entry Anchor Strategy Evidence (Required)**: {implementation_entry_anchor_strategy_evidence}
 
-## Resolved Class Inventory (Required)
+## Binding Context
 
-| Role | Concrete Name | Resolution | Source / Evidence | Notes |
-|------|---------------|------------|-------------------|-------|
-| boundary-entry | src/app/tasks_controller.py::TasksController.create_task | existing | binding packet + repo anchor | controller-first HTTP entry |
-| request-dto | src/app/contracts.py::CreateTaskRequest | existing | binding packet | concrete request model |
-| response-dto | src/app/contracts.py::CreateTaskResponse | existing | binding packet | concrete response model |
+| Field | Value |
+|-------|-------|
+| `BindingRowID` | BindingRowID-001 |
+| `Operation ID` | createTask |
+| `IF Scope` | IF-001 |
+| `UIF Path Ref(s)` | [UIF-Path-001] |
+| `UDD Ref(s)` | [UDD-001] |
+| `Primary TM IDs` | [TM-001] |
+| `TM IDs` | [TM-001] |
+| `TC IDs` | [TC-001, TC-002] |
+| `Test Scope` | Integration |
+| `Spec Ref(s)` | [UC-001, FR-001] |
+| `Scenario Ref(s)` | [S1] |
+| `Success Ref(s)` | [SC-001] |
+| `Edge Ref(s)` | [EC-001] |
+
+## Interface Definition
+
+### Contract Summary
+
+| Aspect | Definition |
+|--------|------------|
+| External Input | create-task request |
+| Success Output | created task payload |
+| Failure Output | error payload |
+
+### Shared Semantic Reuse
+
+| Shared Semantic Ref | Constraint Type | Applied To | Impact on Contract |
+|---------------------|-----------------|------------|--------------------|
+| N/A | none | N/A | No shared semantic dependency for this fixture |
 
 ## Full Field Dictionary (Operation-scoped)
 
 | Field | Owner Class | Dictionary Tier | Direction | Required/Optional | Default | Validation/Enum | Persisted | Contract-visible | Used in createTask | Source Anchor |
 |-------|-------------|-----------------|-----------|-------------------|---------|-----------------|-----------|------------------|--------------------|---------------|
 | taskId | CreateTaskResponse | operation-critical | output | required | none | uuid | no | yes | yes | `src/app/contracts.py::CreateTaskResponse.taskId` |
+
+## UML Class Design
+
+### Resolved Type Inventory
+
+| Role | Concrete Name | Resolution | Source / Evidence | Notes |
+|------|---------------|------------|-------------------|-------|
+| boundary-entry | src/app/tasks_controller.py::TasksController.create_task | existing | binding packet + repo anchor | controller-first HTTP entry |
+| implementation-entry | {implementation_entry_anchor} | existing | binding packet | implementation handoff |
+| request-dto | src/app/contracts.py::CreateTaskRequest | existing | binding packet | concrete request model |
+| response-dto | src/app/contracts.py::CreateTaskResponse | existing | binding packet | concrete response model |
+
+## Sequence Design
+
+### Behavior Paths
+
+| Path | Trigger | Key Steps | Outcome | Contract-Visible Failure | Sequence Ref | TM/TC Anchor |
+|------|---------|-----------|---------|--------------------------|--------------|--------------|
+| Main | [UIF-Path-001] create task | controller -> service | task created | N/A | S1 | TM-001 / TC-001 |
+| Failure | [UIF-Path-001] create task invalid | controller -> service -> error | N/A | validation error | S2 | TM-001 / TC-002 |
 
 ## Test Projection
 
@@ -97,6 +183,12 @@ def _write_minimal_feature(
 |----------|--------------|------------|----------------|----------|----------|------------------|--------------------------|----------------------------|
 | IF-001 | createTask | Integration | [TM-001] | [TM-001] | [TC-001, TC-002] | task create success | task create failure | pytest -k createTask |
 
+### Cross-Interface Smoke Candidate (Required)
+
+| Smoke Candidate ID | IF Scope | Operation ID | Candidate Role | Depends On Candidate ID(s) | Trigger | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
+|--------------------|----------|--------------|----------------|----------------------------|---------|------------------|--------------------------|----------------------------|
+| SMK-001 | IF-001 | createTask | entry | N/A | create task | task create success | task create failure | pytest -k createTask |
+
 ## Closure Check
 
 | Check Item | Required Evidence | Status |
@@ -105,6 +197,14 @@ def _write_minimal_feature(
 | UML closure | class diagram and two-party package relations both present and consistent with sequence | ok |
 | Sequence closure | success/failure paths include mandatory second-party, third-party, and middleware calls | ok |
 | Test closure | `TM/TC`, pass/failure anchors, and command/assertion signal are present | ok |
+
+## Upstream References
+
+- repo anchors: [src/app/tasks_controller.py::TasksController.create_task, src/app/contracts.py::CreateTaskResponse]
+
+## Boundary Notes
+
+- Keep controller-first HTTP boundary and bounded task semantics for this fixture.
 """
     (feature_dir / "contracts" / "create-task.md").write_text(contract_text, encoding="utf-8")
 
@@ -118,6 +218,12 @@ Demo planning control plane.
 ## Shared Context Snapshot
 
 - Feature: Demo
+
+### Repository-First Consumption Slice
+
+- Relevant dependency usage rows / `SIG-*`: [SIG-001]
+- Relevant module-edge rules: [EDGE-001]
+- Bounded repo candidate anchors: [`src/app/tasks_controller.py::TasksController.create_task`]
 
 ## Stage Queue
 
@@ -224,7 +330,48 @@ def _write_data_model_feature(
     if include_spec:
         (feature_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
     if include_test_matrix:
-        (feature_dir / "test-matrix.md").write_text("# Test Matrix\n\n## Binding Packets\n", encoding="utf-8")
+        (feature_dir / "test-matrix.md").write_text(
+            """# Test Matrix
+
+## Interface Partition Decisions
+
+| BindingRowID | User Intent | Trigger Ref(s) | Request Semantics | Visible Result | Side Effect | Repo Landing Hint | Split Rationale |
+|--------------|-------------|----------------|-------------------|----------------|-------------|-------------------|-----------------|
+| BR-001 | Demo intent | [UIF-001.trigger] | Input semantics only | Visible demo result | none | demo-entry-family | Single binding |
+
+## UIF Full Path Coverage Graph (Mermaid)
+
+```mermaid
+flowchart TD
+    Start --> Success
+```
+
+## UIF Path Coverage Ledger
+
+| UIF Path Ref | Path Type | Included in Graph | Omission Reason |
+|--------------|-----------|-------------------|-----------------|
+| UIF-Path-001 | Happy | yes | N/A |
+
+## Scenario Matrix
+
+| TM ID | BindingRowID | Path Type | Scenario | Preconditions | Expected Outcome | Related Ref |
+|-------|--------------|-----------|----------|---------------|------------------|-------------|
+| TM-001 | BR-001 | Happy | Demo success | Ready state | Demo visible | [UC-001] |
+
+## Verification Case Anchors
+
+| TC ID | BindingRowID | TM ID | Verification Goal | Observability / Signal | Related Ref |
+|-------|--------------|-------|-------------------|------------------------|-------------|
+| TC-001 | BR-001 | TM-001 | Verify demo payload | Demo signal | [FR-001] |
+
+## Binding Packets
+
+| BindingRowID | IF Scope | User Intent | Trigger Ref(s) | Request Semantics | Visible Result | Side Effect | Boundary Notes | Repo Landing Hint | UIF Path Ref(s) | UDD Ref(s) | Primary TM IDs | TM IDs | TC IDs | Test Scope | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) |
+|--------------|----------|-------------|----------------|-------------------|----------------|-------------|----------------|-------------------|-----------------|------------|----------------|--------|--------|------------|-------------|-----------------|----------------|-------------|
+| BR-001 | IF-001 | Demo intent | [UIF-001.trigger] | Input semantics only | Demo visible | none | N/A | demo-entry-family | [UIF-Path-001] | [UDD-001] | [TM-001] | [TM-001] | [TC-001] | Integration | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] |
+""",
+            encoding="utf-8",
+        )
     if include_research:
         (feature_dir / "research.md").write_text("# Research\n", encoding="utf-8")
     if include_data_model:
@@ -240,6 +387,12 @@ Demo planning control plane.
 ## Shared Context Snapshot
 
 - Feature: Demo
+
+### Repository-First Consumption Slice
+
+- Relevant dependency usage rows / `SIG-*`: [SIG-001]
+- Relevant module-edge rules: [EDGE-001]
+- Bounded repo candidate anchors: [`src/app/tasks_controller.py::TasksController.create_task`]
 
 ## Stage Queue
 
@@ -319,9 +472,16 @@ def test_task_preflight_helper_emits_contract_unit_inventory(tmp_path):
     assert unit["binding_packet"]["has_projection_drift"] is False
     assert unit["contract"]["target_path"] == "contracts/create-task.md"
     assert unit["contract"]["exists"] is True
+    assert unit["contract"]["binding_context_section_present"] is True
+    assert unit["contract"]["interface_definition_section_present"] is True
     assert unit["contract"]["full_field_dictionary_present"] is True
     assert unit["contract"]["field_dictionary_tier_present"] is True
+    assert unit["contract"]["resolved_type_inventory_present"] is True
     assert unit["contract"]["test_projection_section_present"] is True
+    assert unit["contract"]["upstream_references_section_present"] is True
+    assert unit["contract"]["boundary_notes_section_present"] is True
+    assert unit["contract"]["cross_interface_smoke_candidate_present"] is True
+    assert unit["contract"]["cross_interface_smoke_candidate_row_count"] == 1
     assert unit["contract"]["closure_check_section_present"] is True
     assert unit["contract"]["interface_definition_closure_check_present"] is True
     assert unit["contract"]["uml_closure_check_present"] is True
@@ -368,6 +528,48 @@ def test_task_preflight_helper_excludes_missing_contract_from_ready_inventory(tm
     assert payload["execution_readiness"]["error_count"] >= 1
     error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
     assert "done_contract_target_missing" in error_codes
+
+
+def test_task_preflight_helper_accepts_h3_field_dictionary_heading(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(feature_dir)
+    contract_path = feature_dir / "contracts" / "create-task.md"
+    contract_text = contract_path.read_text(encoding="utf-8")
+    contract_path.write_text(
+        contract_text.replace(
+            "## Full Field Dictionary (Operation-scoped)",
+            "### Full Field Dictionary (Operation-scoped)",
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "task_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+            "--test-matrix",
+            str(feature_dir / "test-matrix.md"),
+            "--contracts-dir",
+            str(feature_dir / "contracts"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["execution_readiness"]["ready_for_task_generation"] is True
+    assert payload["ready_unit_inventory"][0]["contract"]["full_field_dictionary_present"] is True
 
 
 def test_task_preflight_helper_treats_empty_contract_status_as_not_done(tmp_path):
@@ -606,11 +808,12 @@ def test_task_preflight_helper_blocks_missing_full_field_dictionary(tmp_path):
     assert "full_field_dictionary_missing" in error_codes
 
 
-def test_task_preflight_helper_warns_missing_contract_governance_markers(tmp_path):
+def test_task_preflight_helper_blocks_missing_contract_required_sections(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
-    _write_minimal_feature(
-        feature_dir,
-        contract_text="""# Contract
+    _write_minimal_feature(feature_dir)
+    contract_path = feature_dir / "contracts" / "create-task.md"
+    contract_path.write_text(
+        """# Northbound Interface Design: BindingRowID-001
 
 ## Full Field Dictionary (Operation-scoped)
 
@@ -618,6 +821,7 @@ def test_task_preflight_helper_warns_missing_contract_governance_markers(tmp_pat
 |-------|-------------|-----------|-------------------|---------|-----------------|-----------|------------------|--------------------|---------------|
 | taskId | CreateTaskResponse | output | required | none | uuid | no | yes | yes | `src/app/contracts.py::CreateTaskResponse.taskId` |
 """,
+        encoding="utf-8",
     )
 
     result = subprocess.run(
@@ -645,7 +849,15 @@ def test_task_preflight_helper_warns_missing_contract_governance_markers(tmp_pat
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert payload["ready_unit_inventory"] == []
-    assert payload["execution_readiness"]["ready_for_task_generation"] is True
+    assert payload["execution_readiness"]["ready_for_task_generation"] is False
+    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
+    assert "binding_context_section_missing" in error_codes
+    assert "interface_definition_section_missing" in error_codes
+    assert "resolved_type_inventory_missing" in error_codes
+    assert "cross_interface_smoke_candidate_missing" in error_codes
+    assert "upstream_references_section_missing" in error_codes
+    assert "boundary_notes_section_missing" in error_codes
+    assert "contract_units_not_execution_ready" in error_codes
     warning_codes = [entry["code"] for entry in payload["execution_readiness"]["warnings"]]
     assert "field_dictionary_tier_missing" in warning_codes
     assert "test_projection_section_missing" in warning_codes
@@ -655,16 +867,15 @@ def test_task_preflight_helper_warns_missing_contract_governance_markers(tmp_pat
 
 def test_task_preflight_helper_warns_unresolved_contract_field_gaps(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
-    _write_minimal_feature(
-        feature_dir,
-        contract_text="""# Contract
-
-## Full Field Dictionary (Operation-scoped)
-
-| Field | Owner Class | Direction | Required/Optional | Default | Validation/Enum | Persisted | Contract-visible | Used in createTask | Source Anchor |
-|-------|-------------|-----------|-------------------|---------|-----------------|-----------|------------------|--------------------|---------------|
-| taskId | CreateTaskResponse | output | required | gap | gap | gap | yes | yes | TODO(REPO_ANCHOR) |
-""",
+    _write_minimal_feature(feature_dir)
+    contract_path = feature_dir / "contracts" / "create-task.md"
+    contract_text = contract_path.read_text(encoding="utf-8")
+    contract_path.write_text(
+        contract_text.replace(
+            "| taskId | CreateTaskResponse | operation-critical | output | required | none | uuid | no | yes | yes | `src/app/contracts.py::CreateTaskResponse.taskId` |",
+            "| taskId | CreateTaskResponse | operation-critical | output | required | gap | gap | gap | yes | yes | TODO(REPO_ANCHOR) |",
+        ),
+        encoding="utf-8",
     )
 
     result = subprocess.run(
@@ -692,24 +903,27 @@ def test_task_preflight_helper_warns_unresolved_contract_field_gaps(tmp_path):
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert payload["ready_unit_inventory"] == []
-    assert payload["execution_readiness"]["ready_for_task_generation"] is True
+    assert payload["execution_readiness"]["ready_for_task_generation"] is False
+    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
+    assert "contract_units_not_execution_ready" in error_codes
     warning_codes = [entry["code"] for entry in payload["execution_readiness"]["warnings"]]
     assert "contract_field_gap_unresolved" in warning_codes
 
 
 def test_task_preflight_helper_warns_http_controller_first_violation(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
-    _write_minimal_feature(
-        feature_dir,
-        contract_text="""# Contract
-
-## Full Field Dictionary (Operation-scoped)
-
-| Field | Owner Class | Direction | Required/Optional | Default | Validation/Enum | Persisted | Contract-visible | Used in createTask | Source Anchor |
-|-------|-------------|-----------|-------------------|---------|-----------------|-----------|------------------|--------------------|---------------|
-| taskId | CreateTaskResponse | output | required | none | uuid | no | yes | yes | `src/app/contracts.py::CreateTaskResponse.taskId` |
-**Implementation Entry Anchor (Required)**: src/app/task_service.py::TaskService.create_task
-""",
+    _write_minimal_feature(feature_dir)
+    contract_path = feature_dir / "contracts" / "create-task.md"
+    contract_text = contract_path.read_text(encoding="utf-8")
+    contract_path.write_text(
+        contract_text.replace(
+            "**Implementation Entry Anchor (Required)**: src/app/tasks_controller.py::TasksController.create_task",
+            "**Implementation Entry Anchor (Required)**: src/app/task_service.py::TaskService.create_task",
+        ).replace(
+            "| implementation-entry | src/app/tasks_controller.py::TasksController.create_task | existing | binding packet | implementation handoff |",
+            "| implementation-entry | src/app/task_service.py::TaskService.create_task | existing | binding packet | implementation handoff |",
+        ),
+        encoding="utf-8",
     )
 
     result = subprocess.run(
@@ -736,8 +950,11 @@ def test_task_preflight_helper_warns_http_controller_first_violation(tmp_path):
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["ready_unit_inventory"] == []
+    assert len(payload["ready_unit_inventory"]) == 1
     assert payload["execution_readiness"]["ready_for_task_generation"] is True
+    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
+    assert "contract_anchor_inventory_mismatch" not in error_codes
+    assert "contract_units_not_execution_ready" not in error_codes
     warning_codes = [entry["code"] for entry in payload["execution_readiness"]["warnings"]]
     assert "controller_first_violation" not in warning_codes
 
@@ -746,9 +963,41 @@ def test_task_preflight_helper_blocks_unresolved_contract_placeholder_names(tmp_
     feature_dir = tmp_path / "specs" / "001-demo"
     _write_minimal_feature(
         feature_dir,
-        contract_text="""# Contract
+        contract_text="""# Northbound Interface Design: BindingRowID-001
 
-## Resolved Class Inventory (Required)
+**BindingRowID (Required)**: BindingRowID-001
+**Operation ID (Required)**: createTask
+**IF Scope (Required)**: IF-001
+**Boundary Anchor (Required)**: HTTP POST /tasks
+**Anchor Status (Required)**: `existing`
+**Implementation Entry Anchor (Required)**: src/app/tasks_controller.py::TasksController.create_task
+**Implementation Entry Anchor Status (Required)**: `existing`
+
+## Binding Context
+
+| Field | Value |
+|-------|-------|
+| `BindingRowID` | BindingRowID-001 |
+| `Operation ID` | createTask |
+| `IF Scope` | IF-001 |
+| `UIF Path Ref(s)` | [UIF-Path-001] |
+| `Primary TM IDs` | [TM-001] |
+| `TM IDs` | [TM-001] |
+| `TC IDs` | [TC-001, TC-002] |
+
+## Interface Definition
+
+### Contract Summary
+
+| Aspect | Definition |
+|--------|------------|
+| External Input | create-task request |
+| Success Output | created task payload |
+| Failure Output | error payload |
+
+## UML Class Design
+
+### Resolved Type Inventory
 
 | Role | Concrete Name | Resolution | Source / Evidence | Notes |
 |------|---------------|------------|-------------------|-------|
@@ -768,6 +1017,12 @@ def test_task_preflight_helper_blocks_unresolved_contract_placeholder_names(tmp_
 |----------|--------------|------------|----------------|----------|----------|------------------|--------------------------|----------------------------|
 | IF-001 | createTask | Integration | [TM-001] | [TM-001] | [TC-001, TC-002] | task create success | task create failure | pytest -k createTask |
 
+### Cross-Interface Smoke Candidate (Required)
+
+| Smoke Candidate ID | IF Scope | Operation ID | Candidate Role | Depends On Candidate ID(s) | Trigger | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
+|--------------------|----------|--------------|----------------|----------------------------|---------|------------------|--------------------------|----------------------------|
+| SMK-001 | IF-001 | createTask | entry | N/A | create task | task create success | task create failure | pytest -k createTask |
+
 ## Closure Check
 
 | Check Item | Required Evidence | Status |
@@ -776,6 +1031,14 @@ def test_task_preflight_helper_blocks_unresolved_contract_placeholder_names(tmp_
 | UML closure | class diagram and two-party package relations both present and consistent with sequence | ok |
 | Sequence closure | success/failure paths include mandatory second-party, third-party, and middleware calls | ok |
 | Test closure | `TM/TC`, pass/failure anchors, and command/assertion signal are present | ok |
+
+## Upstream References
+
+- repo anchors: [src/app/tasks_controller.py::TasksController.create_task]
+
+## Boundary Notes
+
+- Placeholder request DTO should block readiness.
 """,
     )
 
@@ -975,52 +1238,14 @@ def test_task_preflight_helper_blocks_binding_context_coverage_drift(tmp_path):
 
 def test_task_preflight_helper_blocks_anchor_inventory_mismatch(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
-    _write_minimal_feature(
-        feature_dir,
-        contract_text="""# Contract
-**Boundary Anchor (Required)**: HTTP POST /tasks
-**Implementation Entry Anchor (Required)**: src/app/tasks_controller.py::TasksController.create_task
-
-## Binding Context
-| Field | Value |
-|-------|-------|
-| `UIF Path Ref(s)` | UIF-Path-001 |
-| `Primary TM IDs` | [TM-001] |
-| `TM IDs` | [TM-001] |
-| `TC IDs` | TC-001, TC-002 |
-
-## Full Field Dictionary (Operation-scoped)
-| Field | Owner Class | Dictionary Tier | Direction | Required/Optional | Default | Validation/Enum | Persisted | Contract-visible | Used in createTask | Source Anchor |
-|-------|-------------|-----------------|-----------|-------------------|---------|-----------------|-----------|------------------|--------------------|---------------|
-| taskId | CreateTaskResponse | operation-critical | output | required | none | uuid | no | yes | yes | `src/app/contracts.py::CreateTaskResponse.taskId` |
-
-## UML Class Design
-### Resolved Type Inventory
-| Role | Concrete Name | Resolution | Source / Evidence | Notes |
-|------|---------------|------------|-------------------|-------|
-| boundary-entry | src/app/tasks_controller.py::TasksController.create_task | existing | binding packet | mismatch with top boundary |
-| implementation-entry | src/app/tasks_controller.py::TasksController.create_task | existing | binding packet | entry |
-
-## Sequence Design
-### Behavior Paths
-| Path | Trigger | Key Steps | Outcome | Contract-Visible Failure | Sequence Ref | TM/TC Anchor |
-|------|---------|-----------|---------|--------------------------|--------------|--------------|
-| Main | create task | call controller | success | N/A | S1 | TM-001 / TC-001, TC-002 |
-
-## Test Projection
-### Test Projection Slice
-| IF Scope | Operation ID | Test Scope | Primary TM IDs | TM ID(s) | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
-|----------|--------------|------------|----------------|----------|----------|------------------|--------------------------|----------------------------|
-| IF-001 | createTask | Integration | [TM-001] | [TM-001] | [TC-001, TC-002] | success | fail | pytest -k createTask |
-
-## Closure Check
-| Check Item | Required Evidence | Status |
-|------------|-------------------|--------|
-| Interface-definition closure | request/response surface + full field dictionary + shared semantic reuse are all present | ok |
-| UML closure | class diagram and two-party package relations both present and consistent with sequence | ok |
-| Sequence closure | success/failure paths include mandatory second-party, third-party, and middleware calls | ok |
-| Test closure | `TM/TC`, pass/failure anchors, and command/assertion signal are present | ok |
-""",
+    _write_minimal_feature(feature_dir)
+    contract_path = feature_dir / "contracts" / "create-task.md"
+    contract_path.write_text(
+        contract_path.read_text(encoding="utf-8").replace(
+            "**Boundary Anchor (Required)**: HTTP POST /tasks",
+            "**Boundary Anchor (Required)**: TasksBoundary.handle",
+        ),
+        encoding="utf-8",
     )
 
     result = subprocess.run(
@@ -1095,7 +1320,7 @@ def test_task_preflight_helper_flags_missing_binding_projection_tuple_fields(tmp
     assert "binding_projection_missing_required_fields" in error_codes
 
 
-def test_task_preflight_helper_warns_missing_binding_contract_packet(tmp_path):
+def test_task_preflight_helper_blocks_missing_binding_contract_packet(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
     _write_minimal_feature(feature_dir, include_binding_packet=False)
 
@@ -1123,7 +1348,10 @@ def test_task_preflight_helper_warns_missing_binding_contract_packet(tmp_path):
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["execution_readiness"]["ready_for_task_generation"] is True
+    assert payload["execution_readiness"]["ready_for_task_generation"] is False
+    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
+    assert "test_matrix_required_sections_missing" in error_codes
+    assert "contract_units_not_execution_ready" in error_codes
     warning_codes = [entry["code"] for entry in payload["execution_readiness"]["warnings"]]
     assert "missing_binding_contract_packet" in warning_codes
 
@@ -1169,7 +1397,7 @@ def test_task_preflight_helper_blocks_binding_projection_packet_drift(tmp_path):
     assert "binding_projection_packet_drift" in error_codes
 
 
-def test_task_preflight_helper_ignores_anchor_strategy_evidence_in_projection_readiness(tmp_path):
+def test_task_preflight_helper_blocks_missing_anchor_strategy_evidence_for_new_anchors(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
     _write_minimal_feature(
         feature_dir,
@@ -1203,9 +1431,9 @@ def test_task_preflight_helper_ignores_anchor_strategy_evidence_in_projection_re
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["execution_readiness"]["ready_for_task_generation"] is True
+    assert payload["execution_readiness"]["ready_for_task_generation"] is False
     error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
-    assert "new_anchor_strategy_evidence_missing" not in error_codes
+    assert "new_anchor_strategy_evidence_missing" in error_codes
 
 
 def test_task_preflight_helper_ignores_template_placeholder_binding_rows(tmp_path):
@@ -1767,6 +1995,43 @@ def test_data_model_preflight_helper_flags_missing_test_matrix_artifact(tmp_path
     assert payload["generation_readiness"]["ready_for_generation"] is False
     error_codes = [entry["code"] for entry in payload["generation_readiness"]["errors"]]
     assert "test_matrix_missing" in error_codes
+
+
+def test_data_model_preflight_helper_flags_missing_required_test_matrix_sections(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_data_model_feature(feature_dir)
+
+    test_matrix_path = feature_dir / "test-matrix.md"
+    test_matrix_path.write_text(
+        test_matrix_path.read_text(encoding="utf-8").replace("## UIF Path Coverage Ledger\n", ""),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "data_model_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--research",
+            str(feature_dir / "research.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["generation_readiness"]["ready_for_generation"] is False
+    error_codes = [entry["code"] for entry in payload["generation_readiness"]["errors"]]
+    assert "test_matrix_required_sections_missing" in error_codes
 
 
 def test_data_model_preflight_helper_flags_missing_pending_data_model_row(tmp_path):

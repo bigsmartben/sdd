@@ -124,6 +124,9 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
   - downstream execution projection
 - This stage MAY design concrete `new` operation-scoped boundary/entry/DTO/collaborator surfaces when the selected semantic slices fully close the binding and one implementation-facing target can be named.
 - If bounded repo reads cannot close `existing` or `extended` boundary/entry anchors, this stage MUST evaluate one concrete `new` anchor set before stopping.
+- If `Anchor Status (Required) = new`, `Boundary Anchor Strategy Evidence (Required)` MUST include explicit rejection evidence for both `existing` and `extended`.
+- If `Implementation Entry Anchor Status (Required) = new`, `Implementation Entry Anchor Strategy Evidence (Required)` MUST include explicit rejection evidence for both `existing` and `extended`.
+- If an anchor status is not `new`, set the corresponding strategy evidence field to `N/A`.
 - Do not mark the row `blocked` only because no existing repo entry anchor was found when a concrete `new` anchor set can be named and fully closed in this run.
 - For first-party internal `new` anchors, choose repository-style names (`*Controller`, `*Service`, `*ServiceImpl`) unless the selected boundary is explicitly an adapter/facade surface.
 - This stage MAY refine operation-scoped VO/DTO/field mappings from upstream shared semantics, but it MUST NOT mint new shared-semantic classes, owners/sources, lifecycle vocabulary, or invariants.

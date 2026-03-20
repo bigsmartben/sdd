@@ -176,7 +176,7 @@ def test_contract_template_contains_unified_realization_requirements():
     assert "## Closure Check" in content
     assert "| `Test Scope` | [binding-scoped test coverage summary] |" in content
     assert "## Test Projection" in content
-    assert "### Cross-Interface Smoke Candidate" in content
+    assert "### Cross-Interface Smoke Candidate (Required)" in content
     assert "### Resolved Type Inventory" in content
     assert "Angle-bracket labels in the examples below are template scaffolding only and MUST be replaced before the artifact can be `done`." in content
     assert "| Sequence closure | success/failure paths include mandatory second-party, third-party, and middleware calls | [ok / gap] |" in content
@@ -261,6 +261,8 @@ def test_tasks_template_is_contract_only():
     assert "contracts/<operationId>.md" in content
     assert "Spec Slice:" in content
     assert "Test Slice:" in content
+    assert "selected contract `Binding Context` + `Test Projection Slice`" in content
+    assert "contract `Binding Context` `Spec Ref(s)`" in content
     assert "## 2.1) Upstream Alignment Repair (Required On Projection Drift)" in content
     assert "keep contract projection as execution truth for this run and emit explicit upstream writeback repair actions" in content
     assert "`/sdd.specify`" in content
