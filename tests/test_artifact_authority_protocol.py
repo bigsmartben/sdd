@@ -62,7 +62,7 @@ def test_tasks_implement_and_analyze_use_compact_contract_sections():
     assert "Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`" in tasks
 
     assert "Treat `IMPLEMENT_BOOTSTRAP.analyze_readiness` as the primary analyze hard gate." in implement
-    assert "bounded fallback validation" in implement
+    assert "stop immediately and report the runtime bootstrap blocker" in implement
     assert "waive-analyze-gate" in implement
     assert "`IMPLEMENT_BOOTSTRAP.analyze_readiness.errors` contains blockers" in implement
     assert "LOCAL_EXECUTION_PROTOCOL" in implement

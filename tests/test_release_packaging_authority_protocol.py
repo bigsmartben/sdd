@@ -116,6 +116,23 @@ def _assert_packaged_authority_markers(tmp_path: Path, agents: list[str], suffix
             assert marker in combined_text, f"missing authority marker for {agent}: {marker}"
 
 
+def _assert_packaged_runtime_templates(package_root: Path) -> None:
+    runtime_spec = package_root / ".specify" / "templates" / "spec-template.md"
+    runtime_plan = package_root / ".specify" / "templates" / "plan-template.md"
+    runtime_ui_html = package_root / ".specify" / "templates" / "ui-html-template.html"
+
+    assert runtime_spec.exists(), f"missing runtime spec template: {runtime_spec}"
+    assert runtime_plan.exists(), f"missing runtime plan template: {runtime_plan}"
+    assert runtime_ui_html.exists(), f"missing runtime ui.html template: {runtime_ui_html}"
+
+    spec_text = runtime_spec.read_text(encoding="utf-8")
+    plan_text = runtime_plan.read_text(encoding="utf-8")
+
+    assert "Scenario Type (happy/alternate/validation/exception/retry/recovery/cancel/timeout/permission/duplicate)" in spec_text
+    assert "Do not collapse later FRs to capability-only shorthand." in spec_text
+    assert "Planning Control Plane" in plan_text
+
+
 def _read_text_from_archive(archive: Path, suffix: str) -> str:
     if archive.suffix == ".whl":
         with zipfile.ZipFile(archive) as zf:
@@ -156,6 +173,7 @@ def test_bash_release_packaging_carries_authority_protocol_into_all_agent_output
     )
 
     _assert_packaged_authority_markers(tmp_path, agents, "sh")
+    _assert_packaged_runtime_templates(tmp_path / ".genreleases" / f"sdd-{agents[0]}-package-sh")
 
 
 @requires_packaging_tools
@@ -202,6 +220,7 @@ def test_powershell_release_packaging_carries_authority_protocol_into_all_agent_
     )
 
     _assert_packaged_authority_markers(tmp_path, agents, "sh")
+    _assert_packaged_runtime_templates(tmp_path / ".genreleases" / f"sdd-{agents[0]}-package-sh")
 
 
 def test_wheel_target_force_includes_authority_assets():

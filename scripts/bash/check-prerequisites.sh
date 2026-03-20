@@ -54,6 +54,56 @@ resolve_specify_cmd() {
     return 1
 }
 
+resolve_python_json_validator() {
+    if command -v python3 >/dev/null 2>&1; then
+        printf 'python3'
+        return 0
+    fi
+    if command -v python >/dev/null 2>&1; then
+        printf 'python'
+        return 0
+    fi
+    return 1
+}
+
+validate_json_payload() {
+    local payload="$1"
+    local validator
+    validator="$(resolve_python_json_validator)" || return 1
+    printf '%s' "$payload" | "$validator" -c 'import json, sys; json.load(sys.stdin)' >/dev/null 2>&1
+}
+
+require_internal_bootstrap_json() {
+    local label="$1"
+    shift
+
+    local specify_cmd
+    if ! specify_cmd="$(resolve_specify_cmd)"; then
+        echo "ERROR: ${label} requested but specify runtime could not be resolved." >&2
+        exit 1
+    fi
+
+    local bootstrap_output
+    if ! bootstrap_output="$("$specify_cmd" "$@" 2>&1)"; then
+        echo "ERROR: ${label} failed." >&2
+        printf '%s\n' "$bootstrap_output" >&2
+        exit 1
+    fi
+
+    if [[ -z "${bootstrap_output//[[:space:]]/}" ]]; then
+        echo "ERROR: ${label} produced empty output." >&2
+        exit 1
+    fi
+
+    if ! validate_json_payload "$bootstrap_output"; then
+        echo "ERROR: ${label} produced non-JSON output." >&2
+        printf '%s\n' "$bootstrap_output" >&2
+        exit 1
+    fi
+
+    printf '%s' "$bootstrap_output"
+}
+
 build_local_execution_protocol_json() {
     local search_available=false
     local search_tool="unavailable"
@@ -292,71 +342,50 @@ if $JSON_MODE; then
     # Build JSON array of documents
     json_docs="$(json_array "${docs[@]}")"
     local_execution_protocol="$(build_local_execution_protocol_json)"
-    SPECIFY_CMD="$(resolve_specify_cmd || true)"
-
     feature_json="$(json_string "$FEATURE_DIR")"
     anchor_gate_payload="{\"script_path\":$(json_string "scripts/implement_anchor_gate.py"),\"history_path\":$(json_string "$FEATURE_DIR/audits/implement-history.md")}"
     json_payload="{\"FEATURE_DIR\":${feature_json},\"AVAILABLE_DOCS\":${json_docs},\"LOCAL_EXECUTION_PROTOCOL\":${local_execution_protocol},\"IMPLEMENT_ANCHOR_GATE\":${anchor_gate_payload}"
 
     if $DATA_MODEL_PREFLIGHT; then
-        data_model_bootstrap="null"
-        if [[ -n "$SPECIFY_CMD" ]]; then
-            if data_model_bootstrap="$("$SPECIFY_CMD" internal-data-model-bootstrap \
-                --feature-dir "$FEATURE_DIR" \
-                --plan "$IMPL_PLAN" \
-                --spec "$FEATURE_SPEC" \
-                --research "$RESEARCH" \
-                --data-model "$DATA_MODEL")"; then
-                :
-            else
-                data_model_bootstrap="null"
-            fi
-        fi
+        data_model_bootstrap="$(require_internal_bootstrap_json \
+            "DATA_MODEL_BOOTSTRAP" \
+            internal-data-model-bootstrap \
+            --feature-dir "$FEATURE_DIR" \
+            --plan "$IMPL_PLAN" \
+            --spec "$FEATURE_SPEC" \
+            --research "$RESEARCH" \
+            --data-model "$DATA_MODEL")"
         json_payload="${json_payload},\"DATA_MODEL_BOOTSTRAP\":${data_model_bootstrap}"
     fi
 
     if $TASK_PREFLIGHT; then
-        task_bootstrap="null"
-        if [[ -n "$SPECIFY_CMD" ]]; then
-            if task_bootstrap="$("$SPECIFY_CMD" internal-task-bootstrap \
-                --feature-dir "$FEATURE_DIR" \
-                --plan "$IMPL_PLAN" \
-                --spec "$FEATURE_SPEC" \
-                --data-model "$DATA_MODEL" \
-                --test-matrix "$TEST_MATRIX" \
-                --contracts-dir "$CONTRACTS_DIR")"; then
-                :
-            else
-                task_bootstrap="null"
-            fi
-        fi
+        task_bootstrap="$(require_internal_bootstrap_json \
+            "TASKS_BOOTSTRAP" \
+            internal-task-bootstrap \
+            --feature-dir "$FEATURE_DIR" \
+            --plan "$IMPL_PLAN" \
+            --spec "$FEATURE_SPEC" \
+            --data-model "$DATA_MODEL" \
+            --test-matrix "$TEST_MATRIX" \
+            --contracts-dir "$CONTRACTS_DIR")"
     fi
 
     if $IMPLEMENT_PREFLIGHT; then
-        implement_bootstrap="null"
-        tasks_manifest_bootstrap="null"
-        if [[ -n "$SPECIFY_CMD" ]]; then
-            if implement_bootstrap="$("$SPECIFY_CMD" internal-implement-bootstrap \
-                --feature-dir "$FEATURE_DIR" \
-                --spec "$FEATURE_SPEC" \
-                --plan "$IMPL_PLAN" \
-                --tasks "$TASKS" \
-                --analyze-history "$FEATURE_DIR/audits/analyze-history.md")"; then
-                :
-            else
-                implement_bootstrap="null"
-            fi
-
-            if tasks_manifest_bootstrap="$("$SPECIFY_CMD" internal-tasks-manifest-bootstrap \
-                --feature-dir "$FEATURE_DIR" \
-                --plan "$IMPL_PLAN" \
-                --tasks "$TASKS" \
-                --tasks-manifest "$TASKS_MANIFEST")"; then
-                :
-            else
-                tasks_manifest_bootstrap="null"
-            fi
-        fi
+        implement_bootstrap="$(require_internal_bootstrap_json \
+            "IMPLEMENT_BOOTSTRAP" \
+            internal-implement-bootstrap \
+            --feature-dir "$FEATURE_DIR" \
+            --spec "$FEATURE_SPEC" \
+            --plan "$IMPL_PLAN" \
+            --tasks "$TASKS" \
+            --analyze-history "$FEATURE_DIR/audits/analyze-history.md")"
+        tasks_manifest_bootstrap="$(require_internal_bootstrap_json \
+            "TASKS_MANIFEST_BOOTSTRAP" \
+            internal-tasks-manifest-bootstrap \
+            --feature-dir "$FEATURE_DIR" \
+            --plan "$IMPL_PLAN" \
+            --tasks "$TASKS" \
+            --tasks-manifest "$TASKS_MANIFEST")"
         json_payload="${json_payload},\"IMPLEMENT_BOOTSTRAP\":${implement_bootstrap}"
         json_payload="${json_payload},\"TASKS_MANIFEST_BOOTSTRAP\":${tasks_manifest_bootstrap}"
     fi

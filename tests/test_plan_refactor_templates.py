@@ -73,11 +73,14 @@ def test_plan_and_test_matrix_templates_precompute_contract_bootstrap_inputs():
     assert "- `UIF Path Ref(s)`" in test_matrix_command
     assert "- `UDD Ref(s)`" in test_matrix_command
     assert "stable binding projection for those interface units" in test_matrix_command
+    assert "Path Type` is verification coverage metadata only" in test_matrix_command
 
     assert "## Binding Packets" in test_matrix_template
     assert "Purpose: complete downstream scope-reference packet for the selected interaction unit." in test_matrix_template
     assert "**Inputs**: `spec.md`" in test_matrix_template
     assert "Packets should remove rebinding work without duplicating `spec.md` prose." in test_matrix_template
+    assert "Path Type` is verification coverage metadata only" in test_matrix_template
+    assert "Create / update / read / authorize / none" in test_matrix_template
     assert "| BindingRowID | IF Scope | User Intent | Trigger Ref(s) | Request Semantics | Visible Result | Side Effect | Boundary Notes | Repo Landing Hint | UIF Path Ref(s) | UDD Ref(s) | Primary TM IDs | TM IDs | TC IDs | Test Scope | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) |" in test_matrix_template
 
 
@@ -239,7 +242,7 @@ def test_tasks_command_uses_contract_as_realization_source():
     content = read("templates/commands/tasks.md")
     assert "selected `contracts/` slices" in content
     assert "Treat `TASKS_BOOTSTRAP.execution_readiness` as the primary hard gate." in content
-    assert "perform one bounded fallback validation from `plan.md` control-plane fields" in content
+    assert "stop immediately and report the runtime bootstrap blocker" in content
     assert "Keep contract projection authoritative for the current run." in content
     assert "On projection drift, emit upstream writeback actions only:" in content
     assert "/sdd.specify" in content
@@ -374,6 +377,8 @@ def test_lint_rules_for_unified_contract_runtime_rows():
 
 def test_plan_required_sections_are_consistent_across_lint_and_preflights():
     rules = read("rules/planning-lint-rules.tsv")
+    task_runtime = read("src/specify_cli/runtime_task_bootstrap.py")
+    data_model_runtime = read("src/specify_cli/runtime_data_model_bootstrap.py")
     task_preflight = read("scripts/task_preflight.py")
     data_model_preflight = read("scripts/data_model_preflight.py")
     required_sections = [
@@ -386,8 +391,10 @@ def test_plan_required_sections_are_consistent_across_lint_and_preflights():
     ]
     for section in required_sections:
         assert section in rules
-        assert section in task_preflight
-        assert section in data_model_preflight
+        assert section in task_runtime
+        assert section in data_model_runtime
+    assert "from specify_cli.runtime_task_bootstrap import build_task_bootstrap_payload" in task_preflight
+    assert "from specify_cli.runtime_data_model_bootstrap import build_data_model_bootstrap_payload" in data_model_preflight
 
 
 def test_checklist_command_uses_branch_inferred_plan_input_with_hard_gate():

@@ -41,7 +41,7 @@ Reference precedence:
 Stage boundary guard:
 
 - `tasks.md` consumes Stage 4 outputs; it does not generate or backfill missing interface design artifacts.
-- Task generation must start only after `TASKS_BOOTSTRAP.execution_readiness.ready_for_task_generation = true`; if bootstrap is missing or invalid, use one bounded fallback validation from `plan.md` control-plane fields before stopping.
+- Task generation must start only after `TASKS_BOOTSTRAP.execution_readiness.ready_for_task_generation = true`; if bootstrap is missing or invalid, stop and repair the runtime bootstrap path before proceeding.
 - If executable tuples depend on `Anchor Status = new` / `Implementation Entry Anchor Status = new`, include explicit strategy evidence refs showing `existing` and `extended` were evaluated and rejected; otherwise stop and repair upstream artifacts.
 - If required execution anchors are missing from `plan.md`, `contracts/`, or `test-matrix.md`, stop and repair upstream artifacts rather than writing compensating tasks.
 - `tasks.md` uses `GLOBAL` and `Interface Delivery Units` as execution packages only, not as replacement design sections.

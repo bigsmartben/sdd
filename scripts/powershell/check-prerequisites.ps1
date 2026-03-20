@@ -81,6 +81,50 @@ function Resolve-SpecifyCommand {
     return $null
 }
 
+function Get-RequiredBootstrapPayload {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Label,
+        [Parameter(Mandatory = $true)]
+        [string]$InternalCommand,
+        [string[]]$Arguments = @()
+    )
+
+    $specifyCmd = Resolve-SpecifyCommand
+    if ([string]::IsNullOrWhiteSpace($specifyCmd)) {
+        Stop-Script -Lines @("ERROR: $Label requested but specify runtime could not be resolved.")
+    }
+
+    try {
+        $rawOutput = (& $specifyCmd $InternalCommand @Arguments 2>&1 | Out-String).Trim()
+    } catch {
+        Stop-Script -Lines @(
+            "ERROR: $Label failed.",
+            $_.Exception.Message
+        )
+    }
+
+    if ($LASTEXITCODE -ne 0) {
+        Stop-Script -Lines @(
+            "ERROR: $Label failed.",
+            $rawOutput
+        )
+    }
+
+    if ([string]::IsNullOrWhiteSpace($rawOutput)) {
+        Stop-Script -Lines @("ERROR: $Label produced empty output.")
+    }
+
+    try {
+        return ($rawOutput | ConvertFrom-Json)
+    } catch {
+        Stop-Script -Lines @(
+            "ERROR: $Label produced non-JSON output.",
+            $rawOutput
+        )
+    }
+}
+
 function Get-LocalExecutionProtocol {
     param(
         [Parameter(Mandatory = $true)]
@@ -308,79 +352,52 @@ if ($Json) {
     }
 
     if ($DataModelPreflight) {
-        $payload.DATA_MODEL_BOOTSTRAP = $null
-        $specifyCmd = Resolve-SpecifyCommand
-        if (-not [string]::IsNullOrWhiteSpace($specifyCmd)) {
-            try {
-                $dataModelBootstrapJson = & $specifyCmd internal-data-model-bootstrap `
-                    --feature-dir $paths.FEATURE_DIR `
-                    --plan $paths.IMPL_PLAN `
-                    --spec $paths.FEATURE_SPEC `
-                    --research $paths.RESEARCH `
-                    --data-model $paths.DATA_MODEL
-
-                if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($dataModelBootstrapJson)) {
-                    $payload.DATA_MODEL_BOOTSTRAP = $dataModelBootstrapJson | ConvertFrom-Json
-                }
-            } catch {
-                $payload.DATA_MODEL_BOOTSTRAP = $null
-            }
-        }
+        $payload.DATA_MODEL_BOOTSTRAP = Get-RequiredBootstrapPayload `
+            -Label 'DATA_MODEL_BOOTSTRAP' `
+            -InternalCommand 'internal-data-model-bootstrap' `
+            -Arguments @(
+                '--feature-dir', $paths.FEATURE_DIR,
+                '--plan', $paths.IMPL_PLAN,
+                '--spec', $paths.FEATURE_SPEC,
+                '--research', $paths.RESEARCH,
+                '--data-model', $paths.DATA_MODEL
+            )
     }
 
     if ($TaskPreflight) {
-        $payload.TASKS_BOOTSTRAP = $null
-        $specifyCmd = Resolve-SpecifyCommand
-        if (-not [string]::IsNullOrWhiteSpace($specifyCmd)) {
-            try {
-                $taskBootstrapJson = & $specifyCmd internal-task-bootstrap `
-                    --feature-dir $paths.FEATURE_DIR `
-                    --plan $paths.IMPL_PLAN `
-                    --spec $paths.FEATURE_SPEC `
-                    --data-model $paths.DATA_MODEL `
-                    --test-matrix $paths.TEST_MATRIX `
-                    --contracts-dir $paths.CONTRACTS_DIR
-
-                if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($taskBootstrapJson)) {
-                    $payload.TASKS_BOOTSTRAP = $taskBootstrapJson | ConvertFrom-Json
-                }
-            } catch {
-                $payload.TASKS_BOOTSTRAP = $null
-            }
-        }
+        $payload.TASKS_BOOTSTRAP = Get-RequiredBootstrapPayload `
+            -Label 'TASKS_BOOTSTRAP' `
+            -InternalCommand 'internal-task-bootstrap' `
+            -Arguments @(
+                '--feature-dir', $paths.FEATURE_DIR,
+                '--plan', $paths.IMPL_PLAN,
+                '--spec', $paths.FEATURE_SPEC,
+                '--data-model', $paths.DATA_MODEL,
+                '--test-matrix', $paths.TEST_MATRIX,
+                '--contracts-dir', $paths.CONTRACTS_DIR
+            )
     }
 
     if ($ImplementPreflight) {
-        $payload.IMPLEMENT_BOOTSTRAP = $null
-        $payload.TASKS_MANIFEST_BOOTSTRAP = $null
-        $specifyCmd = Resolve-SpecifyCommand
-        if (-not [string]::IsNullOrWhiteSpace($specifyCmd)) {
-            try {
-                $implementBootstrapJson = & $specifyCmd internal-implement-bootstrap `
-                    --feature-dir $paths.FEATURE_DIR `
-                    --spec $paths.FEATURE_SPEC `
-                    --plan $paths.IMPL_PLAN `
-                    --tasks $paths.TASKS `
-                    --analyze-history (Join-Path $paths.FEATURE_DIR 'audits/analyze-history.md')
-
-                if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($implementBootstrapJson)) {
-                    $payload.IMPLEMENT_BOOTSTRAP = $implementBootstrapJson | ConvertFrom-Json
-                }
-
-                $tasksManifestBootstrapJson = & $specifyCmd internal-tasks-manifest-bootstrap `
-                    --feature-dir $paths.FEATURE_DIR `
-                    --plan $paths.IMPL_PLAN `
-                    --tasks $paths.TASKS `
-                    --tasks-manifest $paths.TASKS_MANIFEST
-
-                if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($tasksManifestBootstrapJson)) {
-                    $payload.TASKS_MANIFEST_BOOTSTRAP = $tasksManifestBootstrapJson | ConvertFrom-Json
-                }
-            } catch {
-                $payload.IMPLEMENT_BOOTSTRAP = $null
-                $payload.TASKS_MANIFEST_BOOTSTRAP = $null
-            }
-        }
+        $payload.IMPLEMENT_BOOTSTRAP = Get-RequiredBootstrapPayload `
+            -Label 'IMPLEMENT_BOOTSTRAP' `
+            -InternalCommand 'internal-implement-bootstrap' `
+            -Arguments @(
+                '--feature-dir', $paths.FEATURE_DIR,
+                '--spec', $paths.FEATURE_SPEC,
+                '--plan', $paths.IMPL_PLAN,
+                '--tasks', $paths.TASKS,
+                '--analyze-history', (Join-Path $paths.FEATURE_DIR 'audits/analyze-history.md')
+            )
+        $payload.TASKS_MANIFEST_BOOTSTRAP = Get-RequiredBootstrapPayload `
+            -Label 'TASKS_MANIFEST_BOOTSTRAP' `
+            -InternalCommand 'internal-tasks-manifest-bootstrap' `
+            -Arguments @(
+                '--feature-dir', $paths.FEATURE_DIR,
+                '--plan', $paths.IMPL_PLAN,
+                '--tasks', $paths.TASKS,
+                '--tasks-manifest', $paths.TASKS_MANIFEST
+            )
     }
 
     [PSCustomObject]$payload | ConvertTo-Json -Compress -Depth 8

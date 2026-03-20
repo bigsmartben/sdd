@@ -109,7 +109,8 @@ Determine partition uniqueness from:
 Apply these rules exactly:
 
 - Split bindings when user intent, request semantics, side effect, permission boundary, idempotency semantics, transaction boundary, or repo landing family materially differ.
-- Merge happy / alternate / exception / duplicate / timeout paths when they still exercise the same northbound action boundary.
+- Merge `Happy` / `Alternate` / `Exception` / `Degraded` / `Duplicate` / `Timeout` paths when they still exercise the same northbound action boundary.
+- Do not split a binding only because `Path Type` changes across those verification paths under the same northbound action.
 - Do not split a binding only because page state, button state, reminder behavior, or branch path differs under the same northbound action.
 - Do not split a binding only because one action has multiple validation or duplicate branches.
 
@@ -154,6 +155,7 @@ Keep them spec-led and verification-led:
   - rows rendered in Mermaid must be marked `Included in Graph = yes`
   - rows intentionally omitted from Mermaid must be marked `Included in Graph = no` with explicit omission reason
 - `Scenario Matrix` captures path type, preconditions, expected outcomes, related spec refs, and the owning `BindingRowID`
+- `Path Type` is verification coverage metadata only; it does not define a new interface partition by itself
 - `Verification Case Anchors` captures what each case proves and how it is observed
 - use the smallest row set that still preserves materially distinct behavior
 - do not let `TM/TC` rows redefine interface partition boundaries; they attach to the already-decided `BindingRowID`

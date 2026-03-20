@@ -16,7 +16,7 @@ def test_tasks_command_enforces_preflight_and_hard_stop():
     assert "scripts/powershell/check-prerequisites.ps1 -Json -TaskPreflight" in content
     assert "Run `{SCRIPT}` once from repo root." in content
     assert "Treat `TASKS_BOOTSTRAP.execution_readiness` as the primary hard gate." in content
-    assert "perform one bounded fallback validation from `plan.md` control-plane fields" in content
+    assert "stop immediately and report the runtime bootstrap blocker" in content
     assert "Stop immediately when any condition holds:" in content
     assert "`TASKS_BOOTSTRAP.execution_readiness.errors` contains blockers" in content
     assert "LOCAL_EXECUTION_PROTOCOL.repo_search.list_files_cmd" in content
@@ -88,4 +88,3 @@ def test_docs_describe_tasks_as_execution_decomposition_only():
     assert "hard-fails on missing execution anchors instead of supplementing design or writing placeholder tasks" in readme
     assert "projects the completed planning-stage design set into an executable task list" in spec_driven
     assert "does not supplement missing design or audit the feature end-to-end" in spec_driven
-

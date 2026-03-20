@@ -44,7 +44,7 @@ Resolve `PLAN_FILE` from current feature branch using `{SCRIPT}` defaults.
 2. Parse `FEATURE_DIR`, `AVAILABLE_DOCS`, `LOCAL_EXECUTION_PROTOCOL`, and `TASKS_BOOTSTRAP`.
 3. Treat `TASKS_BOOTSTRAP.execution_readiness` as the primary hard gate.
 4. If `TASKS_BOOTSTRAP.execution_readiness.ready_for_task_generation = true`, do not recompute full hard gates by re-deriving complete `plan.md` tables.
-5. If `TASKS_BOOTSTRAP` is missing, malformed, or contradictory, perform one bounded fallback validation from `plan.md` control-plane fields.
+5. If `TASKS_BOOTSTRAP` is missing, malformed, contradictory, or unavailable, stop immediately and report the runtime bootstrap blocker.
 6. Read only authoritative inputs for the active generation unit:
    - `plan.md` control plane (`Shared Context Snapshot`, `Binding Projection Index`, `Artifact Status`)
    - required refs from `spec.md`, `data-model.md`, `test-matrix.md`, and selected `contracts/` slices
@@ -85,7 +85,7 @@ Stop immediately when any condition holds:
 
 1. Resolved branch-derived `PLAN_FILE` is missing or invalid.
 2. `TASKS_BOOTSTRAP.execution_readiness.ready_for_task_generation = false`.
-3. `TASKS_BOOTSTRAP` fallback validation cannot build a consumable gate packet.
+3. `TASKS_BOOTSTRAP` is missing, malformed, contradictory, or unavailable.
 4. `TASKS_BOOTSTRAP.execution_readiness.errors` contains blockers.
 5. Required canonical repository-first evidence for affected scope is missing, stale, or non-traceable.
 6. Active executable tuples select `new` repo anchors but lack explicit rejection evidence for `existing` and `extended` in authoritative upstream artifacts.

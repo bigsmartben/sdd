@@ -17,16 +17,22 @@ def _env_with_specify_shim(repo_dir: Path) -> dict[str, str]:
     python_exe = Path(sys.executable).as_posix()
     if len(python_exe) >= 3 and python_exe[1:3] == ":/":
         python_exe = f"/mnt/{python_exe[0].lower()}{python_exe[2:]}"
+    repo_src = REPO_ROOT / "src"
+    repo_src_posix = repo_src.as_posix()
+    if len(repo_src_posix) >= 3 and repo_src_posix[1:3] == ":/":
+        repo_src_posix = f"/mnt/{repo_src_posix[0].lower()}{repo_src_posix[2:]}"
     shim_path = shim_dir / "specify"
     with shim_path.open("w", encoding="utf-8", newline="\n") as handle:
         handle.write(
             "#!/usr/bin/env bash\n"
-            f""""{python_exe}" -c 'import sys, specify_cli; sys.argv[0] = "specify"; specify_cli.main()' "$@"\n"""
+            f"""PYTHONPATH="{repo_src_posix}${{PYTHONPATH:+:$PYTHONPATH}}" "{python_exe}" -c 'import sys; sys.path.insert(0, "{repo_src_posix}"); import specify_cli; sys.argv[0] = "specify"; specify_cli.main()' "$@"\n"""
         )
     shim_path.chmod(0o755)
 
     env = os.environ.copy()
     env["PATH"] = f"{shim_dir}{os.pathsep}{env['PATH']}"
+    existing_pythonpath = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = f"{repo_src}{os.pathsep}{existing_pythonpath}" if existing_pythonpath else str(repo_src)
     shim_posix = shim_path.as_posix()
     if len(shim_posix) >= 3 and shim_posix[1:3] == ":/":
         shim_posix = f"/mnt/{shim_posix[0].lower()}{shim_posix[2:]}"
@@ -1854,8 +1860,8 @@ def test_tasks_command_prefers_task_preflight_bootstrap():
 
     if mapping_doc is not None:
         assert "prerequisite script may emit `TASKS_BOOTSTRAP` as a derived preflight packet" in mapping_doc
-        assert "if `TASKS_BOOTSTRAP` is missing, invalid, or contradictory, fall back to the authoritative `plan.md` control plane" in mapping_doc
-    assert "pre-extract a compact `TASKS_BOOTSTRAP` packet from `plan.md`" in readme
+        assert "if `TASKS_BOOTSTRAP` is missing, invalid, or contradictory" not in mapping_doc
+    assert "emits a compact runtime `TASKS_BOOTSTRAP` packet from `plan.md`" in readme
     assert "LOCAL_EXECUTION_PROTOCOL" in readme
 
     assert "LOCAL_EXECUTION_PROTOCOL" in bash_script
@@ -1866,7 +1872,7 @@ def test_tasks_command_prefers_task_preflight_bootstrap():
     assert "internal-task-bootstrap" in powershell_script
     assert "runtime_tools = $runtimeTools" in powershell_script
     assert "TASKS_BOOTSTRAP" in powershell_script
-    assert '$payload.TASKS_BOOTSTRAP = $null' in powershell_script
+    assert "Get-RequiredBootstrapPayload" in powershell_script
 
 
 def test_implement_command_prefers_implement_preflight_bootstrap():
@@ -1877,7 +1883,7 @@ def test_implement_command_prefers_implement_preflight_bootstrap():
     assert "scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks --implement-preflight" in implement_command
     assert "scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks -ImplementPreflight" in implement_command
     assert "Treat `IMPLEMENT_BOOTSTRAP.analyze_readiness` as the primary analyze hard gate." in implement_command
-    assert "bounded fallback validation" in implement_command
+    assert "stop immediately and report the runtime bootstrap blocker" in implement_command
     assert "`IMPLEMENT_BOOTSTRAP.analyze_readiness.errors` contains blockers" in implement_command
     assert "parse `feature_dir`, `available_docs`, `local_execution_protocol`, `implement_bootstrap`, and `tasks_manifest_bootstrap`" in implement_command.lower()
     assert "LOCAL_EXECUTION_PROTOCOL.repo_search.list_files_cmd" in implement_command
@@ -1895,8 +1901,7 @@ def test_implement_command_prefers_implement_preflight_bootstrap():
     assert "internal-tasks-manifest-bootstrap" in powershell_script
     assert "IMPLEMENT_BOOTSTRAP" in powershell_script
     assert "TASKS_MANIFEST_BOOTSTRAP" in powershell_script
-    assert '$payload.IMPLEMENT_BOOTSTRAP = $null' in powershell_script
-    assert '$payload.TASKS_MANIFEST_BOOTSTRAP = $null' in powershell_script
+    assert "Get-RequiredBootstrapPayload" in powershell_script
 
 
 def test_data_model_command_prefers_data_model_preflight_bootstrap():
@@ -1911,7 +1916,7 @@ def test_data_model_command_prefers_data_model_preflight_bootstrap():
     assert "resolved `plan.md` / `spec.md` / `test-matrix.md` / `data-model.md` paths" in data_model_command
     assert "`DATA_MODEL_BOOTSTRAP.state_machine_policy`" in data_model_command
     assert "If `N > 3` or `T >= 2N`, emit a full FSM package" in data_model_command
-    assert "If `DATA_MODEL_BOOTSTRAP` is missing, malformed, or contradictory" in data_model_command
+    assert "If `DATA_MODEL_BOOTSTRAP` is missing, malformed, contradictory, or unavailable" in data_model_command
 
     assert "--data-model-preflight" in bash_script
     assert "internal-data-model-bootstrap" in bash_script
@@ -1919,5 +1924,4 @@ def test_data_model_command_prefers_data_model_preflight_bootstrap():
     assert "-DataModelPreflight" in powershell_script
     assert "internal-data-model-bootstrap" in powershell_script
     assert "DATA_MODEL_BOOTSTRAP" in powershell_script
-    assert '$payload.DATA_MODEL_BOOTSTRAP = $null' in powershell_script
-
+    assert "Get-RequiredBootstrapPayload" in powershell_script

@@ -16,8 +16,12 @@ from specify_cli.runtime_common import (
 
 DATA_MODEL_BOOTSTRAP_SCHEMA_VERSION = "1.2"
 DATA_MODEL_SECTION_HEADINGS = (
+    "Summary",
     "Shared Context Snapshot",
     "Stage Queue",
+    "Binding Projection Index",
+    "Artifact Status",
+    "Handoff Protocol",
 )
 STATE_MACHINE_POLICY = {
     "decision_owner": "/sdd.plan.data-model",
@@ -179,8 +183,12 @@ def build_data_model_bootstrap_payload(
     document = plan_path.read_text(encoding="utf-8")
     sections = {heading: extract_section(document, heading) for heading in DATA_MODEL_SECTION_HEADINGS}
     required_sections = {
+        "summary": sections["Summary"] is not None,
         "shared_context_snapshot": sections["Shared Context Snapshot"] is not None,
         "stage_queue": sections["Stage Queue"] is not None,
+        "binding_projection_index": sections["Binding Projection Index"] is not None,
+        "artifact_status": sections["Artifact Status"] is not None,
+        "handoff_protocol": sections["Handoff Protocol"] is not None,
     }
     missing_sections = [name for name, present in required_sections.items() if not present]
 

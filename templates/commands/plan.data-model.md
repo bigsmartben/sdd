@@ -46,8 +46,7 @@ Use `.specify/templates/data-model-template.md` only. If the runtime template is
 1. Run `{SCRIPT}` once from repo root and parse `FEATURE_DIR`, `AVAILABLE_DOCS`, and `DATA_MODEL_BOOTSTRAP`
 2. Treat `DATA_MODEL_BOOTSTRAP.generation_readiness` as the primary queue/readiness gate for resolved paths, selected row, and output-path consistency
 3. If `DATA_MODEL_BOOTSTRAP.generation_readiness.ready_for_generation = true`, reuse the selected stage row, resolved `plan.md` / `spec.md` / `test-matrix.md` / `data-model.md` paths, `FEATURE_DIR`, and `state_machine_policy` from `DATA_MODEL_BOOTSTRAP`; do not rescan for alternate pending rows
-4. If `DATA_MODEL_BOOTSTRAP` is missing, malformed, or contradictory, perform one bounded fallback validation from `plan.md` control-plane fields plus current `spec.md` / `test-matrix.md` availability
-5. In fallback mode only, resolve `PLAN_FILE` as `<FEATURE_DIR>/plan.md`, find the first `Stage Queue` row where `Stage ID = data-model` and `Status = pending`, require the `test-matrix` row to be `done`, and stop on any blocker
+4. If `DATA_MODEL_BOOTSTRAP` is missing, malformed, contradictory, or unavailable, stop immediately and report the runtime bootstrap blocker
 
 ## Stage Packet (Data-Model Unit)
 
@@ -79,9 +78,10 @@ Apply the constitution-derived lifecycle applicability policy from `DATA_MODEL_B
 Stop immediately when any condition holds:
 
 1. Resolved branch-derived `PLAN_FILE` is missing or invalid
-2. `DATA_MODEL_BOOTSTRAP.generation_readiness.ready_for_generation = false` and fallback validation cannot reconstruct a consumable stage packet
-3. Required `test-matrix.md` sections or selected binding packets are missing or non-consumable
-4. Shared-semantic boundary or lifecycle evidence required by the selected unit cannot be resolved from the allowed inputs
+2. `DATA_MODEL_BOOTSTRAP.generation_readiness.ready_for_generation = false`
+3. `DATA_MODEL_BOOTSTRAP` is missing, malformed, contradictory, or unavailable
+4. Required `test-matrix.md` sections or selected binding packets are missing or non-consumable
+5. Shared-semantic boundary or lifecycle evidence required by the selected unit cannot be resolved from the allowed inputs
 
 ## Plan Control-Plane Input Path (Mandatory)
 
