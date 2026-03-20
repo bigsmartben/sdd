@@ -15,7 +15,7 @@ if ($Help) {
     Write-Output "  Uses current feature branch to resolve specs/<feature-key>/spec.md"
     Write-Output "  -Json             Output results in JSON format"
     Write-Output "  -Help             Show this help message"
-    exit 0
+    return
 }
 
 # Load common functions
@@ -24,19 +24,17 @@ if ($Help) {
 $paths = Get-FeaturePathsEnv
 $isFeatureBranch = [bool](Test-FeatureBranch -Branch $paths.CURRENT_BRANCH -HasGit:$paths.HAS_GIT | Select-Object -Last 1)
 if (-not $isFeatureBranch) {
-    exit 1
+    throw "Feature branch validation failed."
 }
 
 $template = Join-Path $paths.REPO_ROOT '.specify/templates/plan-template.md'
 if (-not (Test-Path $template -PathType Leaf)) {
     Write-Error "Required runtime template not found or not readable at $template"
-    exit 1
 }
 
 # Validate spec file before creating plan.md beside it.
 if (-not (Test-Path $paths.FEATURE_SPEC -PathType Leaf)) {
     Write-Error "spec.md not found at $($paths.FEATURE_SPEC)"
-    exit 1 
 }
 
 $constitution = Join-Path $paths.REPO_ROOT '.specify/memory/constitution.md'
@@ -46,13 +44,11 @@ $moduleInvocation = Join-Path $paths.REPO_ROOT '.specify/memory/repository-first
 foreach ($requiredPath in @($constitution, $dependencyMatrix, $moduleInvocation)) {
     if (-not (Test-Path $requiredPath -PathType Leaf)) {
         Write-Error "Required constitution or repository-first baseline not found or not readable at $requiredPath. Run /sdd.constitution first."
-        exit 1
     }
 
     $item = Get-Item $requiredPath
     if ($item.Length -le 0) {
         Write-Error "Required constitution or repository-first baseline is empty at $requiredPath. Run /sdd.constitution first."
-        exit 1
     }
 }
 

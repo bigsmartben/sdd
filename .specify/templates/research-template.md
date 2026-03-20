@@ -14,11 +14,11 @@ For `/sdd.plan.research`, repository reuse evidence comes from source code and `
 
 ## Repository Reuse Anchors (Source Code Only)
 
-List only source-code files, symbols, or tests that later stages should reuse. Every `Source Path / Symbol` value must be a concrete file path or `path/to/file.ext::Symbol`; module-root or directory-only paths such as `aidm-api/` are invalid. Do not list `README.md`, `docs/**`, `specs/**`, or generated artifacts here.
+List only source-code modules, symbols, or tests that later stages should reuse. Do not list `README.md`, `docs/**`, `specs/**`, or generated artifacts here.
 
 | Anchor | Source Path / Symbol | Reuse Intent |
 |--------|----------------------|--------------|
-| [Existing file / symbol / test] | `[path/to/file.ext::Symbol]` | [How later stages should reuse it] |
+| [Existing module / pattern] | `[path/to/file.ext::Symbol]` | [How later stages should reuse it] |
 
 ## Constraints
 

@@ -77,6 +77,7 @@ When conditional reads are required, prefer section-level rereads over whole-fil
 ### Repo Anchor Input Limits
 
 Keep repo-backed reads bounded to the selected unit and active blocker.
+When emitting `Repository Reuse Anchors`, every `Source Path / Symbol` value MUST be a concrete file path or `path/to/file.ext::Symbol`; module-root or directory-only placeholders such as `aidm-api/` are invalid.
 If ambiguity/conflict remains after bounded reads, keep unresolved findings explicit in `research.md` and set row `Blocker` instead of expanding scope.
 
 `research.md` remains the authoritative output for research semantics.

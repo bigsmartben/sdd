@@ -4,6 +4,9 @@ This is the latest set of releases that you can use with your agent of choice. W
 
 ## Changelog
 
+- Merge pull request #30 from bigsmartben/codex/release-v2.0.27
+- Fallback to PATH specify when shim runtime probe fails
+- Update release notes for v2.0.27
 - Prepare v2.0.27 release and align bootstrap metadata
 - Revert implement anchor gate and simplify preflight gating
 - Remove implement execution policy from bootstrap payload
