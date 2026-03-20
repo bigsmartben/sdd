@@ -4,9 +4,9 @@ This is the latest set of releases that you can use with your agent of choice. W
 
 ## Changelog
 
-- Merge pull request #32 from bigsmartben/codex/release-v2.0.28
-- Prepare v2.0.28 release metadata
-- Update release notes with latest changelog entries
-- Tighten spec templates and normalize repo text handling
-- Refine planning templates and sync runtime snapshots
+- feat: tighten task and data-model bootstrap validation
+- chore: align runtime artifact authority and preflight updates
+- matix优化
+- test-martix 南北接口packages定义
+- Update release notes after v2.0.28 publish
 

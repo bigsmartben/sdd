@@ -114,6 +114,20 @@ If no shared lifecycle exists, keep the section with an explicit `N/A` note inst
 | [LC-001] | [`Closing`] | [closure completed] | [`Closed`] | `allowed` | [INV-001, INV-002] | [BR-002, BR-003] |
 | [LC-001] | [`Closed`] | [reopen request] | [`Open`] | `forbidden` | [INV-002] | [BR-003] |
 
+### Transition Pseudocode
+
+Use this subsection when `Required Model = Full FSM`.
+If the lifecycle is `Lightweight`, keep one explicit `N/A` line.
+
+```text
+if state == Open and trigger == close_requested:
+    state = Closing
+elif state == Closing and trigger == closure_completed:
+    state = Closed
+elif state == Closed and trigger == reopen_requested:
+    reject("forbidden transition")
+```
+
 ### State Diagram
 
 ```mermaid

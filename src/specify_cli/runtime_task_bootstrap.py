@@ -40,6 +40,7 @@ TASK_ALLOWED_SMOKE_CANDIDATE_ROLES = {"entry", "middle", "exit", "none"}
 TASK_ALLOWED_ANCHOR_STATUSES = {"existing", "extended", "new", "todo"}
 TASK_BASELINE_CODE_TO_CATEGORY = {
     "missing_required_sections": "missing",
+    "required_stage_rows_missing": "missing",
     "empty_binding_projection_index": "missing",
     "missing_binding_contract_packet": "missing",
     "binding_contract_packet_missing_required_fields": "missing",
@@ -268,9 +269,12 @@ def inspect_contract_artifact(contract_path_abs: str) -> dict[str, Any]:
     inspection["duplicate_required_sections"] = duplicate_sections
 
     binding_context = parse_binding_context(extract_section(content, "Binding Context"))
-    inspection["operation_id"] = extract_required_anchor(content, "Operation ID (Required)") or clean_cell(
+    operation_id = extract_required_anchor(content, "Operation ID (Required)") or clean_cell(
         binding_context.get("Operation ID", "")
     )
+    if clean_cell(operation_id).lower() in {"", "n/a", "na", "none", "todo", "tbd"}:
+        operation_id = ""
+    inspection["operation_id"] = operation_id
     top_boundary_anchor_status = normalize_symbol(extract_required_anchor(content, "Anchor Status (Required)")).lower()
     top_implementation_entry_anchor_status = normalize_symbol(
         extract_required_anchor(content, "Implementation Entry Anchor Status (Required)")
@@ -598,6 +602,7 @@ def build_unit_inventory(
 def build_task_execution_readiness(
     *,
     missing_sections: list[str],
+    missing_required_stage_ids: list[str],
     missing_test_matrix_sections: list[str],
     incomplete_stage_ids: list[str],
     binding_projection_index: list[dict[str, Any]],
@@ -614,6 +619,15 @@ def build_task_execution_readiness(
                 "code": "missing_required_sections",
                 "message": "plan.md is missing required control-plane sections.",
                 "details": {"sections": missing_sections},
+            }
+        )
+
+    if missing_required_stage_ids:
+        errors.append(
+            {
+                "code": "required_stage_rows_missing",
+                "message": "Stage Queue is missing one or more required stage rows before /sdd.tasks.",
+                "details": {"stage_ids": missing_required_stage_ids},
             }
         )
 
@@ -1333,6 +1347,12 @@ def build_task_bootstrap_payload(
 
     required_stage_ids = set(TASK_REQUIRED_STAGE_IDS)
     data_model_required = "data-model" in required_stage_ids
+    present_required_stage_ids = {
+        row["stage_id"]
+        for row in stage_queue
+        if row.get("stage_id") in required_stage_ids
+    }
+    missing_required_stage_ids = normalize_stage_ids(list(required_stage_ids - present_required_stage_ids))
 
     incomplete_stage_ids = normalize_stage_ids(
         [
@@ -1350,6 +1370,7 @@ def build_task_bootstrap_payload(
     )
     execution_readiness = build_task_execution_readiness(
         missing_sections=missing_sections,
+        missing_required_stage_ids=missing_required_stage_ids,
         missing_test_matrix_sections=missing_test_matrix_sections,
         incomplete_stage_ids=incomplete_stage_ids,
         binding_projection_index=binding_projection_index,
@@ -1379,6 +1400,7 @@ def build_task_bootstrap_payload(
         "stage_queue_status_summary": summarize_stage_queue(stage_queue),
         "data_model_required": data_model_required,
         "required_stage_ids_for_tasks": sorted(required_stage_ids),
+        "missing_required_stage_ids": missing_required_stage_ids,
         "incomplete_stage_ids": incomplete_stage_ids,
         "binding_row_count": len(binding_projection_index),
         "binding_projection_index": binding_projection_index,

@@ -4,7 +4,7 @@ description: "Interface-delivery-oriented execution orchestration template for f
 
 # Tasks: [FEATURE NAME]
 
-**Input**: Upstream design artifacts from `/specs/[YYYYMMDD-slug]/`
+**Input**: Approved upstream planning/design artifacts from the resolved feature workspace (`FEATURE_DIR`)
 **Outputs**: `tasks.md` (this document), `tasks.manifest.json` (machine-readable sidecar projection)
 
 ## 1) Document Purpose
@@ -130,9 +130,9 @@ Role guidance:
 
 Purpose: shared prerequisites before interface-specific delivery.
 
-- [ ] T001 [Type:Infra] [Role:bootstrap] Initialize project structure per plan in [path]
-- [ ] T002 [Type:Infra] [Role:tooling] Configure lint/format/test runner in [path]
-- [ ] T003 [Type:Infra] [Role:config] Add runtime/env configuration in [path]
+- [ ] T001 [Type:Infra] [Role:bootstrap] Initialize project structure per plan in [path] (Completion Anchor: [bootstrap command pass signal])
+- [ ] T002 [Type:Infra] [Role:tooling] Configure lint/format/test runner in [path] (Completion Anchor: [lint/test command pass signal])
+- [ ] T003 [Type:Infra] [Role:config] Add runtime/env configuration in [path] (Completion Anchor: [runtime config validation signal])
 
 Rules:
 
@@ -149,7 +149,7 @@ Interface delivery units are IF-scoped execution work packages. Keep them execut
 ## Interface IF-### — [name]
 
 - Goal: [one-line delivery goal; short execution-only reference]
-- Contract: [single operationId / boundary anchor]
+- Contract: [single operationId]
 - Implementation Entry: [single repo-backed entry anchor from contract realization section, or same as contract boundary]
 - Spec Slice: [UC/UIF/FR/SC/EC refs projected from contract `Binding Context` `Spec Ref(s)` / success-edge refs]
 - Test Slice: [Test Scope + TM/TC + pass/failure anchors projected from contract `Test Projection Slice`]
@@ -186,7 +186,7 @@ Rules:
 
 - Use this section only for tasks that cannot be scoped to one IF unit.
 - Cross-interface smoke tasks MUST be projected from contract `Cross-Interface Smoke Candidate (Required)` rows.
-- If all contract rows carry `Candidate Role = none`, document this explicitly and skip smoke-task generation.
+- If all contract rows carry `Candidate Role = none`, stop task generation and route repair to `/sdd.plan.contract`; queue-complete planning requires at least one non-`none` smoke candidate.
 - Do not use this section for work that exists only because upstream design anchors are missing.
 - Do not use this section as overflow for interface-local tasks.
 

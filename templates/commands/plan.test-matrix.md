@@ -141,6 +141,11 @@ Required columns in each `Binding Projection Index` row:
 - `UDD Ref(s)`
 - `Test Scope`
 
+Projection encoding rules:
+
+- `IF ID / IF Scope` must contain one normalized scope token (`IF-###` or `N/A`) only.
+- `UC ID`, `UIF ID`, and `FR ID` must use deterministic id encoding when multiple refs are needed (comma-separated ids, stable sort, no prose).
+
 ## Test Semantics Requirements
 
 `Scenario Matrix` and `Verification Case Anchors` define the bounded test semantics for each binding.
@@ -248,6 +253,11 @@ Update only:
 - selected `test-matrix` stage row status and fingerprints
 - `Binding Projection Index`
 - `Artifact Status`
+
+Stage-row status transition is mandatory and explicit:
+
+- Set selected `test-matrix` row `Status = done` only when `test-matrix.md` is written and both `Binding Projection Index` + `Artifact Status` are initialized/refreshed consistently.
+- Otherwise set selected row `Status = blocked` with concrete `Blocker` details (missing binding packet fields, unresolved refs, or projection initialization failures).
 
 ## Handoff Decision
 

@@ -2,7 +2,7 @@
 
 **Stage**: Stage 4 Binding-Level Interface Design Closure
 **BindingRowID (Required)**: [BR-###]
-**Operation ID (Required)**: [operationId or N/A]
+**Operation ID (Required)**: [operationId]
 **IF Scope (Required)**: [IF-### or N/A]
 **Boundary Anchor (Required)**: [HTTP `METHOD /path` \| `event.topic` \| `Facade.method` \| `cli command` \| `ConcreteBoundary.method` \| `TODO(REPO_ANCHOR)`]
 **Anchor Status (Required)**: [`existing` \| `extended` \| `new` \| `todo`]
@@ -18,6 +18,8 @@ Its core outputs are fixed:
 - `UML Class Design`
 - `Sequence Design`
 - `Test Projection`
+
+`Operation ID (Required)` MUST be concrete for this binding and MUST NOT be `N/A`.
 
 ## Northbound Entry Rules (Normative)
 
@@ -46,7 +48,7 @@ Treat upstream packet scope-reference fields as binding-range inputs only. This 
 | Field | Value |
 |-------|-------|
 | `BindingRowID` | [BR-###] |
-| `Operation ID` | [operationId or N/A] |
+| `Operation ID` | [operationId] |
 | `IF Scope` | [IF-### or N/A] |
 | `User Intent` | [Northbound action summary] |
 | `Trigger Ref(s)` | [UIP / UIF / UC refs] |
@@ -321,7 +323,7 @@ This section is the normalized downstream testing slice for `/sdd.tasks` and `/s
 
 | IF Scope | Operation ID | Test Scope | Primary TM IDs | TM ID(s) | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
 |----------|--------------|------------|----------------|----------|----------|------------------|--------------------------|----------------------------|
-| [IF-### or N/A] | [operationId or N/A] | [`Contract` / `Integration` / `E2E` / `Mixed`] | [TM-###, TM-###] | [TM-###, TM-###] | [TC-###, TC-###] | [primary success check inferred here] | [failure/branch checks inferred here] | [test command or assertion signal] |
+| [IF-### or N/A] | [operationId] | [`Contract` / `Integration` / `E2E` / `Mixed`] | [TM-###, TM-###] | [TM-###, TM-###] | [TC-###, TC-###] | [primary success check inferred here] | [failure/branch checks inferred here] | [test command or assertion signal] |
 
 ### Cross-Interface Smoke Candidate (Required)
 
@@ -330,7 +332,7 @@ If this operation does not participate in feature-level smoke flow, keep `Candid
 
 | Smoke Candidate ID | IF Scope | Operation ID | Candidate Role | Depends On Candidate ID(s) | Trigger | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
 |--------------------|----------|--------------|----------------|----------------------------|---------|------------------|--------------------------|----------------------------|
-| [SMK-###] | [IF-### or N/A] | [operationId or N/A] | [`entry` / `middle` / `exit` / `none`] | [SMK-###, SMK-### or `N/A`] | [cross-interface trigger or `N/A`] | [cross-interface success signal or `N/A`] | [degraded/failure signal or `N/A`] | [smoke command/assertion signal or `N/A`] |
+| [SMK-###] | [IF-### or N/A] | [operationId] | [`entry` / `middle` / `exit` / `none`] | [SMK-###, SMK-### or `N/A`] | [cross-interface trigger or `N/A`] | [cross-interface success signal or `N/A`] | [degraded/failure signal or `N/A`] | [smoke command/assertion signal or `N/A`] |
 
 ## Closure Check
 

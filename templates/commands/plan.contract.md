@@ -40,7 +40,7 @@ This stage MUST NOT redefine how the binding was cut from `spec.md`; binding pro
 ## Selection Rules
 
 1. Run `{SCRIPT}` once from repo root. Resolve `FEATURE_DIR` and planning preflight context.
-2. Resolve `PLAN_FILE` as `<FEATURE_DIR>/plan.md` and `FEATURE_SPEC` as `<FEATURE_DIR>/spec.md`; read only the resolved `PLAN_FILE`
+2. Resolve `PLAN_FILE` as `<FEATURE_DIR>/plan.md` and `FEATURE_SPEC` as `<FEATURE_DIR>/spec.md`; during row selection and prerequisite checks, read only the resolved `PLAN_FILE` (after selection, consume `Allowed Inputs`)
 3. In `Artifact Status`, find the first row where:
    - `Unit Type = contract`
    - `Status = blocked`
@@ -110,7 +110,7 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 
 - Use `BindingRowID` as the only design unit for the run.
 - Read requirement projection first, then shared semantic constraints, then land the design in repository evidence.
-- `Northbound Contract Summary` is reader-oriented only: summarize external request/response, visible outcomes, and side effects without competing with field-level contract authority.
+- `Contract Summary` is reader-oriented only: summarize external request/response, visible outcomes, and side effects without competing with field-level contract authority.
 - `Full Field Dictionary (Operation-scoped)` is the only authoritative field-level contract surface: it MUST cover request DTO fields, response DTO fields, selected state-owner fields, and the fields directly used for reads, writes, projections, validation, defaults, or state decisions.
 - `Full Field Dictionary (Operation-scoped)` MUST classify rows using `Dictionary Tier = operation-critical|owner-residual`, and list `operation-critical` rows first.
 - `contract` is the first stage that MUST produce:
@@ -122,6 +122,8 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
   - collaborator chain
   - sequence / UML realization design
   - downstream execution projection
+- `Operation ID` MUST be concrete and MUST NOT be `N/A`.
+- `collaborator chain` closure MUST be explicit in `UML Class Design` + `Sequence Design` (optionally with a dedicated collaborator table).
 - This stage MAY design concrete `new` operation-scoped boundary/entry/DTO/collaborator surfaces when the selected semantic slices fully close the binding and one implementation-facing target can be named.
 - If bounded repo reads cannot close `existing` or `extended` boundary/entry anchors, this stage MUST evaluate one concrete `new` anchor set before stopping.
 - If `Anchor Status (Required) = new`, `Boundary Anchor Strategy Evidence (Required)` MUST include explicit rejection evidence for both `existing` and `extended`.
@@ -227,8 +229,9 @@ Update only the selected contract row in `Artifact Status`:
 If repo-backed verification finds a binding-projection error or shared-semantic gap, keep it explicit in the generated contract and route repair to `/sdd.plan.test-matrix` or `/sdd.plan.data-model`; do not rewrite upstream planning artifacts from this command.
 
 Set `Artifact Status` row `Status = blocked` when `Full Field Dictionary (Operation-scoped)` still contains key gaps, when shared-semantic reuse cannot be closed, or when the selected binding projection is inconsistent.
+Set `Artifact Status` row `Status = blocked` when `Operation ID` is missing, placeholder-like, or `N/A`.
 Set `Artifact Status` row `Status = blocked` when closure still fails after evaluating `existing -> extended -> new -> todo` with bounded evidence.
-Set `Artifact Status` row `Status = done` only when the field dictionary is present and key gaps are resolved.
+Set `Artifact Status` row `Status = done` only when `Operation ID` is concrete and the field dictionary is present with key gaps resolved.
 
 Do not modify unrelated `BindingRowID` rows.
 Do not modify `Binding Projection Index` or `Stage Queue`.

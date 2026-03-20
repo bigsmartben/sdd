@@ -49,7 +49,7 @@ Build one bounded run-local packet for the selected `research` row from:
 - selected row source/output fingerprint fields
 
 Use this packet as the default context for generation.
-Do not load additional artifacts unless a selected-row blocker explicitly requires them.
+Do not load additional artifacts unless a selected-row blocker or a concrete decision-evidence gap explicitly requires them.
 
 ## Plan Control-Plane Input Path (Mandatory)
 
@@ -67,11 +67,11 @@ Read only:
 - `Shared Context Snapshot` from the resolved `PLAN_FILE` only
 - resolved `FEATURE_SPEC`
 - `.specify/memory/constitution.md`
-- targeted repo anchors only when required by the active research blocker
+- targeted repo anchors when required by the active research blocker or by concrete decision-evidence gaps
 
 ### Conditional Inputs
 
-Read additional files only when the selected row's blocker cannot be resolved from the stage packet.
+Read additional files only when the selected row's blocker or a concrete decision-evidence gap cannot be resolved from the stage packet.
 When conditional reads are required, prefer section-level rereads over whole-file replay.
 
 ### Repo Anchor Input Limits
@@ -105,6 +105,7 @@ Emit a `Handoff Decision` section in the runtime output with exactly these field
 - `Ready/Blocked`: `Ready` when the selected row is updated to `done`; otherwise `Blocked`
 
 `Ready/Blocked` is stage-local readiness only and MUST NOT be treated as cross-artifact final PASS/FAIL; centralized final gating belongs to `/sdd.analyze`.
+`research` remains optional clarification for `/sdd.plan.data-model`, but the `research` stage row must still be `done` before `/sdd.tasks` can proceed.
 
 ## Final Output
 

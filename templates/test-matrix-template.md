@@ -62,7 +62,7 @@ Purpose: enforce full selected-scope UIF path accounting for the coverage graph.
 
 | UIF Path Ref | Path Type | Included in Graph | Omission Reason |
 |--------------|-----------|-------------------|-----------------|
-| [UIF-Path-001] | [Happy \| Alternate \| Exception \| Degraded] | [yes \| no] | [N/A when included; explicit reason when omitted] |
+| [UIF-Path-001] | [Happy \| Alternate \| Exception \| Degraded \| Duplicate \| Timeout] | [yes \| no] | [N/A when included; explicit reason when omitted] |
 
 Rules:
 

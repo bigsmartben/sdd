@@ -50,6 +50,7 @@ Rules:
 
 - Queue order is fixed.
 - Child commands take the first matching `pending` row only.
+- `research` is optional clarification input for `/sdd.plan.data-model`, but it remains a required completed stage before `/sdd.tasks`.
 - `data-model` is the fixed shared-semantic alignment row after `test-matrix`; complete it before entering `contract`.
 - `contract` is not a stage row; it is a per-binding artifact queue unit selected from `Artifact Status`.
 - Do not add prose summaries into this table.
@@ -68,6 +69,8 @@ Rules:
 - Each row must be uniquely identifiable.
 - `BindingRowID` is the plan-local identifier for one stable binding row projected from `test-matrix.md`.
 - `Binding Projection Index` is a projection ledger only.
+- `IF ID / IF Scope` stores one normalized IF scope token (`IF-###` or `N/A`) for downstream selection; do not pack mixed labels/prose into this cell.
+- `UC ID`, `UIF ID`, and `FR ID` must use deterministic id encoding (comma-separated ids, stable sort, no prose) when multiple refs are needed.
 - Keep only the minimal selection and scheduling fields needed for downstream `plan.contract` and `plan.data-model`.
 - Do not mirror packet-level scope reference fields such as `User Intent`, `Request Semantics`, `Visible Result`, `Side Effect`, `Boundary Notes`, or `Repo Landing Hint` into this index; those remain authoritative only in `test-matrix.md`.
 - `Boundary Anchor`, `Implementation Entry Anchor`, anchor statuses, DTO anchors, collaborator anchors, lifecycle refs, invariant refs, and realization design remain downstream responsibilities.
@@ -85,7 +88,10 @@ Track minimum planning artifacts derived from each `BindingRowID`.
 Rules:
 
 - `contract` is tracked as the single per-binding interface design artifact.
-- One command run updates one row only.
+- Write scope is command-specific:
+  - `/sdd.plan.test-matrix` may batch initialize one `contract` row per projected `BindingRowID`.
+  - `/sdd.plan.data-model` may batch update only blocker/fingerprint fields for affected `contract` rows.
+  - `/sdd.plan.contract` updates exactly one selected `contract` row per run.
 - Child commands may write only status, target path, blocker, and fingerprints.
 
 ## Handoff Protocol

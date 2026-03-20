@@ -93,8 +93,9 @@ Stop immediately when any condition holds:
 6. Active executable tuples select `new` repo anchors but lack explicit rejection evidence for `existing` and `extended` in authoritative upstream artifacts.
 7. Required repository discovery is blocked because `LOCAL_EXECUTION_PROTOCOL.repo_search.available = false`.
 8. Any selected `contract` row is missing `Full Field Dictionary (Operation-scoped)`, or any selected `Binding Projection Index` row drifts from authoritative `Binding Packets` for the same `BindingRowID`.
+9. Queue-complete smoke readiness fails because all completed contract rows carry `Candidate Role = none`.
 
-Hard execution safety gates in this command are limited to:
+Hard execution safety gates in this command include at minimum (non-exhaustive):
 
 - input availability and consumability
 - repository-anchored tuple executability
@@ -102,8 +103,10 @@ Hard execution safety gates in this command are limited to:
 - DAG schedulability
 - task-line completeness
 - selected-contract field-dictionary completeness and binding-packet projection stability
+- cross-interface smoke candidate readiness
 
 `/sdd.tasks` does **not** own comprehensive audit concerns (coverage completeness, ambiguity sweeps, contradiction analysis). Route those to `/sdd.analyze`.
+Treat any non-empty `TASKS_BOOTSTRAP.execution_readiness.errors` as blocking for this run.
 Do not claim cross-artifact final PASS/FAIL in this stage.
 
 ## Final Output
