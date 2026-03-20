@@ -675,6 +675,100 @@ class TestCliValidation:
         assert "--ai-skills" in plain
         assert "agent skills" in plain.lower()
 
+    def test_strict_env_flag_appears_in_help(self):
+        """--strict-env should appear in init --help output."""
+        from typer.testing import CliRunner
+
+        runner = CliRunner()
+        result = runner.invoke(app, ["init", "--help"])
+
+        plain = re.sub(r'\x1b\[[0-9;]*m', '', result.output)
+        assert "--strict-env" in plain
+
+    def test_init_runtime_preflight_warning_is_non_blocking_by_default(self, tmp_path):
+        """Runtime preflight warnings should not block init without --strict-env."""
+        from typer.testing import CliRunner
+
+        runner = CliRunner()
+        target = tmp_path / "runtime-warn-proj"
+
+        def fake_download(project_path, *args, **kwargs):
+            cmds_dir = project_path / ".claude" / "commands"
+            cmds_dir.mkdir(parents=True, exist_ok=True)
+            (cmds_dir / "sdd.plan.md").write_text("# plan\n")
+
+        with patch("specify_cli.download_and_extract_template", side_effect=fake_download), \
+             patch("specify_cli.ensure_executable_scripts"), \
+             patch("specify_cli.ensure_constitution_from_template"), \
+             patch("specify_cli.is_git_repo", return_value=False), \
+             patch("specify_cli.shutil.which", return_value="/usr/bin/git"), \
+             patch(
+                 "specify_cli.detect_runtime_preflight",
+                 return_value={
+                     "errors": [],
+                     "warnings": ["PowerShell runtime probe failed."],
+                     "details": ["powershell probe: exit code 1"],
+                 },
+             ):
+            result = runner.invoke(
+                app,
+                [
+                    "init",
+                    str(target),
+                    "--ai",
+                    "claude",
+                    "--ignore-agent-tools",
+                    "--script",
+                    "sh",
+                    "--no-git",
+                ],
+            )
+
+        assert result.exit_code == 0
+        plain = re.sub(r'\x1b\[[0-9;]*m', '', result.output)
+        assert "Runtime Environment Preflight" in plain
+
+    def test_init_runtime_preflight_blocks_with_strict_env(self, tmp_path):
+        """Runtime preflight findings should block init when --strict-env is used."""
+        from typer.testing import CliRunner
+
+        runner = CliRunner()
+        target = tmp_path / "runtime-strict-proj"
+
+        with patch("specify_cli.download_and_extract_template") as mock_download, \
+             patch("specify_cli.ensure_executable_scripts"), \
+             patch("specify_cli.ensure_constitution_from_template"), \
+             patch("specify_cli.is_git_repo", return_value=False), \
+             patch("specify_cli.shutil.which", return_value="/usr/bin/git"), \
+             patch(
+                 "specify_cli.detect_runtime_preflight",
+                 return_value={
+                     "errors": ["Bash runtime not found."],
+                     "warnings": [],
+                     "details": [],
+                 },
+             ):
+            result = runner.invoke(
+                app,
+                [
+                    "init",
+                    str(target),
+                    "--ai",
+                    "claude",
+                    "--ignore-agent-tools",
+                    "--script",
+                    "sh",
+                    "--strict-env",
+                    "--no-git",
+                ],
+            )
+
+        assert result.exit_code == 1
+        mock_download.assert_not_called()
+        plain = re.sub(r'\x1b\[[0-9;]*m', '', result.output)
+        assert "Runtime Environment Preflight" in plain
+        assert "--strict-env is enabled" in plain
+
     def test_kiro_alias_normalized_to_kiro_cli(self, tmp_path):
         """--ai kiro should normalize to canonical kiro-cli agent key."""
         from typer.testing import CliRunner
@@ -819,3 +913,48 @@ class TestParameterOrderingIssue:
         assert result.exit_code == 1
         assert "Invalid value for --ai-commands-dir" in result.output
         assert "--here" in result.output
+
+
+class TestCheckCommandRuntimePreflight:
+    """Verify specify check includes runtime preflight diagnostics."""
+
+    def test_check_displays_runtime_preflight_panel(self):
+        from typer.testing import CliRunner
+
+        runner = CliRunner()
+        with patch("specify_cli.check_tool", return_value=True), \
+             patch(
+                 "specify_cli.detect_runtime_preflight",
+                 side_effect=[
+                     {"errors": [], "warnings": [], "details": ["powershell probe: ok"]},
+                     {"errors": [], "warnings": ["bash runtime not found"], "details": []},
+                 ],
+             ) as mock_preflight:
+            result = runner.invoke(app, ["check"])
+
+        assert result.exit_code == 0
+        assert mock_preflight.call_count == 2
+
+        plain = re.sub(r'\x1b\[[0-9;]*m', '', result.output)
+        assert "Runtime Environment Preflight" in plain
+        assert "bash runtime not found" in plain
+        assert "higher first-run success rate" in plain
+
+    def test_check_without_runtime_findings_omits_runtime_tip(self):
+        from typer.testing import CliRunner
+
+        runner = CliRunner()
+        with patch("specify_cli.check_tool", return_value=True), \
+             patch(
+                 "specify_cli.detect_runtime_preflight",
+                 side_effect=[
+                     {"errors": [], "warnings": [], "details": ["powershell probe: ok"]},
+                     {"errors": [], "warnings": [], "details": ["bash probe: ok"]},
+                 ],
+             ):
+            result = runner.invoke(app, ["check"])
+
+        assert result.exit_code == 0
+        plain = re.sub(r'\x1b\[[0-9;]*m', '', result.output)
+        assert "Runtime Environment Preflight" in plain
+        assert "higher first-run success rate" not in plain

@@ -100,14 +100,15 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 
 ### Repo Closure
 
-- Repo evidence is mandatory for closing `Boundary Anchor`, `Implementation Entry Anchor`, request / response DTO surface, collaborator chain, middleware chain, owner/source symbols, package/module relations, and executable realization design.
+- Repo evidence is mandatory for evaluating `existing`, `extended`, and `new(repo-backed)` closure and for landing any repo-backed symbols used by the selected design.
 - Keep repo-backed verification bounded to the selected `BindingRowID` and active blockers; if ambiguity remains, keep unresolved items explicit as `todo` / `gap` instead of widening scope.
 - Do not assume the selected packet already contains boundary/entry/DTO/collaborator closure; infer those surfaces here from requirement projection, shared semantics, and bounded repo evidence.
+- Bounded repo closure MUST end with one explicit boundary/entry decision: `existing`, `extended`, `new(repo-backed)`, `contract-defined`, or `todo`; do not keep searching for alternate entry chains after the bounded read set is exhausted.
 
 ## Unified Design Requirements
 
 - Use `BindingRowID` as the only design unit for the run.
-- Read requirement projection first, then shared semantic constraints, then land the design in repository evidence.
+- Read requirement projection first, then shared semantic constraints, then land the design in repository evidence or contract-defined design-final naming.
 - `Northbound Contract Summary` is reader-oriented only: summarize external request/response, visible outcomes, and side effects without competing with field-level contract authority.
 - `Full Field Dictionary (Operation-scoped)` is the only authoritative field-level contract surface: it MUST cover request DTO fields, response DTO fields, selected state-owner fields, and the fields directly used for reads, writes, projections, validation, defaults, or state decisions.
 - `Full Field Dictionary (Operation-scoped)` MUST classify rows using `Dictionary Tier = operation-critical|owner-residual`, and list `operation-critical` rows first.
@@ -119,7 +120,10 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
   - collaborator chain
   - sequence / UML realization design
   - downstream execution projection
-- This stage MAY design `new` operation-scoped boundary/entry/DTO/collaborator surfaces when the repo has no existing landed target, but it MUST keep them concrete and binding-bounded.
+- This stage MAY design `new` repo-backed operation-scoped boundary/entry/DTO/collaborator surfaces when explicit `path::symbol` landing evidence exists, and it MAY design `contract-defined` design-final operation-scoped surfaces when the selected semantic slices fully close the binding without a repo-backed target.
+- If bounded repo reads cannot close `existing` or `extended` boundary/entry anchors, this stage MUST evaluate one concrete `new(repo-backed)` anchor set and then one concrete `contract-defined` design-final anchor set before stopping.
+- Do not mark the row `blocked` only because no existing repo entry anchor was found when a concrete `new(repo-backed)` or `contract-defined` anchor set can be named and fully closed in this run.
+- For first-party internal `contract-defined` anchors, choose repository-style names (`*Controller`, `*Service`, `*ServiceImpl`) unless the selected boundary is explicitly an adapter/facade surface.
 - This stage MAY refine operation-scoped VO/DTO/field mappings from upstream shared semantics, but it MUST NOT mint new shared-semantic classes, owners/sources, lifecycle vocabulary, or invariants.
 - Do not delete owner fields that this operation does not use; keep them in the field dictionary with `Used in <Operation ID> = no`.
 - Realization design scope is delivery-ready: internal handoff, failure propagation, sequence closure, UML ownership, and southbound dependency chain.
@@ -140,12 +144,16 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 - Every sequence call MUST map to an owning UML method with directed caller/callee relationship.
 - UML request/response class labels should use anchored symbols or repository boundary naming conventions; do not synthesize placeholder DTO labels.
 - Any newly introduced field/method/call MUST be explicitly marked as new and connected to owner/consumer or caller/callee.
+- If the selected design uses `contract-defined` northbound anchors plus reused `existing` downstream implementation, keep those layers explicit in UML and sequence instead of collapsing them into one entry symbol.
+- Any `contract-defined` operation-scoped holder/state class MUST close owner, creator, reader, and writer responsibilities before the row can be marked `done`.
 
 ## Concrete Naming Closure (Mandatory)
 
 - Every class/type/callable name that appears in the generated contract MUST be concrete before the row can be marked `done`; do not leave angle-bracket placeholders such as `<BoundaryRequestModel>` or `<ContractBoundaryEntry>` in the final artifact.
-- Apply the repository decision order `existing -> extended -> new`.
-- A contract may define operation-scoped classes/types in this stage when upstream has not already fixed them, but those names MUST be concrete and MUST stay inside the selected operation boundary.
+- Apply the anchor decision order `existing -> extended -> new(repo-backed) -> contract-defined(design-final)`.
+- A contract may define operation-scoped classes/types in this stage when upstream has not already fixed them, but those names MUST be concrete, uniquely named, and MUST stay inside the selected operation boundary.
+- `contract-defined` is legal only when Interface Definition, Full Field Dictionary, Sequence, UML, and Test Projection all close on the same concrete names for this binding.
+- When `new(repo-backed)` or `contract-defined` operation-scoped anchors are selected, freeze that naming for this run and finish the contract instead of reopening anchor search loops.
 - If continuing would require inventing a new shared-semantic class/owner/source rather than an operation-scoped contract detail, stop and route upstream to `/sdd.plan.data-model`.
 
 ## Repo Anchor Decision Protocol (Mandatory)
@@ -182,8 +190,9 @@ Do not read `research.md` in this stage.
 
 - Do not run repository-wide discovery or broad symbol scans.
 - Read only the minimum repo-backed targets required to close the selected binding.
+- After bounded reads, stop anchor hunting and transition to closure output for this run: either concrete `new(repo-backed)` anchors, concrete `contract-defined` design-final anchors, or explicit blocker evidence.
 - If required evidence is still missing after bounded reads:
-  - set missing anchor to `TODO(REPO_ANCHOR)` when the template requires an anchor token
+  - set missing anchor to `TODO(REPO_ANCHOR)` when neither repo-backed nor contract-defined closure can supply the required anchor token
   - keep explicit gap rows in `Full Field Dictionary (Operation-scoped)` instead of shrinking the contract
   - set `Artifact Status` blocker details precisely instead of widening scope
 
@@ -198,6 +207,7 @@ Stop local refinement and route upstream when continuing would require a new ups
 - `/sdd.plan.test-matrix` only when the selected `BindingRowID`, `Operation ID`, `IF Scope`, `UIF Path Ref(s)`, `UDD Ref(s)`, `TM ID`, `TC IDs`, `Spec Ref(s)`, `Scenario Ref(s)`, `Success Ref(s)`, or `Edge Ref(s)` are missing, inconsistent, or projected to the wrong binding
 
 Do not route upstream for boundary/entry/DTO/collaborator inference, operation-scoped field selection, VO/DTO projection shape, default/validation detail, or realization-design detail that can be derived from the existing upstream boundary.
+Do not route upstream only because no existing repo entry was found; when shared semantics are stable, close locally with concrete `new(repo-backed)` or `contract-defined` design-final anchors.
 
 ## Required Writeback
 
@@ -212,6 +222,7 @@ Update only the selected contract row in `Artifact Status`:
 If repo-backed verification finds a binding-projection error or shared-semantic gap, keep it explicit in the generated contract and route repair to `/sdd.plan.test-matrix` or `/sdd.plan.data-model`; do not rewrite upstream planning artifacts from this command.
 
 Set `Artifact Status` row `Status = blocked` when `Full Field Dictionary (Operation-scoped)` still contains key gaps, when shared-semantic reuse cannot be closed, or when the selected binding projection is inconsistent.
+Set `Artifact Status` row `Status = blocked` when closure still fails after evaluating `existing -> extended -> new(repo-backed) -> contract-defined(design-final)` with bounded evidence.
 Set `Artifact Status` row `Status = done` only when the field dictionary is present and key gaps are resolved.
 
 Do not modify unrelated `BindingRowID` rows.

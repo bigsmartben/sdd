@@ -31,6 +31,20 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+function Stop-Script {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Lines,
+        [string]$Reason = 'Prerequisite validation failed.'
+    )
+
+    foreach ($line in $Lines) {
+        Write-Output $line
+    }
+
+    throw $Reason
+}
+
 function Resolve-SpecifyCommand {
     $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
     $repoShimDir = Join-Path $repoRoot '.test-bin'
@@ -194,22 +208,19 @@ EXAMPLES:
   .\check-prerequisites.ps1 -PathsOnly
 
 "@
-    exit 0
+    return
 }
 
 if ($DataModelPreflight -and -not $Json) {
-    Write-Output "ERROR: -DataModelPreflight requires -Json output mode."
-    exit 1
+    Write-Error "ERROR: -DataModelPreflight requires -Json output mode."
 }
 
 if ($TaskPreflight -and -not $Json) {
-    Write-Output "ERROR: -TaskPreflight requires -Json output mode."
-    exit 1
+    Write-Error "ERROR: -TaskPreflight requires -Json output mode."
 }
 
 if ($ImplementPreflight -and -not $Json) {
-    Write-Output "ERROR: -ImplementPreflight requires -Json output mode."
-    exit 1
+    Write-Error "ERROR: -ImplementPreflight requires -Json output mode."
 }
 
 # Source common functions
@@ -218,7 +229,7 @@ if ($ImplementPreflight -and -not $Json) {
 # Get feature paths and validate branch.
 $paths = Get-FeaturePathsEnv
 if (-not (Test-FeatureBranch -Branch $paths.CURRENT_BRANCH -HasGit:$paths.HAS_GIT)) {
-    exit 1
+    throw "Feature branch validation failed."
 }
 
 # If paths-only mode, output paths and exit (support combined -Json -PathsOnly)
@@ -242,27 +253,30 @@ if ($PathsOnly) {
         Write-Output "TASKS: $($paths.TASKS)"
         Write-Output "TASKS_MANIFEST: $($paths.TASKS_MANIFEST)"
     }
-    exit 0
+    return
 }
 
 # Validate required directories and files
 if (-not (Test-Path $paths.FEATURE_DIR -PathType Container)) {
-    Write-Output "ERROR: Feature directory not found: $($paths.FEATURE_DIR)"
-    Write-Output "Run /sdd.specify first to create the feature structure."
-    exit 1
+    Stop-Script -Lines @(
+        "ERROR: Feature directory not found: $($paths.FEATURE_DIR)",
+        "Run /sdd.specify first to create the feature structure."
+    )
 }
 
 if (-not (Test-Path $paths.IMPL_PLAN -PathType Leaf)) {
-    Write-Output "ERROR: plan.md not found in $($paths.FEATURE_DIR)"
-    Write-Output "Run /sdd.plan first to create the implementation plan."
-    exit 1
+    Stop-Script -Lines @(
+        "ERROR: plan.md not found in $($paths.FEATURE_DIR)",
+        "Run /sdd.plan first to create the implementation plan."
+    )
 }
 
 # Check for tasks.md if required
 if ($RequireTasks -and -not (Test-Path $paths.TASKS -PathType Leaf)) {
-    Write-Output "ERROR: tasks.md not found in $($paths.FEATURE_DIR)"
-    Write-Output "Run /sdd.tasks first to create the task list."
-    exit 1
+    Stop-Script -Lines @(
+        "ERROR: tasks.md not found in $($paths.FEATURE_DIR)",
+        "Run /sdd.tasks first to create the task list."
+    )
 }
 
 # Build list of available documents

@@ -1,1 +1,22 @@
 * text=auto eol=lf
+
+# Linux/macOS shell scripts
+*.sh text eol=lf
+
+# Windows PowerShell scripts
+*.ps1 text eol=crlf
+
+# Documentation and source
+*.md text eol=lf
+*.py text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Media and binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary

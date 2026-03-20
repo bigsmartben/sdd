@@ -22,16 +22,8 @@ wheels/
 003*
 .clinerules
 .history
-.github/agents/
-.github/prompts/
-specs/
-.ven311/
-.venv311/
-.dev311/
 demos/
 demo-cline/
-.roo
-.roomodes
 
 # Virtual environments
 venv/
@@ -39,22 +31,24 @@ ENV/
 env/
 .venv
 
-specs/
 tmp-**/
 
 # IDE
-.vscode/
-.idea/
 *.swp
 *.swo
 .DS_Store
 *.tmp
+.*/
+!.github/
+!.specify/
+
 
 # Project specific
 *.log
 .env
 .env.local
 *.lock
+specs/
 
 # Spec Kit-specific files
 .genreleases/

@@ -309,6 +309,24 @@ def test_anchor_status_allowed_values_accepts_protocol_values(tmp_path: Path):
     assert payload["findings_total"] == 0
 
 
+def test_anchor_status_allowed_values_accepts_contract_defined(tmp_path: Path):
+    feature_dir = _write_feature_fixture(
+        tmp_path,
+        test_matrix_status="contract-defined",
+        contract_anchor_status="`contract-defined`",
+        contract_boundary_anchor="DemoBoundary.start",
+        contract_entry_anchor="DemoEntry.handle",
+        contract_entry_status="`contract-defined`",
+        test_matrix_boundary_anchor="DemoBoundary.start",
+        packet_boundary_anchor="DemoBoundary.start",
+        packet_boundary_status="contract-defined",
+        packet_entry_anchor="DemoEntry.handle",
+        packet_entry_status="contract-defined",
+    )
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] == 0
+
+
 def test_anchor_status_allowed_values_rejects_out_of_enum_tokens(tmp_path: Path):
     feature_dir = _write_feature_fixture(tmp_path, test_matrix_status="anchored")
     payload = _run_planning_lint(feature_dir)
@@ -494,6 +512,50 @@ def test_repo_anchor_paths_must_resolve_to_real_files_in_powershell(tmp_path: Pa
     payload = _run_planning_lint_powershell(feature_dir)
     assert payload["findings_total"] > 0
     assert any(f["rule_id"] == "PLN-RA-009" for f in payload["findings"])
+
+
+def test_research_repo_anchors_reject_directory_only_paths(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    (feature_dir / "research.md").write_text(
+        "\n".join(
+            [
+                "# Research",
+                "",
+                "## Repository Reuse Anchors (Source Code Only)",
+                "",
+                "| Anchor | Source Path / Symbol | Reuse Intent |",
+                "|--------|----------------------|--------------|",
+                "| `aidm-api` | `aidm-api/` | Reuse as contract boundary. |",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-RA-014" for f in payload["findings"])
+
+
+def test_research_repo_anchors_reject_directory_only_paths_in_powershell(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    (feature_dir / "research.md").write_text(
+        "\n".join(
+            [
+                "# Research",
+                "",
+                "## Repository Reuse Anchors (Source Code Only)",
+                "",
+                "| Anchor | Source Path / Symbol | Reuse Intent |",
+                "|--------|----------------------|--------------|",
+                "| `aidm-api` | `aidm-api/` | Reuse as contract boundary. |",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    payload = _run_planning_lint_powershell(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-RA-014" for f in payload["findings"])
 
 
 @pytest.mark.parametrize(

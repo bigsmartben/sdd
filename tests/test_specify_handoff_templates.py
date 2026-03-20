@@ -48,11 +48,16 @@ def test_specify_command_keeps_current_flow_and_treats_ui_html_as_optional_sidec
 
 def test_spec_template_stays_unsplit_and_ui_html_template_exists():
     spec_template = read("templates/spec-template.md")
+    runtime_spec_template = read(".specify/templates/spec-template.md")
     ui_html_template = read("templates/ui-html-template.html")
 
     assert "### This Stage Outputs" in spec_template
     assert "[spec.md](spec.md) (this document)" in spec_template
     assert "[ui.html](ui.html)" not in spec_template
+    assert "Scenario Type (happy/alternate/validation/exception/retry/recovery/cancel/timeout/permission/duplicate)" in spec_template
+    assert "Scenario Type (happy/alternate/validation/exception/retry/recovery/cancel/timeout/permission/duplicate)" in runtime_spec_template
+    assert "Do not collapse later FRs to capability-only shorthand." in spec_template
+    assert "Do not collapse later FRs to capability-only shorthand." in runtime_spec_template
     assert "UI Preview" in ui_html_template
     assert "spec.md" in ui_html_template
     assert "Primary Tool Loop" in ui_html_template
@@ -80,10 +85,14 @@ def test_spec_and_commands_require_semantically_aligned_edge_case_refs():
     clarify = read("templates/commands/clarify.md")
 
     assert "Treat `EC-*` as semantic anchors, not a fixed four-item bucket list." in specify
+    assert "Use `validation` as a first-class `Path Inventory` scenario type" in specify
+    assert "`Path Inventory` scenario types stay within the allowed enum (`happy/alternate/validation/exception/retry/recovery/cancel/timeout/permission/duplicate`)" in specify
     assert "EC-*` references remain semantically aligned across `Path Inventory`, `Exception Paths`, FR blocks, and `N.2 Environment Edge Cases`" in specify
+    assert "every FR block includes `Capability`, `Given/When/Then`, `UDD (user-visible data) refs`, and `Success criteria`" in specify
     assert "add `EC-005+` instead of overloading an unrelated edge-case id" in clarify
     assert "`EC-*` identifiers are semantic anchors, not a fixed four-slot checklist." in spec_template
     assert "Do not point a retry path at a re-entry EC, or a permission path at a duplicate-click EC." in spec_template
+    assert "Use `validation` for user-visible guardrails that block progression on empty, invalid, or incomplete input while the user remains on the current step." in spec_template
     assert "Every `EC-*` cited from `Path Inventory`, `Exception Paths`, FR blocks, `test-matrix.md`, or `contracts/` MUST describe the same edge semantics textually." in spec_template
 
 

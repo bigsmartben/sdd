@@ -4,15 +4,6 @@ This is the latest set of releases that you can use with your agent of choice. W
 
 ## Changelog
 
-- Prepare v2.0.27 release and align bootstrap metadata
-- Revert implement anchor gate and simplify preflight gating
-- Remove implement execution policy from bootstrap payload
-- Harden implement gates with anchor checks and protocol evidence
-- Add contract binding section to anchor status test fixture
-- Add tasks manifest bootstrap to implement preflight flow
-- Refactor planning templates and tighten preflight validation
-- Require data-model before contract planning handoff
-- Align task bootstrap and handoff rules with semantic blockers
-- Align planning flow and block unresolved contract placeholders
-- Align planning templates with repo anchor governance
-
+- Update release notes with latest changelog entries
+- Tighten spec templates and normalize repo text handling
+- Refine planning templates and sync runtime snapshots

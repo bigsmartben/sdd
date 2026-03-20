@@ -1,0 +1,129 @@
+# Feature Verification Design: [FEATURE]
+
+**Stage**: Stage 2 Feature Verification Design
+**Inputs**: `spec.md`
+
+Use this artifact to project spec-defined verification semantics into stable binding packets.
+`test-matrix.md` is authoritative for:
+
+- scenario-oriented test semantics
+- stable `BindingRowID` generation from `spec.md`
+- minimal binding packets for selected bindings
+
+## Coverage Strategy
+
+- [Coverage scope: which `UC / FR / UIF / UDD` paths must be verified and why]
+- [Path decomposition: which happy / alternate / exception paths must stay distinct in test semantics]
+- [Binding strategy: how spec paths collapse into stable `BindingRowID` units]
+- [Observability strategy: which signals prove each path family]
+
+## UIF Full Path (Mermaid)
+
+Purpose: spec-derived overview UIF completion for the selected feature scope. Integrate the consumer-visible UIF paths already defined inside relevant `UC` sections into one full-path interaction map from `spec.md`, not a repository realization or implementation sequence.
+
+```mermaid
+flowchart TD
+    Start["UIF Start"] --> Happy["Happy Path Backbone"]
+    Happy --> Success["Success Outcome"]
+    Happy --> Alternate["Alternate Branch"]
+    Happy --> Exception["Exception / Degraded Branch"]
+```
+
+Rules:
+
+- Derive this section only from `spec.md`.
+- Use this section to complete the overview-level UIF by integrating the relevant `UC`-internal UIF paths into one replayable consumer-visible map.
+- Use the happy path as the backbone of the full-path UIF.
+- Add alternate, exception, or degraded branches only when they materially complete the consumer-visible path family defined in spec.
+- Keep branch nodes aligned with the same path family unless the spec requires a different binding unit.
+- Cite node or edge labels with the same `UIF Path Ref(s)`, `Scenario Ref(s)`, `Success Ref(s)`, and `Edge Ref(s)` used by the binding packet where relevant.
+- Do not infer controllers, services, collaborators, DTOs, state owners, or repository hops here.
+- Do not treat this diagram as interface design evidence; it exists only to make spec-defined interaction flow replayable during downstream reads.
+
+## Scenario Matrix
+
+Purpose: test semantics only; no interface-design closure.
+
+| TM ID | Path Type | Scenario | Preconditions | Expected Outcome | Related Ref |
+|-------|-----------|----------|---------------|------------------|-------------|
+| TM-001 | [`Happy` \| `Alternate` \| `Exception` \| `Degraded`] | [Scenario summary] | [Required state/setup] | [Observable outcome] | [UC / UIF / FR / UDD / SC / EC refs] |
+
+Rules:
+
+- Keep rows minimal; add a new `TM ID` only when path semantics, preconditions, or expected outcomes materially differ.
+- `Related Ref` should cite the spec evidence that makes the scenario necessary.
+- `Scenario Matrix` rows may share one `BindingRowID`; scenario identity and binding identity are not the same thing.
+- Do not repeat `Operation ID` or `IF Scope` here when the owning binding packet already fixes them.
+
+## Verification Case Anchors
+
+Purpose: verification goals and observable checks for each scenario unit.
+
+| TC ID | TM ID | Verification Goal | Observability / Signal | Related Ref |
+|-------|-------|-------------------|------------------------|-------------|
+| TC-001 | TM-001 | [What this case proves] | [Assertion, signal, or measurable check] | [SC / EC / FR / UIF / UDD refs] |
+
+Rules:
+
+- Keep `TC ID` stable and reusable across reruns.
+- `Observability / Signal` should state what must be observed for the case to pass.
+- Use multiple `TC ID` rows when one scenario needs separate observable guarantees.
+- Do not repeat binding identity fields here when `TM ID` plus the owning packet already resolves the binding.
+
+## Binding Contract Packets
+
+Purpose: minimal binding locator packet for the selected interaction unit.
+
+| BindingRowID | Operation ID | IF Scope | UIF Path Ref(s) | UDD Ref(s) | TM ID | TC IDs | Test Scope | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) |
+|--------------|--------------|----------|-----------------|------------|-------|--------|------------|-------------|-----------------|----------------|-------------|
+| BR-001 | [operationId or N/A] | [IF-### or N/A] | [UIF path refs] | [UDD refs or `N/A`] | [TM-001] | [TC-001, TC-002] | [Binding-scoped test coverage summary] | [UC / FR / UIF / UDD refs] | [TM / SC refs] | [Success refs] | [Edge / EC refs or `N/A`] |
+
+## Binding Projection Protocol (Required)
+
+- Keep `TM ID`, `TC ID`, and `BindingRowID` stable once referenced downstream.
+- One `BindingRowID` represents one consumer-visible northbound interface binding unit.
+- A binding unit is uniquely determined by:
+  - consumer-visible interaction family
+  - `Operation ID`
+  - `IF Scope`
+  - `UIF Path Ref(s)`
+- Merge happy / alternate / exception paths into one `BindingRowID` when they keep the same interaction family, requirement projection, and external contract intent.
+- Express path differences through `TC IDs`, `Scenario Ref(s)`, `Success Ref(s)`, and `Edge Ref(s)` instead of minting a new binding row.
+- Split into different `BindingRowID` values when any of these change materially:
+  - UIF path family
+  - UDD projection scope
+  - consumer-visible trigger/result semantics
+- Do not emit a binding packet for pure internal steps that do not create an independent consumer-visible interface binding.
+- Do not emit a new binding packet for a branch or exception path that still belongs to the same binding unit.
+- Read only spec-grounded semantics here.
+
+### Packet Field Semantics (Mandatory)
+
+- `BindingRowID`: stable binding projection key; one row equals one downstream contract unit
+- `Operation ID`: spec-level operation token for this binding unit
+- `IF Scope`: interface scope aligned to the same binding
+- `UIF Path Ref(s)`: consumer-visible UIF path refs that define the interaction family
+- `UDD Ref(s)`: data refs that materially affect this binding; use `N/A` when none apply
+- `TM ID`: primary scenario row that anchors the packet
+- `TC IDs`: ordered verification case ids that belong to the same binding
+- `Test Scope`: short statement of what behavior surface this packet must preserve
+- `Spec Ref(s)`: authoritative `UC / FR / UIF / UDD` refs for this binding
+- `Scenario Ref(s)`: scenario rows or spec scenario refs that materialize the packet
+- `Success Ref(s)`: refs that prove expected main-path behavior
+- `Edge Ref(s)`: refs that prove alternate / exception / degraded behavior
+
+### Spec Slice Locator Rules (Mandatory)
+
+- Treat every packet as a spec-slice locator, not as a prose summary of `spec.md`.
+- `Spec Ref(s)` MUST identify the authoritative `UC / FR / UIF / UDD` ids that define the binding; do not restate their text here.
+- `UIF Path Ref(s)` MUST point to the exact consumer-visible path family that made this binding executable.
+- `UDD Ref(s)` MUST point only to the data semantics actually needed for downstream design or shared-semantic alignment; do not copy unrelated data references.
+- `Scenario Ref(s)`, `Success Ref(s)`, and `Edge Ref(s)` MUST be direct locator refs, not paraphrased outcome text.
+- If a required spec slice cannot be located exactly, keep the gap explicit and block the packet rather than embedding a prose interpretation.
+
+## Notes
+
+- `test-matrix.md` is the stage that fixes the ref-level mapping from binding to spec/test slices.
+- `UIF Full Path (Mermaid)` completes the spec overview UIF by integrating `UC`-local UIF paths into one replay aid for the same binding/test semantics, not a second implementation authority.
+- Packets should remove rebinding work without duplicating `spec.md` prose.
+- Downstream stages may consume these packets, but they must not rewrite `BindingRowID` or binding meaning.

@@ -624,6 +624,98 @@ def check_tool(tool: str, tracker: StepTracker = None) -> bool:
     
     return found
 
+def _probe_runtime_command(command: list[str], marker: str) -> Tuple[bool, str]:
+    """Run a short runtime probe command and validate marker output."""
+    try:
+        result = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=8,
+        )
+    except FileNotFoundError:
+        return False, "runtime executable not found"
+    except subprocess.TimeoutExpired:
+        return False, "probe timed out"
+    except OSError as exc:
+        return False, f"probe failed to start ({exc})"
+
+    stdout_text = (result.stdout or "").strip()
+    stderr_text = (result.stderr or "").strip()
+
+    if result.returncode != 0:
+        detail = f"exit code {result.returncode}"
+        if stderr_text:
+            detail += f"; stderr: {stderr_text.splitlines()[0]}"
+        return False, detail
+
+    if marker not in stdout_text:
+        detail = "marker output missing"
+        if stdout_text:
+            detail += f"; stdout: {stdout_text.splitlines()[0]}"
+        return False, detail
+
+    return True, "ok"
+
+def detect_runtime_preflight(
+    ai_assistant: str,
+    script_type: str,
+    check_agent_cli: bool = True,
+) -> dict:
+    """Detect runtime readiness for the selected agent and script family."""
+    marker = "SDD_RUNTIME_OK"
+    result = {
+        "errors": [],
+        "warnings": [],
+        "details": [],
+    }
+
+    if script_type == "ps":
+        candidates = ["pwsh", "powershell"] if os.name == "nt" else ["pwsh"]
+        shell_name = next((name for name in candidates if shutil.which(name)), None)
+        if shell_name is None:
+            result["errors"].append(
+                "PowerShell runtime not found for --script ps. Install pwsh (preferred) or powershell."
+            )
+        else:
+            ok, detail = _probe_runtime_command(
+                [shell_name, "-NoProfile", "-Command", f"Write-Output {marker}"],
+                marker,
+            )
+            result["details"].append(f"{shell_name} probe: {detail}")
+            if not ok:
+                result["warnings"].append(
+                    "PowerShell runtime probe failed. If using VS Code/Copilot, ensure shell args use PowerShell syntax (do not use cmd-only '/k chcp 65001 > nul')."
+                )
+    elif script_type == "sh":
+        shell_path = shutil.which("bash")
+        if shell_path is None:
+            result["errors"].append(
+                "Bash runtime not found for --script sh. Install bash or initialize with --script ps."
+            )
+        else:
+            ok, detail = _probe_runtime_command(
+                [shell_path, "-lc", f"echo {marker}"],
+                marker,
+            )
+            result["details"].append(f"bash probe: {detail}")
+            if not ok:
+                result["warnings"].append(
+                    "Bash runtime probe failed. Verify bash can start non-interactive shells."
+                )
+
+    agent_config = AGENT_CONFIG.get(ai_assistant)
+    if check_agent_cli and agent_config and agent_config.get("requires_cli"):
+        if not check_tool(ai_assistant):
+            result["errors"].append(
+                f"{agent_config['name']} CLI is required but not detected in PATH."
+            )
+        else:
+            result["details"].append(f"{ai_assistant} CLI detected")
+
+    return result
+
 def is_git_repo(path: Path = None) -> bool:
     """Check if the specified path is inside a git repository."""
     if path is None:
@@ -1349,6 +1441,7 @@ def init(
     debug: bool = typer.Option(False, "--debug", help="Show verbose diagnostic output for network and extraction failures"),
     github_token: str = typer.Option(None, "--github-token", help="GitHub token to use for API requests (or set GH_TOKEN or GITHUB_TOKEN environment variable)"),
     ai_skills: bool = typer.Option(False, "--ai-skills", help="Install Prompt.MD templates as agent skills (requires --ai)"),
+    strict_env: bool = typer.Option(False, "--strict-env", help="Fail initialization when runtime environment preflight detects issues"),
 ):
     """
     Initialize a new Specify project from the latest template.
@@ -1377,6 +1470,7 @@ def init(
         specify init --here --force  # Skip confirmation when current directory not empty
         specify init my-project --ai claude --ai-skills   # Install agent skills
         specify init --here --ai gemini --ai-skills
+        specify init my-project --ai copilot --script ps --strict-env
         specify init my-project --ai generic --ai-commands-dir .myagent/commands/  # Unsupported agent
     """
 
@@ -1520,6 +1614,47 @@ def init(
         else:
             selected_script = default_script
 
+    runtime_preflight = detect_runtime_preflight(
+        selected_ai,
+        selected_script,
+        check_agent_cli=False,
+    )
+
+    if runtime_preflight["errors"] or runtime_preflight["warnings"]:
+        preflight_lines = []
+        for issue in runtime_preflight["errors"]:
+            preflight_lines.append(f"[red]- {issue}[/red]")
+        for warning in runtime_preflight["warnings"]:
+            preflight_lines.append(f"[yellow]- {warning}[/yellow]")
+
+        if runtime_preflight["details"]:
+            preflight_lines.append("")
+            preflight_lines.append("[bold]Probe details:[/bold]")
+            for detail in runtime_preflight["details"]:
+                preflight_lines.append(f"  • {detail}")
+
+        preflight_title = "[yellow]Runtime Environment Preflight[/yellow]"
+        preflight_style = "yellow"
+        if strict_env and (runtime_preflight["errors"] or runtime_preflight["warnings"]):
+            preflight_title = "[red]Runtime Environment Preflight[/red]"
+            preflight_style = "red"
+            preflight_lines.append("")
+            preflight_lines.append("[bold]Initialization halted because --strict-env is enabled.[/bold]")
+            preflight_lines.append("Fix the reported issues and rerun init.")
+
+        console.print()
+        console.print(
+            Panel(
+                "\n".join(preflight_lines),
+                title=preflight_title,
+                border_style=preflight_style,
+                padding=(1, 2),
+            )
+        )
+
+        if strict_env:
+            raise typer.Exit(1)
+
     console.print(f"[cyan]Selected AI assistant:[/cyan] {selected_ai}")
     console.print(f"[cyan]Selected script type:[/cyan] {selected_script}")
 
@@ -1528,7 +1663,13 @@ def init(
     sys._specify_tracker_active = True
 
     tracker.add("precheck", "Check required tools")
-    tracker.complete("precheck", "ok")
+    precheck_detail = "ok"
+    if runtime_preflight["errors"] or runtime_preflight["warnings"]:
+        precheck_detail = (
+            f"{len(runtime_preflight['errors'])} issue(s), "
+            f"{len(runtime_preflight['warnings'])} warning(s)"
+        )
+    tracker.complete("precheck", precheck_detail)
     tracker.add("ai-select", "Select AI assistant")
     tracker.complete("ai-select", f"{selected_ai}")
     tracker.add("script-select", "Select script type")
@@ -1813,7 +1954,56 @@ def check():
     tracker.add("code-insiders", "Visual Studio Code Insiders")
     check_tool("code-insiders", tracker=tracker)
 
+    runtime_profiles = [("ps", "PowerShell runtime"), ("sh", "Bash runtime")]
+    runtime_results = []
+    for script_key, script_label in runtime_profiles:
+        tracker_key = f"runtime-{script_key}"
+        tracker.add(tracker_key, script_label)
+
+        preflight = detect_runtime_preflight(
+            ai_assistant="generic",
+            script_type=script_key,
+            check_agent_cli=False,
+        )
+
+        runtime_results.append((script_key, preflight))
+
+        if preflight["errors"]:
+            tracker.error(tracker_key, preflight["errors"][0])
+        elif preflight["warnings"]:
+            tracker.skip(tracker_key, preflight["warnings"][0])
+        else:
+            detail = preflight["details"][0] if preflight["details"] else "ok"
+            tracker.complete(tracker_key, detail)
+
     console.print(tracker.render())
+
+    runtime_table = Table(show_header=True, header_style="bold cyan")
+    runtime_table.add_column("Script", style="cyan")
+    runtime_table.add_column("Status")
+    runtime_table.add_column("Detail", style="bright_black")
+
+    runtime_has_findings = False
+    for script_key, preflight in runtime_results:
+        if preflight["errors"]:
+            runtime_has_findings = True
+            runtime_table.add_row(script_key, "[red]error[/red]", preflight["errors"][0])
+        elif preflight["warnings"]:
+            runtime_has_findings = True
+            runtime_table.add_row(script_key, "[yellow]warning[/yellow]", preflight["warnings"][0])
+        else:
+            detail = preflight["details"][0] if preflight["details"] else "ok"
+            runtime_table.add_row(script_key, "[green]ok[/green]", detail)
+
+    console.print()
+    console.print(
+        Panel(
+            runtime_table,
+            title="[cyan]Runtime Environment Preflight[/cyan]",
+            border_style="cyan",
+            padding=(1, 2),
+        )
+    )
 
     console.print("\n[bold green]Specify CLI is ready to use![/bold green]")
 
@@ -1822,6 +2012,9 @@ def check():
 
     if not any(agent_results.values()):
         console.print("[dim]Tip: Install an AI assistant for the best experience[/dim]")
+
+    if runtime_has_findings:
+        console.print("[dim]Tip: Resolve runtime preflight findings before running /sdd commands for a higher first-run success rate[/dim]")
 
 @app.command()
 def version():
