@@ -54,11 +54,11 @@ def _write_minimal_feature(
         (feature_dir / "test-matrix.md").write_text(
             f"""# Test Matrix
 
-## Binding Contract Packets
+## Binding Packets
 
-| BindingRowID | Operation ID | IF Scope | UIF Path Ref(s) | UDD Ref(s) | Boundary Anchor | Boundary Anchor Status | Boundary Anchor Strategy Evidence | Implementation Entry Anchor | Implementation Entry Anchor Status | Implementation Entry Anchor Strategy Evidence | Request DTO Anchor | Response DTO Anchor | Primary Collaborator Anchor | TM ID | TC IDs | Test Scope | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) | Main Pass Anchor | Branch/Failure Anchor(s) |
-|--------------|--------------|----------|-----------------|------------|-----------------|------------------------|-----------------------------------|-----------------------------|------------------------------------|-----------------------------------------------|--------------------|--------------------|-----------------------------|-------|--------|------------|-------------|-----------------|----------------|-------------|------------------|--------------------------|
-| BindingRowID-001 | createTask | IF-001 | [UIF-Path-001] | [UDD-001] | HTTP POST /tasks | {boundary_anchor_status} | {boundary_anchor_strategy_evidence} | {implementation_entry_anchor} | {implementation_entry_anchor_status} | {implementation_entry_anchor_strategy_evidence} | src/app/contracts.py::CreateTaskRequest | src/app/contracts.py::CreateTaskResponse | src/app/task_service.py::TaskService.create_task | TM-001 | [TC-001, TC-002] | {test_scope} | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] | TC-001 pass | TC-002 fail |
+| BindingRowID | IF Scope | Trigger Ref(s) | UIF Path Ref(s) | UDD Ref(s) | Boundary Anchor | Boundary Anchor Status | Boundary Anchor Strategy Evidence | Implementation Entry Anchor | Implementation Entry Anchor Status | Implementation Entry Anchor Strategy Evidence | Request DTO Anchor | Response DTO Anchor | Primary Collaborator Anchor | Primary TM IDs | TC IDs | Test Scope | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) | Main Pass Anchor | Branch/Failure Anchor(s) |
+|--------------|----------|----------------|-----------------|------------|-----------------|------------------------|-----------------------------------|-----------------------------|------------------------------------|-----------------------------------------------|--------------------|--------------------|-----------------------------|----------------|--------|------------|-------------|-----------------|----------------|-------------|------------------|--------------------------|
+| BindingRowID-001 | IF-001 | [UIF-001.trigger] | [UIF-Path-001] | [UDD-001] | HTTP POST /tasks | {boundary_anchor_status} | {boundary_anchor_strategy_evidence} | {implementation_entry_anchor} | {implementation_entry_anchor_status} | {implementation_entry_anchor_strategy_evidence} | src/app/contracts.py::CreateTaskRequest | src/app/contracts.py::CreateTaskResponse | src/app/task_service.py::TaskService.create_task | [TM-001] | [TC-001, TC-002] | {test_scope} | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] | TC-001 pass | TC-002 fail |
 """,
             encoding="utf-8",
         )
@@ -66,6 +66,8 @@ def _write_minimal_feature(
         (feature_dir / "test-matrix.md").write_text("# Test Matrix\n", encoding="utf-8")
     if contract_text is None:
         contract_text = """# Contract
+
+**Operation ID (Required)**: createTask
 
 ## Resolved Class Inventory (Required)
 
@@ -85,9 +87,9 @@ def _write_minimal_feature(
 
 ### Test Projection Slice
 
-| IF Scope | Operation ID | Test Scope | TM ID | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
-|----------|--------------|------------|-------|----------|------------------|--------------------------|----------------------------|
-| IF-001 | createTask | Integration | TM-001 | TC-001, TC-002 | task create success | task create failure | pytest -k createTask |
+| IF Scope | Operation ID | Test Scope | Primary TM IDs | TM ID(s) | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
+|----------|--------------|------------|----------------|----------|----------|------------------|--------------------------|----------------------------|
+| IF-001 | createTask | Integration | [TM-001] | [TM-001] | [TC-001, TC-002] | task create success | task create failure | pytest -k createTask |
 
 ## Closure Check
 
@@ -121,9 +123,9 @@ Demo planning control plane.
 
 ## Binding Projection Index
 
-| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | UIF Path Ref(s) | UDD Ref(s) | Test Scope |
-|--------------|-------|--------|-------|------------------|-------|--------|--------------|-----------------|------------|------------|
-| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | TM-001 | TC-001, TC-002 | createTask | [UIF-Path-001] | [UDD-001] | {test_scope} |
+| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | Trigger Ref(s) | Primary TM IDs | TC IDs | UIF Path Ref(s) | UDD Ref(s) | Test Scope |
+|--------------|-------|--------|-------|------------------|----------------|----------------|--------|-----------------|------------|------------|
+| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | [UIF-001.trigger] | [TM-001] | TC-001, TC-002 | [UIF-Path-001] | [UDD-001] | {test_scope} |
 
 ## Artifact Status
 
@@ -216,7 +218,7 @@ def _write_data_model_feature(
     if include_spec:
         (feature_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
     if include_test_matrix:
-        (feature_dir / "test-matrix.md").write_text("# Test Matrix\n\n## Binding Contract Packets\n", encoding="utf-8")
+        (feature_dir / "test-matrix.md").write_text("# Test Matrix\n\n## Binding Packets\n", encoding="utf-8")
     if include_research:
         (feature_dir / "research.md").write_text("# Research\n", encoding="utf-8")
     if include_data_model:
@@ -243,8 +245,8 @@ Demo planning control plane.
 
 ## Binding Projection Index
 
-| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | UIF Path Ref(s) | UDD Ref(s) | Test Scope |
-|--------------|-------|--------|-------|------------------|-------|--------|--------------|-----------------|------------|------------|
+| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | Trigger Ref(s) | Primary TM IDs | TC IDs | UIF Path Ref(s) | UDD Ref(s) | Test Scope |
+|--------------|-------|--------|-------|------------------|----------------|----------------|--------|-----------------|------------|------------|
 
 ## Artifact Status
 
@@ -744,7 +746,7 @@ def test_task_preflight_helper_blocks_unresolved_contract_placeholder_names(tmp_
 
 | Role | Concrete Name | Resolution | Source / Evidence | Notes |
 |------|---------------|------------|-------------------|-------|
-| request-dto | <BoundaryRequestModel> | contract-defined | contract-local rationale | unresolved placeholder should block |
+| request-dto | <BoundaryRequestModel> | new | contract-local rationale | unresolved placeholder should block |
 
 ## Full Field Dictionary (Operation-scoped)
 
@@ -756,9 +758,9 @@ def test_task_preflight_helper_blocks_unresolved_contract_placeholder_names(tmp_
 
 ### Test Projection Slice
 
-| IF Scope | Operation ID | Test Scope | TM ID | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
-|----------|--------------|------------|-------|----------|------------------|--------------------------|----------------------------|
-| IF-001 | createTask | Integration | TM-001 | TC-001, TC-002 | task create success | task create failure | pytest -k createTask |
+| IF Scope | Operation ID | Test Scope | Primary TM IDs | TM ID(s) | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
+|----------|--------------|------------|----------------|----------|----------|------------------|--------------------------|----------------------------|
+| IF-001 | createTask | Integration | [TM-001] | [TM-001] | [TC-001, TC-002] | task create success | task create failure | pytest -k createTask |
 
 ## Closure Check
 
@@ -813,7 +815,8 @@ def test_task_preflight_helper_blocks_duplicate_required_contract_sections(tmp_p
 | Field | Value |
 |-------|-------|
 | `UIF Path Ref(s)` | UIF-Path-001 |
-| `TM ID` | TM-001 |
+| `Primary TM IDs` | [TM-001] |
+| `TM IDs` | [TM-001] |
 | `TC IDs` | TC-001, TC-002 |
 
 ## Full Field Dictionary (Operation-scoped)
@@ -836,9 +839,9 @@ def test_task_preflight_helper_blocks_duplicate_required_contract_sections(tmp_p
 
 ## Test Projection
 ### Test Projection Slice
-| IF Scope | Operation ID | Test Scope | TM ID | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
-|----------|--------------|------------|-------|----------|------------------|--------------------------|----------------------------|
-| IF-001 | createTask | Integration | TM-001 | TC-001, TC-002 | success | fail | pytest -k createTask |
+| IF Scope | Operation ID | Test Scope | Primary TM IDs | TM ID(s) | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
+|----------|--------------|------------|----------------|----------|----------|------------------|--------------------------|----------------------------|
+| IF-001 | createTask | Integration | [TM-001] | [TM-001] | [TC-001, TC-002] | success | fail | pytest -k createTask |
 
 ## Closure Check
 | Check Item | Required Evidence | Status |
@@ -897,7 +900,8 @@ def test_task_preflight_helper_blocks_binding_context_coverage_drift(tmp_path):
 | Field | Value |
 |-------|-------|
 | `UIF Path Ref(s)` | UIF-Path-001, UIF-Path-002 |
-| `TM ID` | TM-001 |
+| `Primary TM IDs` | [TM-001] |
+| `TM IDs` | [TM-001] |
 | `TC IDs` | TC-001, TC-002 |
 
 ## Full Field Dictionary (Operation-scoped)
@@ -920,9 +924,9 @@ def test_task_preflight_helper_blocks_binding_context_coverage_drift(tmp_path):
 
 ## Test Projection
 ### Test Projection Slice
-| IF Scope | Operation ID | Test Scope | TM ID | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
-|----------|--------------|------------|-------|----------|------------------|--------------------------|----------------------------|
-| IF-001 | createTask | Integration | TM-001 | TC-001 | success | fail | pytest -k createTask |
+| IF Scope | Operation ID | Test Scope | Primary TM IDs | TM ID(s) | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
+|----------|--------------|------------|----------------|----------|----------|------------------|--------------------------|----------------------------|
+| IF-001 | createTask | Integration | [TM-001] | [TM-001] | [TC-001] | success | fail | pytest -k createTask |
 
 ## Closure Check
 | Check Item | Required Evidence | Status |
@@ -975,7 +979,8 @@ def test_task_preflight_helper_blocks_anchor_inventory_mismatch(tmp_path):
 | Field | Value |
 |-------|-------|
 | `UIF Path Ref(s)` | UIF-Path-001 |
-| `TM ID` | TM-001 |
+| `Primary TM IDs` | [TM-001] |
+| `TM IDs` | [TM-001] |
 | `TC IDs` | TC-001, TC-002 |
 
 ## Full Field Dictionary (Operation-scoped)
@@ -998,9 +1003,9 @@ def test_task_preflight_helper_blocks_anchor_inventory_mismatch(tmp_path):
 
 ## Test Projection
 ### Test Projection Slice
-| IF Scope | Operation ID | Test Scope | TM ID | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
-|----------|--------------|------------|-------|----------|------------------|--------------------------|----------------------------|
-| IF-001 | createTask | Integration | TM-001 | TC-001, TC-002 | success | fail | pytest -k createTask |
+| IF Scope | Operation ID | Test Scope | Primary TM IDs | TM ID(s) | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
+|----------|--------------|------------|----------------|----------|----------|------------------|--------------------------|----------------------------|
+| IF-001 | createTask | Integration | [TM-001] | [TM-001] | [TC-001, TC-002] | success | fail | pytest -k createTask |
 
 ## Closure Check
 | Check Item | Required Evidence | Status |
@@ -1049,8 +1054,8 @@ def test_task_preflight_helper_flags_missing_binding_projection_tuple_fields(tmp
     plan_text = plan_path.read_text(encoding="utf-8")
     plan_path.write_text(
         plan_text.replace(
-            "| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | TM-001 | TC-001, TC-002 | createTask | [UIF-Path-001] | [UDD-001] | Integration |",
-            "| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | TM-001 | TC-001, TC-002 | createTask |  |  | Integration |",
+            "| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | [UIF-001.trigger] | [TM-001] | TC-001, TC-002 | [UIF-Path-001] | [UDD-001] | Integration |",
+            "| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | [UIF-001.trigger] | [TM-001] | TC-001, TC-002 |  |  | Integration |",
         ),
         encoding="utf-8",
     )
@@ -1124,8 +1129,8 @@ def test_task_preflight_helper_blocks_binding_projection_packet_drift(tmp_path):
     plan_path = feature_dir / "plan.md"
     plan_text = plan_path.read_text(encoding="utf-8")
     plan_path.write_text(
-        plan_text.replace("| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | TM-001 | TC-001, TC-002 | createTask | [UIF-Path-001] | [UDD-001] | Integration |",
-                          "| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | TM-001 | TC-001, TC-002 | createTaskV2 | [UIF-Path-001] | [UDD-001] | Integration |"),
+        plan_text.replace("| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | [UIF-001.trigger] | [TM-001] | TC-001, TC-002 | [UIF-Path-001] | [UDD-001] | Integration |",
+                          "| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | [UIF-001.trigger-v2] | [TM-001] | TC-001, TC-002 | [UIF-Path-001] | [UDD-001] | Integration |"),
         encoding="utf-8",
     )
 
@@ -1217,9 +1222,9 @@ def test_task_preflight_helper_ignores_template_placeholder_binding_rows(tmp_pat
 
 ## Binding Projection Index
 
-| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | UIF Path Ref(s) | UDD Ref(s) | Test Scope |
-|--------------|-------|--------|-------|------------------|-------|--------|--------------|-----------------|------------|------------|
-| [BindingRowID-001] | [UC-001] | [UIF-001] | [FR-001] | [IF-001] | [TM-001] | [TC-001, TC-002] | [createTask] | [UIF-Path-001] | [UDD-001] | [Integration] |
+| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | Trigger Ref(s) | Primary TM IDs | TC IDs | UIF Path Ref(s) | UDD Ref(s) | Test Scope |
+|--------------|-------|--------|-------|------------------|----------------|----------------|--------|-----------------|------------|------------|
+| [BindingRowID-001] | [UC-001] | [UIF-001] | [FR-001] | [IF-001] | [UIF-001.trigger] | [TM-001] | [TC-001, TC-002] | [UIF-Path-001] | [UDD-001] | [Integration] |
 
 ## Artifact Status
 

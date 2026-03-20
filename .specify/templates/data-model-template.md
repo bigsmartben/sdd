@@ -1,7 +1,7 @@
 # Data Model: [FEATURE]
 
 **Stage**: Stage 3 Shared Semantic Alignment
-**Inputs**: `spec.md`, `test-matrix.md` (`Binding Contract Packets` required; `Scenario Matrix` / `Verification Case Anchors` when needed)
+**Inputs**: `spec.md`, `test-matrix.md` (`Interface Partition Decisions` and `Binding Packets` required; `Scenario Matrix` / `Verification Case Anchors` when needed), bounded repo semantic landing slice
 
 Use this artifact to align the shared semantic backbone consumed by multiple `BindingRowID` values. This file is authoritative for shared semantic elements and downstream reuse constraints. It is not an interface predesign artifact.
 
@@ -13,6 +13,7 @@ Use this artifact to align the shared semantic backbone consumed by multiple `Bi
 - Which entities, value objects, projections, lifecycle semantics, invariants, and policies need stable naming and ownership
 - Which owner/source/lifecycle decisions downstream `contract` runs must reuse instead of reinventing
 - Which `BindingRowID` values consume each shared semantic element
+- Which repeated interface-partition details must stay out of the shared semantic backbone even if multiple bindings mention them
 
 ### This file defines
 
@@ -31,6 +32,7 @@ Use this artifact to align the shared semantic backbone consumed by multiple `Bi
 - Operation-scoped DTO/command/result models
 - Single-binding local validation details
 - Realization-level collaborator chains or sequence design
+- Interface-partition-only trigger refs, request semantics, or side-effect descriptions
 
 Landing rule:
 
@@ -41,7 +43,9 @@ Landing rule:
 
 Selection rule:
 
-- If a semantic is used by two or more `BindingRowID` values, include it here by default.
+- Use `Interface Partition Decisions` first to distinguish shared business semantics from repeated interface-local details.
+- Use `Binding Packets` scope reference fields (`User Intent`, `Request Semantics`, `Visible Result`, `Side Effect`, `Boundary Notes`, `Repo Landing Hint`) as exclusionary context first: they help explain why a semantic stays local or becomes shared, but they do not become shared semantics by themselves.
+- If a semantic is used by two or more `BindingRowID` values, include it here only when it is business-stable across those bindings and not merely repeated trigger/request/side-effect metadata.
 - If a semantic is used by only one `BindingRowID`, leave it to `/sdd.plan.contract` unless it is a globally stable business object, stable projection, or stable lifecycle that downstream contracts must not redefine independently.
 
 ## Semantic Backbone Summary
@@ -142,11 +146,13 @@ Use stable refs that downstream contracts can cite directly: `SSE-*`, `OSA-*`, `
 Rules:
 
 - `Kind` MUST be one of `entity | value-object | projection | lifecycle | invariant | policy`.
-- `Anchor Status` MUST use the repo-anchor decision vocabulary `existing | extended | new | contract-defined | todo`; prefer `existing | extended | new` in this stage and use `todo` only for genuine evidence blockers.
+- `Anchor Status` MUST use the repo-anchor decision vocabulary `existing | extended | new | todo`; prefer `existing | extended | new` in this stage and use `todo` only for genuine evidence blockers.
 - `Repo Anchor` MUST use strict `path/to/file.ext::Symbol` format or explicit `TODO(REPO_ANCHOR)`.
 - `Anchor Role` MUST align to the repo-anchor role taxonomy `owner | state-source | projection-source | carrier | partial-lineage`.
 - Keep `Status = gap` only when authoritative input or evidence is missing and the stage is blocked from closing the semantic safely.
 - Do not add operation-scoped request/response types or single-binding helper concepts here.
+- Do not elevate trigger refs, request semantics, or side-effect descriptions from `Interface Partition Decisions` into `Shared Semantic Elements`.
+- Do not elevate `User Intent`, `Visible Result`, `Boundary Notes`, or `Repo Landing Hint` from `Binding Packets` into `Shared Semantic Elements` unless they have been grounded as stable business semantics in `spec.md`.
 - If a row is materialized as a final class, semantic owner, lifecycle owner, or UML node, its landing MUST follow repo-first `existing -> extended -> new`.
 - Do not introduce a new design-only class when an `existing` or `extended` landing already closes the shared semantic safely.
 - If a confirmed shared semantic cannot land as `existing` or `extended`, introduce the required `new` class/owner/lifecycle here instead of deferring the decision.
@@ -166,6 +172,8 @@ Rules:
 - Every shared projection, derivation, counter, badge, role label, or lifecycle guard MUST identify the owner class/field/state that sustains it.
 - Owner/source for confirmed shared semantics MUST be closed in this stage; use `gap` only when required input/evidence is genuinely missing.
 - Owner/source rows that become final semantic owners in UML/class output MUST use repo-first landing instead of floating free from the codebase.
+- Repeated interface-local request, trigger, or side-effect details from `test-matrix.md` are not valid owner/source rows.
+- `User Intent`, `Visible Result`, `Boundary Notes`, and `Repo Landing Hint` are not valid owner/source rows by themselves.
 
 ## Shared Field Vocabulary
 
@@ -181,6 +189,8 @@ Rules:
 - Include only fields whose semantics are shared across bindings or globally stable.
 - Capture vocabulary, meaning, nullability, and boundary rules only.
 - Leave complete request/response expansion to `/sdd.plan.contract`.
+- Do not mirror `Interface Partition Decisions` columns as vocabulary rows unless those columns point to a genuine shared business field.
+- Do not mirror `Binding Packets` scope reference fields as vocabulary rows unless they point to a genuine shared business field grounded in `UDD` / spec semantics.
 
 ## Lifecycle And Invariant Support
 
@@ -231,6 +241,8 @@ Rules:
 
 - Ensure `Shared Semantic Elements` and `Downstream Contract Constraints` are both present and internally consistent.
 - Ensure every shared element is backed by `UDD` / spec refs and consuming `BindingRowID` rows.
+- Ensure no row is included only because multiple bindings repeat the same interface-local trigger, request, or side-effect wording.
+- Ensure no row is included only because packet-level scope reference fields describe similar intents, results, notes, or landing hints across bindings.
 - Ensure owner/source alignment closes over every shared projection or derived semantic so downstream contracts do not invent missing owners.
 - Ensure lifecycle/invariant content appears only when the vocabulary is shared or globally stable.
 - Ensure any final semantic owner, lifecycle owner, or UML/class node follows repo-first landing order `existing -> extended -> new`.

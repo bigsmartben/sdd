@@ -87,7 +87,7 @@ Mandatory stale-row routing:
 
 Projection drift routing:
 
-- if `Binding Projection Index` differs from the selected `Binding Contract Packets` row for the same `BindingRowID`, route `/sdd.plan.test-matrix` to repair the upstream binding projection
+- if `Binding Projection Index` differs from the selected `Binding Packets` row for the same `BindingRowID`, route `/sdd.plan.test-matrix` to repair the upstream binding projection
 - if a generated contract contradicts the selected packet or selected `data-model` constraints for the same `BindingRowID`, treat it as contract projection drift and repair the upstream owner first (`/sdd.plan.test-matrix` for binding projection errors, `/sdd.plan.data-model` for shared semantic errors), then regenerate `/sdd.plan.contract`
 - if the generated contract only differs in inferred boundary/entry/DTO/collaborator realization while remaining consistent with binding projection and shared semantic constraints, treat it as contract-stage design output rather than upstream drift
 

@@ -9,7 +9,7 @@ Use this artifact to derive stable northbound interface partitions and project v
 - interface partition decisions for the selected feature scope
 - scenario-oriented test semantics
 - stable `BindingRowID` generation from `spec.md`
-- minimal binding packets for selected bindings
+- complete binding packets for selected bindings as downstream scope references
 
 ## Coverage Strategy
 
@@ -105,7 +105,7 @@ Rules:
 
 ## Binding Packets
 
-Purpose: minimal binding locator packet for the selected interaction unit.
+Purpose: complete downstream scope-reference packet for the selected interaction unit.
 
 | BindingRowID | IF Scope | User Intent | Trigger Ref(s) | Request Semantics | Visible Result | Side Effect | Boundary Notes | Repo Landing Hint | UIF Path Ref(s) | UDD Ref(s) | Primary TM IDs | TM IDs | TC IDs | Test Scope | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) |
 |--------------|----------|-------------|----------------|-------------------|----------------|-------------|----------------|-------------------|-----------------|------------|----------------|--------|--------|------------|-------------|-----------------|----------------|-------------|

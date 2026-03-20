@@ -1,13 +1,13 @@
-# Northbound Interface Design: [BINDING OR OPERATION]
+# Northbound Interface Design: [BindingRowID]
 
-**Stage**: Stage 3/4 Binding-Level Interface Design Closure
+**Stage**: Stage 4 Binding-Level Interface Design Closure
 **BindingRowID (Required)**: [BR-###]
 **Operation ID (Required)**: [operationId or N/A]
 **IF Scope (Required)**: [IF-### or N/A]
 **Boundary Anchor (Required)**: [HTTP `METHOD /path` \| `event.topic` \| `Facade.method` \| `cli command` \| `ConcreteBoundary.method` \| `TODO(REPO_ANCHOR)`]
-**Anchor Status (Required)**: [`existing` \| `extended` \| `new` \| `contract-defined` \| `todo`]
+**Anchor Status (Required)**: [`existing` \| `extended` \| `new` \| `todo`]
 **Implementation Entry Anchor (Required)**: [`path/to/file.ext::Symbol` \| `ConcreteEntry.method` \| `TODO(REPO_ANCHOR)`]
-**Implementation Entry Anchor Status (Required)**: [`existing` \| `extended` \| `new` \| `contract-defined` \| `todo`]
+**Implementation Entry Anchor Status (Required)**: [`existing` \| `extended` \| `new` \| `todo`]
 
 This artifact is the single authoritative interface-design closure for one `BindingRowID`.
 Its core outputs are fixed:
@@ -19,19 +19,18 @@ Its core outputs are fixed:
 
 ## Northbound Entry Rules (Normative)
 
-- Allowed normative boundary-anchor forms are exactly: HTTP `METHOD /path`, event topic `event.topic`, RPC/Façade method `Facade.method`, CLI `command`, concrete contract-defined boundary name `ConcreteBoundary.method`, or explicit `TODO(REPO_ANCHOR)`.
+- Allowed normative boundary-anchor forms are exactly: HTTP `METHOD /path`, event topic `event.topic`, RPC/Façade method `Facade.method`, CLI `command`, concrete boundary name `ConcreteBoundary.method`, or explicit `TODO(REPO_ANCHOR)`.
 - `Boundary Anchor` MUST represent the first client-callable entry for this interaction, not an internal service/manager/mapper hop.
 - If clients call an HTTP route directly, use HTTP `METHOD /path` as `Boundary Anchor` and the owning controller method as `Implementation Entry Anchor`.
 - For HTTP-facing bindings, treat `Boundary Anchor` and `Implementation Entry Anchor` as two aligned views of one northbound boundary semantic: external consumer entry vs internal realization handoff.
 - If clients call a stable RPC/Façade surface, use repo-backed `Facade.method` as `Boundary Anchor`.
 - If both controller/HTTP and façade exist, select the consumer-visible first callable entry as normative `Boundary Anchor`.
-- For first-party internal `contract-defined` anchors, prefer repository-style names such as `*Controller.method`, `*Service.method`, or `*ServiceImpl.method`; do not use `Facade` unless the anchor is explicitly modeling an adapter/external integration surface.
+- For first-party internal `new` anchors, prefer repository-style names such as `*Controller.method`, `*Service.method`, or `*ServiceImpl.method`; do not use `Facade` unless the anchor is explicitly modeling an adapter/external integration surface.
 - `BA-*` labels are not valid normative boundary anchors.
-- Apply anchor decision order `existing -> extended -> new(repo-backed) -> contract-defined(design-final)`.
+- Apply anchor decision order `existing -> extended -> new -> todo`.
 - `extended` is valid only for same-entity field/state expansion.
-- `new` is normative only when explicit `path::symbol` target evidence is provided.
-- `contract-defined` is normative only when selected `spec.md` / `data-model.md` / `test-matrix.md` slices plus bounded repo reads fully close the binding design, but no repo-backed boundary/entry target can yet be confirmed.
-- If neither repo-backed nor contract-defined target evidence is sufficient, set the corresponding anchor field to `TODO(REPO_ANCHOR)` and status to `todo`.
+- `new` is normative only when selected `spec.md` / `data-model.md` / `test-matrix.md` slices plus bounded repo reads fully close the binding design and this stage can assign one concrete repository-facing boundary/entry target for implementation.
+- If bounded evidence cannot close `existing`, `extended`, or one concrete `new` target, set the corresponding anchor field to `TODO(REPO_ANCHOR)` and status to `todo`.
 
 ## Binding Context
 
@@ -69,7 +68,7 @@ Generate it in this order:
 
 1. `UDD Ref(s)` for user-visible field meaning
 2. `data-model.md` for shared owner/source/lifecycle/invariant constraints
-3. bounded repo evidence plus contract-defined closure evidence for landed naming and concrete shape
+3. bounded repo evidence for landed naming and concrete shape
 
 ### Contract Summary
 
@@ -100,7 +99,7 @@ If a field cannot be fully confirmed, keep the row with an explicit gap marker r
 
 | Field | Owner Class | Dictionary Tier | Direction | Required/Optional | Default | Validation/Enum | Persisted | Contract-visible | Used in [operationId] | Source Anchor |
 |-------|-------------|-----------------|-----------|-------------------|---------|-----------------|-----------|------------------|-----------------------|---------------|
-| [fieldPath] | [RequestModel / ResponseModel / StateOwner] | [`operation-critical` / `owner-residual`] | [input / output / state / derived] | [required / optional / conditional] | [default / derivation / none / gap] | [validation rule / enum vocabulary / gap] | [yes / no / derived / gap] | [yes / no / indirect] | [yes / no] | [`path/to/file.ext::Symbol` / `contract-defined field/method name` / `SSE-*` / `OSA-*` / `SFV-*` / `LC-*` / `INV-*` / `TODO(REPO_ANCHOR)`] |
+| [fieldPath] | [RequestModel / ResponseModel / StateOwner] | [`operation-critical` / `owner-residual`] | [input / output / state / derived] | [required / optional / conditional] | [default / derivation / none / gap] | [validation rule / enum vocabulary / gap] | [yes / no / derived / gap] | [yes / no / indirect] | [yes / no] | [`path/to/file.ext::Symbol` / `new concrete field/method name` / `SSE-*` / `OSA-*` / `SFV-*` / `LC-*` / `INV-*` / `TODO(REPO_ANCHOR)`] |
 
 ## UML Class Design
 
@@ -112,20 +111,20 @@ Mandatory rules:
 - UML MUST include explicit two-party package relations; class-only diagrams are insufficient.
 - Every sequence participant that is a first-party executable class/interface MUST appear in UML with at least one mapped method.
 - For contract-visible request/response and behavior-significant fields, each field MUST have explicit UML ownership.
-- Any newly introduced field/method/call not already in anchored sources MUST be explicitly marked as `new` or `contract-defined`.
-- If `Boundary Anchor` / `Implementation Entry Anchor` are `contract-defined` but reuse an `existing` realization chain downstream, render both layers explicitly instead of replacing the design anchor with the nearest existing class.
-- Any `contract-defined` entity/value object/state holder MUST identify owner, creator, reader, and writer closure somewhere in UML notes or field ownership rows before the artifact can be `done`.
+- Any newly introduced field/method/call not already in anchored sources MUST be explicitly marked as `new`.
+- If `Boundary Anchor` / `Implementation Entry Anchor` are `new` but reuse an `existing` realization chain downstream, render both layers explicitly instead of replacing the design anchor with the nearest existing class.
+- Any `new` entity/value object/state holder MUST identify owner, creator, reader, and writer closure somewhere in UML notes or field ownership rows before the artifact can be `done`.
 - Angle-bracket labels in the examples below are template scaffolding only and MUST be replaced before the artifact can be `done`.
 
 ### Resolved Type Inventory
 
 | Role | Concrete Name | Resolution | Source / Evidence | Notes |
 |------|---------------|------------|-------------------|-------|
-| [`boundary-entry` / `implementation-entry` / `request-dto` / `response-dto` / `entity` / `value-object` / `service` / `collaborator` / `middleware` / `external-dependency`] | [`path/to/file.ext::Symbol` or concrete contract-defined name] | [`existing` / `extended` / `new` / `contract-defined`] | [spec ref / data-model ref / repo anchor / contract-local rationale] | [why this concrete name is final for this contract run] |
+| [`boundary-entry` / `implementation-entry` / `request-dto` / `response-dto` / `entity` / `value-object` / `service` / `collaborator` / `middleware` / `external-dependency`] | [`path/to/file.ext::Symbol` or concrete new name] | [`existing` / `extended` / `new`] | [spec ref / data-model ref / repo anchor / contract-local rationale] | [why this concrete name is final for this contract run] |
 
-Use `Notes` to make layering explicit whenever `contract-defined` and `existing` types coexist in the same design:
+Use `Notes` to make layering explicit whenever `new` and `existing` types coexist in the same design:
 
-- mark northbound design anchors as `contract-defined boundary` / `contract-defined entry`
+- mark northbound design anchors as `new boundary` / `new entry`
 - mark reused downstream classes as `existing realization`
 - mark any operation-scoped holder such as a new set/state/value object with owner + creator + reader + writer closure
 
@@ -243,8 +242,8 @@ Mandatory rules:
 - Sequence MUST explicitly represent every mandatory third-party call on the main path.
 - Sequence MUST explicitly represent middleware traversal or middleware invocation points; do not collapse middleware into a silent internal step.
 - Sequence MUST NOT merge multiple mandatory collaborators/dependencies into one synthetic participant label.
-- When `contract-defined` boundary/entry anchors hand off to an `existing` realization chain, the first hop MUST remain the contract-defined anchor and the reused repo-backed chain MUST appear as a subsequent explicit handoff.
-- Do not substitute the nearest `existing` controller/service for a `contract-defined` boundary when the new northbound interaction semantics are not identical.
+- When `new` boundary/entry anchors hand off to an `existing` realization chain, the first hop MUST remain the new anchor and the reused repo-backed chain MUST appear as a subsequent explicit handoff.
+- Do not substitute the nearest `existing` controller/service for a `new` boundary when the new northbound interaction semantics are not identical.
 - `opt` blocks are allowed only for truly conditional branches; mandatory main-path calls MUST remain outside `opt`.
 - Main success path and key failure path MUST be traceable to `Primary TM IDs` / `TM IDs` / `TC IDs`.
 
@@ -351,9 +350,9 @@ Keep this section short and explicit.
 - Keep field completeness in `Full Field Dictionary (Operation-scoped)`.
 - Keep shared owner/source/lifecycle/invariant definitions upstream in `data-model.md`; reuse them here instead of re-declaring them.
 - `contract` is responsible for first-time production of `Boundary Anchor`, `Implementation Entry Anchor`, request/response surface, UML closure, sequence closure, and test projection for this binding.
-- If repo evidence is missing, this stage may design `new` repo-backed or `contract-defined` design-final operation-scoped boundary/entry/DTO/collaborator/middleware surfaces when they remain bounded to this binding.
-- `contract-defined` anchors are planning-final for this binding and MUST stay concrete, uniquely named, and consistent across Interface Definition, UML, Sequence, and Test Projection.
-- If `contract-defined` anchors reuse `existing` repo-backed implementation, keep the design anchor and reused realization chain distinct instead of collapsing both into one symbol.
-- Any `contract-defined` operation-scoped holder/state class must close owner, creator, reader, and writer responsibilities before the binding can be treated as design-final.
+- If repo evidence is insufficient for `existing` or `extended`, this stage may design concrete `new` operation-scoped boundary/entry/DTO/collaborator/middleware surfaces when they remain bounded to this binding.
+- `new` anchors are planning-final for this binding and MUST stay concrete, uniquely named, and consistent across Interface Definition, UML, Sequence, and Test Projection.
+- If `new` anchors reuse `existing` repo-backed implementation, keep the design anchor and reused realization chain distinct instead of collapsing both into one symbol.
+- Any `new` operation-scoped holder/state class must close owner, creator, reader, and writer responsibilities before the binding can be treated as design-final.
 - If a gap is truly shared-semantic, route upstream to `/sdd.plan.data-model`.
 - Do not use helper docs (`README.md`, `docs/**`, `specs/**`, generated artifacts) as repo semantic anchors.

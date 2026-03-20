@@ -416,9 +416,9 @@ function Get-PlanBindingTupleData {
             for ($idx = 0; $idx -lt $cells.Count; $idx++) {
                 switch ($cells[$idx]) {
                     'BindingRowID' { $bindingRowIndex = $idx }
-                    'Operation ID' { $operationIndex = $idx }
+                    'Trigger Ref(s)' { $operationIndex = $idx }
                     'IF ID / IF Scope' { $ifScopeIndex = $idx }
-                    'TM ID' { $tmIndex = $idx }
+                    'Primary TM IDs' { $tmIndex = $idx }
                     'TC IDs' { $tcIndex = $idx }
                     'UIF Path Ref(s)' { $uifPathIndex = $idx }
                     'UDD Ref(s)' { $uddRefIndex = $idx }
@@ -447,9 +447,9 @@ function Get-PlanBindingTupleData {
 
         $rows[$bindingId] = [PSCustomObject]@{
             Line       = $lineNumber
-            Operation  = if ($operationIndex -ge 0 -and $operationIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$operationIndex] } else { '' }
+            Operation  = if ($operationIndex -ge 0 -and $operationIndex -lt $cells.Count) { Normalize-MarkdownListCell -Value $cells[$operationIndex] } else { '' }
             IfScope    = if ($ifScopeIndex -ge 0 -and $ifScopeIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$ifScopeIndex] } else { '' }
-            TmId       = if ($tmIndex -ge 0 -and $tmIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$tmIndex] } else { '' }
+            TmId       = if ($tmIndex -ge 0 -and $tmIndex -lt $cells.Count) { Normalize-MarkdownListCell -Value $cells[$tmIndex] } else { '' }
             TcIds      = if ($tcIndex -ge 0 -and $tcIndex -lt $cells.Count) { Normalize-MarkdownListCell -Value $cells[$tcIndex] } else { '' }
             UifPathRefs = if ($uifPathIndex -ge 0 -and $uifPathIndex -lt $cells.Count) { Normalize-MarkdownListCell -Value $cells[$uifPathIndex] } else { '' }
             UddRefs    = if ($uddRefIndex -ge 0 -and $uddRefIndex -lt $cells.Count) { Normalize-MarkdownListCell -Value $cells[$uddRefIndex] } else { '' }
@@ -495,7 +495,7 @@ function Get-TestMatrixBindingPackets {
             continue
         }
 
-        if ($currentSection -ne 'Binding Contract Packets') {
+        if ($currentSection -ne 'Binding Packets') {
             continue
         }
 
@@ -526,9 +526,9 @@ function Get-TestMatrixBindingPackets {
             for ($idx = 0; $idx -lt $cells.Count; $idx++) {
                 switch ($cells[$idx]) {
                     'BindingRowID' { $bindingRowIndex = $idx }
-                    'Operation ID' { $operationIndex = $idx }
+                    'Trigger Ref(s)' { $operationIndex = $idx }
                     'IF Scope' { $ifScopeIndex = $idx }
-                    'TM ID' { $tmIndex = $idx }
+                    'Primary TM IDs' { $tmIndex = $idx }
                     'TC IDs' { $tcIndex = $idx }
                     'UIF Path Ref(s)' { $uifPathIndex = $idx }
                     'UDD Ref(s)' { $uddRefIndex = $idx }
@@ -557,9 +557,9 @@ function Get-TestMatrixBindingPackets {
 
         $rows[$bindingId] = [PSCustomObject]@{
             Line        = $lineNumber
-            Operation   = if ($operationIndex -ge 0 -and $operationIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$operationIndex] } else { '' }
+            Operation   = if ($operationIndex -ge 0 -and $operationIndex -lt $cells.Count) { Normalize-MarkdownListCell -Value $cells[$operationIndex] } else { '' }
             IfScope     = if ($ifScopeIndex -ge 0 -and $ifScopeIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$ifScopeIndex] } else { '' }
-            TmId        = if ($tmIndex -ge 0 -and $tmIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$tmIndex] } else { '' }
+            TmId        = if ($tmIndex -ge 0 -and $tmIndex -lt $cells.Count) { Normalize-MarkdownListCell -Value $cells[$tmIndex] } else { '' }
             TcIds       = if ($tcIndex -ge 0 -and $tcIndex -lt $cells.Count) { Normalize-MarkdownListCell -Value $cells[$tcIndex] } else { '' }
             UifPathRefs = if ($uifPathIndex -ge 0 -and $uifPathIndex -lt $cells.Count) { Normalize-MarkdownListCell -Value $cells[$uifPathIndex] } else { '' }
             UddRefs     = if ($uddRefIndex -ge 0 -and $uddRefIndex -lt $cells.Count) { Normalize-MarkdownListCell -Value $cells[$uddRefIndex] } else { '' }
@@ -1313,13 +1313,13 @@ foreach ($row in $rows) {
                 foreach ($bindingId in $planData.Rows.Keys) {
                     $planRow = $planData.Rows[$bindingId]
                     if (-not $packetRows.ContainsKey($bindingId)) {
-                        Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $planRow.Line -Message "$($row.message) BindingRowID $bindingId is present in `Binding Projection Index` but missing from `test-matrix.md` `Binding Contract Packets`." -Remediation $row.remediation
+                        Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $planRow.Line -Message "$($row.message) BindingRowID $bindingId is present in `Binding Projection Index` but missing from `test-matrix.md` `Binding Packets`." -Remediation $row.remediation
                         continue
                     }
 
                     $packetRow = $packetRows[$bindingId]
                     if ($planRow.Operation -ne $packetRow.Operation -or $planRow.IfScope -ne $packetRow.IfScope -or $planRow.TmId -ne $packetRow.TmId -or $planRow.TcIds -ne $packetRow.TcIds -or $planRow.UifPathRefs -ne $packetRow.UifPathRefs -or $planRow.UddRefs -ne $packetRow.UddRefs -or $planRow.TestScope -ne $packetRow.TestScope) {
-                        Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $planRow.Line -Message "$($row.message) BindingRowID $bindingId differs from `test-matrix.md` `Binding Contract Packets` for minimal projection fields." -Remediation $row.remediation
+                        Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $planRow.Line -Message "$($row.message) BindingRowID $bindingId differs from `test-matrix.md` `Binding Packets` for minimal projection fields." -Remediation $row.remediation
                     }
 
                 }

@@ -1147,13 +1147,13 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                                 "BindingRowID")
                                     binding_row_idx=$idx
                                     ;;
-                                "Operation ID")
+                                "Trigger Ref(s)")
                                     operation_idx=$idx
                                     ;;
                                 "IF ID / IF Scope")
                                     if_scope_idx=$idx
                                     ;;
-                                "TM ID")
+                                "Primary TM IDs")
                                     tm_idx=$idx
                                     ;;
                                 "TC IDs")
@@ -1198,13 +1198,13 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
 
                     plan_line["$binding_id"]=$line_no
                     if [[ $operation_idx -ge 0 && $operation_idx -lt ${#cells[@]} ]]; then
-                        plan_operation["$binding_id"]="$(normalize_markdown_scalar "${cells[$operation_idx]}")"
+                        plan_operation["$binding_id"]="$(normalize_markdown_list_cell "${cells[$operation_idx]}")"
                     fi
                     if [[ $if_scope_idx -ge 0 && $if_scope_idx -lt ${#cells[@]} ]]; then
                         plan_if_scope["$binding_id"]="$(normalize_markdown_scalar "${cells[$if_scope_idx]}")"
                     fi
                     if [[ $tm_idx -ge 0 && $tm_idx -lt ${#cells[@]} ]]; then
-                        plan_tm["$binding_id"]="$(normalize_markdown_scalar "${cells[$tm_idx]}")"
+                        plan_tm["$binding_id"]="$(normalize_markdown_list_cell "${cells[$tm_idx]}")"
                     fi
                     if [[ $tc_idx -ge 0 && $tc_idx -lt ${#cells[@]} ]]; then
                         plan_tc["$binding_id"]="$(normalize_markdown_list_cell "${cells[$tc_idx]}")"
@@ -1249,7 +1249,7 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                         continue
                     fi
 
-                    if [[ "$current_section" != "Binding Contract Packets" ]]; then
+                    if [[ "$current_section" != "Binding Packets" ]]; then
                         continue
                     fi
 
@@ -1284,13 +1284,13 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                                 "BindingRowID")
                                     binding_row_idx=$idx
                                     ;;
-                                "Operation ID")
+                                "Trigger Ref(s)")
                                     operation_idx=$idx
                                     ;;
                                 "IF Scope")
                                     if_scope_idx=$idx
                                     ;;
-                                "TM ID")
+                                "Primary TM IDs")
                                     tm_idx=$idx
                                     ;;
                                 "TC IDs")
@@ -1334,13 +1334,13 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
 
                     packet_line["$binding_id"]=$line_no
                     if [[ $operation_idx -ge 0 && $operation_idx -lt ${#cells[@]} ]]; then
-                        packet_operation["$binding_id"]="$(normalize_markdown_scalar "${cells[$operation_idx]}")"
+                        packet_operation["$binding_id"]="$(normalize_markdown_list_cell "${cells[$operation_idx]}")"
                     fi
                     if [[ $if_scope_idx -ge 0 && $if_scope_idx -lt ${#cells[@]} ]]; then
                         packet_if_scope["$binding_id"]="$(normalize_markdown_scalar "${cells[$if_scope_idx]}")"
                     fi
                     if [[ $tm_idx -ge 0 && $tm_idx -lt ${#cells[@]} ]]; then
-                        packet_tm["$binding_id"]="$(normalize_markdown_scalar "${cells[$tm_idx]}")"
+                        packet_tm["$binding_id"]="$(normalize_markdown_list_cell "${cells[$tm_idx]}")"
                     fi
                     if [[ $tc_idx -ge 0 && $tc_idx -lt ${#cells[@]} ]]; then
                         packet_tc["$binding_id"]="$(normalize_markdown_list_cell "${cells[$tc_idx]}")"
@@ -1358,12 +1358,12 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
 
                 for binding_id in "${!plan_line[@]}"; do
                     if [[ -z "${packet_line[$binding_id]:-}" ]]; then
-                        add_finding "$id" "$severity" "$rel_file" "${plan_line[$binding_id]}" "$message BindingRowID $binding_id is present in `Binding Projection Index` but missing from `test-matrix.md` `Binding Contract Packets`." "$remediation"
+                        add_finding "$id" "$severity" "$rel_file" "${plan_line[$binding_id]}" "$message BindingRowID $binding_id is present in `Binding Projection Index` but missing from `test-matrix.md` `Binding Packets`." "$remediation"
                         continue
                     fi
 
                     if [[ "${plan_operation[$binding_id]:-}" != "${packet_operation[$binding_id]:-}" || "${plan_if_scope[$binding_id]:-}" != "${packet_if_scope[$binding_id]:-}" || "${plan_tm[$binding_id]:-}" != "${packet_tm[$binding_id]:-}" || "${plan_tc[$binding_id]:-}" != "${packet_tc[$binding_id]:-}" || "${plan_uif[$binding_id]:-}" != "${packet_uif[$binding_id]:-}" || "${plan_udd[$binding_id]:-}" != "${packet_udd[$binding_id]:-}" || "${plan_test_scope[$binding_id]:-}" != "${packet_test_scope[$binding_id]:-}" ]]; then
-                        add_finding "$id" "$severity" "$rel_file" "${plan_line[$binding_id]}" "$message BindingRowID $binding_id differs from `test-matrix.md` `Binding Contract Packets` for minimal projection fields." "$remediation"
+                        add_finding "$id" "$severity" "$rel_file" "${plan_line[$binding_id]}" "$message BindingRowID $binding_id differs from `test-matrix.md` `Binding Packets` for minimal projection fields." "$remediation"
                     fi
 
                 done

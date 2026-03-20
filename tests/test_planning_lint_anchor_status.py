@@ -86,11 +86,11 @@ def _write_feature_fixture(
                 "|-------|-------|--------------|-----------------|----------|-------------|------------------|---------------|-------------------|------------------------|",
                 f"| TC-001 | TM-001 | demoOp | {test_matrix_boundary_anchor} | IF-001 | src/boundary/demo.py::DemoBoundary | boundary-owner | {test_matrix_status} | Verify demo payload | Demo payload is visible |",
                 "",
-                "## Binding Contract Packets",
+                "## Binding Packets",
                 "",
-                "| BindingRowID | Operation ID | IF Scope | UIF Path Ref(s) | UDD Ref(s) | Boundary Anchor | Boundary Anchor Status | Implementation Entry Anchor | Implementation Entry Anchor Status | Request DTO Anchor | Response DTO Anchor | Primary Collaborator Anchor | State Owner Anchor(s) | TM ID | TC IDs | Test Scope | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) | Lifecycle Ref(s) | Invariant Ref(s) | Main Pass Anchor | Branch/Failure Anchor(s) |",
-                "|--------------|--------------|----------|-----------------|------------|-----------------|------------------------|-----------------------------|------------------------------------|--------------------|--------------------|-----------------------------|-----------------------|-------|--------|------------|-------------|-----------------|----------------|-------------|------------------|------------------|------------------|--------------------------|",
-                f"| BR-001 | demoOp | IF-001 | [UIF-Path-001] | [UDD-001] | {packet_boundary_anchor} | {packet_boundary_status} | {packet_entry_anchor} | {packet_entry_status} | N/A | src/app/demo.py::DemoResponse | N/A | [src/domain/demo.py::DemoAggregate] | TM-001 | [TC-001] | Integration | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] | [Lifecycle: DemoAggregate] | [INV-001] | happy path | retry path |",
+                "| BindingRowID | IF Scope | Trigger Ref(s) | UIF Path Ref(s) | UDD Ref(s) | Boundary Anchor | Boundary Anchor Status | Implementation Entry Anchor | Implementation Entry Anchor Status | Request DTO Anchor | Response DTO Anchor | Primary Collaborator Anchor | State Owner Anchor(s) | Primary TM IDs | TC IDs | Test Scope | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) | Lifecycle Ref(s) | Invariant Ref(s) | Main Pass Anchor | Branch/Failure Anchor(s) |",
+                "|--------------|----------|----------------|-----------------|------------|-----------------|------------------------|-----------------------------|------------------------------------|--------------------|--------------------|-----------------------------|-----------------------|----------------|--------|------------|-------------|-----------------|----------------|-------------|------------------|------------------|------------------|--------------------------|",
+                f"| BR-001 | IF-001 | [UIF-001.trigger] | [UIF-Path-001] | [UDD-001] | {packet_boundary_anchor} | {packet_boundary_status} | {packet_entry_anchor} | {packet_entry_status} | N/A | src/app/demo.py::DemoResponse | N/A | [src/domain/demo.py::DemoAggregate] | [TM-001] | [TC-001] | Integration | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] | [Lifecycle: DemoAggregate] | [INV-001] | happy path | retry path |",
             ]
         ),
         encoding="utf-8",
@@ -114,7 +114,8 @@ def _write_feature_fixture(
         "| `IF Scope` | IF-001 |",
         "| `UIF Path Ref(s)` | [UIF-Path-001] |",
         "| `UDD Ref(s)` | [UDD-001] |",
-        "| `TM ID` | TM-001 |",
+        "| `Primary TM IDs` | [TM-001] |",
+        "| `TM IDs` | [TM-001] |",
         "| `TC IDs` | [TC-001] |",
         "| `Test Scope` | Integration |",
         "| `Spec Ref(s)` | [UC-001, FR-001] |",
@@ -135,7 +136,7 @@ def _write_feature_fixture(
         "| Role | Concrete Name | Resolution | Source / Evidence | Notes |",
         "|------|---------------|------------|-------------------|-------|",
         "| boundary-entry | src/web/demo_controller.py::DemoController.handle | existing | spec ref + repo anchor | controller entry |",
-        "| request-dto | src/app/demo.py::DemoRequest | contract-defined | contract-local rationale | demo request type |",
+        "| request-dto | src/app/demo.py::DemoRequest | new | contract-local rationale | demo request type |",
         "| response-dto | src/app/demo.py::DemoResponse | existing | repo anchor | demo response type |",
         "",
         "## Full Field Dictionary (Operation-scoped)",
@@ -161,9 +162,9 @@ def _write_feature_fixture(
             "",
             "### Test Projection Slice",
             "",
-            "| IF Scope | Operation ID | Test Scope | TM ID | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |",
-            "|----------|--------------|------------|-------|----------|------------------|--------------------------|----------------------------|",
-            "| IF-001 | demoOp | Integration | TM-001 | TC-001 | happy path | retry path | pytest -k demo |",
+            "| IF Scope | Operation ID | Test Scope | Primary TM IDs | TM ID(s) | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |",
+            "|----------|--------------|------------|----------------|----------|----------|------------------|--------------------------|----------------------------|",
+            "| IF-001 | demoOp | Integration | [TM-001] | [TM-001] | [TC-001] | happy path | retry path | pytest -k demo |",
             "",
             "### Cross-Interface Smoke Candidate",
             "",
@@ -225,9 +226,9 @@ def _write_feature_fixture(
                 "",
                 "## Binding Projection Index",
                 "",
-                "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | UIF Path Ref(s) | UDD Ref(s) | Test Scope |",
-                "|--------------|-------|--------|-------|------------------|-------|--------|--------------|-----------------|------------|------------|",
-                f"| BR-001 | UC-001 | UIF-001 | FR-001 | IF-001 | TM-001 | TC-001 | demoOp | {plan_uif_path_refs} | {plan_udd_refs} | {plan_test_scope} |",
+                "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | Trigger Ref(s) | Primary TM IDs | TC IDs | UIF Path Ref(s) | UDD Ref(s) | Test Scope |",
+                "|--------------|-------|--------|-------|------------------|----------------|----------------|--------|-----------------|------------|------------|",
+                f"| BR-001 | UC-001 | UIF-001 | FR-001 | IF-001 | [UIF-001.trigger] | [TM-001] | TC-001 | {plan_uif_path_refs} | {plan_udd_refs} | {plan_test_scope} |",
                 "",
                 "## Artifact Status",
                 "",
@@ -309,19 +310,19 @@ def test_anchor_status_allowed_values_accepts_protocol_values(tmp_path: Path):
     assert payload["findings_total"] == 0
 
 
-def test_anchor_status_allowed_values_accepts_contract_defined(tmp_path: Path):
+def test_anchor_status_allowed_values_accepts_new(tmp_path: Path):
     feature_dir = _write_feature_fixture(
         tmp_path,
-        test_matrix_status="contract-defined",
-        contract_anchor_status="`contract-defined`",
+        test_matrix_status="new",
+        contract_anchor_status="`new`",
         contract_boundary_anchor="DemoBoundary.start",
         contract_entry_anchor="DemoEntry.handle",
-        contract_entry_status="`contract-defined`",
+        contract_entry_status="`new`",
         test_matrix_boundary_anchor="DemoBoundary.start",
         packet_boundary_anchor="DemoBoundary.start",
-        packet_boundary_status="contract-defined",
+        packet_boundary_status="new",
         packet_entry_anchor="DemoEntry.handle",
-        packet_entry_status="contract-defined",
+        packet_entry_status="new",
     )
     payload = _run_planning_lint(feature_dir)
     assert payload["findings_total"] == 0
@@ -601,8 +602,8 @@ def test_binding_projection_index_rejects_contract_design_columns(tmp_path: Path
     plan = feature_dir / "plan.md"
     plan.write_text(
         plan.read_text(encoding="utf-8").replace(
-            "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | UIF Path Ref(s) | UDD Ref(s) | Test Scope |",
-            "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | UIF Path Ref(s) | UDD Ref(s) | Boundary Anchor | Test Scope |",
+            "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | Trigger Ref(s) | Primary TM IDs | TC IDs | UIF Path Ref(s) | UDD Ref(s) | Test Scope |",
+            "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | Trigger Ref(s) | Primary TM IDs | TC IDs | UIF Path Ref(s) | UDD Ref(s) | Boundary Anchor | Test Scope |",
         ),
         encoding="utf-8",
     )

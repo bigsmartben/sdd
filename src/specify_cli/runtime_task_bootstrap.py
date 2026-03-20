@@ -60,13 +60,21 @@ def is_active_status(status: str) -> bool:
     return clean_cell(status).lower() != "done"
 
 
+def extract_required_value(content: str, label: str) -> str:
+    pattern = rf"(?m)^\*\*{re.escape(label)}\*\*:\s*(.+?)\s*$"
+    match = re.search(pattern, content)
+    if not match:
+        return ""
+    return clean_cell(match.group(1))
+
+
 def load_binding_contract_packets(test_matrix_path: Path) -> dict[str, dict[str, Any]]:
     if not test_matrix_path.is_file():
         return {}
 
     document = test_matrix_path.read_text(encoding="utf-8")
     packet_rows = parse_markdown_table(
-        extract_section(document, "Binding Contract Packets"),
+        extract_section(document, "Binding Packets"),
         filter_placeholder_first_cell=True,
     )
     packets: dict[str, dict[str, Any]] = {}
@@ -76,11 +84,11 @@ def load_binding_contract_packets(test_matrix_path: Path) -> dict[str, dict[str,
             continue
         packets[binding_row_id] = {
             "binding_row_id": binding_row_id,
-            "operation_id": clean_cell(row.get("Operation ID", "")),
+            "trigger_refs": split_ref_cell(row.get("Trigger Ref(s)", "")),
             "if_scope": clean_cell(row.get("IF Scope", "")),
             "uif_path_refs": split_ref_cell(row.get("UIF Path Ref(s)", "")),
             "udd_refs": split_ref_cell(row.get("UDD Ref(s)", "")),
-            "tm_id": clean_cell(row.get("TM ID", "")),
+            "primary_tm_ids": split_ref_cell(row.get("Primary TM IDs", "")),
             "tc_ids": split_ref_cell(row.get("TC IDs", "")),
             "test_scope": clean_cell(row.get("Test Scope", "")),
             "spec_refs": split_ref_cell(row.get("Spec Ref(s)", "")),
@@ -104,6 +112,7 @@ def inspect_contract_artifact(contract_path_abs: str) -> dict[str, Any]:
         "has_unresolved_field_gaps": False,
         "placeholder_names_present": False,
         "placeholder_names": [],
+        "operation_id": "",
     }
     if not contract_path_abs or not Path(contract_path_abs).is_file():
         return inspection
@@ -125,6 +134,7 @@ def inspect_contract_artifact(contract_path_abs: str) -> dict[str, Any]:
         r"(?i)\|\s*gap\s*\|",
         content,
     ) is not None
+    inspection["operation_id"] = extract_required_value(content, "Operation ID (Required)")
     placeholder_names = sorted(set(UNRESOLVED_CONTRACT_NAME_RE.findall(content)))
     inspection["placeholder_names_present"] = bool(placeholder_names)
     inspection["placeholder_names"] = placeholder_names
@@ -159,9 +169,10 @@ def build_unit_inventory(
         uif_id = clean_cell(row.get("UIF ID", ""))
         fr_id = clean_cell(row.get("FR ID", ""))
         if_scope = clean_cell(row.get("IF ID / IF Scope", ""))
-        tm_id = clean_cell(row.get("TM ID", ""))
+        trigger_refs = split_ref_cell(row.get("Trigger Ref(s)", ""))
+        primary_tm_ids = split_ref_cell(row.get("Primary TM IDs", ""))
         tc_ids = split_ref_cell(row.get("TC IDs", ""))
-        operation_id = clean_cell(row.get("Operation ID", ""))
+        operation_id = contract_inspection["operation_id"]
         uif_path_refs = split_ref_cell(row.get("UIF Path Ref(s)", ""))
         udd_refs = split_ref_cell(row.get("UDD Ref(s)", ""))
         test_scope = clean_cell(row.get("Test Scope", ""))
@@ -174,9 +185,9 @@ def build_unit_inventory(
                 ("UIF ID", uif_id),
                 ("FR ID", fr_id),
                 ("IF ID / IF Scope", if_scope),
-                ("TM ID", tm_id),
+                ("Trigger Ref(s)", trigger_refs),
+                ("Primary TM IDs", primary_tm_ids),
                 ("TC IDs", tc_ids),
-                ("Operation ID", operation_id),
                 ("UIF Path Ref(s)", uif_path_refs),
                 ("UDD Ref(s)", udd_refs),
                 ("Test Scope", test_scope),
@@ -187,11 +198,11 @@ def build_unit_inventory(
         missing_binding_packet_fields = []
         if packet:
             for field_name, field_value in (
-                ("Operation ID", packet.get("operation_id", "")),
+                ("Trigger Ref(s)", packet.get("trigger_refs", [])),
                 ("IF Scope", packet.get("if_scope", "")),
                 ("UIF Path Ref(s)", packet.get("uif_path_refs", [])),
                 ("UDD Ref(s)", packet.get("udd_refs", [])),
-                ("TM ID", packet.get("tm_id", "")),
+                ("Primary TM IDs", packet.get("primary_tm_ids", [])),
                 ("TC IDs", packet.get("tc_ids", [])),
                 ("Test Scope", packet.get("test_scope", "")),
                 ("Spec Ref(s)", packet.get("spec_refs", [])),
@@ -204,9 +215,9 @@ def build_unit_inventory(
 
         has_projection_drift = bool(packet) and any(
             (
-                operation_id != packet.get("operation_id", ""),
+                trigger_refs != packet.get("trigger_refs", []),
                 if_scope != packet.get("if_scope", ""),
-                tm_id != packet.get("tm_id", ""),
+                primary_tm_ids != packet.get("primary_tm_ids", []),
                 tc_ids != packet.get("tc_ids", []),
                 uif_path_refs != packet.get("uif_path_refs", []),
                 udd_refs != packet.get("udd_refs", []),
@@ -221,7 +232,8 @@ def build_unit_inventory(
             "fr_id": fr_id,
             "if_scope": if_scope,
             "operation_id": operation_id,
-            "tm_id": tm_id,
+            "trigger_refs": trigger_refs,
+            "primary_tm_ids": primary_tm_ids,
             "tc_ids": tc_ids,
             "uif_path_refs": uif_path_refs,
             "udd_refs": udd_refs,
@@ -230,11 +242,11 @@ def build_unit_inventory(
             "missing_binding_packet_fields": missing_binding_packet_fields,
             "binding_packet": {
                 "present": bool(packet),
-                "operation_id": packet.get("operation_id", ""),
+                "trigger_refs": packet.get("trigger_refs", []),
                 "if_scope": packet.get("if_scope", ""),
                 "uif_path_refs": packet.get("uif_path_refs", []),
                 "udd_refs": packet.get("udd_refs", []),
-                "tm_id": packet.get("tm_id", ""),
+                "primary_tm_ids": packet.get("primary_tm_ids", []),
                 "tc_ids": packet.get("tc_ids", []),
                 "test_scope": packet.get("test_scope", ""),
                 "spec_refs": packet.get("spec_refs", []),
@@ -350,7 +362,7 @@ def build_task_execution_readiness(
         warnings.append(
             {
                 "code": "missing_binding_contract_packet",
-                "message": "Some binding rows have no matching Binding Contract Packet in test-matrix.md.",
+                "message": "Some binding rows have no matching Binding Packet in test-matrix.md.",
                 "details": {"binding_row_ids": missing_binding_packet_rows},
             }
         )
@@ -383,7 +395,7 @@ def build_task_execution_readiness(
         warnings.append(
             {
                 "code": "binding_projection_packet_drift",
-                "message": "Some binding rows drift from their authoritative Binding Contract Packets.",
+                "message": "Some binding rows drift from their authoritative Binding Packets.",
                 "details": {"binding_row_ids": binding_projection_packet_drift_rows},
             }
         )
@@ -678,9 +690,9 @@ def build_task_bootstrap_payload(
             "uif_id": clean_cell(row.get("UIF ID", "")),
             "fr_id": clean_cell(row.get("FR ID", "")),
             "if_scope": clean_cell(row.get("IF ID / IF Scope", "")),
-            "tm_id": clean_cell(row.get("TM ID", "")),
+            "trigger_refs": split_ref_cell(row.get("Trigger Ref(s)", "")),
+            "primary_tm_ids": split_ref_cell(row.get("Primary TM IDs", "")),
             "tc_ids": split_ref_cell(row.get("TC IDs", "")),
-            "operation_id": clean_cell(row.get("Operation ID", "")),
             "uif_path_refs": split_ref_cell(row.get("UIF Path Ref(s)", "")),
             "udd_refs": split_ref_cell(row.get("UDD Ref(s)", "")),
             "test_scope": clean_cell(row.get("Test Scope", "")),

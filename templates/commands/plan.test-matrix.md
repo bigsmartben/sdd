@@ -160,9 +160,9 @@ Keep them spec-led and verification-led:
 - keep `Observability / Signal` focused on pass/fail evidence
 - do not infer controllers, services, DTOs, collaborators, repository anchors, or shared-semantics ownership into the Mermaid or TM/TC outputs
 
-## Binding Contract Packet Requirements
+## Binding Packet Requirements
 
-For each stable binding in `test-matrix.md`, emit one authoritative minimal packet for that binding.
+For each stable binding in `test-matrix.md`, emit one authoritative complete scope-reference packet for that binding.
 This packet remains authoritative in `test-matrix.md`; do not mirror it in full into `PLAN_FILE`.
 It identifies what the binding is and which spec/test slices belong to it.
 

@@ -48,7 +48,7 @@ def test_plan_child_commands_are_contract_only():
 def test_plan_template_tracks_only_contract_artifacts():
     content = read("templates/plan-template.md")
     assert "`contract` is tracked as the single per-binding interface design artifact." in content
-    assert "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | TM ID | TC IDs | Operation ID | UIF Path Ref(s) | UDD Ref(s) | Test Scope |" in content
+    assert "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | Trigger Ref(s) | Primary TM IDs | TC IDs | UIF Path Ref(s) | UDD Ref(s) | Test Scope |" in content
     assert "minimal selection and scheduling fields" in content
     assert "regenerate the projection instead of letting downstream commands rewrite it" in content
     assert "<!-- Keep table body empty until /sdd.plan.test-matrix projects stable binding rows. -->" in content
@@ -67,18 +67,18 @@ def test_plan_and_test_matrix_templates_precompute_contract_bootstrap_inputs():
     assert "- `Test Scope`" in plan
     assert "Do not add `Boundary Anchor`" in plan
 
-    assert "## Binding Contract Packet Requirements" in test_matrix_command
+    assert "## Binding Packet Requirements" in test_matrix_command
     assert "Do not read `research.md` in this stage." not in test_matrix_command
     assert "Read only:" in test_matrix_command
     assert "- `UIF Path Ref(s)`" in test_matrix_command
     assert "- `UDD Ref(s)`" in test_matrix_command
-    assert "stable binding projection from `spec.md`" in test_matrix_command
+    assert "stable binding projection for those interface units" in test_matrix_command
 
-    assert "## Binding Contract Packets" in test_matrix_template
-    assert "Purpose: minimal binding locator packet for the selected interaction unit." in test_matrix_template
+    assert "## Binding Packets" in test_matrix_template
+    assert "Purpose: complete downstream scope-reference packet for the selected interaction unit." in test_matrix_template
     assert "**Inputs**: `spec.md`" in test_matrix_template
-    assert "Read only spec-grounded semantics here." in test_matrix_template
-    assert "| BindingRowID | Operation ID | IF Scope | UIF Path Ref(s) | UDD Ref(s) | TM ID | TC IDs | Test Scope | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) |" in test_matrix_template
+    assert "Packets should remove rebinding work without duplicating `spec.md` prose." in test_matrix_template
+    assert "| BindingRowID | IF Scope | User Intent | Trigger Ref(s) | Request Semantics | Visible Result | Side Effect | Boundary Notes | Repo Landing Hint | UIF Path Ref(s) | UDD Ref(s) | Primary TM IDs | TM IDs | TC IDs | Test Scope | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) |" in test_matrix_template
 
 
 def test_contract_command_uses_test_matrix_as_default_semantic_source():
@@ -86,7 +86,7 @@ def test_contract_command_uses_test_matrix_as_default_semantic_source():
 
     assert "Treat the matched `Binding Projection Index` row as a minimal locator ledger only" in content
     assert "Treat the selected packet as demand projection only through" in content
-    assert "Do not treat the selected packet as a predesigned contract seed." in content
+    assert "Treat the selected packet as a downstream scope-reference packet, not as a predesigned contract seed." in content
     assert "if absent, stop and route back to `/sdd.plan.test-matrix`" in content
     assert "Reconstruct request / response meaning from `UC`, `FR`, `UIF`, `UDD`, and scenario refs before reading repo evidence." in content
     assert "If repo-backed verification finds a binding-projection error or shared-semantic gap" in content
@@ -101,16 +101,16 @@ def test_contract_command_uses_test_matrix_as_default_semantic_source():
     assert "MAY refine operation-scoped VO/DTO/field mappings" in content
     assert "MUST NOT mint new shared-semantic classes, owners/sources, lifecycle vocabulary, or invariants." in content
     assert "Bounded repo closure MUST end with one explicit boundary/entry decision" in content
-    assert "`new(repo-backed)`, `contract-defined`, or `todo`" in content
-    assert "MUST evaluate one concrete `new(repo-backed)` anchor set and then one concrete `contract-defined` design-final anchor set before stopping." in content
+    assert "`existing`, `extended`, `new`, or `todo`" in content
+    assert "MUST evaluate one concrete `new` anchor set before stopping." in content
     assert "Do not mark the row `blocked` only because no existing repo entry anchor was found" in content
     assert "freeze that naming for this run and finish the contract instead of reopening anchor search loops." in content
     assert "After bounded reads, stop anchor hunting and transition to closure output for this run" in content
-    assert "concrete `contract-defined` design-final anchors" in content
+    assert "concrete `new` anchors" in content
     assert "Do not route upstream only because no existing repo entry was found" in content
-    assert "after evaluating `existing -> extended -> new(repo-backed) -> contract-defined(design-final)` with bounded evidence." in content
+    assert "after evaluating `existing -> extended -> new -> todo` with bounded evidence." in content
     assert "## Concrete Naming Closure (Mandatory)" in content
-    assert "Apply the anchor decision order `existing -> extended -> new(repo-backed) -> contract-defined(design-final)`." in content
+    assert "Apply the anchor decision order `existing -> extended -> new -> todo`." in content
     assert "Stop local refinement and route upstream when continuing would require a new upstream shared semantic" in content
     assert "new shared semantic owner/source, a new backbone semantic element, a new cross-operation stable owner field, new shared lifecycle/invariant vocabulary" in content
     assert "## Feature-Level Smoke Readiness (Queue-Complete Gate)" in content
@@ -152,12 +152,12 @@ def test_research_data_model_and_test_matrix_are_packet_first():
 
     assert "Stage Packet (Test-Matrix Unit)" in test_matrix
     assert "Use this packet as the default context for generation and binding projection." in test_matrix
-    assert "stable binding projection from `spec.md`" in test_matrix
+    assert "stable binding projection for those interface units" in test_matrix
     assert "`UIF Full Path Coverage Graph (Mermaid)`" in test_matrix
     assert "`UIF Path Coverage Ledger`" in test_matrix
     assert "prefer section-level rereads over whole-file replay for the selected unit" in test_matrix
     assert "Do not require `research` or `data-model` rows to be `done` before this stage" in test_matrix
-    assert "Do not consume `research.md`, `data-model.md`, repo anchors, or generated contract artifacts in this stage." in test_matrix
+    assert "Do not consume `data-model.md` or generated contract artifacts in this stage." in test_matrix
     assert "If the selected packet cannot be closed from `spec.md` and selected plan-row context" in test_matrix
     assert "`UDD Ref(s)`" in test_matrix
 
@@ -178,11 +178,11 @@ def test_contract_template_contains_unified_realization_requirements():
     assert "Angle-bracket labels in the examples below are template scaffolding only and MUST be replaced before the artifact can be `done`." in content
     assert "| Sequence closure | success/failure paths include mandatory second-party, third-party, and middleware calls | [ok / gap] |" in content
     assert "| UML closure | class diagram and two-party package relations both present and consistent with sequence | [ok / gap] |" in content
-    assert "`contract-defined` \\| `todo`" in content
+    assert "`new` \\| `todo`" in content
     assert "ConcreteBoundary.method" in content
     assert "ConcreteEntry.method" in content
-    assert "- Apply anchor decision order `existing -> extended -> new(repo-backed) -> contract-defined(design-final)`." in content
-    assert "- `contract-defined` is normative only when selected `spec.md` / `data-model.md` / `test-matrix.md` slices plus bounded repo reads fully close the binding design" in content
+    assert "- Apply anchor decision order `existing -> extended -> new -> todo`." in content
+    assert "- `new` is normative only when selected `spec.md` / `data-model.md` / `test-matrix.md` slices plus bounded repo reads fully close the binding design" in content
     assert "prefer repository-style names such as `*Controller.method`, `*Service.method`, or `*ServiceImpl.method`" in content
     assert "#### Sequence Variant A (Boundary != Entry)" in content
     assert "#### Sequence Variant B (Boundary == Entry)" in content
@@ -192,11 +192,11 @@ def test_contract_template_contains_unified_realization_requirements():
     assert "Sequence MUST NOT merge multiple mandatory collaborators/dependencies into one synthetic participant label" in content
     assert "render both layers explicitly instead of replacing the design anchor with the nearest existing class." in content
     assert "owner, creator, reader, and writer closure" in content
-    assert "the first hop MUST remain the contract-defined anchor and the reused repo-backed chain MUST appear as a subsequent explicit handoff." in content
-    assert "- If repo evidence is missing, this stage may design `new` repo-backed or `contract-defined` design-final operation-scoped boundary/entry/DTO/collaborator/middleware surfaces when they remain bounded to this binding." in content
-    assert "- `contract-defined` anchors are planning-final for this binding and MUST stay concrete, uniquely named, and consistent across Interface Definition, UML, Sequence, and Test Projection." in content
-    assert "- If `contract-defined` anchors reuse `existing` repo-backed implementation, keep the design anchor and reused realization chain distinct instead of collapsing both into one symbol." in content
-    assert "- Any `contract-defined` operation-scoped holder/state class must close owner, creator, reader, and writer responsibilities before the binding can be treated as design-final." in content
+    assert "the first hop MUST remain the new anchor and the reused repo-backed chain MUST appear as a subsequent explicit handoff." in content
+    assert "- If repo evidence is insufficient for `existing` or `extended`, this stage may design concrete `new` operation-scoped boundary/entry/DTO/collaborator/middleware surfaces when they remain bounded to this binding." in content
+    assert "- `new` anchors are planning-final for this binding and MUST stay concrete, uniquely named, and consistent across Interface Definition, UML, Sequence, and Test Projection." in content
+    assert "- If `new` anchors reuse `existing` repo-backed implementation, keep the design anchor and reused realization chain distinct instead of collapsing both into one symbol." in content
+    assert "- Any `new` operation-scoped holder/state class must close owner, creator, reader, and writer responsibilities before the binding can be treated as design-final." in content
     assert "- repo anchors: [boundary / entry / request-response model / collaborator / middleware / dependency symbols]" in content
     assert "- `contract` is responsible for first-time production of `Boundary Anchor`, `Implementation Entry Anchor`, request/response surface, UML closure, sequence closure, and test projection for this binding." in content
 
@@ -213,7 +213,7 @@ def test_data_model_template_requires_new_anchor_evidence_and_owner_closure():
     assert "| OSA ID | Semantic Ref | Owner Class / Semantic Owner | Source Type | Source Ref(s) | Consumed Field / Concept | Consumed By BindingRowID(s) | Notes |" in content
     assert "Every shared projection, derivation, counter, badge, role label, or lifecycle guard MUST identify the owner class/field/state that sustains it." in content
     assert "- Owner/source for confirmed shared semantics MUST be closed in this stage; use `gap` only when required input/evidence is genuinely missing." in content
-    assert "- `Anchor Status` MUST use the repo-anchor decision vocabulary `existing | extended | new | contract-defined | todo`; prefer `existing | extended | new` in this stage and use `todo` only for genuine evidence blockers." in content
+    assert "- `Anchor Status` MUST use the repo-anchor decision vocabulary `existing | extended | new | todo`; prefer `existing | extended | new` in this stage and use `todo` only for genuine evidence blockers." in content
     assert "- `Anchor Role` MUST align to the repo-anchor role taxonomy `owner | state-source | projection-source | carrier | partial-lineage`." in content
     assert "| SFV ID | Semantic Owner | Meaning | Primary UDD Ref(s) | Required Semantics | Null / Boundary Rule | Shared By BindingRowID(s) |" in content
     assert "If a confirmed shared semantic cannot land as `existing` or `extended`, introduce the required `new` class/owner/lifecycle here instead of deferring the decision." in content
