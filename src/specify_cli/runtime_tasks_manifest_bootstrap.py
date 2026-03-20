@@ -114,7 +114,7 @@ def build_tasks_manifest_validation(
             generated_plan_path = generated_from.get("plan_path", "")
             resolved_generated_plan = _resolve_path(str(generated_plan_path), feature_dir=feature_dir)
             if resolved_generated_plan is not None and resolved_generated_plan != plan_path.resolve():
-                warnings.append(
+                errors.append(
                     {
                         "code": "tasks_manifest_plan_path_mismatch",
                         "message": "tasks.manifest.json `generated_from.plan_path` does not match current plan.md path.",
@@ -160,7 +160,7 @@ def build_tasks_manifest_validation(
                     }
                 )
             if duplicate_ids:
-                warnings.append(
+                errors.append(
                     {
                         "code": "tasks_manifest_duplicate_task_ids",
                         "message": "tasks.manifest.json contains duplicated task_id values.",

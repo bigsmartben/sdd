@@ -28,11 +28,12 @@ Resolve `PLAN_FILE` from the current feature branch using `{SCRIPT}` defaults.
 Generate exactly one `data-model.md` artifact by consuming the first pending `data-model` row from `PLAN_FILE`.
 This command is single-unit only and MUST NOT perform any other planning stage work.
 This stage performs shared semantic alignment for the selected `BindingRowID` set, not interface predesign.
+For this command, `selected BindingRowID set` means all currently projected `BindingRowID` rows in `PLAN_FILE` `Binding Projection Index` for this run-local snapshot.
 Primary semantic inputs are `spec.md`, `test-matrix.md`, and bounded repo semantic landing evidence:
 
 - `Interface Partition Decisions` explain why bindings were split and which semantics stay interface-local
 - `Binding Packets` are the default downstream-demand projection input, including scope reference fields such as `User Intent`, `Request Semantics`, `Visible Result`, `Side Effect`, `Boundary Notes`, and `Repo Landing Hint`
-- `Scenario Matrix` / `Verification Case Anchors` are conditional inputs only when needed to confirm whether a semantic is shared or binding-local
+- `Scenario Matrix` / `Verification Case Anchors` are required verification inputs for confirming whether semantics are shared or binding-local
 - bounded repo semantic landing evidence is mandatory when this stage materializes a final semantic owner, lifecycle owner, or UML/class node
 
 `research.md` is optional clarification input only and MUST NOT be treated as the primary semantic source for this stage.
@@ -46,8 +47,8 @@ Use `.specify/templates/data-model-template.md` only. If the runtime template is
 1. Run `{SCRIPT}` once from repo root and parse `FEATURE_DIR`, `AVAILABLE_DOCS`, and `DATA_MODEL_BOOTSTRAP`
 2. Treat `DATA_MODEL_BOOTSTRAP.generation_readiness` as the primary queue/readiness gate for resolved paths, selected row, and output-path consistency
 3. If `DATA_MODEL_BOOTSTRAP.generation_readiness.ready_for_generation = true`, reuse the selected stage row, resolved `plan.md` / `spec.md` / `test-matrix.md` / `data-model.md` paths, `FEATURE_DIR`, and `state_machine_policy` from `DATA_MODEL_BOOTSTRAP`; do not rescan for alternate pending rows
-4. If `DATA_MODEL_BOOTSTRAP` is missing, malformed, or contradictory, perform one bounded fallback validation from `plan.md` control-plane fields plus current `spec.md` / `test-matrix.md` availability
-5. In fallback mode only, resolve `PLAN_FILE` as `<FEATURE_DIR>/plan.md`, find the first `Stage Queue` row where `Stage ID = data-model` and `Status = pending`, require the `test-matrix` row to be `done`, and stop on any blocker
+4. If `DATA_MODEL_BOOTSTRAP` is missing, malformed, contradictory, or unavailable, stop immediately and report the runtime bootstrap blocker
+5. When `ready_for_generation = false`, report blocking `generation_readiness.errors[].code/message/details` directly in runtime output; do not replace them with generic failure text
 
 ## Stage Packet (Data-Model Unit)
 
@@ -57,8 +58,14 @@ Build one bounded run-local packet for the selected `data-model` row from:
 - `Shared Context Snapshot` in resolved `PLAN_FILE`
 - `Repository-First Consumption Slice` in resolved `PLAN_FILE`
 - resolved `FEATURE_SPEC` path
-- resolved `test-matrix.md` path, with `Interface Partition Decisions` and `Binding Packets` as mandatory inputs
-- `Scenario Matrix` / `Verification Case Anchors` only when required to confirm whether a semantic is shared across bindings or remains binding-local
+- resolved `test-matrix.md` path, with these mandatory sections:
+  - `Interface Partition Decisions`
+  - `UIF Full Path Coverage Graph (Mermaid)`
+  - `UIF Path Coverage Ledger`
+  - `Scenario Matrix`
+  - `Verification Case Anchors`
+  - `Binding Packets`
+- `Scenario Matrix` / `Verification Case Anchors` as required verification anchors for confirming whether a semantic is shared across bindings or remains binding-local
 - bounded repo semantic landing evidence referenced by the selected feature slice
 - optional `research.md` path only when `spec.md` + `test-matrix.md` wording leaves the shared-semantic boundary ambiguous
 - selected row source/output fingerprint fields
@@ -79,9 +86,10 @@ Apply the constitution-derived lifecycle applicability policy from `DATA_MODEL_B
 Stop immediately when any condition holds:
 
 1. Resolved branch-derived `PLAN_FILE` is missing or invalid
-2. `DATA_MODEL_BOOTSTRAP.generation_readiness.ready_for_generation = false` and fallback validation cannot reconstruct a consumable stage packet
-3. Required `test-matrix.md` sections or selected binding packets are missing or non-consumable
-4. Shared-semantic boundary or lifecycle evidence required by the selected unit cannot be resolved from the allowed inputs
+2. `DATA_MODEL_BOOTSTRAP.generation_readiness.ready_for_generation = false`
+3. `DATA_MODEL_BOOTSTRAP` is missing, malformed, contradictory, or unavailable
+4. Any required `test-matrix.md` section is missing, or any projected `BindingRowID` packet is missing/non-consumable/incomplete
+5. Shared-semantic boundary or lifecycle evidence required by the selected unit cannot be resolved from the allowed inputs
 
 ## Plan Control-Plane Input Path (Mandatory)
 
@@ -94,7 +102,8 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 
 - Stay inside the resolved `FEATURE_DIR` plus the explicit files listed in `Allowed Inputs`
 - Derive shared semantic elements from `FEATURE_SPEC` and `test-matrix.md` first
-- Use `Interface Partition Decisions` plus `Binding Packets` as the default downstream-demand projection input; use packet scope reference fields primarily to exclude interface-local detail from the shared model, and use `Scenario Matrix` / `Verification Case Anchors` only to confirm whether a semantic is shared or binding-local
+- Use `Interface Partition Decisions` plus `Binding Packets` as the default downstream-demand projection input; use packet scope reference fields primarily to exclude interface-local detail from the shared model, and use `Scenario Matrix` / `Verification Case Anchors` as required verification anchors for shared-vs-local checks
+- Apply shared-semantic alignment across the full projected `BindingRowID` set for this run-local snapshot; do not narrow to ad hoc subsets unless a runtime blocker explicitly requires upstream repair first
 - Treat `research.md` as optional clarification only; do not let it override `spec.md` or `test-matrix.md`
 - Apply repo-first only as the landing strategy for final semantic owners, lifecycle owners, and UML/class nodes; it is not the primary semantic input source for this stage, but bounded repo landing evidence is still required when such nodes are materialized
 - Finish row selection and prerequisite checks before any broader reads; do not scan the repository for additional context, alternate `plan.md` paths, or other feature folders
@@ -139,7 +148,7 @@ Read only:
 - `Shared Context Snapshot` from the resolved `PLAN_FILE` only
 - `Repository-First Consumption Slice` from the resolved `PLAN_FILE` only
 - resolved `FEATURE_SPEC`
-- resolved `test-matrix.md` (`Interface Partition Decisions` and `Binding Packets` required; `Scenario Matrix` / `Verification Case Anchors` conditional)
+- resolved `test-matrix.md` (`Interface Partition Decisions`, `UIF Full Path Coverage Graph (Mermaid)`, `UIF Path Coverage Ledger`, `Scenario Matrix`, `Verification Case Anchors`, and `Binding Packets` required)
 - bounded repo semantic landing evidence referenced by the selected feature slice
 - optional `research.md`
 

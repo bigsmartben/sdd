@@ -21,15 +21,26 @@ from specify_cli.runtime_gate_protocol import build_repository_first_gate_protoc
 
 TASK_BOOTSTRAP_SCHEMA_VERSION = "1.4"
 TASK_SECTION_HEADINGS = (
+    "Summary",
     "Shared Context Snapshot",
     "Stage Queue",
     "Binding Projection Index",
     "Artifact Status",
+    "Handoff Protocol",
 )
 UNRESOLVED_CONTRACT_NAME_RE = re.compile(r"<([A-Z][A-Za-z0-9]+)>")
 TASK_REQUIRED_STAGE_IDS = {"research", "test-matrix", "data-model"}
+TASK_REQUIRED_TEST_MATRIX_SECTIONS = (
+    "Interface Partition Decisions",
+    "Scenario Matrix",
+    "Verification Case Anchors",
+    "Binding Packets",
+)
+TASK_ALLOWED_SMOKE_CANDIDATE_ROLES = {"entry", "middle", "exit", "none"}
+TASK_ALLOWED_ANCHOR_STATUSES = {"existing", "extended", "new", "todo"}
 TASK_BASELINE_CODE_TO_CATEGORY = {
     "missing_required_sections": "missing",
+    "required_stage_rows_missing": "missing",
     "empty_binding_projection_index": "missing",
     "missing_binding_contract_packet": "missing",
     "binding_contract_packet_missing_required_fields": "missing",
@@ -41,7 +52,23 @@ TASK_BASELINE_CODE_TO_CATEGORY = {
     "contract_rows_not_done": "stale",
     "binding_projection_packet_drift": "stale",
     "binding_projection_missing_required_fields": "non_traceable",
+    "test_matrix_required_sections_missing": "missing",
     "contract_placeholder_names_present": "non_traceable",
+    "contract_duplicate_required_sections": "non_traceable",
+    "contract_binding_context_coverage_drift": "non_traceable",
+    "contract_anchor_inventory_mismatch": "non_traceable",
+    "contract_anchor_status_invalid": "non_traceable",
+    "new_anchor_strategy_evidence_missing": "non_traceable",
+    "operation_id_missing": "non_traceable",
+    "binding_context_section_missing": "missing",
+    "interface_definition_section_missing": "missing",
+    "resolved_type_inventory_missing": "missing",
+    "upstream_references_section_missing": "missing",
+    "boundary_notes_section_missing": "missing",
+    "cross_interface_smoke_candidate_missing": "missing",
+    "cross_interface_smoke_candidate_invalid": "non_traceable",
+    "cross_interface_smoke_candidate_all_none": "non_traceable",
+    "contract_units_not_execution_ready": "non_traceable",
     "full_field_dictionary_missing": "non_traceable",
     "field_dictionary_tier_missing": "non_traceable",
     "test_projection_section_missing": "non_traceable",
@@ -60,12 +87,65 @@ def is_active_status(status: str) -> bool:
     return clean_cell(status).lower() != "done"
 
 
-def extract_required_value(content: str, label: str) -> str:
+def count_heading_occurrences(document: str, heading: str, level: int = 2) -> int:
+    marker = "#" * level
+    pattern = rf"(?m)^{re.escape(marker)}\s+{re.escape(heading)}\s*$"
+    return len(re.findall(pattern, document))
+
+
+def extract_subsection(document: str, heading: str, level: int = 3) -> str | None:
+    marker = "#" * level
+    same_level_marker = "#" * level
+    parent_level_marker = "#" * (level - 1) if level > 1 else "#"
+    pattern = (
+        rf"^{re.escape(marker)}\s+{re.escape(heading)}\n"
+        rf"(.*?)(?=^{re.escape(same_level_marker)}\s+|^{re.escape(parent_level_marker)}\s+|\Z)"
+    )
+    match = re.search(pattern, document, flags=re.MULTILINE | re.DOTALL)
+    if not match:
+        return None
+    return match.group(1).strip()
+
+
+def parse_binding_context(section: str | None) -> dict[str, str]:
+    rows = parse_markdown_table(section)
+    context: dict[str, str] = {}
+    for row in rows:
+        field = clean_cell(row.get("Field", ""))
+        value = clean_cell(row.get("Value", ""))
+        if field:
+            context[field] = value
+    return context
+
+
+def normalize_symbol(value: str) -> str:
+    return clean_cell(value).strip("`").strip()
+
+
+def extract_required_anchor(content: str, label: str) -> str:
     pattern = rf"(?m)^\*\*{re.escape(label)}\*\*:\s*(.+?)\s*$"
     match = re.search(pattern, content)
     if not match:
         return ""
-    return clean_cell(match.group(1))
+    return normalize_symbol(match.group(1))
+
+
+def has_existing_extended_rejection_evidence(value: str) -> bool:
+    normalized = clean_cell(value).lower()
+    if not normalized or normalized in {"n/a", "na", "none"}:
+        return False
+    return "existing" in normalized and "extended" in normalized and "reject" in normalized
+
+
+def boundary_anchor_requires_inventory_match(anchor: str) -> bool:
+    normalized = normalize_symbol(anchor)
+    if not normalized:
+        return False
+    if normalized.upper().startswith("HTTP "):
+        return False
+    if normalized == "TODO(REPO_ANCHOR)":
+        return False
+    return "::" in normalized or re.match(r"^[A-Z][A-Za-z0-9_.$-]*\.[A-Za-z_$][A-Za-z0-9_$.-]*$", normalized) is not None
 
 
 def load_binding_contract_packets(test_matrix_path: Path) -> dict[str, dict[str, Any]]:
@@ -101,9 +181,19 @@ def load_binding_contract_packets(test_matrix_path: Path) -> dict[str, dict[str,
 
 def inspect_contract_artifact(contract_path_abs: str) -> dict[str, Any]:
     inspection = {
+        "binding_context_section_present": False,
+        "interface_definition_section_present": False,
         "full_field_dictionary_present": False,
         "field_dictionary_tier_present": False,
+        "resolved_type_inventory_present": False,
         "test_projection_section_present": False,
+        "upstream_references_section_present": False,
+        "boundary_notes_section_present": False,
+        "cross_interface_smoke_candidate_present": False,
+        "cross_interface_smoke_candidate_row_count": 0,
+        "cross_interface_smoke_candidate_non_none_role_count": 0,
+        "cross_interface_smoke_candidate_invalid_roles": [],
+        "cross_interface_smoke_candidate_missing_signals": [],
         "closure_check_section_present": False,
         "interface_definition_closure_check_present": False,
         "uml_closure_check_present": False,
@@ -112,19 +202,44 @@ def inspect_contract_artifact(contract_path_abs: str) -> dict[str, Any]:
         "has_unresolved_field_gaps": False,
         "placeholder_names_present": False,
         "placeholder_names": [],
+        "duplicate_required_sections_present": False,
+        "duplicate_required_sections": [],
+        "binding_context_coverage_drift": False,
+        "missing_uif_path_refs_in_behavior_or_test_projection": [],
+        "missing_tm_ids_in_behavior_or_test_projection": [],
+        "missing_tc_ids_in_behavior_or_test_projection": [],
+        "anchor_inventory_mismatch": False,
+        "anchor_inventory_mismatch_details": [],
+        "boundary_anchor_status": "",
+        "implementation_entry_anchor_status": "",
+        "boundary_anchor_strategy_evidence": "",
+        "implementation_entry_anchor_strategy_evidence": "",
+        "invalid_anchor_status_fields": [],
+        "missing_new_anchor_strategy_evidence_fields": [],
         "operation_id": "",
     }
     if not contract_path_abs or not Path(contract_path_abs).is_file():
         return inspection
 
     content = Path(contract_path_abs).read_text(encoding="utf-8")
-    inspection["full_field_dictionary_present"] = "## Full Field Dictionary (Operation-scoped)" in content
+    inspection["binding_context_section_present"] = "## Binding Context" in content
+    inspection["interface_definition_section_present"] = "## Interface Definition" in content
+    inspection["full_field_dictionary_present"] = re.search(
+        r"(?m)^#{2,3}\s+Full Field Dictionary \(Operation-scoped\)\s*$",
+        content,
+    ) is not None
     inspection["field_dictionary_tier_present"] = re.search(
         r"(?i)^\|\s*Field\s*\|\s*Owner\s+Class\s*\|\s*Dictionary\s+Tier\s*\|",
         content,
         flags=re.MULTILINE,
     ) is not None
+    inspection["resolved_type_inventory_present"] = "### Resolved Type Inventory" in content
     inspection["test_projection_section_present"] = "## Test Projection" in content
+    inspection["upstream_references_section_present"] = "## Upstream References" in content
+    inspection["boundary_notes_section_present"] = "## Boundary Notes" in content
+    inspection["cross_interface_smoke_candidate_present"] = (
+        "### Cross-Interface Smoke Candidate (Required)" in content
+    )
     inspection["closure_check_section_present"] = "## Closure Check" in content
     inspection["interface_definition_closure_check_present"] = "| Interface-definition closure |" in content
     inspection["uml_closure_check_present"] = "| UML closure |" in content
@@ -134,10 +249,137 @@ def inspect_contract_artifact(contract_path_abs: str) -> dict[str, Any]:
         r"(?i)\|\s*gap\s*\|",
         content,
     ) is not None
-    inspection["operation_id"] = extract_required_value(content, "Operation ID (Required)")
     placeholder_names = sorted(set(UNRESOLVED_CONTRACT_NAME_RE.findall(content)))
     inspection["placeholder_names_present"] = bool(placeholder_names)
     inspection["placeholder_names"] = placeholder_names
+
+    required_sections = [
+        "Interface Definition",
+        "UML Class Design",
+        "Sequence Design",
+        "Test Projection",
+        "Closure Check",
+        "Upstream References",
+        "Boundary Notes",
+    ]
+    duplicate_sections = sorted(
+        [heading for heading in required_sections if count_heading_occurrences(content, heading, level=2) > 1]
+    )
+    inspection["duplicate_required_sections_present"] = bool(duplicate_sections)
+    inspection["duplicate_required_sections"] = duplicate_sections
+
+    binding_context = parse_binding_context(extract_section(content, "Binding Context"))
+    operation_id = extract_required_anchor(content, "Operation ID (Required)") or clean_cell(
+        binding_context.get("Operation ID", "")
+    )
+    if clean_cell(operation_id).lower() in {"", "n/a", "na", "none", "todo", "tbd"}:
+        operation_id = ""
+    inspection["operation_id"] = operation_id
+    top_boundary_anchor_status = normalize_symbol(extract_required_anchor(content, "Anchor Status (Required)")).lower()
+    top_implementation_entry_anchor_status = normalize_symbol(
+        extract_required_anchor(content, "Implementation Entry Anchor Status (Required)")
+    ).lower()
+    boundary_anchor_strategy_evidence = normalize_symbol(
+        extract_required_anchor(content, "Boundary Anchor Strategy Evidence (Required)")
+    )
+    implementation_entry_anchor_strategy_evidence = normalize_symbol(
+        extract_required_anchor(content, "Implementation Entry Anchor Strategy Evidence (Required)")
+    )
+    inspection["boundary_anchor_status"] = top_boundary_anchor_status
+    inspection["implementation_entry_anchor_status"] = top_implementation_entry_anchor_status
+    inspection["boundary_anchor_strategy_evidence"] = boundary_anchor_strategy_evidence
+    inspection["implementation_entry_anchor_strategy_evidence"] = implementation_entry_anchor_strategy_evidence
+    if top_boundary_anchor_status not in TASK_ALLOWED_ANCHOR_STATUSES:
+        inspection["invalid_anchor_status_fields"].append("Anchor Status (Required)")
+    if top_implementation_entry_anchor_status not in TASK_ALLOWED_ANCHOR_STATUSES:
+        inspection["invalid_anchor_status_fields"].append("Implementation Entry Anchor Status (Required)")
+    if top_boundary_anchor_status == "new" and not has_existing_extended_rejection_evidence(
+        boundary_anchor_strategy_evidence
+    ):
+        inspection["missing_new_anchor_strategy_evidence_fields"].append("Boundary Anchor Strategy Evidence (Required)")
+    if top_implementation_entry_anchor_status == "new" and not has_existing_extended_rejection_evidence(
+        implementation_entry_anchor_strategy_evidence
+    ):
+        inspection["missing_new_anchor_strategy_evidence_fields"].append(
+            "Implementation Entry Anchor Strategy Evidence (Required)"
+        )
+    declared_uif_refs = split_ref_cell(binding_context.get("UIF Path Ref(s)", ""))
+    declared_tm_ids = split_ref_cell(binding_context.get("TM IDs", ""))
+    declared_tc_ids = split_ref_cell(binding_context.get("TC IDs", ""))
+
+    behavior_paths = extract_subsection(content, "Behavior Paths", level=3) or ""
+    test_projection_slice = extract_subsection(content, "Test Projection Slice", level=3) or ""
+    behavior_and_test_projection = f"{behavior_paths}\n{test_projection_slice}"
+    smoke_candidate_rows = parse_markdown_table(
+        extract_subsection(content, "Cross-Interface Smoke Candidate (Required)", level=3)
+    )
+    inspection["cross_interface_smoke_candidate_row_count"] = len(smoke_candidate_rows)
+    for row in smoke_candidate_rows:
+        candidate_role = normalize_symbol(row.get("Candidate Role", "")).lower()
+        if candidate_role not in TASK_ALLOWED_SMOKE_CANDIDATE_ROLES:
+            inspection["cross_interface_smoke_candidate_invalid_roles"].append(candidate_role or "<missing>")
+            continue
+        if candidate_role != "none":
+            inspection["cross_interface_smoke_candidate_non_none_role_count"] += 1
+        if candidate_role != "none":
+            missing_signal_fields = [
+                field_name
+                for field_name in ("Main Pass Anchor", "Command / Assertion Signal")
+                if not clean_cell(row.get(field_name, ""))
+                or clean_cell(row.get(field_name, "")).lower() == "n/a"
+            ]
+            if missing_signal_fields:
+                inspection["cross_interface_smoke_candidate_missing_signals"].append(
+                    {
+                        "candidate_role": candidate_role,
+                        "fields": missing_signal_fields,
+                    }
+                )
+
+    if declared_uif_refs and behavior_and_test_projection.strip():
+        inspection["missing_uif_path_refs_in_behavior_or_test_projection"] = [
+            ref for ref in declared_uif_refs if ref not in behavior_and_test_projection
+        ]
+    if declared_tm_ids and behavior_and_test_projection.strip():
+        inspection["missing_tm_ids_in_behavior_or_test_projection"] = [
+            ref for ref in declared_tm_ids if ref not in behavior_and_test_projection
+        ]
+    if declared_tc_ids and behavior_and_test_projection.strip():
+        inspection["missing_tc_ids_in_behavior_or_test_projection"] = [
+            ref for ref in declared_tc_ids if ref not in behavior_and_test_projection
+        ]
+
+    inspection["binding_context_coverage_drift"] = bool(
+        inspection["missing_uif_path_refs_in_behavior_or_test_projection"]
+        or inspection["missing_tm_ids_in_behavior_or_test_projection"]
+        or inspection["missing_tc_ids_in_behavior_or_test_projection"]
+    )
+
+    top_boundary_anchor = extract_required_anchor(content, "Boundary Anchor (Required)")
+    top_entry_anchor = extract_required_anchor(content, "Implementation Entry Anchor (Required)")
+    resolved_type_inventory = parse_markdown_table(extract_subsection(content, "Resolved Type Inventory", level=3))
+    boundary_inventory_anchor = ""
+    entry_inventory_anchor = ""
+    for row in resolved_type_inventory:
+        role = normalize_symbol(row.get("Role", "")).lower()
+        concrete_name = normalize_symbol(row.get("Concrete Name", ""))
+        if role == "boundary-entry":
+            boundary_inventory_anchor = concrete_name
+        if role == "implementation-entry":
+            entry_inventory_anchor = concrete_name
+
+    anchor_mismatch_details: list[str] = []
+    if (
+        top_boundary_anchor
+        and boundary_inventory_anchor
+        and boundary_anchor_requires_inventory_match(top_boundary_anchor)
+        and top_boundary_anchor != boundary_inventory_anchor
+    ):
+        anchor_mismatch_details.append("Boundary Anchor != Resolved Type Inventory boundary-entry")
+    if top_entry_anchor and entry_inventory_anchor and top_entry_anchor != entry_inventory_anchor:
+        anchor_mismatch_details.append("Implementation Entry Anchor != Resolved Type Inventory implementation-entry")
+    inspection["anchor_inventory_mismatch"] = bool(anchor_mismatch_details)
+    inspection["anchor_inventory_mismatch_details"] = anchor_mismatch_details
     return inspection
 
 
@@ -260,9 +502,37 @@ def build_unit_inventory(
                 "target_path": clean_cell(contract_row.get("Target Path", "")),
                 "target_path_abs": contract_target_path_abs,
                 "exists": contract_exists,
+                "binding_context_section_present": contract_inspection["binding_context_section_present"],
+                "interface_definition_section_present": contract_inspection["interface_definition_section_present"],
                 "full_field_dictionary_present": contract_inspection["full_field_dictionary_present"],
                 "field_dictionary_tier_present": contract_inspection["field_dictionary_tier_present"],
+                "resolved_type_inventory_present": contract_inspection["resolved_type_inventory_present"],
                 "test_projection_section_present": contract_inspection["test_projection_section_present"],
+                "upstream_references_section_present": contract_inspection["upstream_references_section_present"],
+                "boundary_notes_section_present": contract_inspection["boundary_notes_section_present"],
+                "cross_interface_smoke_candidate_present": contract_inspection["cross_interface_smoke_candidate_present"],
+                "cross_interface_smoke_candidate_row_count": contract_inspection[
+                    "cross_interface_smoke_candidate_row_count"
+                ],
+                "cross_interface_smoke_candidate_non_none_role_count": contract_inspection[
+                    "cross_interface_smoke_candidate_non_none_role_count"
+                ],
+                "cross_interface_smoke_candidate_invalid_roles": contract_inspection[
+                    "cross_interface_smoke_candidate_invalid_roles"
+                ],
+                "cross_interface_smoke_candidate_missing_signals": contract_inspection[
+                    "cross_interface_smoke_candidate_missing_signals"
+                ],
+                "boundary_anchor_status": contract_inspection["boundary_anchor_status"],
+                "implementation_entry_anchor_status": contract_inspection["implementation_entry_anchor_status"],
+                "boundary_anchor_strategy_evidence": contract_inspection["boundary_anchor_strategy_evidence"],
+                "implementation_entry_anchor_strategy_evidence": contract_inspection[
+                    "implementation_entry_anchor_strategy_evidence"
+                ],
+                "invalid_anchor_status_fields": contract_inspection["invalid_anchor_status_fields"],
+                "missing_new_anchor_strategy_evidence_fields": contract_inspection[
+                    "missing_new_anchor_strategy_evidence_fields"
+                ],
                 "closure_check_section_present": contract_inspection["closure_check_section_present"],
                 "interface_definition_closure_check_present": contract_inspection[
                     "interface_definition_closure_check_present"
@@ -273,6 +543,20 @@ def build_unit_inventory(
                 "has_unresolved_field_gaps": contract_inspection["has_unresolved_field_gaps"],
                 "placeholder_names_present": contract_inspection["placeholder_names_present"],
                 "placeholder_names": contract_inspection["placeholder_names"],
+                "duplicate_required_sections_present": contract_inspection["duplicate_required_sections_present"],
+                "duplicate_required_sections": contract_inspection["duplicate_required_sections"],
+                "binding_context_coverage_drift": contract_inspection["binding_context_coverage_drift"],
+                "missing_uif_path_refs_in_behavior_or_test_projection": contract_inspection[
+                    "missing_uif_path_refs_in_behavior_or_test_projection"
+                ],
+                "missing_tm_ids_in_behavior_or_test_projection": contract_inspection[
+                    "missing_tm_ids_in_behavior_or_test_projection"
+                ],
+                "missing_tc_ids_in_behavior_or_test_projection": contract_inspection[
+                    "missing_tc_ids_in_behavior_or_test_projection"
+                ],
+                "anchor_inventory_mismatch": contract_inspection["anchor_inventory_mismatch"],
+                "anchor_inventory_mismatch_details": contract_inspection["anchor_inventory_mismatch_details"],
             },
         }
         unit_inventory.append(unit)
@@ -284,9 +568,21 @@ def build_unit_inventory(
             and not has_projection_drift
             and unit["contract"]["status"] == "done"
             and contract_exists
+            and operation_id
+            and unit["contract"]["binding_context_section_present"]
+            and unit["contract"]["interface_definition_section_present"]
             and unit["contract"]["full_field_dictionary_present"]
             and unit["contract"]["field_dictionary_tier_present"]
+            and unit["contract"]["resolved_type_inventory_present"]
             and unit["contract"]["test_projection_section_present"]
+            and unit["contract"]["upstream_references_section_present"]
+            and unit["contract"]["boundary_notes_section_present"]
+            and unit["contract"]["cross_interface_smoke_candidate_present"]
+            and unit["contract"]["cross_interface_smoke_candidate_row_count"] == 1
+            and not unit["contract"]["cross_interface_smoke_candidate_invalid_roles"]
+            and not unit["contract"]["cross_interface_smoke_candidate_missing_signals"]
+            and not unit["contract"]["invalid_anchor_status_fields"]
+            and not unit["contract"]["missing_new_anchor_strategy_evidence_fields"]
             and unit["contract"]["closure_check_section_present"]
             and unit["contract"]["interface_definition_closure_check_present"]
             and unit["contract"]["uml_closure_check_present"]
@@ -294,6 +590,9 @@ def build_unit_inventory(
             and unit["contract"]["test_closure_check_present"]
             and not unit["contract"]["has_unresolved_field_gaps"]
             and not unit["contract"]["placeholder_names_present"]
+            and not unit["contract"]["duplicate_required_sections_present"]
+            and not unit["contract"]["binding_context_coverage_drift"]
+            and not unit["contract"]["anchor_inventory_mismatch"]
         ):
             ready_unit_inventory.append(unit)
 
@@ -303,10 +602,13 @@ def build_unit_inventory(
 def build_task_execution_readiness(
     *,
     missing_sections: list[str],
+    missing_required_stage_ids: list[str],
+    missing_test_matrix_sections: list[str],
     incomplete_stage_ids: list[str],
     binding_projection_index: list[dict[str, Any]],
     artifact_status: list[dict[str, Any]],
     unit_inventory: list[dict[str, Any]],
+    ready_unit_inventory: list[dict[str, Any]],
 ) -> dict[str, Any]:
     errors: list[dict[str, Any]] = []
     warnings: list[dict[str, Any]] = []
@@ -317,6 +619,15 @@ def build_task_execution_readiness(
                 "code": "missing_required_sections",
                 "message": "plan.md is missing required control-plane sections.",
                 "details": {"sections": missing_sections},
+            }
+        )
+
+    if missing_required_stage_ids:
+        errors.append(
+            {
+                "code": "required_stage_rows_missing",
+                "message": "Stage Queue is missing one or more required stage rows before /sdd.tasks.",
+                "details": {"stage_ids": missing_required_stage_ids},
             }
         )
 
@@ -335,6 +646,15 @@ def build_task_execution_readiness(
                 "code": "empty_binding_projection_index",
                 "message": "Binding Projection Index has no consumable rows.",
                 "details": {},
+            }
+        )
+
+    if missing_test_matrix_sections:
+        errors.append(
+            {
+                "code": "test_matrix_required_sections_missing",
+                "message": "test-matrix.md is missing required sections for downstream task generation.",
+                "details": {"sections": missing_test_matrix_sections},
             }
         )
 
@@ -392,7 +712,7 @@ def build_task_execution_readiness(
         ]
     )
     if binding_projection_packet_drift_rows:
-        warnings.append(
+        errors.append(
             {
                 "code": "binding_projection_packet_drift",
                 "message": "Some binding rows drift from their authoritative Binding Packets.",
@@ -493,6 +813,295 @@ def build_task_execution_readiness(
             }
         )
 
+    duplicate_required_sections_rows = sorted(
+        [
+            {
+                "binding_row_id": unit["binding_row_id"],
+                "sections": unit["contract"]["duplicate_required_sections"],
+            }
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and unit["contract"]["duplicate_required_sections_present"]
+        ],
+        key=lambda item: item["binding_row_id"],
+    )
+    if duplicate_required_sections_rows:
+        errors.append(
+            {
+                "code": "contract_duplicate_required_sections",
+                "message": "Some done contract rows contain duplicated required sections.",
+                "details": {"rows": duplicate_required_sections_rows},
+            }
+        )
+
+    binding_context_coverage_drift_rows = sorted(
+        [
+            {
+                "binding_row_id": unit["binding_row_id"],
+                "missing_uif_path_refs": unit["contract"]["missing_uif_path_refs_in_behavior_or_test_projection"],
+                "missing_tm_ids": unit["contract"]["missing_tm_ids_in_behavior_or_test_projection"],
+                "missing_tc_ids": unit["contract"]["missing_tc_ids_in_behavior_or_test_projection"],
+            }
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and unit["contract"]["binding_context_coverage_drift"]
+        ],
+        key=lambda item: item["binding_row_id"],
+    )
+    if binding_context_coverage_drift_rows:
+        errors.append(
+            {
+                "code": "contract_binding_context_coverage_drift",
+                "message": "Some done contract rows do not fully close Binding Context UIF/TM/TC refs in behavior paths or test projection.",
+                "details": {"rows": binding_context_coverage_drift_rows},
+            }
+        )
+
+    anchor_inventory_mismatch_rows = sorted(
+        [
+            {
+                "binding_row_id": unit["binding_row_id"],
+                "details": unit["contract"]["anchor_inventory_mismatch_details"],
+            }
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and unit["contract"]["anchor_inventory_mismatch"]
+        ],
+        key=lambda item: item["binding_row_id"],
+    )
+    if anchor_inventory_mismatch_rows:
+        errors.append(
+            {
+                "code": "contract_anchor_inventory_mismatch",
+                "message": "Some done contract rows mismatch top-level anchors vs Resolved Type Inventory anchors.",
+                "details": {"rows": anchor_inventory_mismatch_rows},
+            }
+        )
+
+    invalid_anchor_status_rows = sorted(
+        [
+            {
+                "binding_row_id": unit["binding_row_id"],
+                "fields": unit["contract"]["invalid_anchor_status_fields"],
+                "anchor_status": unit["contract"]["boundary_anchor_status"],
+                "implementation_entry_anchor_status": unit["contract"]["implementation_entry_anchor_status"],
+            }
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and unit["contract"]["invalid_anchor_status_fields"]
+        ],
+        key=lambda item: item["binding_row_id"],
+    )
+    if invalid_anchor_status_rows:
+        errors.append(
+            {
+                "code": "contract_anchor_status_invalid",
+                "message": "Some done contract rows have invalid or missing anchor status values.",
+                "details": {"rows": invalid_anchor_status_rows},
+            }
+        )
+
+    missing_new_anchor_strategy_rows = sorted(
+        [
+            {
+                "binding_row_id": unit["binding_row_id"],
+                "fields": unit["contract"]["missing_new_anchor_strategy_evidence_fields"],
+                "anchor_status": unit["contract"]["boundary_anchor_status"],
+                "implementation_entry_anchor_status": unit["contract"]["implementation_entry_anchor_status"],
+            }
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and unit["contract"]["missing_new_anchor_strategy_evidence_fields"]
+        ],
+        key=lambda item: item["binding_row_id"],
+    )
+    if missing_new_anchor_strategy_rows:
+        errors.append(
+            {
+                "code": "new_anchor_strategy_evidence_missing",
+                "message": "Some done contract rows use `new` anchors without explicit rejection evidence for both `existing` and `extended`.",
+                "details": {"rows": missing_new_anchor_strategy_rows},
+            }
+        )
+
+    missing_operation_id_rows = sorted(
+        [
+            unit["binding_row_id"]
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done" and unit["contract"]["exists"] and not unit["operation_id"]
+        ]
+    )
+    if missing_operation_id_rows:
+        errors.append(
+            {
+                "code": "operation_id_missing",
+                "message": "Some done contract rows are missing `Operation ID (Required)`.",
+                "details": {"binding_row_ids": missing_operation_id_rows},
+            }
+        )
+
+    missing_binding_context_rows = sorted(
+        [
+            unit["binding_row_id"]
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and not unit["contract"]["binding_context_section_present"]
+        ]
+    )
+    if missing_binding_context_rows:
+        errors.append(
+            {
+                "code": "binding_context_section_missing",
+                "message": "Some done contract rows are missing `Binding Context`.",
+                "details": {"binding_row_ids": missing_binding_context_rows},
+            }
+        )
+
+    missing_interface_definition_rows = sorted(
+        [
+            unit["binding_row_id"]
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and not unit["contract"]["interface_definition_section_present"]
+        ]
+    )
+    if missing_interface_definition_rows:
+        errors.append(
+            {
+                "code": "interface_definition_section_missing",
+                "message": "Some done contract rows are missing `Interface Definition`.",
+                "details": {"binding_row_ids": missing_interface_definition_rows},
+            }
+        )
+
+    missing_resolved_type_inventory_rows = sorted(
+        [
+            unit["binding_row_id"]
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and not unit["contract"]["resolved_type_inventory_present"]
+        ]
+    )
+    if missing_resolved_type_inventory_rows:
+        errors.append(
+            {
+                "code": "resolved_type_inventory_missing",
+                "message": "Some done contract rows are missing `Resolved Type Inventory`.",
+                "details": {"binding_row_ids": missing_resolved_type_inventory_rows},
+            }
+        )
+
+    missing_upstream_references_rows = sorted(
+        [
+            unit["binding_row_id"]
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and not unit["contract"]["upstream_references_section_present"]
+        ]
+    )
+    if missing_upstream_references_rows:
+        errors.append(
+            {
+                "code": "upstream_references_section_missing",
+                "message": "Some done contract rows are missing `Upstream References`.",
+                "details": {"binding_row_ids": missing_upstream_references_rows},
+            }
+        )
+
+    missing_boundary_notes_rows = sorted(
+        [
+            unit["binding_row_id"]
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and not unit["contract"]["boundary_notes_section_present"]
+        ]
+    )
+    if missing_boundary_notes_rows:
+        errors.append(
+            {
+                "code": "boundary_notes_section_missing",
+                "message": "Some done contract rows are missing `Boundary Notes`.",
+                "details": {"binding_row_ids": missing_boundary_notes_rows},
+            }
+        )
+
+    missing_smoke_candidate_rows = sorted(
+        [
+            unit["binding_row_id"]
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and not unit["contract"]["cross_interface_smoke_candidate_present"]
+        ]
+    )
+    if missing_smoke_candidate_rows:
+        errors.append(
+            {
+                "code": "cross_interface_smoke_candidate_missing",
+                "message": "Some done contract rows are missing `Cross-Interface Smoke Candidate (Required)`.",
+                "details": {"binding_row_ids": missing_smoke_candidate_rows},
+            }
+        )
+
+    invalid_smoke_candidate_rows = sorted(
+        [
+            {
+                "binding_row_id": unit["binding_row_id"],
+                "row_count": unit["contract"]["cross_interface_smoke_candidate_row_count"],
+                "invalid_roles": unit["contract"]["cross_interface_smoke_candidate_invalid_roles"],
+                "missing_signals": unit["contract"]["cross_interface_smoke_candidate_missing_signals"],
+            }
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and unit["contract"]["cross_interface_smoke_candidate_present"]
+            and (
+                unit["contract"]["cross_interface_smoke_candidate_row_count"] != 1
+                or unit["contract"]["cross_interface_smoke_candidate_invalid_roles"]
+                or unit["contract"]["cross_interface_smoke_candidate_missing_signals"]
+            )
+        ],
+        key=lambda item: item["binding_row_id"],
+    )
+    if invalid_smoke_candidate_rows:
+        errors.append(
+            {
+                "code": "cross_interface_smoke_candidate_invalid",
+                "message": "Some done contract rows have invalid `Cross-Interface Smoke Candidate (Required)` content.",
+                "details": {"rows": invalid_smoke_candidate_rows},
+            }
+        )
+
+    if contract_rows and not non_done_contract_rows and not done_contract_missing_files:
+        done_contract_units = [
+            unit
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done" and unit["contract"]["exists"]
+        ]
+        if done_contract_units:
+            non_none_candidates = sum(
+                unit["contract"]["cross_interface_smoke_candidate_non_none_role_count"]
+                for unit in done_contract_units
+            )
+            if non_none_candidates == 0:
+                errors.append(
+                    {
+                        "code": "cross_interface_smoke_candidate_all_none",
+                        "message": "All done contract rows use `Candidate Role = none`; queue-complete smoke requires at least one non-none candidate.",
+                        "details": {"binding_row_ids": sorted(unit["binding_row_id"] for unit in done_contract_units)},
+                    }
+                )
+
     missing_field_dictionary_rows = sorted(
         [
             unit["binding_row_id"]
@@ -503,7 +1112,7 @@ def build_task_execution_readiness(
         ]
     )
     if missing_field_dictionary_rows:
-        warnings.append(
+        errors.append(
             {
                 "code": "full_field_dictionary_missing",
                 "message": "Some done contract rows are missing `Full Field Dictionary (Operation-scoped)`.",
@@ -636,6 +1245,22 @@ def build_task_execution_readiness(
             }
         )
 
+    not_ready_binding_rows = sorted(
+        [
+            unit["binding_row_id"]
+            for unit in unit_inventory
+            if unit["binding_row_id"] not in {ready_unit["binding_row_id"] for ready_unit in ready_unit_inventory}
+        ]
+    )
+    if unit_inventory and not_ready_binding_rows:
+        errors.append(
+            {
+                "code": "contract_units_not_execution_ready",
+                "message": "One or more binding units are not execution-ready for /sdd.tasks.",
+                "details": {"binding_row_ids": not_ready_binding_rows},
+            }
+        )
+
     return {
         "ready_for_task_generation": len(errors) == 0,
         "error_count": len(errors),
@@ -660,17 +1285,25 @@ def build_task_bootstrap_payload(
     document = plan_path.read_text(encoding="utf-8")
     sections = {heading: extract_section(document, heading) for heading in TASK_SECTION_HEADINGS}
     required_sections = {
+        "summary": sections["Summary"] is not None,
         "shared_context_snapshot": sections["Shared Context Snapshot"] is not None,
         "stage_queue": sections["Stage Queue"] is not None,
         "binding_projection_index": sections["Binding Projection Index"] is not None,
         "artifact_status": sections["Artifact Status"] is not None,
+        "handoff_protocol": sections["Handoff Protocol"] is not None,
     }
     missing_sections = [name for name, present in required_sections.items() if not present]
 
     stage_rows = parse_markdown_table(sections["Stage Queue"])
-    binding_rows = parse_markdown_table(sections["Binding Projection Index"])
-    artifact_rows = parse_markdown_table(sections["Artifact Status"])
+    binding_rows = parse_markdown_table(sections["Binding Projection Index"], filter_placeholder_first_cell=True)
+    artifact_rows = parse_markdown_table(sections["Artifact Status"], filter_placeholder_first_cell=True)
     binding_packets = load_binding_contract_packets(test_matrix_path)
+    test_matrix_document = test_matrix_path.read_text(encoding="utf-8") if test_matrix_path.is_file() else ""
+    missing_test_matrix_sections = [
+        heading
+        for heading in TASK_REQUIRED_TEST_MATRIX_SECTIONS
+        if extract_section(test_matrix_document, heading) is None
+    ]
 
     stage_queue = [
         {
@@ -714,6 +1347,12 @@ def build_task_bootstrap_payload(
 
     required_stage_ids = set(TASK_REQUIRED_STAGE_IDS)
     data_model_required = "data-model" in required_stage_ids
+    present_required_stage_ids = {
+        row["stage_id"]
+        for row in stage_queue
+        if row.get("stage_id") in required_stage_ids
+    }
+    missing_required_stage_ids = normalize_stage_ids(list(required_stage_ids - present_required_stage_ids))
 
     incomplete_stage_ids = normalize_stage_ids(
         [
@@ -731,10 +1370,13 @@ def build_task_bootstrap_payload(
     )
     execution_readiness = build_task_execution_readiness(
         missing_sections=missing_sections,
+        missing_required_stage_ids=missing_required_stage_ids,
+        missing_test_matrix_sections=missing_test_matrix_sections,
         incomplete_stage_ids=incomplete_stage_ids,
         binding_projection_index=binding_projection_index,
         artifact_status=artifact_status,
         unit_inventory=unit_inventory,
+        ready_unit_inventory=ready_unit_inventory,
     )
     repository_first_gate_protocol = build_repository_first_gate_protocol(
         gate_name="task_bootstrap",
@@ -758,10 +1400,12 @@ def build_task_bootstrap_payload(
         "stage_queue_status_summary": summarize_stage_queue(stage_queue),
         "data_model_required": data_model_required,
         "required_stage_ids_for_tasks": sorted(required_stage_ids),
+        "missing_required_stage_ids": missing_required_stage_ids,
         "incomplete_stage_ids": incomplete_stage_ids,
         "binding_row_count": len(binding_projection_index),
         "binding_projection_index": binding_projection_index,
         "binding_contract_packet_count": len(binding_packets),
+        "missing_test_matrix_sections": missing_test_matrix_sections,
         "artifact_status": artifact_status,
         "artifact_status_summary": summarize_status_rows(artifact_rows),
         "unit_inventory": unit_inventory,

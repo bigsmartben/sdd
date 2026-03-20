@@ -2,12 +2,14 @@
 
 **Stage**: Stage 4 Binding-Level Interface Design Closure
 **BindingRowID (Required)**: [BR-###]
-**Operation ID (Required)**: [operationId or N/A]
+**Operation ID (Required)**: [operationId]
 **IF Scope (Required)**: [IF-### or N/A]
 **Boundary Anchor (Required)**: [HTTP `METHOD /path` \| `event.topic` \| `Facade.method` \| `cli command` \| `ConcreteBoundary.method` \| `TODO(REPO_ANCHOR)`]
 **Anchor Status (Required)**: [`existing` \| `extended` \| `new` \| `todo`]
+**Boundary Anchor Strategy Evidence (Required)**: [`existing rejected: ...; extended rejected: ...` \| `N/A` when `Anchor Status (Required) != new`]
 **Implementation Entry Anchor (Required)**: [`path/to/file.ext::Symbol` \| `ConcreteEntry.method` \| `TODO(REPO_ANCHOR)`]
 **Implementation Entry Anchor Status (Required)**: [`existing` \| `extended` \| `new` \| `todo`]
+**Implementation Entry Anchor Strategy Evidence (Required)**: [`existing rejected: ...; extended rejected: ...` \| `N/A` when `Implementation Entry Anchor Status (Required) != new`]
 
 This artifact is the single authoritative interface-design closure for one `BindingRowID`.
 Its core outputs are fixed:
@@ -16,6 +18,8 @@ Its core outputs are fixed:
 - `UML Class Design`
 - `Sequence Design`
 - `Test Projection`
+
+`Operation ID (Required)` MUST be concrete for this binding and MUST NOT be `N/A`.
 
 ## Northbound Entry Rules (Normative)
 
@@ -30,6 +34,9 @@ Its core outputs are fixed:
 - Apply anchor decision order `existing -> extended -> new -> todo`.
 - `extended` is valid only for same-entity field/state expansion.
 - `new` is normative only when selected `spec.md` / `data-model.md` / `test-matrix.md` slices plus bounded repo reads fully close the binding design and this stage can assign one concrete repository-facing boundary/entry target for implementation.
+- When `Anchor Status (Required) = new`, `Boundary Anchor Strategy Evidence (Required)` MUST include explicit rejection evidence for both `existing` and `extended`.
+- When `Implementation Entry Anchor Status (Required) = new`, `Implementation Entry Anchor Strategy Evidence (Required)` MUST include explicit rejection evidence for both `existing` and `extended`.
+- When an anchor status is not `new`, set the corresponding strategy evidence field to `N/A`.
 - If bounded evidence cannot close `existing`, `extended`, or one concrete `new` target, set the corresponding anchor field to `TODO(REPO_ANCHOR)` and status to `todo`.
 
 ## Binding Context
@@ -41,7 +48,7 @@ Treat upstream packet scope-reference fields as binding-range inputs only. This 
 | Field | Value |
 |-------|-------|
 | `BindingRowID` | [BR-###] |
-| `Operation ID` | [operationId or N/A] |
+| `Operation ID` | [operationId] |
 | `IF Scope` | [IF-### or N/A] |
 | `User Intent` | [Northbound action summary] |
 | `Trigger Ref(s)` | [UIP / UIF / UC refs] |
@@ -316,16 +323,16 @@ This section is the normalized downstream testing slice for `/sdd.tasks` and `/s
 
 | IF Scope | Operation ID | Test Scope | Primary TM IDs | TM ID(s) | TC ID(s) | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
 |----------|--------------|------------|----------------|----------|----------|------------------|--------------------------|----------------------------|
-| [IF-### or N/A] | [operationId or N/A] | [`Contract` / `Integration` / `E2E` / `Mixed`] | [TM-###, TM-###] | [TM-###, TM-###] | [TC-###, TC-###] | [primary success check inferred here] | [failure/branch checks inferred here] | [test command or assertion signal] |
+| [IF-### or N/A] | [operationId] | [`Contract` / `Integration` / `E2E` / `Mixed`] | [TM-###, TM-###] | [TM-###, TM-###] | [TC-###, TC-###] | [primary success check inferred here] | [failure/branch checks inferred here] | [test command or assertion signal] |
 
-### Cross-Interface Smoke Candidate
+### Cross-Interface Smoke Candidate (Required)
 
 Keep exactly one row for the selected operation.
 If this operation does not participate in feature-level smoke flow, keep `Candidate Role = none` with explicit `N/A` values.
 
 | Smoke Candidate ID | IF Scope | Operation ID | Candidate Role | Depends On Candidate ID(s) | Trigger | Main Pass Anchor | Branch/Failure Anchor(s) | Command / Assertion Signal |
 |--------------------|----------|--------------|----------------|----------------------------|---------|------------------|--------------------------|----------------------------|
-| [SMK-###] | [IF-### or N/A] | [operationId or N/A] | [`entry` / `middle` / `exit` / `none`] | [SMK-###, SMK-### or `N/A`] | [cross-interface trigger or `N/A`] | [cross-interface success signal or `N/A`] | [degraded/failure signal or `N/A`] | [smoke command/assertion signal or `N/A`] |
+| [SMK-###] | [IF-### or N/A] | [operationId] | [`entry` / `middle` / `exit` / `none`] | [SMK-###, SMK-### or `N/A`] | [cross-interface trigger or `N/A`] | [cross-interface success signal or `N/A`] | [degraded/failure signal or `N/A`] | [smoke command/assertion signal or `N/A`] |
 
 ## Closure Check
 

@@ -24,13 +24,13 @@ Purpose: decide how many northbound interface units the selected feature slice r
 
 | BindingRowID | User Intent | Trigger Ref(s) | Request Semantics | Visible Result | Side Effect | Repo Landing Hint | Split Rationale |
 |--------------|-------------|----------------|-------------------|----------------|-------------|-------------------|-----------------|
-| BR-001 | [Northbound user intent] | [UIP / UIF / UC refs that trigger this action] | [Input semantics only; no DTO naming] | [Visible success/result semantics] | [Create / update / read / authorize / navigate / none] | [Existing entry family or bounded repo hint] | [Why this is one independent interface unit] |
+| BR-001 | [Northbound user intent] | [UIP / UIF / UC refs that trigger this action] | [Input semantics only; no DTO naming] | [Visible success/result semantics] | [Create / update / read / authorize / none] | [Existing entry family or bounded repo hint] | [Why this is one independent interface unit] |
 
 Rules:
 
 - Decide `BindingRowID` values from northbound action boundaries, not from page-state branches.
 - Split rows only when user intent, request semantics, side effect, permission boundary, idempotency semantics, transaction boundary, or repo landing family materially differ.
-- Do not split rows only because of happy / alternate / duplicate / timeout branches inside the same northbound action.
+- Do not split rows only because of `Happy` / `Alternate` / `Exception` / `Degraded` / `Duplicate` / `Timeout` branches inside the same northbound action.
 - `Repo Landing Hint` is a bounded reuse hint, not final contract closure.
 
 ## UIF Full Path Coverage Graph (Mermaid)
@@ -62,7 +62,7 @@ Purpose: enforce full selected-scope UIF path accounting for the coverage graph.
 
 | UIF Path Ref | Path Type | Included in Graph | Omission Reason |
 |--------------|-----------|-------------------|-----------------|
-| [UIF-Path-001] | [Happy \| Alternate \| Exception \| Degraded] | [yes \| no] | [N/A when included; explicit reason when omitted] |
+| [UIF-Path-001] | [Happy \| Alternate \| Exception \| Degraded \| Duplicate \| Timeout] | [yes \| no] | [N/A when included; explicit reason when omitted] |
 
 Rules:
 
@@ -84,6 +84,7 @@ Rules:
 
 - Keep rows minimal; add a new `TM ID` only when path semantics, preconditions, or expected outcomes materially differ.
 - `Related Ref` should cite the spec evidence that makes the scenario necessary.
+- `Path Type` is verification coverage metadata only; it MUST NOT redefine interface partition boundaries or mint a new `BindingRowID` by itself.
 - `Scenario Matrix` rows may share one `BindingRowID`; scenario identity and binding identity are not the same thing.
 - `BindingRowID` in this table MUST reuse the already-decided interface partition from `Interface Partition Decisions`.
 - Do not redefine interface boundaries here; TM rows only attach verification paths to an existing binding.
@@ -121,7 +122,7 @@ Purpose: complete downstream scope-reference packet for the selected interaction
   - request semantics
   - visible result / side-effect semantics
   - bounded repo landing hint
-- Merge happy / alternate / exception paths into one `BindingRowID` when they keep the same interaction family, requirement projection, and external contract intent.
+- Merge `Happy` / `Alternate` / `Exception` / `Degraded` / `Duplicate` / `Timeout` paths into one `BindingRowID` when they keep the same interaction family, requirement projection, and external contract intent.
 - Express path differences through `TC IDs`, `Scenario Ref(s)`, `Success Ref(s)`, and `Edge Ref(s)` instead of minting a new binding row.
 - Split into different `BindingRowID` values when any of these change materially:
   - user intent / northbound action boundary

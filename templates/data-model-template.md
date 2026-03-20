@@ -1,7 +1,7 @@
 # Data Model: [FEATURE]
 
 **Stage**: Stage 3 Shared Semantic Alignment
-**Inputs**: `spec.md`, `test-matrix.md` (`Interface Partition Decisions` and `Binding Packets` required; `Scenario Matrix` / `Verification Case Anchors` when needed), bounded repo semantic landing slice
+**Inputs**: `spec.md`, `test-matrix.md` (`Interface Partition Decisions`, `UIF Full Path Coverage Graph (Mermaid)`, `UIF Path Coverage Ledger`, `Scenario Matrix`, `Verification Case Anchors`, and `Binding Packets` required), bounded repo semantic landing slice
 
 Use this artifact to align the shared semantic backbone consumed by multiple `BindingRowID` values. This file is authoritative for shared semantic elements and downstream reuse constraints. It is not an interface predesign artifact.
 
@@ -113,6 +113,20 @@ If no shared lifecycle exists, keep the section with an explicit `N/A` note inst
 | [LC-001] | [`Open`] | [close requested] | [`Closing`] | `allowed` | [INV-001] | [BR-002, BR-003] |
 | [LC-001] | [`Closing`] | [closure completed] | [`Closed`] | `allowed` | [INV-001, INV-002] | [BR-002, BR-003] |
 | [LC-001] | [`Closed`] | [reopen request] | [`Open`] | `forbidden` | [INV-002] | [BR-003] |
+
+### Transition Pseudocode
+
+Use this subsection when `Required Model = Full FSM`.
+If the lifecycle is `Lightweight`, keep one explicit `N/A` line.
+
+```text
+if state == Open and trigger == close_requested:
+    state = Closing
+elif state == Closing and trigger == closure_completed:
+    state = Closed
+elif state == Closed and trigger == reopen_requested:
+    reject("forbidden transition")
+```
 
 ### State Diagram
 

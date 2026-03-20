@@ -109,7 +109,8 @@ Determine partition uniqueness from:
 Apply these rules exactly:
 
 - Split bindings when user intent, request semantics, side effect, permission boundary, idempotency semantics, transaction boundary, or repo landing family materially differ.
-- Merge happy / alternate / exception / duplicate / timeout paths when they still exercise the same northbound action boundary.
+- Merge `Happy` / `Alternate` / `Exception` / `Degraded` / `Duplicate` / `Timeout` paths when they still exercise the same northbound action boundary.
+- Do not split a binding only because `Path Type` changes across those verification paths under the same northbound action.
 - Do not split a binding only because page state, button state, reminder behavior, or branch path differs under the same northbound action.
 - Do not split a binding only because one action has multiple validation or duplicate branches.
 
@@ -140,6 +141,11 @@ Required columns in each `Binding Projection Index` row:
 - `UDD Ref(s)`
 - `Test Scope`
 
+Projection encoding rules:
+
+- `IF ID / IF Scope` must contain one normalized scope token (`IF-###` or `N/A`) only.
+- `UC ID`, `UIF ID`, and `FR ID` must use deterministic id encoding when multiple refs are needed (comma-separated ids, stable sort, no prose).
+
 ## Test Semantics Requirements
 
 `Scenario Matrix` and `Verification Case Anchors` define the bounded test semantics for each binding.
@@ -154,6 +160,7 @@ Keep them spec-led and verification-led:
   - rows rendered in Mermaid must be marked `Included in Graph = yes`
   - rows intentionally omitted from Mermaid must be marked `Included in Graph = no` with explicit omission reason
 - `Scenario Matrix` captures path type, preconditions, expected outcomes, related spec refs, and the owning `BindingRowID`
+- `Path Type` is verification coverage metadata only; it does not define a new interface partition by itself
 - `Verification Case Anchors` captures what each case proves and how it is observed
 - use the smallest row set that still preserves materially distinct behavior
 - do not let `TM/TC` rows redefine interface partition boundaries; they attach to the already-decided `BindingRowID`
@@ -246,6 +253,11 @@ Update only:
 - selected `test-matrix` stage row status and fingerprints
 - `Binding Projection Index`
 - `Artifact Status`
+
+Stage-row status transition is mandatory and explicit:
+
+- Set selected `test-matrix` row `Status = done` only when `test-matrix.md` is written and both `Binding Projection Index` + `Artifact Status` are initialized/refreshed consistently.
+- Otherwise set selected row `Status = blocked` with concrete `Blocker` details (missing binding packet fields, unresolved refs, or projection initialization failures).
 
 ## Handoff Decision
 

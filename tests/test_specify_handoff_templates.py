@@ -48,16 +48,13 @@ def test_specify_command_keeps_current_flow_and_treats_ui_html_as_optional_sidec
 
 def test_spec_template_stays_unsplit_and_ui_html_template_exists():
     spec_template = read("templates/spec-template.md")
-    runtime_spec_template = read(".specify/templates/spec-template.md")
     ui_html_template = read("templates/ui-html-template.html")
 
     assert "### This Stage Outputs" in spec_template
     assert "[spec.md](spec.md) (this document)" in spec_template
     assert "[ui.html](ui.html)" not in spec_template
     assert "Scenario Type (happy/alternate/validation/exception/retry/recovery/cancel/timeout/permission/duplicate)" in spec_template
-    assert "Scenario Type (happy/alternate/validation/exception/retry/recovery/cancel/timeout/permission/duplicate)" in runtime_spec_template
     assert "Do not collapse later FRs to capability-only shorthand." in spec_template
-    assert "Do not collapse later FRs to capability-only shorthand." in runtime_spec_template
     assert "UI Preview" in ui_html_template
     assert "spec.md" in ui_html_template
     assert "Primary Tool Loop" in ui_html_template

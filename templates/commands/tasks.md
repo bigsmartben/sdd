@@ -44,7 +44,7 @@ Resolve `PLAN_FILE` from current feature branch using `{SCRIPT}` defaults.
 2. Parse `FEATURE_DIR`, `AVAILABLE_DOCS`, `LOCAL_EXECUTION_PROTOCOL`, and `TASKS_BOOTSTRAP`.
 3. Treat `TASKS_BOOTSTRAP.execution_readiness` as the primary hard gate.
 4. If `TASKS_BOOTSTRAP.execution_readiness.ready_for_task_generation = true`, do not recompute full hard gates by re-deriving complete `plan.md` tables.
-5. If `TASKS_BOOTSTRAP` is missing, malformed, or contradictory, perform one bounded fallback validation from `plan.md` control-plane fields.
+5. If `TASKS_BOOTSTRAP` is missing, malformed, contradictory, or unavailable, stop immediately and report the runtime bootstrap blocker.
 6. Read only authoritative inputs for the active generation unit:
    - `plan.md` control plane (`Shared Context Snapshot`, `Binding Projection Index`, `Artifact Status`)
    - required refs from `spec.md`, `data-model.md`, `test-matrix.md`, and selected `contracts/` slices
@@ -71,6 +71,7 @@ Resolve `PLAN_FILE` from current feature branch using `{SCRIPT}` defaults.
 6. On projection drift, emit upstream writeback actions only:
    - `/sdd.specify` for spec drift
    - `/sdd.plan.test-matrix` for test-matrix drift
+   - projection drift is blocking for this run; do not merge conflicting semantics locally
 7. Do not re-parse the just-written markdown to construct the manifest.
 8. Invalidate run-local derived views after write/report.
 
@@ -78,6 +79,7 @@ Manifest requirements:
 
 - Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`
 - `generated_from` keys: `plan_path`, `plan_source_fingerprint`, `contract_source_fingerprints`
+- Per-task required keys: `task_id`, `dependencies`, `if_scope`, `refs`, `target_paths`, `completion_anchors`, `conflict_hints`, `topo_layer`, `status`
 
 ## Stop Conditions
 
@@ -85,14 +87,15 @@ Stop immediately when any condition holds:
 
 1. Resolved branch-derived `PLAN_FILE` is missing or invalid.
 2. `TASKS_BOOTSTRAP.execution_readiness.ready_for_task_generation = false`.
-3. `TASKS_BOOTSTRAP` fallback validation cannot build a consumable gate packet.
+3. `TASKS_BOOTSTRAP` is missing, malformed, contradictory, or unavailable.
 4. `TASKS_BOOTSTRAP.execution_readiness.errors` contains blockers.
 5. Required canonical repository-first evidence for affected scope is missing, stale, or non-traceable.
 6. Active executable tuples select `new` repo anchors but lack explicit rejection evidence for `existing` and `extended` in authoritative upstream artifacts.
 7. Required repository discovery is blocked because `LOCAL_EXECUTION_PROTOCOL.repo_search.available = false`.
-8. Any selected `contract` row is missing `Full Field Dictionary (Operation-scoped)` or drifts from authoritative `Binding Packets` for the same `BindingRowID`.
+8. Any selected `contract` row is missing `Full Field Dictionary (Operation-scoped)`, or any selected `Binding Projection Index` row drifts from authoritative `Binding Packets` for the same `BindingRowID`.
+9. Queue-complete smoke readiness fails because all completed contract rows carry `Candidate Role = none`.
 
-Hard execution safety gates in this command are limited to:
+Hard execution safety gates in this command include at minimum (non-exhaustive):
 
 - input availability and consumability
 - repository-anchored tuple executability
@@ -100,8 +103,10 @@ Hard execution safety gates in this command are limited to:
 - DAG schedulability
 - task-line completeness
 - selected-contract field-dictionary completeness and binding-packet projection stability
+- cross-interface smoke candidate readiness
 
 `/sdd.tasks` does **not** own comprehensive audit concerns (coverage completeness, ambiguity sweeps, contradiction analysis). Route those to `/sdd.analyze`.
+Treat any non-empty `TASKS_BOOTSTRAP.execution_readiness.errors` as blocking for this run.
 Do not claim cross-artifact final PASS/FAIL in this stage.
 
 ## Final Output

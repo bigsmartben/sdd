@@ -4,7 +4,7 @@ description: "Interface-delivery-oriented execution orchestration template for f
 
 # Tasks: [FEATURE NAME]
 
-**Input**: Upstream design artifacts from `/specs/[YYYYMMDD-slug]/`
+**Input**: Approved upstream planning/design artifacts from the resolved feature workspace (`FEATURE_DIR`)
 **Outputs**: `tasks.md` (this document), `tasks.manifest.json` (machine-readable sidecar projection)
 
 ## 1) Document Purpose
@@ -33,15 +33,16 @@ Reference precedence:
 - Contract semantics: `contracts/`
 - Global model semantics: `data-model.md`
 - Feature verification semantics: `test-matrix.md`
-- Downstream execution projection authority (per IF unit): selected contract `Spec Projection Slice` + `Test Projection Slice`
+- Downstream execution projection authority (per IF unit): selected contract `Binding Context` + `Test Projection Slice`
 - `tasks.md`: execution mapping only; must not redefine the above semantics
 - Inline task summaries, local execution notes, and other derived views must yield to the authoritative artifacts above when conflicts appear.
 - If contract projection slices drift from `spec.md` or `test-matrix.md`, keep contract projection as execution truth for this run and emit explicit upstream writeback repair actions (no local semantic merge).
+- If projection drift is detected, keep this run blocked after recording upstream repair actions; do not continue with merged semantics in task generation.
 
 Stage boundary guard:
 
 - `tasks.md` consumes Stage 4 outputs; it does not generate or backfill missing interface design artifacts.
-- Task generation must start only after `TASKS_BOOTSTRAP.execution_readiness.ready_for_task_generation = true`; if bootstrap is missing or invalid, use one bounded fallback validation from `plan.md` control-plane fields before stopping.
+- Task generation must start only after `TASKS_BOOTSTRAP.execution_readiness.ready_for_task_generation = true`; if bootstrap is missing or invalid, stop and repair the runtime bootstrap path before proceeding.
 - If executable tuples depend on `Anchor Status = new` / `Implementation Entry Anchor Status = new`, include explicit strategy evidence refs showing `existing` and `extended` were evaluated and rejected; otherwise stop and repair upstream artifacts.
 - If required execution anchors are missing from `plan.md`, `contracts/`, or `test-matrix.md`, stop and repair upstream artifacts rather than writing compensating tasks.
 - `tasks.md` uses `GLOBAL` and `Interface Delivery Units` as execution packages only, not as replacement design sections.
@@ -64,7 +65,7 @@ Only include this section when drift exists between contract projection slices a
 
 | Drift Type | Contract Projection Evidence | Upstream Target | Owner Command | Required Repair |
 | --- | --- | --- | --- | --- |
-| `spec` drift | [operationId + `Spec Projection Slice` refs] | `spec.md` | `/sdd.specify` | [align `spec.md` refs/phrasing to contract projection] |
+| `spec` drift | [operationId + contract `Binding Context` `Spec Ref(s)`] | `spec.md` | `/sdd.specify` | [align `spec.md` refs/phrasing to contract projection] |
 | `test` drift | [operationId + `Test Projection Slice` refs] | `test-matrix.md` | `/sdd.plan.test-matrix` | [align TM/TC rows and anchors to contract projection] |
 
 Rules:
@@ -129,9 +130,9 @@ Role guidance:
 
 Purpose: shared prerequisites before interface-specific delivery.
 
-- [ ] T001 [Type:Infra] [Role:bootstrap] Initialize project structure per plan in [path]
-- [ ] T002 [Type:Infra] [Role:tooling] Configure lint/format/test runner in [path]
-- [ ] T003 [Type:Infra] [Role:config] Add runtime/env configuration in [path]
+- [ ] T001 [Type:Infra] [Role:bootstrap] Initialize project structure per plan in [path] (Completion Anchor: [bootstrap command pass signal])
+- [ ] T002 [Type:Infra] [Role:tooling] Configure lint/format/test runner in [path] (Completion Anchor: [lint/test command pass signal])
+- [ ] T003 [Type:Infra] [Role:config] Add runtime/env configuration in [path] (Completion Anchor: [runtime config validation signal])
 
 Rules:
 
@@ -148,9 +149,9 @@ Interface delivery units are IF-scoped execution work packages. Keep them execut
 ## Interface IF-### — [name]
 
 - Goal: [one-line delivery goal; short execution-only reference]
-- Contract: [single operationId / boundary anchor]
+- Contract: [single operationId]
 - Implementation Entry: [single repo-backed entry anchor from contract realization section, or same as contract boundary]
-- Spec Slice: [UC/UIF/FR/SC/EC refs projected from contract `Spec Projection Slice`]
+- Spec Slice: [UC/UIF/FR/SC/EC refs projected from contract `Binding Context` `Spec Ref(s)` / success-edge refs]
 - Test Slice: [Test Scope + TM/TC + pass/failure anchors projected from contract `Test Projection Slice`]
 - Primary Refs: [short refs that help execution or completion checks]
 
@@ -171,7 +172,7 @@ Rules:
 - Each IF unit SHOULD form a verification-implementation-completion loop (document exceptions).
 - Keep IF sections reference-oriented; do not copy upstream design prose or add design explanation paragraphs.
 - Use `Contract` as the client-facing binding reference and `Implementation Entry` as the internal execution-target reference when they differ.
-- `Spec Slice` and `Test Slice` are mandatory per IF unit and are the authoritative downstream execution projection slices from contract; they are not optional narrative notes.
+- `Spec Slice` and `Test Slice` are mandatory per IF unit and are the authoritative downstream execution projection slices from contract `Binding Context` + `Test Projection Slice`; they are not optional narrative notes.
 - Keep `Goal`, `Contract`, `Implementation Entry`, and `Primary Refs` as short execution references only.
 - If multiple operations share an `IF Scope`, keep them as separate work packages inside the same IF unit; do not merge them into a composite task.
 - Use `CaseID/TM/TC` as completion anchors only when they help prove delivery.
@@ -185,7 +186,7 @@ Rules:
 
 - Use this section only for tasks that cannot be scoped to one IF unit.
 - Cross-interface smoke tasks MUST be projected from contract `Cross-Interface Smoke Candidate (Required)` rows.
-- If all contract rows carry `Candidate Role = none`, document this explicitly and skip smoke-task generation.
+- If all contract rows carry `Candidate Role = none`, stop task generation and route repair to `/sdd.plan.contract`; queue-complete planning requires at least one non-`none` smoke candidate.
 - Do not use this section for work that exists only because upstream design anchors are missing.
 - Do not use this section as overflow for interface-local tasks.
 
@@ -198,6 +199,7 @@ Rules:
 - `tasks.manifest.json` should be refreshed from the same run-local execution graph used to render `tasks.md`, so both outputs stay atomically aligned for a run.
 - `tasks.manifest.json` top-level keys MUST include `schema_version`, `generated_at`, `generated_from`, and `tasks`.
 - `generated_from` MUST include `plan_path`, `plan_source_fingerprint`, and `contract_source_fingerprints`.
+- Each manifest task row MUST include: `task_id`, `dependencies`, `if_scope`, `refs`, `target_paths`, `completion_anchors`, `conflict_hints`, `topo_layer`, `status`.
 - `tasks.manifest.json` task IDs and dependencies must stay aligned with the `tasks.md` lines rendered from the same execution graph.
 - Required consumable sections in `tasks.md` (authoritative fallback + human review):
   - `Upstream Inputs (Execution References)`

@@ -34,7 +34,7 @@ Comprehensive audit ownership remains with `/sdd.analyze`.
 
 1. Run `{SCRIPT}` once and parse `FEATURE_DIR`, `AVAILABLE_DOCS`, `LOCAL_EXECUTION_PROTOCOL`, `IMPLEMENT_BOOTSTRAP`, and `TASKS_MANIFEST_BOOTSTRAP`.
 2. Treat `IMPLEMENT_BOOTSTRAP.analyze_readiness` as the primary analyze hard gate.
-3. If `IMPLEMENT_BOOTSTRAP` is missing, malformed, or contradictory, perform one bounded fallback validation from latest `analyze-history.md` run block and current `spec.md` / `plan.md` / `tasks.md` SHA-256 values.
+3. If `IMPLEMENT_BOOTSTRAP` is missing, malformed, contradictory, or unavailable, stop immediately and report the runtime bootstrap blocker.
 4. Parse optional runtime mode:
    - `mode: strict` (default)
    - `mode: adaptive`
@@ -71,7 +71,7 @@ Stop immediately when any condition holds:
 
 1. Required task artifacts are missing or non-consumable.
 2. `IMPLEMENT_BOOTSTRAP.analyze_readiness.ready_for_implementation = false` and `waive-analyze-gate` is absent.
-3. `IMPLEMENT_BOOTSTRAP` fallback validation cannot reconstruct a consumable analyze gate packet.
+3. `IMPLEMENT_BOOTSTRAP` is missing, malformed, contradictory, or unavailable.
 4. `IMPLEMENT_BOOTSTRAP.analyze_readiness.errors` contains blockers.
 5. Required DAG predecessors fail.
 6. Required canonical repository-first evidence for affected scope is missing, stale, or non-traceable.
@@ -95,7 +95,7 @@ Do not invent missing semantics in this command:
 Return a concise execution summary:
 
 1. execution mode
-2. analyze gate status (`IMPLEMENT_BOOTSTRAP` pass, fallback pass, or `waived`)
+2. analyze gate status (`IMPLEMENT_BOOTSTRAP` pass or `waived`)
 3. completed / failed / blocked tasks
 4. dependency-closure validation result
 5. completion-anchor validation result
