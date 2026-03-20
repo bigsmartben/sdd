@@ -4,6 +4,9 @@ This is the latest set of releases that you can use with your agent of choice. W
 
 ## Changelog
 
+- Merge pull request #32 from bigsmartben/codex/release-v2.0.28
+- Prepare v2.0.28 release metadata
 - Update release notes with latest changelog entries
 - Tighten spec templates and normalize repo text handling
 - Refine planning templates and sync runtime snapshots
+
