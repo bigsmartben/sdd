@@ -230,14 +230,16 @@ graph TD
 
 **Path Inventory**:
 
-| Path ID | Scenario Type (happy/alternate/exception/retry/recovery/cancel/timeout/permission/duplicate) | Start Node | End Node | Trigger / Guard | ref: Scenario/FR/EC |
+| Path ID | Scenario Type (happy/alternate/validation/exception/retry/recovery/cancel/timeout/permission/duplicate) | Start Node | End Node | Trigger / Guard | ref: Scenario/FR/EC |
 |---|---|---|---|---|---|
 | UIP-UC001-01 | happy | UIF-UC001-N01 | UIF-UC001-N02 | [Guard] | S1 / FR-001 |
-| UIP-UC001-02 | exception | UIF-UC001-D01 | UIF-UC001-E01 | [Guard] | S3 / FR-002 / EC-001 |
+| UIP-UC001-02 | validation | UIF-UC001-N02 | UIF-UC001-N02 | [Guard] | S2 / FR-002 / EC-002 |
+| UIP-UC001-03 | exception | UIF-UC001-D01 | UIF-UC001-E01 | [Guard] | S3 / FR-002 / EC-001 |
 
 Reference rule:
 When this table cites an `EC-*`, that `EC-*` MUST describe the same user-visible edge semantics as the path trigger/guard.
 Do not point a retry path at a re-entry EC, or a permission path at a duplicate-click EC.
+Use `validation` for user-visible guardrails that block progression on empty, invalid, or incomplete input while the user remains on the current step.
 If the edge semantics differ, add `EC-005+` instead of overloading an existing edge-case id.
 
 **Interaction Step Table**:
@@ -267,6 +269,11 @@ Do not reuse one `EC-*` across unrelated retry, re-entry, permission, duplicate,
 ---
 
 ### 3.3 Functional Requirements *(mandatory)*
+
+Minimum completeness rule (mandatory):
+Every FR subsection in this section MUST include `Capability`, `Given/When/Then`, `UDD (user-visible data) refs`, and `Success criteria`.
+If an FR cites exception handling, validation, timeout, recovery, permission, duplicate, or any `EC-*` semantics, it MUST also include `Failure / edge behavior`.
+Do not collapse later FRs to capability-only shorthand.
 
 #### FR-001 - [Requirement Name] *(Level: MUST | ref: S1, S2)*
 

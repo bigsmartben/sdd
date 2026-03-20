@@ -77,6 +77,7 @@ Script rules:
 5. Enforce edge-case anchor semantics:
    - Treat `EC-*` as semantic anchors, not a fixed four-item bucket list.
    - Add `EC-005+` whenever retry, re-entry, permission/access, duplicate/dedup, timeout/transport, validation, or recovery behavior is semantically distinct.
+   - Use `validation` as a first-class `Path Inventory` scenario type when the user-visible behavior is a guardrail that blocks progression on empty, invalid, or incomplete input while preserving the current step.
    - Keep `Path Inventory`, `Exception Paths`, FR blocks, and `N.2 Environment Edge Cases` textually aligned on the same `EC-*` meaning.
 6. Write `SPEC_FILE` using template heading order; do not add governance/process-control payload sections.
 
@@ -92,7 +93,9 @@ Validate the generated `spec.md`:
 - all mandatory template sections complete
 - no implementation detail leakage
 - UDD is field-level (`Entity.field`) for user-visible data
+- `Path Inventory` scenario types stay within the allowed enum (`happy/alternate/validation/exception/retry/recovery/cancel/timeout/permission/duplicate`)
 - interactive UCs include required UX flow tables; user-facing UCs include UI definitions and component-data dependency mappings
+- every FR block includes `Capability`, `Given/When/Then`, `UDD (user-visible data) refs`, and `Success criteria`; FRs that cite exception or `EC-*` behavior also include `Failure / edge behavior`
 - requirements are testable and unambiguous
 - success criteria are measurable and technology-agnostic
 - no unresolved `[NEEDS CLARIFICATION]` markers remain
