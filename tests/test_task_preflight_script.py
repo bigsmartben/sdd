@@ -1881,8 +1881,29 @@ def test_data_model_preflight_helper_reports_ready_when_research_done_and_data_m
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["schema_version"] == "1.2"
+    assert payload["schema_version"] == "1.3"
     assert payload["state_machine_policy"]["full_fsm_rule"] == "N > 3 or T >= 2N"
+    assert payload["shared_semantic_boundary_policy"]["forbidden_contract_suffixes"] == [
+        "DTO",
+        "Request",
+        "Response",
+        "Command",
+        "Result",
+    ]
+    assert payload["shared_semantic_boundary_policy"]["forbidden_interface_role_suffixes"] == [
+        "Controller",
+        "Service",
+        "Facade",
+    ]
+    assert payload["shared_semantic_boundary_policy"]["new_anchor_requires_strategy_evidence"] is True
+    assert payload["shared_semantic_boundary_policy"]["new_anchor_prefers_todo_repo_anchor_until_symbol_exists"] is True
+    assert payload["shared_semantic_boundary_policy"]["contract_must_reuse_shared_refs"] is True
+    assert payload["shared_semantic_boundary_policy"]["contract_must_not_redefine_shared_semantics"] == [
+        "owner_source_alignment",
+        "lifecycle_vocabulary",
+        "invariant_vocabulary",
+        "shared_owner_decisions",
+    ]
     assert payload["state_machine_policy"]["full_fsm_required_components"] == [
         "transition_table",
         "transition_pseudocode",
@@ -2097,7 +2118,16 @@ def test_bash_check_prerequisites_can_embed_data_model_bootstrap(tmp_path):
     payload = json.loads(result.stdout)
     assert payload["FEATURE_DIR"].replace("\\", "/").endswith("/repo/specs/20250708-demo")
     assert "DATA_MODEL_BOOTSTRAP" in payload
-    assert payload["DATA_MODEL_BOOTSTRAP"]["schema_version"] == "1.2"
+    assert payload["DATA_MODEL_BOOTSTRAP"]["schema_version"] == "1.3"
+    assert payload["DATA_MODEL_BOOTSTRAP"]["shared_semantic_boundary_policy"]["forbidden_contract_suffixes"] == [
+        "DTO",
+        "Request",
+        "Response",
+        "Command",
+        "Result",
+    ]
+    assert payload["DATA_MODEL_BOOTSTRAP"]["shared_semantic_boundary_policy"]["new_anchor_requires_strategy_evidence"] is True
+    assert payload["DATA_MODEL_BOOTSTRAP"]["shared_semantic_boundary_policy"]["contract_must_reuse_shared_refs"] is True
     assert payload["DATA_MODEL_BOOTSTRAP"]["generation_readiness"]["ready_for_generation"] is True
 
 

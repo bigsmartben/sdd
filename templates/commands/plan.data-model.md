@@ -39,7 +39,8 @@ Primary semantic inputs are `spec.md`, `test-matrix.md`, and bounded repo semant
 `research.md` is optional clarification input only and MUST NOT be treated as the primary semantic source for this stage.
 The output MUST define only the shared, stable, reusable semantics that downstream `contract` work must reuse across bindings: shared entities, value objects, projections, owner/source alignment, lifecycle vocabulary, invariants, and any necessary new shared classes.
 Repo-first remains mandatory as the landing strategy for any final semantic owner, lifecycle owner, or UML/class node emitted by this artifact: apply `existing -> extended -> new`. If `existing` and `extended` cannot safely close a confirmed shared semantic, this stage MUST explicitly choose `new` here rather than leaving the ownership decision to `/sdd.plan.contract`.
-Do not define HTTP routes, controller/service/DTO names, request/response shapes, operation-scoped command/result models, or repo interface-anchor placement here; those belong to `/sdd.plan.contract`.
+Do not define HTTP routes, controller/service/facade naming, contract-flavored shared names such as `*DTO`, `*Request`, `*Response`, `*Command`, or `*Result`, request/response shapes, operation-scoped command/result models, or repo interface-anchor placement here; those belong to `/sdd.plan.contract`.
+Downstream `/sdd.plan.contract` work MUST reuse shared refs produced here and MUST NOT redefine shared owners, owner/source alignment, lifecycle vocabulary, invariant vocabulary, or other confirmed shared semantics independently.
 Use `.specify/templates/data-model-template.md` only. If the runtime template is missing or unreadable, stop and report the blocker instead of inferring structure from mirrors or other `data-model.md` outputs.
 
 ## Selection Rules
@@ -119,9 +120,12 @@ If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
 - Include shared owner/source/lifecycle/invariant/projection vocabulary when contract runs would otherwise drift
 - If a shared semantic is materialized as a class, semantic owner, lifecycle owner, or UML node, it MUST follow repo-first landing order `existing -> extended -> new`
 - If `existing` and `extended` are both insufficient, `new` is the required outcome for this stage; do not defer that class/owner decision downstream
+- Shared semantic names and UML/class labels in this stage MUST avoid contract-flavored suffixes such as `*DTO`, `*Request`, `*Response`, `*Command`, and `*Result`, and MUST avoid interface-role labels such as `*Controller`, `*Service`, and `*Facade`
+- When `Anchor Status = new`, record repo-first strategy evidence for why `existing` and `extended` were rejected; if the concrete repo symbol does not yet exist, keep `Repo Anchor = TODO(REPO_ANCHOR)` instead of inventing a future `path::symbol`
 - Do not include interface-partition-only trigger semantics, request semantics, side-effect descriptions, single-binding request/response shapes, controller/service/facade naming, operation-specific DTO/command/result models, single-interface local validation detail, or realization-level collaborator chains
 - Treat `User Intent`, `Request Semantics`, `Visible Result`, `Side Effect`, `Boundary Notes`, and `Repo Landing Hint` as downstream scope-reference helpers only; they may justify exclusion from the shared model but they do not become shared semantics by themselves
 - Shared semantics that are confirmed by `spec.md` + `test-matrix.md` MUST be closed here at owner/source/lifecycle level; use `gap` only for genuine input/evidence blockers, not for unresolved ownership of an already-confirmed shared semantic
+- `/sdd.plan.contract` MUST reuse the shared refs chosen here and MUST NOT silently redefine shared owner/source/lifecycle/invariant semantics downstream
 
 ## Shared-Semantic Consistency Checks (Lightweight)
 
@@ -129,12 +133,15 @@ Before writing `done` status for the selected row, validate:
 
 - Every shared semantic element cites primary `UDD` / spec refs and the `BindingRowID(s)` that consume it
 - Every semantic elevated from `test-matrix.md` is justified as business-stable shared meaning rather than as repeated interface-partition metadata
+- Every single-binding semantic elevated into `data-model.md` includes explicit `Why Not Contract-Local` justification grounded in cross-role or globally stable semantics
+- Shared semantic names and UML/class labels remain free of contract-flavored names (`*DTO`, `*Request`, `*Response`, `*Command`, `*Result`) and interface-role labels (`*Controller`, `*Service`, `*Facade`)
 - Packet scope reference fields are used only to explain why a semantic stayed local or became shared; they are not copied verbatim into shared owner/source/vocabulary rows unless grounded by stable business semantics
 - Every owner/source alignment row resolves who owns the semantic and whether the downstream field/concept is authoritative, derived, or projected
 - Shared field vocabulary stays vocabulary-only; do not expand it into a full per-contract field dictionary
 - Lifecycle and invariant sections appear only when the state semantics are shared or globally stable for downstream reuse
 - Every final UML/class landing decision remains repo-first and MUST end in `existing`, `extended`, or explicit `new`; do not leave a confirmed shared semantic without a closed landing decision
-- `Downstream Contract Constraints` makes explicit which shared semantic refs each `BindingRowID` must reuse in `/sdd.plan.contract`
+- Every `new` landing records repo-first strategy evidence, and unresolved concrete symbols stay `TODO(REPO_ANCHOR)` until a real repo symbol exists
+- `Downstream Contract Constraints` makes explicit which shared semantic refs each `BindingRowID` must reuse in `/sdd.plan.contract`, and those downstream contracts do not redefine shared owner/source/lifecycle/invariant semantics independently
 - If a required shared semantic cannot be closed only because authoritative input or evidence is missing, keep the blocker explicit in `data-model.md` and set the selected row `Blocker` instead of letting later stages backfill the model
 
 If any gate fails, do not mark the `data-model` row `done`; keep it non-done and populate `Blocker` with the exact missing shared-semantic evidence.

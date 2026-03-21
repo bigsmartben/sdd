@@ -84,21 +84,45 @@ require_internal_bootstrap_json() {
     fi
 
     local bootstrap_output
-    if ! bootstrap_output="$("$specify_cmd" "$@" 2>&1)"; then
+    local bootstrap_stderr_file
+    local bootstrap_stderr=""
+    bootstrap_stderr_file="$(mktemp)"
+
+    if ! bootstrap_output="$("$specify_cmd" "$@" 2>"$bootstrap_stderr_file")"; then
+        bootstrap_stderr="$(cat "$bootstrap_stderr_file")"
+        rm -f "$bootstrap_stderr_file"
         echo "ERROR: ${label} failed." >&2
-        printf '%s\n' "$bootstrap_output" >&2
+        if [[ -n "$bootstrap_stderr" ]]; then
+            printf '%s\n' "$bootstrap_stderr" >&2
+        fi
+        if [[ -n "${bootstrap_output//[[:space:]]/}" ]]; then
+            printf '%s\n' "$bootstrap_output" >&2
+        fi
         exit 1
     fi
 
+    bootstrap_stderr="$(cat "$bootstrap_stderr_file")"
+    rm -f "$bootstrap_stderr_file"
+
     if [[ -z "${bootstrap_output//[[:space:]]/}" ]]; then
         echo "ERROR: ${label} produced empty output." >&2
+        if [[ -n "$bootstrap_stderr" ]]; then
+            printf '%s\n' "$bootstrap_stderr" >&2
+        fi
         exit 1
     fi
 
     if ! validate_json_payload "$bootstrap_output"; then
         echo "ERROR: ${label} produced non-JSON output." >&2
+        if [[ -n "$bootstrap_stderr" ]]; then
+            printf '%s\n' "$bootstrap_stderr" >&2
+        fi
         printf '%s\n' "$bootstrap_output" >&2
         exit 1
+    fi
+
+    if [[ -n "$bootstrap_stderr" ]]; then
+        printf '%s\n' "$bootstrap_stderr" >&2
     fi
 
     printf '%s' "$bootstrap_output"

@@ -28,6 +28,7 @@ def _write_feature_fixture(
     plan_uif_path_refs: str = "[UIF-Path-001]",
     plan_udd_refs: str = "[UDD-001]",
     plan_test_scope: str = "Integration",
+    data_model_strategy_evidence: str | None = None,
 ) -> Path:
     feature_dir = tmp_path / "feature"
     (feature_dir / "contracts").mkdir(parents=True)
@@ -53,6 +54,13 @@ def _write_feature_fixture(
         "class DemoController:\n    def handle(self):\n        return 'ok'\n",
         encoding="utf-8",
     )
+
+    if data_model_strategy_evidence is None:
+        data_model_strategy_evidence = (
+            "existing and extended reviewed; new shared semantic owner is required"
+            if test_matrix_status == "new"
+            else "N/A"
+        )
 
     (feature_dir / "data-model.md").write_text(
         "\n".join(
@@ -80,9 +88,9 @@ def _write_feature_fixture(
                 "|---------------|------------|---------------------|----------|-----------------|--------------------------|-----------------------------|",
                 "| LC-001 | `Open` | complete | `Closed` | allowed | [INV-001] | [BR-001] |",
                 "",
-                "| SSE ID | Kind | Name | Business Meaning | Primary UDD Ref(s) | Primary Spec Ref(s) | Consumed By BindingRowID(s) | Anchor Status | Repo Anchor | Anchor Role | Status |",
-                "|--------|------|------|------------------|--------------------|---------------------|-----------------------------|---------------|-------------|-------------|--------|",
-                f"| SSE-001 | entity | DemoAggregate | demo | [UDD-001] | [FR-001] | [BR-001] | {test_matrix_status} | src/domain/demo.py::DemoAggregate | owner | defined |",
+                "| SSE ID | Kind | Name | Business Meaning | Primary UDD Ref(s) | Primary Spec Ref(s) | Consumed By BindingRowID(s) | Anchor Status | Repo-First Strategy Evidence | Repo Anchor | Anchor Role | Status |",
+                "|--------|------|------|------------------|--------------------|---------------------|-----------------------------|---------------|------------------------------|-------------|-------------|--------|",
+                f"| SSE-001 | entity | DemoAggregate | demo | [UDD-001] | [FR-001] | [BR-001] | {test_matrix_status} | {data_model_strategy_evidence} | src/domain/demo.py::DemoAggregate | owner | defined |",
                 "",
                 "## Owner / Source Alignment",
                 "",
@@ -582,6 +590,52 @@ def test_binding_tuple_projection_sync_flags_plan_projection_drift(tmp_path: Pat
     payload = _run_planning_lint(feature_dir)
     assert payload["findings_total"] > 0
     assert any(f["rule_id"] == "PLN-BP-002" for f in payload["findings"])
+
+
+def test_data_model_requires_repo_first_strategy_evidence_column(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    data_model = feature_dir / "data-model.md"
+    data_model.write_text(
+        data_model.read_text(encoding="utf-8").replace("Repo-First Strategy Evidence | ", "", 1),
+        encoding="utf-8",
+    )
+
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-DM-006" for f in payload["findings"])
+
+
+def test_data_model_contract_flavored_names_are_rejected(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    data_model = feature_dir / "data-model.md"
+    data_model.write_text(
+        data_model.read_text(encoding="utf-8").replace("DemoAggregate", "DemoViewDTO"),
+        encoding="utf-8",
+    )
+
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-DM-007" for f in payload["findings"])
+
+
+def test_data_model_interface_role_names_are_rejected(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    data_model = feature_dir / "data-model.md"
+    data_model.write_text(
+        data_model.read_text(encoding="utf-8").replace("DemoAggregate", "DemoService"),
+        encoding="utf-8",
+    )
+
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-DM-008" for f in payload["findings"])
+
+
+def test_data_model_new_anchors_require_strategy_evidence(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path, test_matrix_status="new", data_model_strategy_evidence="N/A")
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-DM-009" for f in payload["findings"])
 
 
 def test_repo_anchor_paths_must_resolve_to_real_files(tmp_path: Path):
