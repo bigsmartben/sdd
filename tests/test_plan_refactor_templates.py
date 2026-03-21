@@ -144,7 +144,10 @@ def test_research_data_model_and_test_matrix_are_packet_first():
     assert "Treat `DATA_MODEL_BOOTSTRAP.generation_readiness` as the primary queue/readiness gate" in data_model
     assert "optional `research.md` path only when `spec.md` + `test-matrix.md` wording leaves the shared-semantic boundary ambiguous" in data_model
     assert "The output MUST define only the shared, stable, reusable semantics" in data_model
-    assert "Do not define HTTP routes, controller/service/DTO names, request/response shapes, operation-scoped command/result models, or repo interface-anchor placement here; those belong to `/sdd.plan.contract`." in data_model
+    assert "Do not define HTTP routes, controller/service/facade naming, contract-flavored shared names such as `*DTO`, `*Request`, `*Response`, `*Command`, or `*Result`, request/response shapes, operation-scoped command/result models, or repo interface-anchor placement here; those belong to `/sdd.plan.contract`." in data_model
+    assert "Downstream `/sdd.plan.contract` work MUST reuse shared refs produced here" in data_model
+    assert "Shared semantic names and UML/class labels in this stage MUST avoid contract-flavored suffixes" in data_model
+    assert "When `Anchor Status = new`, record repo-first strategy evidence" in data_model
     assert "`DATA_MODEL_BOOTSTRAP.state_machine_policy`" in data_model
     assert "If `N > 3` or `T >= 2N`, emit a full FSM package" in data_model
     assert "If `existing` and `extended` are both insufficient, `new` is the required outcome for this stage" in data_model
@@ -211,13 +214,16 @@ def test_data_model_template_requires_new_anchor_evidence_and_owner_closure():
     assert "If a semantic is used by only one `BindingRowID`, leave it to `/sdd.plan.contract`" in content
     assert "Leave complete request/response expansion to `/sdd.plan.contract`." in content
     assert "Use stable refs that downstream contracts can cite directly: `SSE-*`, `OSA-*`, `SFV-*`, `LC-*`, `INV-*`, and `DCC-*`." in content
-    assert "| SSE ID | Kind | Name | Business Meaning | Primary UDD Ref(s) | Primary Spec Ref(s) | Consumed By BindingRowID(s) | Anchor Status | Repo Anchor | Anchor Role | Status |" in content
+    assert "| SSE ID | Kind | Name | Business Meaning | Primary UDD Ref(s) | Primary Spec Ref(s) | Consumed By BindingRowID(s) | Why Not Contract-Local | Anchor Status | Repo-First Strategy Evidence | Repo Anchor | Anchor Role | Status |" in content
     assert "## Owner / Source Alignment" in content
     assert "| OSA ID | Semantic Ref | Owner Class / Semantic Owner | Source Type | Source Ref(s) | Consumed Field / Concept | Consumed By BindingRowID(s) | Notes |" in content
     assert "Every shared projection, derivation, counter, badge, role label, or lifecycle guard MUST identify the owner class/field/state that sustains it." in content
     assert "- Owner/source for confirmed shared semantics MUST be closed in this stage; use `gap` only when required input/evidence is genuinely missing." in content
     assert "- `Anchor Status` MUST use the repo-anchor decision vocabulary `existing | extended | new | todo`; prefer `existing | extended | new` in this stage and use `todo` only for genuine evidence blockers." in content
+    assert "- `Repo-First Strategy Evidence` MUST be explicit whenever `Anchor Status = new`; explain why `existing` and `extended` were rejected, and use `N/A` only for non-`new` rows." in content
     assert "- `Anchor Role` MUST align to the repo-anchor role taxonomy `owner | state-source | projection-source | carrier | partial-lineage`." in content
+    assert "contract-flavored/interface-role names such as `*DTO`, `*Request`, `*Response`, `*Command`, `*Result`, `*Controller`, `*Service`, or `*Facade`" in content
+    assert "`contract` MUST reuse these shared refs and MUST NOT redefine shared owner/source alignment, lifecycle vocabulary, invariant vocabulary, or other confirmed shared semantics independently." in content
     assert "| SFV ID | Semantic Owner | Meaning | Primary UDD Ref(s) | Required Semantics | Null / Boundary Rule | Shared By BindingRowID(s) |" in content
     assert "If a confirmed shared semantic cannot land as `existing` or `extended`, introduce the required `new` class/owner/lifecycle here instead of deferring the decision." in content
     assert "- Otherwise keep the lifecycle lightweight, but still include the transition table because it is a primary reader view." in content
@@ -371,6 +377,10 @@ def test_lint_rules_for_unified_contract_runtime_rows():
     assert "PLN-ID-015" in content
     assert "PLN-RA-011" in content
     assert "PLN-RA-012" in content
+    assert "PLN-DM-006" in content
+    assert "PLN-DM-007" in content
+    assert "PLN-DM-008" in content
+    assert "PLN-DM-009" in content
     assert "PLN-RA-013" in content
     assert "PLN-RA-014" in content
     assert "\tcontracts\tcontracts/*\t" in content

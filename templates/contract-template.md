@@ -92,8 +92,8 @@ Generate it in this order:
 
 If the selected `BindingRowID` has no shared-semantic dependency, keep one explicit `N/A` row.
 
-| Shared Semantic Ref | Constraint Type | Applied To | Impact on Contract |
-|---------------------|-----------------|------------|--------------------|
+| Shared Semantic Ref | Constraint Type (Required Enum) | Applied To | Impact on Contract |
+|---------------------|---------------------------------|------------|--------------------|
 | [`SSE-*` / `OSA-*` / `SFV-*` / `LC-*` / `INV-*` / `DCC-*` / `N/A`] | [`shared-semantic-element` / `owner-source-alignment` / `shared-field-vocabulary` / `lifecycle-invariant` / `downstream-contract-constraint` / `none`] | [request / response / owner field / behavior path / collaborator / `N/A`] | [what must be reused and what must not be invented locally] |
 
 ### Full Field Dictionary (Operation-scoped)

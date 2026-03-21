@@ -24,10 +24,12 @@ Use this artifact to align the shared semantic backbone consumed by multiple `Bi
 - Contract-facing reuse constraints for each `BindingRowID`
 - Repo-first landing decisions for any final semantic owner, lifecycle owner, or UML/class node that this artifact materializes
 - Explicit `new` shared classes when `existing` and `extended` cannot safely close a confirmed shared semantic
+- Repo-first strategy evidence for every `new` shared landing decision
 
 ### This file does not define
 
 - HTTP routes, controller/service/facade naming, or repository interface placement
+- Contract-flavored shared names such as `*DTO`, `*Request`, `*Response`, `*Command`, or `*Result`
 - Full request/response field dictionaries
 - Operation-scoped DTO/command/result models
 - Single-binding local validation details
@@ -39,6 +41,8 @@ Landing rule:
 - `spec.md` + `test-matrix.md` define the shared semantics to align.
 - Repo-first (`existing -> extended -> new`) governs how any final semantic owner, lifecycle owner, or UML/class node lands in the repository-facing model.
 - If `existing` and `extended` cannot safely close a confirmed shared semantic, this artifact MUST choose `new`.
+- If `Anchor Status = new`, record explicit repo-first strategy evidence for why `existing` and `extended` were rejected.
+- When a `new` symbol does not yet exist in the repository, prefer `Repo Anchor = TODO(REPO_ANCHOR)` instead of inventing a speculative future `path::symbol`.
 - `gap` is reserved for genuine input/evidence blockers, not for unresolved ownership of an already-confirmed shared semantic.
 
 Selection rule:
@@ -151,25 +155,28 @@ Lifecycle rules:
 This is the primary shared-semantic backbone table.
 Use stable refs that downstream contracts can cite directly: `SSE-*`, `OSA-*`, `SFV-*`, `LC-*`, `INV-*`, and `DCC-*`.
 
-| SSE ID | Kind | Name | Business Meaning | Primary UDD Ref(s) | Primary Spec Ref(s) | Consumed By BindingRowID(s) | Anchor Status | Repo Anchor | Anchor Role | Status |
-|--------|------|------|------------------|--------------------|---------------------|-----------------------------|---------------|-------------|-------------|--------|
-| SSE-001 | `entity` | [ConversationThread] | [Shared user-visible thread object] | [UDD-001] | [FR-001, UIF-001] | [BR-001, BR-002] | `existing` | [`src/domain/thread.py::ConversationThread`] | `owner` | `defined` |
-| SSE-002 | `projection` | [UnreadBadge] | [Shared unread-count projection] | [UDD-003] | [FR-003] | [BR-001, BR-004] | `extended` | [`src/domain/thread.py::ConversationThread.unreadCount`] | `projection-source` | `defined` |
-| SSE-003 | `lifecycle` | [ClosureLifecycle] | [Stable thread closure lifecycle vocabulary] | [UDD-002] | [FR-004, FR-005] | [BR-002] | `existing` | [`src/domain/thread.py::ConversationThread.status`] | `state-source` | `defined` |
+| SSE ID | Kind | Name | Business Meaning | Primary UDD Ref(s) | Primary Spec Ref(s) | Consumed By BindingRowID(s) | Why Not Contract-Local | Anchor Status | Repo-First Strategy Evidence | Repo Anchor | Anchor Role | Status |
+|--------|------|------|------------------|--------------------|---------------------|-----------------------------|------------------------|---------------|------------------------------|-------------|-------------|--------|
+| SSE-001 | `entity` | [ConversationThread] | [Shared user-visible thread object] | [UDD-001] | [FR-001, UIF-001] | [BR-001, BR-002] | [N/A] | `existing` | [N/A] | [`src/domain/thread.py::ConversationThread`] | `owner` | `defined` |
+| SSE-002 | `projection` | [UnreadBadge] | [Shared unread-count projection] | [UDD-003] | [FR-003] | [BR-001, BR-004] | [N/A] | `extended` | [Reuse existing aggregate field and extend projection semantics in place] | [`src/domain/thread.py::ConversationThread.unreadCount`] | `projection-source` | `defined` |
+| SSE-003 | `lifecycle` | [ClosureLifecycle] | [Stable thread closure lifecycle vocabulary] | [UDD-002] | [FR-004, FR-005] | [BR-002] | [Globally stable lifecycle vocabulary reused across downstream contract variants] | `existing` | [N/A] | [`src/domain/thread.py::ConversationThread.status`] | `state-source` | `defined` |
 
 Rules:
 
 - `Kind` MUST be one of `entity | value-object | projection | lifecycle | invariant | policy`.
+- `Why Not Contract-Local` MUST be explicit for any row consumed by exactly one `BindingRowID`; use concrete cross-role/global-stability reasoning, not stylistic preference.
 - `Anchor Status` MUST use the repo-anchor decision vocabulary `existing | extended | new | todo`; prefer `existing | extended | new` in this stage and use `todo` only for genuine evidence blockers.
+- `Repo-First Strategy Evidence` MUST be explicit whenever `Anchor Status = new`; explain why `existing` and `extended` were rejected, and use `N/A` only for non-`new` rows.
 - `Repo Anchor` MUST use strict `path/to/file.ext::Symbol` format or explicit `TODO(REPO_ANCHOR)`.
 - `Anchor Role` MUST align to the repo-anchor role taxonomy `owner | state-source | projection-source | carrier | partial-lineage`.
 - Keep `Status = gap` only when authoritative input or evidence is missing and the stage is blocked from closing the semantic safely.
-- Do not add operation-scoped request/response types or single-binding helper concepts here.
+- Do not add operation-scoped request/response types, single-binding helper concepts, or contract-flavored/interface-role names such as `*DTO`, `*Request`, `*Response`, `*Command`, `*Result`, `*Controller`, `*Service`, or `*Facade` here.
 - Do not elevate trigger refs, request semantics, or side-effect descriptions from `Interface Partition Decisions` into `Shared Semantic Elements`.
 - Do not elevate `User Intent`, `Visible Result`, `Boundary Notes`, or `Repo Landing Hint` from `Binding Packets` into `Shared Semantic Elements` unless they have been grounded as stable business semantics in `spec.md`.
 - If a row is materialized as a final class, semantic owner, lifecycle owner, or UML node, its landing MUST follow repo-first `existing -> extended -> new`.
 - Do not introduce a new design-only class when an `existing` or `extended` landing already closes the shared semantic safely.
 - If a confirmed shared semantic cannot land as `existing` or `extended`, introduce the required `new` class/owner/lifecycle here instead of deferring the decision.
+- When a `new` row does not yet have a real repo symbol, prefer `Repo Anchor = TODO(REPO_ANCHOR)` rather than fabricating a future anchor.
 
 ## Owner / Source Alignment
 
@@ -238,6 +245,7 @@ Do not repeat the main transition table unless additional detail is necessary.
 ## Downstream Contract Constraints
 
 This is the direct handoff surface for `/sdd.plan.contract`.
+`contract` MUST reuse these shared refs and MUST NOT redefine shared owner/source alignment, lifecycle vocabulary, invariant vocabulary, or other confirmed shared semantics independently.
 
 | DCC ID | BindingRowID | Required Shared Semantic Ref(s) | Constraint Type | Contract Impact |
 |--------|--------------|---------------------------------|-----------------|-----------------|
@@ -250,6 +258,7 @@ Rules:
 - `Constraint Type` MUST be one of `owner | source | lifecycle | invariant | projection`.
 - Every `BindingRowID` that depends on a shared semantic MUST be listed here.
 - Use this section to tell `/sdd.plan.contract` what must be reused, not to design the contract itself.
+- Downstream `/sdd.plan.contract` output reuses these shared refs; it does not rename or redefine the shared semantic backbone chosen here.
 
 ## Alignment Closure
 
@@ -260,5 +269,7 @@ Rules:
 - Ensure owner/source alignment closes over every shared projection or derived semantic so downstream contracts do not invent missing owners.
 - Ensure lifecycle/invariant content appears only when the vocabulary is shared or globally stable.
 - Ensure any final semantic owner, lifecycle owner, or UML/class node follows repo-first landing order `existing -> extended -> new`.
+- Ensure shared semantic names and UML/class nodes avoid contract-flavored/interface-role naming such as `*DTO`, `*Request`, `*Response`, `*Command`, `*Result`, `*Controller`, `*Service`, and `*Facade`.
+- Ensure every `new` landing row records repo-first strategy evidence and uses `TODO(REPO_ANCHOR)` when no real repo symbol exists yet.
 - Ensure confirmed shared semantics end with a closed landing decision; when `existing` and `extended` are insufficient, materialize the required `new` class/owner/lifecycle here.
 - Use `Status = gap` only when the stage is blocked by missing authoritative input or missing landing evidence, not as a fallback for unresolved ownership.

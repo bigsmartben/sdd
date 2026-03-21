@@ -30,9 +30,11 @@ Supported rule kinds:
   - anchor_status_allowed_values
   - northbound_controller_required
   - repo_anchor_paths_exist
-  - plan_status_consistency
-  - binding_projection_stable_only
-  - binding_tuple_projection_sync
+    - plan_status_consistency
+    - binding_projection_stable_only
+    - binding_tuple_projection_sync
+    - shared_semantic_reuse_enum
+    - anchor_strategy_evidence_required
 "@
 }
 
@@ -1326,8 +1328,130 @@ foreach ($row in $rows) {
             }
         }
 
+        'shared_semantic_reuse_enum' {
+            $allowedCsv = $params['allowed']
+            if ([string]::IsNullOrWhiteSpace($allowedCsv)) {
+                Add-Finding -RuleId $row.id -Severity $row.severity -File $row.glob -Line 0 -Message 'Rule params missing required key: allowed' -Remediation 'Fix rules TSV params for this rule.'
+                continue
+            }
+
+            $allowedSet = Get-AllowedStatusSet -AllowedCsv $allowedCsv
+            $typeHeaderPattern = '(?i)^Constraint[ _-]*Type(?:\s*\([^)]*\))?$'
+
+            foreach ($file in $matched) {
+                $lines = @(Get-Content -Path $file.FullPath -ErrorAction Stop)
+                $typeColumnIndex = -1
+                $inTable = $false
+
+                for ($i = 0; $i -lt $lines.Count; $i++) {
+                    $lineNumber = $i + 1
+                    $line = $lines[$i]
+
+                    $cells = @(Get-MarkdownCells -Line $line)
+                    if ($cells.Count -eq 0) {
+                        $typeColumnIndex = -1
+                        $inTable = $false
+                        continue
+                    }
+
+                    if (-not $inTable) {
+                        $typeColumnIndex = -1
+                        for ($idx = 0; $idx -lt $cells.Count; $idx++) {
+                            if ($cells[$idx] -match $typeHeaderPattern) {
+                                $typeColumnIndex = $idx
+                                break
+                            }
+                        }
+                        if ($typeColumnIndex -ge 0) {
+                            $inTable = $true
+                        }
+                        continue
+                    }
+
+                    if (Test-MarkdownSeparatorRow -Cells $cells) {
+                        continue
+                    }
+
+                    if ($typeColumnIndex -ge $cells.Count) {
+                        continue
+                    }
+
+                    $typeValue = $cells[$typeColumnIndex].Trim()
+                    if ($typeValue -eq 'N/A') {
+                        continue
+                    }
+
+                    if (-not $allowedSet.Contains($typeValue)) {
+                        $allowedText = (($allowedSet | ForEach-Object { $_ }) -join ',')
+                        Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lineNumber -Message "$($row.message) Invalid type: $typeValue. Allowed: $allowedText" -Remediation $row.remediation
+                    }
+                }
+            }
+        }
+
+        'anchor_strategy_evidence_required' {
+            $statusLabelPattern = '(?i)^\s*(?:[-*]\s*)?(?:\*\*)?(Boundary[ _-]*Anchor[ _-]*Status|Implementation[ _-]*Entry[ _-]*Anchor[ _-]*Status)(?:\s*\([^)]*\))?(?:\*\*)?\s*:\s*(.+)$'
+            $strategyLabelPattern = '(?i)^\s*(?:[-*]\s*)?(?:\*\*)?(Boundary[ _-]*Anchor[ _-]*Strategy[ _-]*Evidence|Implementation[ _-]*Entry[ _-]*Anchor[ _-]*Strategy[ _-]*Evidence)(?:\s*\([^)]*\))?(?:\*\*)?\s*:\s*(.+)$'
+
+            foreach ($file in $matched) {
+                $lines = @(Get-Content -Path $file.FullPath -ErrorAction Stop)
+                $pendingStatus = $null
+                $pendingType = $null
+                $pendingLine = 0
+
+                for ($i = 0; $i -lt $lines.Count; $i++) {
+                    $lineNumber = $i + 1
+                    $line = $lines[$i]
+
+                    $statusMatch = [regex]::Match($line, $statusLabelPattern)
+                    if ($statusMatch.Success) {
+                        $pType = $statusMatch.Groups[1].Value
+                        $pStatus = Get-AnchorStatusToken -Value $statusMatch.Groups[2].Value
+                        if ($pStatus -eq 'new') {
+                            $pendingType = $pType
+                            $pendingStatus = $pStatus
+                            $pendingLine = $lineNumber
+                        } else {
+                            $pendingStatus = 'DONE'
+                            $pendingType = $pType
+                            $pendingLine = $lineNumber
+                        }
+                        continue
+                    }
+
+                    $strategyMatch = [regex]::Match($line, $strategyLabelPattern)
+                    if ($strategyMatch.Success -and $null -ne $pendingStatus) {
+                        $strategyType = $strategyMatch.Groups[1].Value
+                        $evidenceValue = Normalize-MarkdownScalar -Value $strategyMatch.Groups[2].Value
+
+                        $isMatch = $false
+                        if ($pendingType -like 'Boundary*' -and $strategyType -like 'Boundary*') {
+                            $isMatch = $true
+                        } elseif ($pendingType -like 'Implementation*' -and $strategyType -like 'Implementation*') {
+                            $isMatch = $true
+                        }
+
+                        if ($isMatch) {
+                            if ($pendingStatus -eq 'new') {
+                                if ($evidenceValue -notmatch 'existing[ _-]+rejected' -or $evidenceValue -notmatch 'extended[ _-]+rejected') {
+                                    Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lineNumber -Message "$($row.message) Anchor status is 'new' but evidence is missing 'existing rejected' or 'extended rejected'. Evidence: $evidenceValue" -Remediation $row.remediation
+                                }
+                            }
+                            $pendingStatus = $null
+                            $pendingType = $null
+                            $pendingLine = 0
+                        }
+                    }
+                }
+
+                if ($pendingStatus -eq 'new') {
+                    Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $pendingLine -Message "$($row.message) Anchor status is 'new' but strategy evidence label is missing for $pendingType." -Remediation $row.remediation
+                }
+            }
+        }
+
         default {
-            Add-Finding -RuleId $row.id -Severity $row.severity -File $row.glob -Line 0 -Message "Unsupported rule kind: $($row.kind)" -Remediation 'Use one of: file_regex_forbidden, file_regex_required_any, component_symbols_exist, anchor_status_allowed_values, northbound_controller_required, repo_anchor_paths_exist, plan_status_consistency, binding_projection_stable_only, binding_tuple_projection_sync.'
+            Add-Finding -RuleId $row.id -Severity $row.severity -File $row.glob -Line 0 -Message "Unsupported rule kind: $($row.kind)" -Remediation 'Use one of: file_regex_forbidden, file_regex_required_any, component_symbols_exist, anchor_status_allowed_values, northbound_controller_required, repo_anchor_paths_exist, plan_status_consistency, binding_projection_stable_only, binding_tuple_projection_sync, shared_semantic_reuse_enum, anchor_strategy_evidence_required.'
         }
     }
 }

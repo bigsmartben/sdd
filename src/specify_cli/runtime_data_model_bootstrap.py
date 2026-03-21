@@ -15,7 +15,7 @@ from specify_cli.runtime_common import (
 )
 
 
-DATA_MODEL_BOOTSTRAP_SCHEMA_VERSION = "1.2"
+DATA_MODEL_BOOTSTRAP_SCHEMA_VERSION = "1.3"
 DATA_MODEL_SECTION_HEADINGS = (
     "Summary",
     "Shared Context Snapshot",
@@ -58,6 +58,19 @@ STATE_MACHINE_POLICY = {
         "key_invariants",
     ],
     "full_fsm_below_threshold_requires_justification": True,
+}
+SHARED_SEMANTIC_BOUNDARY_POLICY = {
+    "forbidden_contract_suffixes": ["DTO", "Request", "Response", "Command", "Result"],
+    "forbidden_interface_role_suffixes": ["Controller", "Service", "Facade"],
+    "new_anchor_requires_strategy_evidence": True,
+    "new_anchor_prefers_todo_repo_anchor_until_symbol_exists": True,
+    "contract_must_reuse_shared_refs": True,
+    "contract_must_not_redefine_shared_semantics": [
+        "owner_source_alignment",
+        "lifecycle_vocabulary",
+        "invariant_vocabulary",
+        "shared_owner_decisions",
+    ],
 }
 
 
@@ -369,6 +382,7 @@ def build_data_model_bootstrap_payload(
             "inv_forbids_todo": True,
             "lifecycle_stable_states_forbid_todo": True,
         },
+        "shared_semantic_boundary_policy": SHARED_SEMANTIC_BOUNDARY_POLICY,
         "state_machine_policy": STATE_MACHINE_POLICY,
         "generation_readiness": generation_readiness,
     }

@@ -11,6 +11,12 @@ LINT_SCRIPT = REPO_ROOT / "scripts" / "bash" / "run-planning-lint.sh"
 RULES_FILE = REPO_ROOT / "rules" / "planning-lint-rules.tsv"
 
 
+def _replace_exact(content: str, old: str, new: str, count: int = 1) -> str:
+    updated = content.replace(old, new, count)
+    assert updated != content, f"expected marker not found: {old}"
+    return updated
+
+
 def _write_feature_fixture(
     tmp_path: Path,
     test_matrix_status: str = "existing",
@@ -28,6 +34,7 @@ def _write_feature_fixture(
     plan_uif_path_refs: str = "[UIF-Path-001]",
     plan_udd_refs: str = "[UDD-001]",
     plan_test_scope: str = "Integration",
+    data_model_strategy_evidence: str | None = None,
 ) -> Path:
     feature_dir = tmp_path / "feature"
     (feature_dir / "contracts").mkdir(parents=True)
@@ -53,6 +60,13 @@ def _write_feature_fixture(
         "class DemoController:\n    def handle(self):\n        return 'ok'\n",
         encoding="utf-8",
     )
+
+    if data_model_strategy_evidence is None:
+        data_model_strategy_evidence = (
+            "existing and extended reviewed; new shared semantic owner is required"
+            if test_matrix_status == "new"
+            else "N/A"
+        )
 
     (feature_dir / "data-model.md").write_text(
         "\n".join(
@@ -80,9 +94,9 @@ def _write_feature_fixture(
                 "|---------------|------------|---------------------|----------|-----------------|--------------------------|-----------------------------|",
                 "| LC-001 | `Open` | complete | `Closed` | allowed | [INV-001] | [BR-001] |",
                 "",
-                "| SSE ID | Kind | Name | Business Meaning | Primary UDD Ref(s) | Primary Spec Ref(s) | Consumed By BindingRowID(s) | Anchor Status | Repo Anchor | Anchor Role | Status |",
-                "|--------|------|------|------------------|--------------------|---------------------|-----------------------------|---------------|-------------|-------------|--------|",
-                f"| SSE-001 | entity | DemoAggregate | demo | [UDD-001] | [FR-001] | [BR-001] | {test_matrix_status} | src/domain/demo.py::DemoAggregate | owner | defined |",
+                "| SSE ID | Kind | Name | Business Meaning | Primary UDD Ref(s) | Primary Spec Ref(s) | Consumed By BindingRowID(s) | Anchor Status | Repo-First Strategy Evidence | Repo Anchor | Anchor Role | Status |",
+                "|--------|------|------|------------------|--------------------|---------------------|-----------------------------|---------------|------------------------------|-------------|-------------|--------|",
+                f"| SSE-001 | entity | DemoAggregate | demo | [UDD-001] | [FR-001] | [BR-001] | {test_matrix_status} | {data_model_strategy_evidence} | src/domain/demo.py::DemoAggregate | owner | defined |",
                 "",
                 "## Owner / Source Alignment",
                 "",
@@ -162,6 +176,7 @@ def _write_feature_fixture(
         "**IF Scope (Required)**: IF-001",
         f"**Boundary Anchor (Required)**: {contract_boundary_anchor}",
         f"**Anchor Status (Required)**: {contract_anchor_status}",
+        "**Boundary Anchor Strategy Evidence (Required)**: N/A",
         "",
         "## Binding Context",
         "",
@@ -190,6 +205,11 @@ def _write_feature_fixture(
         "| Success Output | demo payload |",
         "| Failure Output | error payload |",
         "",
+        "### Shared Semantic Reuse",
+        "| Shared Semantic Ref | Constraint Type (Required Enum) | Applied To | Impact on Contract |",
+        "|---------------------|---------------------------------|------------|--------------------|",
+        "| SSE-001 | shared-semantic-element | request | Reuse shared semantic naming and meaning from data model. |",
+        "",
         "## UML Class Design",
         "",
         "### Resolved Type Inventory",
@@ -210,6 +230,7 @@ def _write_feature_fixture(
     contract_lines.extend(
         [
             f"**Implementation Entry Anchor Status (Required)**: {contract_entry_status}",
+            "**Implementation Entry Anchor Strategy Evidence (Required)**: N/A",
             "",
             "## Sequence Design",
             "- Boundary call enters controller and then reaches app handler.",
@@ -404,8 +425,38 @@ def test_anchor_status_allowed_values_rejects_composite_table_tokens(tmp_path: P
 def test_anchor_status_allowed_values_rejects_composite_label_tokens(tmp_path: Path):
     feature_dir = _write_feature_fixture(tmp_path, contract_anchor_status="`existing` and `new`")
     payload = _run_planning_lint(feature_dir)
-    assert payload["findings_total"] > 0
+    # Filter for RA-007 as other rules might trigger too (like strategy evidence)
     assert any(f["rule_id"] == "PLN-RA-007" for f in payload["findings"])
+
+
+def test_anchor_strategy_evidence_required_when_new_anchor_missing_rejections(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path, contract_anchor_status="`new`")
+    contract = feature_dir / "contracts" / "demo.md"
+    content = contract.read_text(encoding="utf-8")
+    content = _replace_exact(
+        content,
+        "**Boundary Anchor Strategy Evidence (Required)**: N/A",
+        "**Boundary Anchor Strategy Evidence (Required)**: logic required it",
+    )
+    contract.write_text(content, encoding="utf-8")
+
+    payload = _run_planning_lint(feature_dir)
+    assert any(f["rule_id"] == "PLN-RA-017" for f in payload["findings"])
+
+
+def test_anchor_strategy_evidence_accepts_required_rejections(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path, contract_anchor_status="`new`")
+    contract = feature_dir / "contracts" / "demo.md"
+    content = contract.read_text(encoding="utf-8")
+    content = _replace_exact(
+        content,
+        "**Boundary Anchor Strategy Evidence (Required)**: N/A",
+        "**Boundary Anchor Strategy Evidence (Required)**: existing rejected: none; extended rejected: none",
+    )
+    contract.write_text(content, encoding="utf-8")
+
+    payload = _run_planning_lint(feature_dir)
+    assert not any(f["rule_id"] == "PLN-RA-017" for f in payload["findings"])
 
 
 @pytest.mark.parametrize(
@@ -510,6 +561,43 @@ def test_dictionary_tier_is_required_in_contract_field_dictionary(tmp_path: Path
     assert any(f["rule_id"] == "PLN-ID-013" for f in payload["findings"])
 
 
+def test_shared_semantic_reuse_enum_validation(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    contract = feature_dir / "contracts" / "demo.md"
+    content = contract.read_text(encoding="utf-8")
+    content = _replace_exact(
+        content,
+        "| SSE-001 | shared-semantic-element | request | Reuse shared semantic naming and meaning from data model. |",
+        "| SSE-001 | invalid-type | request | Reuse shared semantic naming and meaning from data model. |",
+    )
+    contract.write_text(content, encoding="utf-8")
+
+    payload = _run_planning_lint(feature_dir)
+    assert any(f["rule_id"] == "PLN-RA-015" for f in payload["findings"])
+
+
+def test_contract_placeholder_detection(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    contract = feature_dir / "contracts" / "demo.md"
+    content = contract.read_text(encoding="utf-8")
+    content += "\nSome placeholder like [operationId] or <BoundaryRequestModel>\n"
+    contract.write_text(content, encoding="utf-8")
+
+    payload = _run_planning_lint(feature_dir)
+    assert any(f["rule_id"] == "PLN-RA-016" for f in payload["findings"])
+
+
+def test_fingerprint_format_validation(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    plan = feature_dir / "plan.md"
+    content = plan.read_text(encoding="utf-8")
+    content += "\nFingerprint = abc123\n"
+    plan.write_text(content, encoding="utf-8")
+
+    payload = _run_planning_lint(feature_dir)
+    assert any(f["rule_id"] == "PLN-FP-001" for f in payload["findings"])
+
+
 def test_northbound_rule_flags_missing_label_entry_anchor_in_bash(tmp_path: Path):
     feature_dir = _write_feature_fixture(
         tmp_path,
@@ -582,6 +670,52 @@ def test_binding_tuple_projection_sync_flags_plan_projection_drift(tmp_path: Pat
     payload = _run_planning_lint(feature_dir)
     assert payload["findings_total"] > 0
     assert any(f["rule_id"] == "PLN-BP-002" for f in payload["findings"])
+
+
+def test_data_model_requires_repo_first_strategy_evidence_column(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    data_model = feature_dir / "data-model.md"
+    data_model.write_text(
+        data_model.read_text(encoding="utf-8").replace("Repo-First Strategy Evidence | ", "", 1),
+        encoding="utf-8",
+    )
+
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-DM-006" for f in payload["findings"])
+
+
+def test_data_model_contract_flavored_names_are_rejected(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    data_model = feature_dir / "data-model.md"
+    data_model.write_text(
+        data_model.read_text(encoding="utf-8").replace("DemoAggregate", "DemoViewDTO"),
+        encoding="utf-8",
+    )
+
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-DM-007" for f in payload["findings"])
+
+
+def test_data_model_interface_role_names_are_rejected(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    data_model = feature_dir / "data-model.md"
+    data_model.write_text(
+        data_model.read_text(encoding="utf-8").replace("DemoAggregate", "DemoService"),
+        encoding="utf-8",
+    )
+
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-DM-008" for f in payload["findings"])
+
+
+def test_data_model_new_anchors_require_strategy_evidence(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path, test_matrix_status="new", data_model_strategy_evidence="N/A")
+    payload = _run_planning_lint(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-DM-009" for f in payload["findings"])
 
 
 def test_repo_anchor_paths_must_resolve_to_real_files(tmp_path: Path):
