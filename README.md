@@ -718,7 +718,7 @@ Once ready, use the `/sdd.implement` command to execute your implementation plan
 
 The `/sdd.implement` command is execution plus runtime hard gates. It is not the unified semantic audit step; by default it requires current `/sdd.analyze` evidence with `Gate Decision: PASS` for the current task artifacts.
 It should also reuse the emitted `LOCAL_EXECUTION_PROTOCOL` and repo-backed task anchors for local commands instead of trial-and-error across search tools, package managers, or Python runners. SDD-owned helpers should run through packaged `specify-cli` internal commands rather than user-managed interpreters or repo-local `uv run python`.
-Current analyze-pass evidence is read from the latest run block in `FEATURE_DIR/audits/analyze-history.md`; missing evidence, stale fingerprint mismatches, or `Gate Decision: FAIL` should block implementation unless the run includes an explicit analyze-gate waiver.
+Current analyze-pass evidence is read from the latest run block in `FEATURE_DIR/audits/analyze-history.md`; missing evidence or `Gate Decision: FAIL` should block implementation unless the run includes an explicit analyze-gate waiver.
 
 The `/sdd.implement` command will:
 

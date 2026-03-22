@@ -6,12 +6,17 @@ import json
 from pathlib import Path
 from typing import Any
 
-from specify_cli.runtime_common import compute_sha256
-
 
 TASKS_MANIFEST_BOOTSTRAP_SCHEMA_VERSION = "1.0"
-REQUIRED_TOP_LEVEL_KEYS = ("schema_version", "generated_at", "generated_from", "tasks")
-REQUIRED_GENERATED_FROM_KEYS = ("plan_path", "plan_source_fingerprint", "contract_source_fingerprints")
+REQUIRED_TOP_LEVEL_KEYS = (
+    "schema_version",
+    "generated_at",
+    "generated_from",
+    "tasks",
+    "presentation",
+)
+REQUIRED_GENERATED_FROM_KEYS = ("plan_path",)
+REQUIRED_PRESENTATION_KEYS = ("board_style", "source_lineage")
 REQUIRED_TASK_KEYS = (
     "task_id",
     "dependencies",
@@ -91,6 +96,26 @@ def build_tasks_manifest_validation(
                     "details": {"keys": missing_top_level},
                 }
             )
+
+        presentation = manifest_data.get("presentation")
+        if not isinstance(presentation, dict):
+            errors.append(
+                {
+                    "code": "tasks_manifest_presentation_invalid",
+                    "message": "tasks.manifest.json `presentation` must be a JSON object.",
+                    "details": {},
+                }
+            )
+        else:
+            missing_presentation = [key for key in REQUIRED_PRESENTATION_KEYS if key not in presentation]
+            if missing_presentation:
+                errors.append(
+                    {
+                        "code": "tasks_manifest_presentation_missing_keys",
+                        "message": "tasks.manifest.json `presentation` is missing required keys for the enhanced task board.",
+                        "details": {"keys": missing_presentation},
+                    }
+                )
 
         generated_from = manifest_data.get("generated_from")
         if not isinstance(generated_from, dict):
@@ -202,10 +227,9 @@ def build_tasks_manifest_bootstrap_payload(
         "plan_path": str(plan_path),
         "tasks_path": str(tasks_path),
         "tasks_manifest_path": str(tasks_manifest_path),
-        "current_fingerprints": {
-            "plan_sha256": compute_sha256(plan_path),
-            "tasks_sha256": compute_sha256(tasks_path),
-            "tasks_manifest_sha256": compute_sha256(tasks_manifest_path),
+        "presentation": {
+            "board_style": "enhanced",
+            "source_lineage": ["plan_path"],
         },
         "validation": build_tasks_manifest_validation(
             feature_dir=feature_dir,

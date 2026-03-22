@@ -24,32 +24,6 @@ def resolve_generator_version() -> tuple[str | None, str]:
         return None, "unknown"
 
 
-def _normalize_manifest_fingerprints(source_manifest_fingerprints: dict[str, str] | None) -> dict[str, Any]:
-    if source_manifest_fingerprints is None:
-        return {
-            "status": "unknown",
-            "value": {},
-            "missing_keys": [],
-            "reason": "source_manifest_fingerprints_unavailable",
-        }
-
-    missing_keys = sorted([key for key, value in source_manifest_fingerprints.items() if not value])
-    if missing_keys:
-        return {
-            "status": "missing",
-            "value": source_manifest_fingerprints,
-            "missing_keys": missing_keys,
-            "reason": "source_manifest_fingerprints_incomplete",
-        }
-
-    return {
-        "status": "available",
-        "value": source_manifest_fingerprints,
-        "missing_keys": [],
-        "reason": "",
-    }
-
-
 def _normalize_check_entry(*, severity: str, finding: dict[str, Any]) -> dict[str, Any]:
     return {
         "code": finding.get("code", ""),
@@ -81,11 +55,9 @@ def build_repository_first_gate_protocol(
     readiness: dict[str, Any],
     ready_field: str,
     code_to_category: dict[str, str],
-    source_manifest_fingerprints: dict[str, str] | None,
 ) -> dict[str, Any]:
     generator_version, generator_status = resolve_generator_version()
     checks = normalize_baseline_checks(readiness=readiness, code_to_category=code_to_category)
-    freshness = _normalize_manifest_fingerprints(source_manifest_fingerprints)
 
     return {
         "schema_version": REPOSITORY_FIRST_GATE_PROTOCOL_SCHEMA_VERSION,
@@ -99,7 +71,6 @@ def build_repository_first_gate_protocol(
                 "value": _utc_now_iso(),
                 "reason": "",
             },
-            "source_manifest_fingerprints": freshness,
             "generator_version": {
                 "status": generator_status,
                 "value": generator_version,

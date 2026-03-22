@@ -277,11 +277,11 @@ def test_tasks_template_is_contract_only():
     assert "interface detail" not in content.lower()
 
 
-def test_analyze_routes_stale_contract_rows_only():
+def test_analyze_routes_contract_projection_drift():
     content = read("templates/commands/analyze.md")
     assert "centralized audit entry and single concentrated audit step before `/sdd.implement`." in content
     assert "contract-projection drift governance" in content
-    assert "stale `contract` -> `/sdd.plan.contract`" in content
+    assert "regenerate `/sdd.plan.contract`" in content
     assert "Projection drift routing:" in content
     assert "upstream binding-projection drift across `plan.md` / `test-matrix.md`" in content
     assert "unresolved placeholder class/type labels in contract artifacts" in content

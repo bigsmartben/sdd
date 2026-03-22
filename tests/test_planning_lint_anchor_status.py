@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pytest
 
+ANCHOR_STATUSES = {"existing", "extended", "new", "todo"}
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LINT_SCRIPT = REPO_ROOT / "scripts" / "bash" / "run-planning-lint.sh"
@@ -298,11 +300,11 @@ def _write_feature_fixture(
                 "",
                 "## Stage Queue",
                 "",
-                "| Stage ID | Command | Required Inputs | Output Path | Status | Source Fingerprint | Output Fingerprint | Blocker |",
-                "|----------|---------|-----------------|-------------|--------|--------------------|--------------------|---------|",
-                "| research | `/sdd.plan.research` | `plan.md`, `spec.md` | `research.md` | done | spec | research | none |",
-                "| test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md` | `test-matrix.md` | done | spec | test-matrix | none |",
-                "| data-model | `/sdd.plan.data-model` | `plan.md`, `spec.md`, `test-matrix.md` | `data-model.md` | done | spec+test-matrix | data-model | none |",
+                "| Stage ID | Command | Required Inputs | Output Path | Status | Blocker |",
+                "|----------|---------|-----------------|-------------|--------|---------|",
+                "| research | `/sdd.plan.research` | `plan.md`, `spec.md` | `research.md` | done | none |",
+                "| test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md` | `test-matrix.md` | done | none |",
+                "| data-model | `/sdd.plan.data-model` | `plan.md`, `spec.md`, `test-matrix.md` | `data-model.md` | done | none |",
                 "",
                 "## Binding Projection Index",
                 "",
@@ -312,9 +314,9 @@ def _write_feature_fixture(
                 "",
                 "## Artifact Status",
                 "",
-                "| BindingRowID | Unit Type | Target Path | Status | Source Fingerprint | Output Fingerprint | Blocker |",
-                "|--------------|-----------|-------------|--------|--------------------|--------------------|---------|",
-                "| BR-001 | contract | `contracts/demo.md` | pending | test-matrix:demo | pending | none |",
+                "| BindingRowID | Unit Type | Target Path | Status | Blocker |",
+                "|--------------|-----------|-------------|--------|---------|",
+                "| BR-001 | contract | `contracts/demo.md` | pending | none |",
                 "",
                 "## Handoff Protocol",
                 "",
@@ -404,6 +406,19 @@ def test_anchor_status_allowed_values_accepts_new(tmp_path: Path):
         packet_entry_anchor="DemoEntry.handle",
         packet_entry_status="new",
     )
+    # Override strategy evidence to provide proper format for "new" anchors
+    contract = feature_dir / "contracts" / "demo.md"
+    content = contract.read_text(encoding="utf-8")
+    content = content.replace(
+        "**Boundary Anchor Strategy Evidence (Required)**: N/A",
+        "**Boundary Anchor Strategy Evidence (Required)**: existing rejected: none; extended rejected: none",
+    )
+    content = content.replace(
+        "**Implementation Entry Anchor Strategy Evidence (Required)**: N/A",
+        "**Implementation Entry Anchor Strategy Evidence (Required)**: existing rejected: none; extended rejected: none",
+    )
+    contract.write_text(content, encoding="utf-8")
+
     payload = _run_planning_lint(feature_dir)
     assert payload["findings_total"] == 0
 
@@ -585,17 +600,6 @@ def test_contract_placeholder_detection(tmp_path: Path):
 
     payload = _run_planning_lint(feature_dir)
     assert any(f["rule_id"] == "PLN-RA-016" for f in payload["findings"])
-
-
-def test_fingerprint_format_validation(tmp_path: Path):
-    feature_dir = _write_feature_fixture(tmp_path)
-    plan = feature_dir / "plan.md"
-    content = plan.read_text(encoding="utf-8")
-    content += "\nFingerprint = abc123\n"
-    plan.write_text(content, encoding="utf-8")
-
-    payload = _run_planning_lint(feature_dir)
-    assert any(f["rule_id"] == "PLN-FP-001" for f in payload["findings"])
 
 
 def test_northbound_rule_flags_missing_label_entry_anchor_in_bash(tmp_path: Path):

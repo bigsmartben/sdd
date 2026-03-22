@@ -1394,6 +1394,15 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                     if parse_markdown_cells "$line"; then
                         cells=("${MARKDOWN_CELLS[@]}")
 
+                        # Check if this row is a separator row
+                        is_separator=true
+                        for cell in "${cells[@]}"; do
+                            if [[ ! "$cell" =~ ^:?-{3,}:?$ ]]; then
+                                is_separator=false
+                                break
+                            fi
+                        done
+
                         if [[ "$in_table" == false ]]; then
                             idx=0
                             for cell in "${cells[@]}"; do
@@ -1409,7 +1418,7 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                             continue
                         fi
 
-                        if Test-MarkdownSeparatorRow "${cells[@]}"; then
+                        if [[ "$is_separator" == true ]]; then
                             continue
                         fi
 
@@ -1419,7 +1428,7 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
 
                         type_value="${cells[$type_col]}"
                         [[ "$type_value" == "N/A" ]] && continue
-                        
+
                         found=false
                         for allowed in "${allowed_tokens[@]}"; do
                             if [[ "$type_value" == "$allowed" ]]; then
@@ -1434,13 +1443,14 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                         continue
                     fi
                     in_table=false
+                    type_col=-1
                 done < "$file_path"
             done
             ;;
 
         anchor_strategy_evidence_required)
-            anchor_status_label_regex='^[[:space:]]*([-*][[:space:]]*)?(\*\*)?(Boundary[ _-]*Anchor[ _-]*Status|Implementation[ _-]*Entry[ _-]*Anchor[ _-]*Status)([[:space:]]*\([^)]*\))?(\*\*)?[[:space:]]*:[[:space:]]*(.+)$'
-            strategy_label_regex='^[[:space:]]*([-*][[:space:]]*)?(\*\*)?(Boundary[ _-]*Anchor[ _-]*Strategy[ _-]*Evidence|Implementation[ _-]*Entry[ _-]*Anchor[ _-]*Strategy[ _-]*Evidence)([[:space:]]*\([^)]*\))?(\*\*)?[[:space:]]*:[[:space:]]*(.+)$'
+            anchor_status_label_regex='^[[:space:]]*([-*][[:space:]]*)?(\*\*)?(Boundary[ _-]*Anchor[ _-]*Status|Implementation[ _-]*Entry[ _-]*Anchor[ _-]*Status|Anchor[ _-]*Status)([[:space:]]*\([^)]*\))?(\*\*)?[[:space:]]*:[[:space:]]*(.+)$'
+            strategy_label_regex='^[[:space:]]*([-*][[:space:]]*)?(\*\*)?(Boundary[ _-]*Anchor[ _-]*Strategy[ _-]*Evidence|Implementation[ _-]*Entry[ _-]*Anchor[ _-]*Strategy[ _-]*Evidence|Anchor[ _-]*Strategy[ _-]*Evidence)([[:space:]]*\([^)]*\))?(\*\*)?[[:space:]]*:[[:space:]]*(.+)$'
 
             for file_path in "${matched_files[@]}"; do
                 rel_file="${file_path#$FEATURE_DIR/}"
@@ -1467,6 +1477,10 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                         if [[ "$pending_type" == "Boundary"* && "$strategy_type" == "Boundary"* ]]; then
                             is_match=true
                         elif [[ "$pending_type" == "Implementation"* && "$strategy_type" == "Implementation"* ]]; then
+                            is_match=true
+                        elif [[ "$pending_type" == "Anchor"* && "$strategy_type" == "Boundary"* ]]; then
+                            is_match=true
+                        elif [[ "$pending_type" == "Anchor"* && "$strategy_type" == "Anchor"* ]]; then
                             is_match=true
                         fi
 

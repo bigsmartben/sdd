@@ -27,6 +27,9 @@ Resolve `PLAN_FILE` from the current feature branch using `{SCRIPT}` defaults.
 
 Generate exactly one `research.md` artifact by consuming the first pending `research` row from `PLAN_FILE`.
 This command is single-unit only and MUST NOT perform any other planning stage work.
+
+Scope authority note: `research.md` output is **optional clarification input** for downstream planning stages — `/sdd.plan.data-model` may read it; `/sdd.plan.test-matrix` MUST NOT read it. However, the `research` stage row reaching `Status = done` is a **hard gate** for `/sdd.tasks`; this command must be completed successfully before task decomposition can begin.
+
 Use `.specify/templates/research-template.md` only. If the runtime template is missing or unreadable, stop and report the blocker instead of inferring structure from mirrors or prior outputs.
 
 ## Selection Rules
@@ -46,7 +49,7 @@ Build one bounded run-local packet for the selected `research` row from:
 - selected `Stage Queue` row in resolved `PLAN_FILE`
 - `Shared Context Snapshot` in resolved `PLAN_FILE`
 - resolved `FEATURE_SPEC` path
-- selected row source/output fingerprint fields
+- selected row status/output-path/blocker fields
 
 Use this packet as the default context for generation.
 Do not load additional artifacts unless a selected-row blocker or a concrete decision-evidence gap explicitly requires them.
@@ -89,8 +92,6 @@ After generating `research.md`, update the selected `Stage Queue` row only:
 
 - `Status`
 - `Output Path`
-- `Source Fingerprint`
-- `Output Fingerprint`
 - `Blocker`
 
 Do not write long summaries or detailed research prose back into `PLAN_FILE`.

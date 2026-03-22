@@ -1390,8 +1390,8 @@ foreach ($row in $rows) {
         }
 
         'anchor_strategy_evidence_required' {
-            $statusLabelPattern = '(?i)^\s*(?:[-*]\s*)?(?:\*\*)?(Boundary[ _-]*Anchor[ _-]*Status|Implementation[ _-]*Entry[ _-]*Anchor[ _-]*Status)(?:\s*\([^)]*\))?(?:\*\*)?\s*:\s*(.+)$'
-            $strategyLabelPattern = '(?i)^\s*(?:[-*]\s*)?(?:\*\*)?(Boundary[ _-]*Anchor[ _-]*Strategy[ _-]*Evidence|Implementation[ _-]*Entry[ _-]*Anchor[ _-]*Strategy[ _-]*Evidence)(?:\s*\([^)]*\))?(?:\*\*)?\s*:\s*(.+)$'
+            $statusLabelPattern = '(?i)^\s*(?:[-*]\s*)?(?:\*\*)?(Boundary[ _-]*Anchor[ _-]*Status|Implementation[ _-]*Entry[ _-]*Anchor[ _-]*Status|Anchor[ _-]*Status)(?:\s*\([^)]*\))?(?:\*\*)?\s*:\s*(.+)$'
+            $strategyLabelPattern = '(?i)^\s*(?:[-*]\s*)?(?:\*\*)?(Boundary[ _-]*Anchor[ _-]*Strategy[ _-]*Evidence|Implementation[ _-]*Entry[ _-]*Anchor[ _-]*Strategy[ _-]*Evidence|Anchor[ _-]*Strategy[ _-]*Evidence)(?:\s*\([^)]*\))?(?:\*\*)?\s*:\s*(.+)$'
 
             foreach ($file in $matched) {
                 $lines = @(Get-Content -Path $file.FullPath -ErrorAction Stop)
@@ -1428,6 +1428,8 @@ foreach ($row in $rows) {
                         if ($pendingType -like 'Boundary*' -and $strategyType -like 'Boundary*') {
                             $isMatch = $true
                         } elseif ($pendingType -like 'Implementation*' -and $strategyType -like 'Implementation*') {
+                            $isMatch = $true
+                        } elseif ($pendingType -like 'Anchor*' -and $strategyType -like 'Anchor*') {
                             $isMatch = $true
                         }
 

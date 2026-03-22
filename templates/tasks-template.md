@@ -197,8 +197,11 @@ Rules:
 - `tasks.md` remains the human-review and execution-orchestration authority.
 - `tasks.manifest.json` is a machine-readable projection only and MUST NOT introduce new semantics.
 - `tasks.manifest.json` should be refreshed from the same run-local execution graph used to render `tasks.md`, so both outputs stay atomically aligned for a run.
-- `tasks.manifest.json` top-level keys MUST include `schema_version`, `generated_at`, `generated_from`, and `tasks`.
-- `generated_from` MUST include `plan_path`, `plan_source_fingerprint`, and `contract_source_fingerprints`.
+- `tasks.manifest.json` top-level keys MUST include `schema_version`, `generated_at`, `generated_from`, `tasks`, and `presentation`.
+- `generated_from` MUST include `plan_path`.
+- `presentation` MUST include `board_style` and `source_lineage` as projection metadata only.
+- `presentation.board_style` MUST be `enhanced`.
+- `presentation.source_lineage` MUST include `plan_path`.
 - Each manifest task row MUST include: `task_id`, `dependencies`, `if_scope`, `refs`, `target_paths`, `completion_anchors`, `conflict_hints`, `topo_layer`, `status`.
 - `tasks.manifest.json` task IDs and dependencies must stay aligned with the `tasks.md` lines rendered from the same execution graph.
 - Required consumable sections in `tasks.md` (authoritative fallback + human review):

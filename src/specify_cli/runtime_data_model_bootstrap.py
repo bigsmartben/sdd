@@ -8,7 +8,6 @@ from typing import Any
 
 from specify_cli.runtime_common import (
     clean_cell,
-    compute_sha256,
     extract_section,
     parse_markdown_table,
     resolve_target_path,
@@ -84,8 +83,6 @@ def build_stage_row(feature_dir: Path, row: dict[str, str] | None) -> dict[str, 
         "output_path": clean_cell(row.get("Output Path", "")),
         "output_path_abs": resolve_target_path(feature_dir, row.get("Output Path", "")),
         "status": clean_cell(row.get("Status", "")),
-        "source_fingerprint": clean_cell(row.get("Source Fingerprint", "")),
-        "output_fingerprint": clean_cell(row.get("Output Fingerprint", "")),
         "blocker": clean_cell(row.get("Blocker", "")),
     }
 
@@ -341,14 +338,6 @@ def build_data_model_bootstrap_payload(
     ]
     test_matrix_validation = build_test_matrix_validation(test_matrix_path, binding_row_ids)
 
-    current_fingerprints = {
-        "plan_sha256": compute_sha256(plan_path),
-        "spec_sha256": compute_sha256(spec_path),
-        "test_matrix_sha256": compute_sha256(test_matrix_path),
-        "research_sha256": compute_sha256(research_path),
-        "data_model_sha256": compute_sha256(data_model_path),
-    }
-
     generation_readiness = build_generation_readiness(
         missing_sections=missing_sections,
         spec_path=spec_path,
@@ -370,7 +359,6 @@ def build_data_model_bootstrap_payload(
         "research_path": str(research_path),
         "data_model_path": str(data_model_path),
         "required_sections": required_sections,
-        "current_fingerprints": current_fingerprints,
         "research_stage": research_stage,
         "test_matrix_stage": test_matrix_stage,
         "selected_stage": selected_stage,

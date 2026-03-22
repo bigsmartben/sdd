@@ -1,5 +1,5 @@
 ---
-description: Generate the pending test-matrix.md artifact, derive stable northbound interface partitions, and initialize binding rows from the current feature branch plan.md.
+description: Generate the pending test-matrix.md artifact, derive stable northbound interface partitions, and initialize Binding Projection Index and Artifact Status contract rows in plan.md.
 handoffs:
   - label: Continue Data-Model Queue
     agent: sdd.plan.data-model
@@ -55,7 +55,7 @@ Build one bounded run-local packet for the selected `test-matrix` row from:
 - `Shared Context Snapshot` in resolved `PLAN_FILE`
 - `Repository-First Consumption Slice` in resolved `PLAN_FILE`
 - resolved `FEATURE_SPEC` path
-- selected row source/output fingerprint fields
+- selected row status/output-path/blocker fields
 
 Use this packet as the default context for generation and binding projection.
 Do not load additional artifacts unless the selected-row blocker cannot be resolved from this packet.
@@ -240,8 +240,6 @@ Each artifact row must include:
 - `Unit Type`
 - `Target Path`
 - `Status = pending`
-- `Source Fingerprint`
-- `Output Fingerprint`
 - `Blocker`
 
 The total number of minimum planning artifact units equals the row count of `Binding Projection Index`.
@@ -250,9 +248,9 @@ The total number of minimum planning artifact units equals the row count of `Bin
 
 Update only:
 
-- selected `test-matrix` stage row status and fingerprints
-- `Binding Projection Index`
-- `Artifact Status`
+- selected `test-matrix` stage row status/output-path/blocker fields
+- `Binding Projection Index`: one row per stable `BindingRowID` derived from this run
+- `Artifact Status`: initialize exactly one `contract` row per `BindingRowID` (as specified in Binding Packet Requirements above); `Unit Type = contract`, `Status = pending`; do not modify or add other row types
 
 Stage-row status transition is mandatory and explicit:
 

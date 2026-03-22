@@ -80,7 +80,6 @@ def test_tasks_implement_and_analyze_use_compact_contract_sections():
     assert "any active tuple selecting `new` anchors without explicit rejection evidence for both `existing` and `extended` is `FAIL`" in analyze
     assert "matrix dependency facts plus `SIG-*` governance signals including divergence, version-source-mix, and `unresolved`" in analyze
     assert "using concrete module-to-module rows as the primary representation" in analyze
-    assert "Unified Repository-First Gate Protocol (`URFGP`)" in analyze
     assert "Repository-First Evidence Bundle (`RFEB`)" in analyze
     assert "Gate Decision" in analyze
     assert "<!-- SDD_ANALYZE_RUN_BEGIN -->" in analyze
@@ -116,8 +115,8 @@ def test_analyze_boundary_owns_centralized_cross_artifact_audit_and_stale_gate()
     analyze = read("templates/commands/analyze.md")
 
     assert "centralized audit entry and single concentrated audit step before `/sdd.implement`" in analyze
-    assert "stale planning outputs where `plan.md` source fingerprints no longer match the current upstream artifact state" in analyze
-    assert "stale `contract` -> `/sdd.plan.contract`" in analyze
+    assert "contract-projection drift governance" in analyze
+    assert "route `/sdd.plan.test-matrix` to repair the upstream binding projection" in analyze
 
 
 def test_research_template_keeps_repo_first_as_optional_reference_not_primary_audit_input():

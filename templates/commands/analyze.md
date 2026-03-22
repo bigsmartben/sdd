@@ -27,13 +27,14 @@ You **MUST** consider the user input before proceeding (if not empty).
 3. Produce one authoritative `Gate Decision`.
 
 The latest run block in `analyze-history.md` is the only authoritative analyze gate input for `/sdd.implement`.
+`/sdd.implement` preflight validates analyze run presence + `Gate Decision = PASS`; it does not require cross-artifact fingerprint freshness checks.
 
 ## Governance Guardrails (Mandatory)
 
 - **Authority rule**: `/sdd.analyze` is the sole cross-artifact audit authority before implementation. It owns the final PASS/FAIL decision across mandatory core artifacts (`spec.md`, `plan.md`, `tasks.md`) and any existing planning artifacts required by the selected evidence path (`research.md`, `data-model.md`, `test-matrix.md`, `contracts/`).
 - **Stage boundary rule**: `/sdd.analyze` reports findings and remediation owners only. It MUST NOT rewrite semantic source artifacts or locally "repair" drift by mutating planning/design outputs.
 - **Gate ownership rule**: commands other than `/sdd.analyze` may emit local readiness checks, but cross-artifact final PASS/FAIL claims are valid only from this stage.
-- **Shared protocol rule**: treat **Unified Repository-First Gate Protocol (`URFGP`)** as the shared authority for repository-first gate evaluation and owner-command routing.
+- **Routing rule**: use repository-first evidence to decide the upstream owner command; do not rely on stale contract-route heuristics or legacy contract-routing language.
 
 ## Read Only
 
@@ -75,15 +76,7 @@ Run focused passes only (high-signal, bounded):
 3. contract-projection drift governance
 4. repo-anchor misuse and tuple legality
 5. repository-first baseline evidence integrity
-6. stale planning outputs where `plan.md` source fingerprints no longer match the current upstream artifact state
-7. repo-anchor strategy priority compliance (`existing -> extended -> new`) for active tuples and anchors
-
-Mandatory stale-row routing:
-
-- stale `research` -> `/sdd.plan.research`
-- stale `data-model` -> `/sdd.plan.data-model`
-- stale `test-matrix` or missing binding rows -> `/sdd.plan.test-matrix`
-- stale `contract` -> `/sdd.plan.contract`
+6. repo-anchor strategy priority compliance (`existing -> extended -> new`) for active tuples and anchors
 
 Projection drift routing:
 
@@ -102,7 +95,7 @@ Output exactly one decision:
 
 When `FAIL`, include blocker list with supporting facts and remediation owner command (`/sdd.constitution`, `/sdd.specify`, `/sdd.plan.*`, or `/sdd.tasks`).
 
-Default blocking classes include unresolved normative anchors (`BA-*`, `TODO(REPO_ANCHOR)`, `Anchor Status = todo`, `Implementation Entry Anchor Status = todo`), unresolved placeholder class/type labels in contract artifacts, missing `Full Field Dictionary (Operation-scoped)`, unresolved contract projection drift, upstream binding-projection drift across `plan.md` / `test-matrix.md`, controller-first violations, repository-first baseline gaps, and stale control-plane fingerprints.
+Default blocking classes include unresolved normative anchors (`BA-*`, `TODO(REPO_ANCHOR)`, `Anchor Status = todo`, `Implementation Entry Anchor Status = todo`), unresolved placeholder class/type labels in contract artifacts, missing `Full Field Dictionary (Operation-scoped)`, unresolved contract projection drift, upstream binding-projection drift across `plan.md` / `test-matrix.md`, controller-first violations, and repository-first baseline gaps.
 
 Additional blocking requirement: any active tuple selecting `new` anchors without explicit rejection evidence for both `existing` and `extended` is `FAIL` and must route to the relevant `/sdd.plan.*` owner command.
 
@@ -112,9 +105,6 @@ Return one compact report with:
 
 1. Run Metadata:
    - `Run At (UTC):`
-   - `Spec SHA256:`
-   - `Plan SHA256:`
-   - `Tasks SHA256:`
 2. mechanical findings summary
 3. semantic findings summary
 4. metrics summary
@@ -133,6 +123,6 @@ If append fails, report a warning and continue returning the analysis report.
 
 ## Authority Notes
 
-- `plan.md` is authoritative for planning queue state, binding-projection rows, and source/output fingerprints only.
+- `plan.md` is authoritative for planning queue state and binding-projection rows only.
 - `spec.md`, `tasks.md`, constitution, planning artifacts, and canonical repository-first baselines own semantics.
 - Derived views must not override authoritative artifacts.

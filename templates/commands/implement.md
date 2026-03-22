@@ -26,7 +26,7 @@ Comprehensive audit ownership remains with `/sdd.analyze`.
 ## Governance Guardrails (Mandatory)
 
 - **Authority rule**: `/sdd.implement` is authoritative only for runtime execution progress and task-state transitions. It MUST NOT override semantic authority in `spec.md`, `plan.md`, `data-model.md`, `test-matrix.md`, or `contracts/`.
-- **Stage boundary rule**: execute approved task packages only. Do not backfill planning/design artifacts, assign implementation ownership semantics such as `Repo Anchor Role`, or rewrite contract/schema semantics.
+- **Stage boundary rule**: execute approved task packages only. Task execution state transitions within `tasks.md` (`pending → in-progress → done`) are in scope; backfilling planning/design artifacts, assigning implementation ownership semantics such as `Repo Anchor Role`, or rewriting contract/schema semantics are not.
 - **Gate ownership rule**: this stage enforces run-local execution safety and analyze-readiness gating only. Cross-artifact final PASS/FAIL remains owned by `/sdd.analyze`.
 - **Shared protocol rule**: apply **Unified Repository-First Gate Protocol (`URFGP`)** as the shared authority for repository-first execution gating and remediation routing.
 
@@ -54,8 +54,9 @@ Comprehensive audit ownership remains with `/sdd.analyze`.
 
 Manifest validation keys:
 
-- top-level: `schema_version`, `generated_at`, `generated_from`, `tasks`
-- `generated_from`: `plan_path`, `plan_source_fingerprint`, `contract_source_fingerprints`
+- top-level: `schema_version`, `generated_at`, `generated_from`, `tasks`, `presentation`
+- `generated_from`: `plan_path`
+- `presentation`: `board_style`, `source_lineage`
 - task keys: `task_id`, `dependencies`, `if_scope`, `refs`, `target_paths`, `completion_anchors`, `conflict_hints`, `topo_layer`, `status`
 
 ## Write Only

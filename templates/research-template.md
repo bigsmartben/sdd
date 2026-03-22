@@ -1,6 +1,6 @@
 # Research: [FEATURE]
 
-**Stage**: Stage 0 Research  
+**Stage**: Stage 1 Research
 **Inputs**: `spec.md`, user input, targeted source-code reads, `.specify/memory/constitution.md`
 
 Use this artifact to capture planning-blocking research only. Keep it decision-oriented, concise, and grounded in evidence.

@@ -1,0 +1,49 @@
+# Cline context ignore rules for this repository (Spec Kit source repo)
+
+# VCS & local editor/tooling state
+.git/
+.history/
+.opencode/
+.vscode/
+.devcontainer/
+
+# Python environments & caches
+.venv/
+venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+
+# Build/package artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Generated release bundles and temporary runtime outputs
+.genreleases/
+specs/
+sdd-*/
+*.zip
+
+# Extension runtime caches
+.specify/extensions/.cache/
+.specify/extensions/.backup/
+.specify/extensions/*/local-config.yml
+
+# Large/binary media assets (usually not needed for code reasoning)
+media/
+
+# Logs and temporary files
+*.log
+*.tmp
+tmp-**/
+.DS_Store
+*.swp
+*.swo

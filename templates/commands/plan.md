@@ -39,7 +39,7 @@ Do only four things:
 
 ## Governance Guardrails (Mandatory)
 
-- **Authority rule**: `plan.md` is authoritative only for planning control-plane state (queue rows, binding-index projections, artifact status, fingerprints). It MUST NOT override semantic authority owned by `spec.md`, `research.md`, `data-model.md`, `test-matrix.md`, or `contracts/`.
+- **Authority rule**: `plan.md` is authoritative only for planning control-plane state (queue rows, binding-index projections, artifact status). It MUST NOT override semantic authority owned by `spec.md`, `research.md`, `data-model.md`, `test-matrix.md`, or `contracts/`.
 - **Stage boundary rule**: `/sdd.plan` is orchestration-only. Do not emit downstream stage bodies, shared-semantic conclusions, implementation ownership semantics, or contract schema details.
 - **Gate ownership rule**: `/sdd.plan` may report local orchestration readiness (`pending`, `in_progress`, `done`, `blocked`) only. Cross-artifact final PASS/FAIL is owned by `/sdd.analyze`.
 
@@ -109,8 +109,8 @@ The generated `plan.md` is the sole planning control plane and MUST contain exac
 5. `Artifact Status`
 6. `Handoff Protocol`
 
-`plan.md` is a derived planning control plane. It is authoritative for planning queue state, binding-index rows, and source/output fingerprints only. It MUST NOT replace downstream planning artifacts as the semantic source of truth.
-Queue rows, binding rows, fingerprints, and other control-plane restatements are derived views only; they MUST NOT override upstream artifacts or downstream stage artifacts.
+`plan.md` is a derived planning control plane. It is authoritative for planning queue state and binding-index rows only. It MUST NOT replace downstream planning artifacts as the semantic source of truth.
+Queue rows, binding rows, and other control-plane restatements are derived views only; they MUST NOT override upstream artifacts or downstream stage artifacts.
 
 ## Queue Initialization Rules
 
@@ -138,8 +138,6 @@ For each row include:
 - required inputs
 - output path
 - status (`pending`, `in_progress`, `done`, `blocked`)
-- source fingerprint
-- output fingerprint
 - blocker
 
 ### Binding Projection Index
@@ -173,8 +171,6 @@ Required columns:
 - `Unit Type`
 - `Target Path`
 - `Status`
-- `Source Fingerprint`
-- `Output Fingerprint`
 - `Blocker`
 
 ## Handoff Model
@@ -196,12 +192,10 @@ Child commands MUST consume queue state from the resolved `PLAN_FILE` only.
 
 - Keep `/sdd.plan` orchestration-only; do not generate downstream planning artifacts here.
 - Keep queue rows and binding rows minimal and deterministic.
-- Record source fingerprints from the direct authoritative inputs of each queue row.
-- Record output fingerprints after each row completes.
 - Allow only minimal child-command writeback:
   - `/sdd.plan.research`: selected `research` stage row only
   - `/sdd.plan.test-matrix`: selected `test-matrix` stage row, `Binding Projection Index`, and `Artifact Status`
-  - `/sdd.plan.data-model`: selected `data-model` stage row and contract-readiness blocker/fingerprint updates in `Artifact Status` only
+  - `/sdd.plan.data-model`: selected `data-model` stage row and contract-readiness blocker updates in `Artifact Status` only
   - `/sdd.plan.contract`: selected `Artifact Status` row only
 - Do not append long summaries or stage bodies back into `plan.md`.
 - `README.md`, `docs/**`, `specs/**`, `tests/**`, `plans/**`, `templates/**`, demos, and generated artifacts are supporting inputs only and MUST NOT be promoted into repo semantic anchors.
