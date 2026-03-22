@@ -5,6 +5,7 @@ set -euo pipefail
 # Simulate the release process locally without pushing to GitHub.
 # WARNING: This script intentionally modifies local files (e.g., pyproject.toml, CHANGELOG.md)
 # and creates a local tag for dry-run validation. Do not include it in read-only preflight checks.
+# Includes a Markdown lint preflight (same scope as CI lint workflow) before any release edits.
 # Usage: simulate-release.sh [version]
 #   If version is omitted, auto-increments patch version
 
@@ -15,8 +16,34 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+HAS_CHANGELOG=false
+if [[ -f "CHANGELOG.md" ]]; then
+  HAS_CHANGELOG=true
+fi
+
 echo -e "${BLUE}🧪 Simulating Release Process Locally${NC}"
 echo "======================================"
+echo ""
+
+# Step 0: Markdown lint preflight (same globs as .github/workflows/lint.yml)
+echo -e "${YELLOW}🧹 Running Markdown lint preflight...${NC}"
+MD_LINT_GLOBS=('**/*.md' '!extensions/**/*.md')
+
+if command -v markdownlint-cli2 >/dev/null 2>&1; then
+  MD_LINT_CMD=(markdownlint-cli2 "${MD_LINT_GLOBS[@]}")
+elif command -v pnpm >/dev/null 2>&1; then
+  MD_LINT_CMD=(pnpm dlx markdownlint-cli2 "${MD_LINT_GLOBS[@]}")
+elif command -v npx >/dev/null 2>&1; then
+  MD_LINT_CMD=(npx --yes markdownlint-cli2 "${MD_LINT_GLOBS[@]}")
+else
+  echo -e "${RED}❌ Error: markdownlint-cli2 is not available and neither pnpm nor npx was found.${NC}"
+  echo "   Install Node.js tooling, then rerun this script."
+  echo "   Example: npm install -g markdownlint-cli2"
+  exit 1
+fi
+
+"${MD_LINT_CMD[@]}"
+echo -e "${GREEN}✓ Markdown lint passed${NC}"
 echo ""
 
 # Step 1: Determine version
@@ -55,7 +82,11 @@ echo ""
 echo -e "${YELLOW}💾 Creating backup of current state...${NC}"
 BACKUP_DIR=$(mktemp -d)
 cp pyproject.toml "$BACKUP_DIR/pyproject.toml.bak"
-cp CHANGELOG.md "$BACKUP_DIR/CHANGELOG.md.bak"
+if $HAS_CHANGELOG; then
+  cp CHANGELOG.md "$BACKUP_DIR/CHANGELOG.md.bak"
+else
+  echo -e "${YELLOW}⚠️  CHANGELOG.md not found; changelog backup/update will be skipped${NC}"
+fi
 echo -e "${GREEN}✓ Backup created at: $BACKUP_DIR${NC}"
 
 # Step 4: Update pyproject.toml
@@ -70,37 +101,45 @@ echo ""
 echo -e "${YELLOW}📝 Updating CHANGELOG.md...${NC}"
 DATE=$(date +%Y-%m-%d)
 
-# Get the previous tag to compare commits
-PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+if $HAS_CHANGELOG; then
+  # Get the previous tag to compare commits
+  PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
 
-if [[ -n "$PREVIOUS_TAG" ]]; then
-  echo "   Generating changelog from commits since $PREVIOUS_TAG"
-  # Get commits since last tag, format as bullet points
-  COMMITS=$(git log --oneline "$PREVIOUS_TAG"..HEAD --no-merges --pretty=format:"- %s" 2>/dev/null || echo "- Initial release")
+  if [[ -n "$PREVIOUS_TAG" ]]; then
+    echo "   Generating changelog from commits since $PREVIOUS_TAG"
+    # Get commits since last tag, format as bullet points
+    COMMITS=$(git log --oneline "$PREVIOUS_TAG"..HEAD --no-merges --pretty=format:"- %s" 2>/dev/null || echo "- Initial release")
+  else
+    echo "   No previous tag found - this is the first release"
+    COMMITS="- Initial release"
+  fi
+
+  # Create temp file with new entry
+  {
+    head -n 8 CHANGELOG.md
+    echo ""
+    echo "## [$VERSION] - $DATE"
+    echo ""
+    echo "### Changed"
+    echo ""
+    echo "$COMMITS"
+    echo ""
+    tail -n +9 CHANGELOG.md
+  } > CHANGELOG.md.tmp
+  mv CHANGELOG.md.tmp CHANGELOG.md
+  echo -e "${GREEN}✓ Updated CHANGELOG.md with commits since $PREVIOUS_TAG${NC}"
 else
-  echo "   No previous tag found - this is the first release"
-  COMMITS="- Initial release"
+  echo -e "${YELLOW}⚠️  Skipped changelog update (CHANGELOG.md not found)${NC}"
 fi
-
-# Create temp file with new entry
-{
-  head -n 8 CHANGELOG.md
-  echo ""
-  echo "## [$VERSION] - $DATE"
-  echo ""
-  echo "### Changed"
-  echo ""
-  echo "$COMMITS"
-  echo ""
-  tail -n +9 CHANGELOG.md
-} > CHANGELOG.md.tmp
-mv CHANGELOG.md.tmp CHANGELOG.md
-echo -e "${GREEN}✓ Updated CHANGELOG.md with commits since $PREVIOUS_TAG${NC}"
 
 # Step 6: Show what would be committed
 echo ""
 echo -e "${YELLOW}📋 Changes that would be committed:${NC}"
-git diff pyproject.toml CHANGELOG.md
+if $HAS_CHANGELOG; then
+  git diff pyproject.toml CHANGELOG.md
+else
+  git diff pyproject.toml
+fi
 
 # Step 7: Create temporary tag (no push)
 echo ""
@@ -154,8 +193,13 @@ echo -e "${YELLOW}⚠️  LOCAL FILES WERE MODIFIED AS PART OF THIS SIMULATION${
 echo ""
 echo -e "${BLUE}Next steps:${NC}"
 echo "  1. Review the changes above"
-echo "  2. To keep changes: git add pyproject.toml CHANGELOG.md && git commit"
-echo "  3. To discard changes: git checkout pyproject.toml CHANGELOG.md && git tag -d $TAG"
+if $HAS_CHANGELOG; then
+  echo "  2. To keep changes: git add pyproject.toml CHANGELOG.md && git commit"
+  echo "  3. To discard changes: git checkout pyproject.toml CHANGELOG.md && git tag -d $TAG"
+else
+  echo "  2. To keep changes: git add pyproject.toml && git commit"
+  echo "  3. To discard changes: git checkout pyproject.toml && git tag -d $TAG"
+fi
 echo "  4. To restore from backup: cp $BACKUP_DIR/* ."
 echo ""
 echo -e "${BLUE}To run the actual release:${NC}"

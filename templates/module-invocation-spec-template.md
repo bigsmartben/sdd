@@ -4,6 +4,12 @@
 **Canonical Path**: `.specify/memory/repository-first/module-invocation-spec.md`  
 **Primary Inputs**: Real module layering + governance signals from `.specify/memory/repository-first/technical-dependency-matrix.md`
 
+## Artifact Quality Signals
+
+- Must: read like concrete module-governance rules for the real repository.
+- Must not: drift into speculative future edges, abstract layer essays, or dependency-fact duplication.
+- Strictly: every rule must map to a concrete module edge or existing matrix signal.
+
 Use this artifact to define module invocation constraints.
 Rules in this document MUST use normative language (`MUST`/`SHOULD`/`MUST NOT`).
 Allowed and forbidden direction tables MUST cover the concrete first-party module edges found in the target runtime repo.

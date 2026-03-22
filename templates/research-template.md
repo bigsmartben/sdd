@@ -6,6 +6,12 @@
 Use this artifact to capture planning-blocking research only. Keep it decision-oriented, concise, and grounded in evidence.
 For `/sdd.plan.research`, repository reuse evidence comes from source code and `.specify/memory/constitution.md`. Repository-first baseline files are consumed by `/sdd.plan` as shared bootstrap inputs and MAY be referenced here only when a research decision depends on an existing canonical dependency usage row, module-edge rule, or `SIG-*` signal. Do not treat `README.md`, `docs/**`, `specs/**`, demos, or generated artifacts as repo anchors in this file.
 
+## Artifact Quality Signals
+
+- Must: read like a bounded decision memo.
+- Must not: become a literature review or background survey.
+- Strictly: every finding must connect evidence to a planning consequence.
+
 ## Decisions
 
 | ID | Decision | Rationale | Evidence / Source | Downstream Impact |

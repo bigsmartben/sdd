@@ -7,6 +7,12 @@ description: "Interface-delivery-oriented execution orchestration template for f
 **Input**: Approved upstream planning/design artifacts from the resolved feature workspace (`FEATURE_DIR`)
 **Outputs**: `tasks.md` (this document), `tasks.manifest.json` (machine-readable sidecar projection)
 
+## Artifact Quality Signals
+
+- Must: feel like an execution plan a senior engineer could run.
+- Must not: rephrase design docs as broad summary tasks.
+- Strictly: every task needs one clear delivery objective and one clear completion anchor.
+
 ## 1) Document Purpose
 
 - This document is the executable delivery orchestration source for implementation.

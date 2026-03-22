@@ -72,6 +72,8 @@ Read only:
 - `.specify/memory/constitution.md`
 - targeted repo anchors when required by the active research blocker or by concrete decision-evidence gaps
 
+**Prohibited**: `test-matrix.md`, `data-model.md`, `contracts/`, or broad symbol scans.
+
 ### Conditional Inputs
 
 Read additional files only when the selected row's blocker or a concrete decision-evidence gap cannot be resolved from the stage packet.
@@ -96,19 +98,43 @@ After generating `research.md`, update the selected `Stage Queue` row only:
 
 Do not write long summaries or detailed research prose back into `PLAN_FILE`.
 
+## Artifact Quality Contract
+
+Generate `research.md` as a high-signal evidence artifact for unresolved decisions, not as a repository tour.
+
+- Prefer concrete findings, bounded evidence, and decision-relevant tradeoffs over broad background summaries.
+- When repo evidence is used, keep it anchored to real files/symbols and explain why the evidence matters for this feature.
+- The artifact should reduce ambiguity for downstream stages; if a section does not inform reuse, risk, or a blocker decision, trim it.
+- Keep conclusions professional and falsifiable: no hand-wavy “likely”, “maybe”, or cargo-cult best-practice prose without supporting evidence.
+
+## Writeback Contract
+
+Patch `PLAN_FILE` narrowly.
+
+- Modify exactly one `Stage Queue` row where `Stage ID = research`.
+- Update only `Status`, `Output Path`, and `Blocker` in that row.
+- Preserve all section headings, table headers, and row order.
+- Do not change `Binding Projection Index` or `Artifact Status` in this command.
+- Keep `Status` lowercase and in `{pending, in_progress, done, blocked}`.
+
 ## Handoff Decision
 
 Emit a `Handoff Decision` section in the runtime output with exactly these fields:
 
-- `Next Command`: `/sdd.plan.test-matrix`
+- `Next Command`: `/sdd.plan.test-matrix` when `Ready/Blocked = Ready`; re-run `/sdd.plan.research` after resolving blockers when `Ready/Blocked = Blocked`.
 - `Decision Basis`: `test-matrix` consumes `spec.md` as its semantic source and does not depend on `research.md` output to proceed
 - `Selected Stage ID`: selected `research` stage row id
-- `Ready/Blocked`: `Ready` when the selected row is updated to `done`; otherwise `Blocked`
+- `Ready/Blocked`: `Ready` when the selected row is updated to `done`; `Blocked` when the row has an unresolved blocker — do not route to `test-matrix` while blocked.
 
 `Ready/Blocked` is stage-local readiness only and MUST NOT be treated as cross-artifact final PASS/FAIL; centralized final gating belongs to `/sdd.analyze`.
 `research` remains optional clarification for `/sdd.plan.data-model`, but the `research` stage row must still be `done` before `/sdd.tasks` can proceed.
 
 ## Final Output
+
+## Output Contract
+
+- Keep runtime output to selected row, artifact path, updated status, and next command.
+- Do not restate research content, repository reads, or long blocker prose beyond the selected row summary.
 
 Report:
 

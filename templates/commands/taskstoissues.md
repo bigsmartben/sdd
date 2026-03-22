@@ -31,5 +31,18 @@ You **MUST** consider the user input before proceeding (if not empty).
 5. For each task, create one GitHub issue using the MCP server in the exact repository derived from the checked remote.
 6. Report created issue URLs and any skipped tasks with reason.
 
+## Artifact Quality Contract
+
+- Must: convert tasks into actionable execution tickets.
+- Must not: copy raw task markdown or publish ambiguous tracker noise.
+- Strictly: keep titles concrete and bodies scoped to outcome, dependencies, and completion signals.
+- Output only: clean GitHub issues for tasks that can be converted safely.
+
+## Reasoning Order
+
+1. Validate repository target and task source first.
+2. Convert each task into one scoped issue with preserved dependency meaning.
+3. Skip anything that cannot become a clean ticket without inventing semantics.
+
    > [!CAUTION]
    > UNDER NO CIRCUMSTANCES EVER CREATE ISSUES IN REPOSITORIES THAT DO NOT MATCH THE REMOTE URL

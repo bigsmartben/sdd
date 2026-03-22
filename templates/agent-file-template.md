@@ -2,6 +2,12 @@
 
 Auto-generated from all feature plans. Last updated: [DATE]
 
+## Artifact Quality Signals
+
+- Must: read like actionable project guidance for engineers and agents.
+- Must not: include placeholder structure, stale plan fragments, or generic style filler.
+- Strictly: keep commands, structure, and execution guidance aligned to the current repository reality.
+
 ## Active Technologies
 
 [EXTRACTED FROM ALL PLAN.MD FILES]

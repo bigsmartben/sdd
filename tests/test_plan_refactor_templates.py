@@ -25,6 +25,14 @@ def test_plan_command_is_control_plane_only():
     assert "`contract` is not a `Stage Queue` row" in content
     assert "Unified Repository-First Gate Protocol (`URFGP`)" in content
     assert "explicit handoff order: `sdd.plan.research -> sdd.plan.test-matrix -> sdd.plan.data-model -> sdd.plan.contract`" in content
+    assert "## Artifact Quality Contract" in content
+    assert "## Reasoning Order" in content
+    assert "## Writeback Contract" in content
+    assert "## Output Contract" in content
+    assert "Must: output one deterministic control plane" in content
+    assert "Write `PLAN_FILE` as a control-plane scaffold only." in content
+    assert "Seed `Stage Queue` in fixed order" in content
+    assert "Keep markdown table headers unchanged" in content
 
 
 def test_plan_child_commands_are_contract_only():
@@ -47,6 +55,8 @@ def test_plan_child_commands_are_contract_only():
 
 def test_plan_template_tracks_only_contract_artifacts():
     content = read("templates/plan-template.md")
+    assert "## Artifact Quality Signals" in content
+    assert "Must: behave like a trustworthy control plane." in content
     assert "`contract` is tracked as the single per-binding interface design artifact." in content
     assert "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | Trigger Ref(s) | Primary TM IDs | TC IDs | UIF Path Ref(s) | UDD Ref(s) | Test Scope |" in content
     assert "minimal selection and scheduling fields" in content
@@ -119,6 +129,14 @@ def test_contract_command_uses_test_matrix_as_default_semantic_source():
     assert "## Feature-Level Smoke Readiness (Queue-Complete Gate)" in content
     assert "Cross-Interface Smoke Candidate (Required)" in content
     assert "do not rewrite upstream planning artifacts from this command" in content
+    assert "## Artifact Quality Contract" in content
+    assert "## Reasoning Order" in content
+    assert "## Writeback Contract" in content
+    assert "## Output Contract" in content
+    assert "Must: close one `BindingRowID` with concrete names, anchors, field semantics, realization, and test projection." in content
+    assert "Generate or refresh exactly one contract artifact for the selected `BindingRowID`." in content
+    assert "Update only the selected `Artifact Status` row" in content
+    assert "Do not modify `Stage Queue`, `Binding Projection Index`, or unrelated `Artifact Status` rows." in content
 
 
 def test_contract_selection_rules_handle_empty_queue_before_packet_resolution():
@@ -139,6 +157,12 @@ def test_research_data_model_and_test_matrix_are_packet_first():
     assert "Use this packet as the default context for generation." in research
     assert "module-root or directory-only placeholders such as `aidm-api/` are invalid" in research
     assert "Every `Source Path / Symbol` value must be a concrete file path or `path/to/file.ext::Symbol`" in research_template
+    assert "## Artifact Quality Contract" in research
+    assert "## Writeback Contract" in research
+    assert "## Output Contract" in research
+    assert "Generate `research.md` as a high-signal evidence artifact" in research
+    assert "Modify exactly one `Stage Queue` row where `Stage ID = research`" in research
+    assert "Do not change `Binding Projection Index` or `Artifact Status`" in research
 
     assert "Stage Packet (Data-Model Unit)" in data_model
     assert "Treat `DATA_MODEL_BOOTSTRAP.generation_readiness` as the primary queue/readiness gate" in data_model
@@ -153,8 +177,23 @@ def test_research_data_model_and_test_matrix_are_packet_first():
     assert "If `existing` and `extended` are both insufficient, `new` is the required outcome for this stage" in data_model
     assert "If `existing` and `extended` cannot safely close a confirmed shared semantic, this stage MUST explicitly choose `new` here" in data_model
     assert "Shared semantics that are confirmed by `spec.md` + `test-matrix.md` MUST be closed here at owner/source/lifecycle level" in data_model
-    assert "- `Next Command`: `/sdd.plan.contract`" in data_model
+    assert "- `Next Command`: `DATA_MODEL_BOOTSTRAP.recovery_handoff.next_command`" in data_model
+    assert "- `Decision Basis`: `DATA_MODEL_BOOTSTRAP.recovery_handoff.decision_basis`" in data_model
+    assert "- `Selected Stage ID`: `DATA_MODEL_BOOTSTRAP.recovery_handoff.selected_stage_id`" in data_model
+    assert "- `Ready/Blocked`: `DATA_MODEL_BOOTSTRAP.recovery_handoff.ready_blocked`" in data_model
     assert "continue contract generation directly without rerunning `test-matrix`" in data_model
+    assert "DATA_MODEL_BOOTSTRAP.recovery_handoff" in data_model
+    assert "do not default to `/sdd.plan.contract`" in data_model
+    assert "runtime selection order is authoritative: first `pending` `data-model` row, then fallback `data-model` row, then synthetic row if absent." in data_model
+    assert "Do not recompute stage-row hard gates locally; bootstrap `generation_readiness` + `recovery_handoff` are the authority." in data_model
+    assert "## Artifact Quality Contract" in data_model
+    assert "## Reasoning Order" in data_model
+    assert "## Writeback Contract" in data_model
+    assert "## Output Contract" in data_model
+    assert "Must: close reusable shared semantics, owner/source alignment, lifecycle, and invariants before contract design." in data_model
+    assert "Modify only the selected `data-model` row plus blocker fields" in data_model
+    assert "May batch update only `Blocker` fields for affected `contract` rows in `PLAN_FILE` `Artifact Status`" in data_model
+    assert "MUST NOT rewrite `Target Path` / `Status` in `Artifact Status`" in data_model
 
     assert "Stage Packet (Test-Matrix Unit)" in test_matrix
     assert "Use this packet as the default context for generation and binding projection." in test_matrix
@@ -166,10 +205,19 @@ def test_research_data_model_and_test_matrix_are_packet_first():
     assert "Do not consume `data-model.md` or generated contract artifacts in this stage." in test_matrix
     assert "If the selected packet cannot be closed from `spec.md` and selected plan-row context" in test_matrix
     assert "`UDD Ref(s)`" in test_matrix
+    assert "## Artifact Quality Contract" in test_matrix
+    assert "## Reasoning Order" in test_matrix
+    assert "## Writeback Contract" in test_matrix
+    assert "## Output Contract" in test_matrix
+    assert "Must: output stable binding cuts, verification semantics, and reusable packets from `spec.md`." in test_matrix
+    assert "Refresh `Binding Projection Index` by `BindingRowID`; replace matching rows, do not append duplicates." in test_matrix
+    assert "Keep exactly one `contract` row per projected `BindingRowID`" in test_matrix
 
 
 def test_contract_template_contains_unified_realization_requirements():
     content = read("templates/contract-template.md")
+    assert "## Artifact Quality Signals (Normative)" in content
+    assert "Must: be strong enough for implementation to start without reopening basics." in content
     assert "# Northbound Interface Design:" in content
     assert "## Interface Definition" in content
     assert "### Contract Summary" in content
@@ -209,6 +257,8 @@ def test_contract_template_contains_unified_realization_requirements():
 
 def test_data_model_template_requires_new_anchor_evidence_and_owner_closure():
     content = read("templates/data-model-template.md")
+    assert "## Artifact Quality Signals" in content
+    assert "Must: read like a shared business-semantic backbone." in content
 
     assert "**Stage**: Stage 3 Shared Semantic Alignment" in content
     assert "If a semantic is used by only one `BindingRowID`, leave it to `/sdd.plan.contract`" in content
@@ -234,6 +284,8 @@ def test_data_model_template_requires_new_anchor_evidence_and_owner_closure():
 
 def test_test_matrix_template_forbids_backfilling_missing_stage_one_model():
     content = read("templates/test-matrix-template.md")
+    assert "## Artifact Quality Signals" in content
+    assert "Must: make binding identity and verification intent obvious in one pass." in content
 
     assert "**Inputs**: `spec.md`" in content
     assert "## UIF Full Path Coverage Graph (Mermaid)" in content
@@ -264,6 +316,8 @@ def test_tasks_command_uses_contract_as_realization_source():
 
 def test_tasks_template_is_contract_only():
     content = read("templates/tasks-template.md")
+    assert "## Artifact Quality Signals" in content
+    assert "Must: feel like an execution plan a senior engineer could run." in content
     assert "contracts/<operationId>.md" in content
     assert "Spec Slice:" in content
     assert "Test Slice:" in content
@@ -412,6 +466,8 @@ def test_plan_required_sections_are_consistent_across_lint_and_preflights():
 def test_checklist_command_uses_branch_inferred_plan_input_with_hard_gate():
     content = read("templates/commands/checklist.md")
     assert "Treat all `$ARGUMENTS` as checklist context input." in content
+    assert "## Artifact Quality Contract" in content
+    assert "Generate a checklist that a strong reviewer would actually use" in content
     assert "Resolve `PLAN_FILE` from current feature branch using `{SCRIPT}` defaults." in content
     assert "If branch-derived `PLAN_FILE` is missing or invalid, stop immediately and report the blocker." in content
     assert "Run `{SCRIPT}` from repo root. Parse JSON for FEATURE_DIR and AVAILABLE_DOCS list." in content

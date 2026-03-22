@@ -11,6 +11,7 @@ This file provides workspace-level guidance for agents working in this repositor
 - Treat `tests/`, `README.md`, docs, examples, and generated outputs as **validation or presentation artifacts only** unless they are explicitly documented as runtime sources.
 - When runtime artifacts and source-side expectations disagree, prefer the runtime artifact under `.specify/`, then repair downstream validation and documentation to match.
 - Never infer runtime semantics from tests, docs, or generated outputs when a `.specify/` artifact exists or can be read directly.
+- **Prompt Style**: All command and template edits MUST follow the strict authoring rules in `rules/prompt-style-baseline.md`.
 
 ## Runtime vs source boundary
 
