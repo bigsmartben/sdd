@@ -72,6 +72,65 @@ SHARED_SEMANTIC_BOUNDARY_POLICY = {
     ],
 }
 
+DATA_MODEL_TEST_MATRIX_RECOVERY_ERROR_CODES = {
+    "test_matrix_missing",
+    "test_matrix_required_sections_missing",
+    "binding_packets_missing_for_projection_rows",
+    "binding_packets_missing_required_fields",
+    "test_matrix_stage_missing",
+    "test_matrix_stage_not_done",
+}
+
+DATA_MODEL_CONTROL_PLANE_RECOVERY_ERROR_CODES = {
+    "missing_required_sections",
+    "data_model_stage_pending_missing",
+    "data_model_stage_not_pending",
+    "data_model_output_path_mismatch",
+}
+
+
+def build_recovery_handoff(
+    *,
+    generation_readiness: dict[str, Any],
+    selected_stage: dict[str, Any] | None,
+) -> dict[str, str]:
+    if generation_readiness.get("ready_for_generation"):
+        return {
+            "next_command": "/sdd.plan.contract",
+            "decision_basis": "Stage 2 interface partition decisions and binding packets remain authoritative for binding identity and test semantics; once shared semantic refs and constraints are aligned here, continue contract generation directly without rerunning `test-matrix`.",
+            "selected_stage_id": selected_stage["stage_id"] if selected_stage else "[none]",
+            "ready_blocked": "Ready",
+        }
+
+    error_codes = {
+        clean_cell(entry.get("code", ""))
+        for entry in generation_readiness.get("errors", [])
+        if clean_cell(entry.get("code", ""))
+    }
+
+    if error_codes & DATA_MODEL_TEST_MATRIX_RECOVERY_ERROR_CODES:
+        return {
+            "next_command": "/sdd.plan.test-matrix",
+            "decision_basis": "Blocked by test-matrix prerequisites (missing/invalid sections, packets, or stage readiness). Repair Stage 2 projection first, then rerun `/sdd.plan.data-model`.",
+            "selected_stage_id": selected_stage["stage_id"] if selected_stage else "[none]",
+            "ready_blocked": "Blocked",
+        }
+
+    if error_codes & DATA_MODEL_CONTROL_PLANE_RECOVERY_ERROR_CODES:
+        return {
+            "next_command": "/sdd.plan",
+            "decision_basis": "Blocked by plan control-plane state (Stage Queue row selection/output-path consistency). Repair `plan.md` control-plane rows, then rerun `/sdd.plan.data-model`.",
+            "selected_stage_id": selected_stage["stage_id"] if selected_stage else "[none]",
+            "ready_blocked": "Blocked",
+        }
+
+    return {
+        "next_command": "",
+        "decision_basis": "Blocked by unresolved prerequisites that do not map to a single automatic recovery route; inspect `generation_readiness.errors` and repair the first authoritative blocker.",
+        "selected_stage_id": selected_stage["stage_id"] if selected_stage else "[none]",
+        "ready_blocked": "Blocked",
+    }
+
 
 def build_stage_row(feature_dir: Path, row: dict[str, str] | None) -> dict[str, Any] | None:
     if not row:
@@ -150,10 +209,10 @@ def build_generation_readiness(
     warnings: list[dict[str, Any]] = []
 
     if missing_sections:
-        errors.append(
+        warnings.append(
             {
                 "code": "missing_required_sections",
-                "message": "plan.md is missing required control-plane sections for /sdd.plan.data-model.",
+                "message": "plan.md is missing required control-plane sections for /sdd.plan.data-model; continuing in fail-open mode.",
                 "details": {"sections": missing_sections},
             }
         )
@@ -221,44 +280,44 @@ def build_generation_readiness(
         )
 
     if test_matrix_stage is None:
-        errors.append(
+        warnings.append(
             {
                 "code": "test_matrix_stage_missing",
-                "message": "Stage Queue does not contain a test-matrix row.",
+                "message": "Stage Queue does not contain a test-matrix row; continuing in fail-open mode because test-matrix artifact validation is authoritative.",
                 "details": {},
             }
         )
     elif test_matrix_stage["status"] != "done":
-        errors.append(
+        warnings.append(
             {
                 "code": "test_matrix_stage_not_done",
-                "message": "test-matrix prerequisite is not done.",
+                "message": "test-matrix prerequisite row is not done; continuing in fail-open mode because test-matrix artifact validation is authoritative.",
                 "details": {"status": test_matrix_stage["status"], "blocker": test_matrix_stage["blocker"]},
             }
         )
 
     if selected_stage is None:
-        errors.append(
+        warnings.append(
             {
                 "code": "data_model_stage_pending_missing",
-                "message": "No pending data-model row is available in Stage Queue.",
+                "message": "No pending data-model row is available in Stage Queue; continuing in fail-open mode with synthetic selection.",
                 "details": {},
             }
         )
     elif selected_stage["status"] != "pending":
-        errors.append(
+        warnings.append(
             {
                 "code": "data_model_stage_not_pending",
-                "message": "Selected data-model row is not pending.",
+                "message": "Selected data-model row is not pending; continuing in fail-open mode.",
                 "details": {"status": selected_stage["status"]},
             }
         )
 
     if selected_stage and selected_stage["output_path_abs"] and selected_stage["output_path_abs"] != str(data_model_path):
-        errors.append(
+        warnings.append(
             {
                 "code": "data_model_output_path_mismatch",
-                "message": "Selected data-model row output path does not match resolved data-model.md path.",
+                "message": "Selected data-model row output path does not match resolved data-model.md path; continuing in fail-open mode with resolved output path as authority.",
                 "details": {
                     "stage_output_path": selected_stage["output_path_abs"],
                     "resolved_data_model_path": str(data_model_path),
@@ -326,6 +385,28 @@ def build_data_model_bootstrap_payload(
         ),
     )
 
+    if selected_stage is None:
+        data_model_row = next(
+            (
+                row
+                for row in stage_rows
+                if clean_cell(row.get("Stage ID", "")) == "data-model"
+            ),
+            None,
+        )
+        selected_stage = build_stage_row(feature_dir, data_model_row)
+
+    if selected_stage is None:
+        selected_stage = {
+            "stage_id": "data-model",
+            "command": "/sdd.plan.data-model",
+            "required_inputs": "plan.md, spec.md, test-matrix.md",
+            "output_path": "data-model.md",
+            "output_path_abs": str(data_model_path),
+            "status": "pending",
+            "blocker": "",
+        }
+
     test_matrix_path = (
         Path(test_matrix_stage["output_path_abs"])
         if test_matrix_stage and test_matrix_stage["output_path_abs"]
@@ -348,6 +429,10 @@ def build_data_model_bootstrap_payload(
         test_matrix_stage=test_matrix_stage,
         selected_stage=selected_stage,
         test_matrix_validation=test_matrix_validation,
+    )
+    recovery_handoff = build_recovery_handoff(
+        generation_readiness=generation_readiness,
+        selected_stage=selected_stage,
     )
 
     return {
@@ -373,4 +458,5 @@ def build_data_model_bootstrap_payload(
         "shared_semantic_boundary_policy": SHARED_SEMANTIC_BOUNDARY_POLICY,
         "state_machine_policy": STATE_MACHINE_POLICY,
         "generation_readiness": generation_readiness,
+        "recovery_handoff": recovery_handoff,
     }

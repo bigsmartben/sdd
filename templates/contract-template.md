@@ -11,6 +11,14 @@
 **Implementation Entry Anchor Status (Required)**: [`existing` \| `extended` \| `new` \| `todo`]
 **Implementation Entry Anchor Strategy Evidence (Required)**: [`existing rejected: ...; extended rejected: ...` \| `N/A` when `Implementation Entry Anchor Status (Required) != new`]
 
+## Artifact Quality Signals (Normative)
+
+- Must: be strong enough for implementation to start without reopening basics.
+- Strictly: Concrete anchors only; no placeholder labels in final artifact.
+- `contract` is responsible for first-time production of `Boundary Anchor`, `Implementation Entry Anchor`, request/response surface, UML closure, sequence closure, and test projection for this binding.
+
+Angle-bracket labels in the examples below are template scaffolding only and MUST be replaced before the artifact can be `done`.
+
 This artifact is the single authoritative interface-design closure for one `BindingRowID`.
 Its core outputs are fixed:
 
@@ -32,6 +40,7 @@ Its core outputs are fixed:
 - For first-party internal `new` anchors, prefer repository-style names such as `*Controller.method`, `*Service.method`, or `*ServiceImpl.method`; do not use `Facade` unless the anchor is explicitly modeling an adapter/external integration surface.
 - `BA-*` labels are not valid normative boundary anchors.
 - Apply anchor decision order `existing -> extended -> new -> todo`.
+- `new` \| `todo` is only valid after explicit rejection of `existing` and `extended` with evidence.
 - `extended` is valid only for same-entity field/state expansion.
 - `new` is normative only when selected `spec.md` / `data-model.md` / `test-matrix.md` slices plus bounded repo reads fully close the binding design and this stage can assign one concrete repository-facing boundary/entry target for implementation.
 - When `Anchor Status (Required) = new`, `Boundary Anchor Strategy Evidence (Required)` MUST include explicit rejection evidence for both `existing` and `extended`.
@@ -121,7 +130,6 @@ Mandatory rules:
 - Any newly introduced field/method/call not already in anchored sources MUST be explicitly marked as `new`.
 - If `Boundary Anchor` / `Implementation Entry Anchor` are `new` but reuse an `existing` realization chain downstream, render both layers explicitly instead of replacing the design anchor with the nearest existing class.
 - Any `new` entity/value object/state holder MUST identify owner, creator, reader, and writer closure somewhere in UML notes or field ownership rows before the artifact can be `done`.
-- Angle-bracket labels in the examples below are template scaffolding only and MUST be replaced before the artifact can be `done`.
 
 ### Resolved Type Inventory
 
@@ -141,91 +149,30 @@ Use `Notes` to make layering explicit whenever `new` and `existing` types coexis
 
 ```mermaid
 classDiagram
-    class ContractBoundaryEntry["<ContractBoundaryEntry>"] {
-        +[consumerEntry](requestDto): responseDto
+    class ConcreteBoundary {
+        +method(request)
     }
-
-    class ImplementationEntry["<ImplementationEntryAnchor>"] {
-        +[handle](requestDto): responseDto
+    class ConcreteEntry {
+        +execute()
     }
-
-    class RequestModel["<BoundaryRequestModel>"] {
-        +[requestFieldA]: [Type]
-        +[requestFieldB]: [Type]
+    class Collaborator {
+        +perform()
     }
-
-    class ResponseModel["<BoundaryResponseModel>"] {
-        +[responseFieldA]: [Type]
-        +[status]: [StatusEnum]
-    }
-
-    class Collaborator["<AnchoredCollaboratorSymbol>"] {
-        +[execute](requestModel): [collaboratorResult]
-    }
-
-    class Middleware["<AnchoredMiddlewareSymbol>"] {
-        +[intercept](requestContext): [middlewareResult]
-    }
-
-    class ExternalDependency["<AnchoredSecondOrThirdPartySymbol>"] {
-        +[invoke](collaboratorInput): [dependencyResult]
-    }
-
-    class DomainEntity["<DomainEntityOrDO>"] {
-        +[domainField]: [Type]
-        +[state]: [StatusEnum]
-    }
-
-    ContractBoundaryEntry --> ImplementationEntry : hands-off-to
-    ContractBoundaryEntry --> RequestModel : consumes
-    ImplementationEntry --> ResponseModel : maps/produces
-    ImplementationEntry --> Collaborator : calls
-    ImplementationEntry --> Middleware : traverses
-    Collaborator --> ExternalDependency : calls
-    ImplementationEntry --> DomainEntity : reads/writes
+    ConcreteBoundary --> ConcreteEntry
+    ConcreteEntry --> Collaborator
 ```
 
 #### UML Variant B (Boundary == Entry)
 
 ```mermaid
 classDiagram
-    class ContractBoundaryEntry["<ContractBoundaryAnchorAndEntry>"] {
-        +[consumerEntry](requestDto): responseDto
+    class ConcreteBoundary {
+        +method(request)
     }
-
-    class RequestModel["<BoundaryRequestModel>"] {
-        +[requestFieldA]: [Type]
-        +[requestFieldB]: [Type]
+    class Collaborator {
+        +perform()
     }
-
-    class ResponseModel["<BoundaryResponseModel>"] {
-        +[responseFieldA]: [Type]
-        +[status]: [StatusEnum]
-    }
-
-    class Collaborator["<AnchoredCollaboratorSymbol>"] {
-        +[execute](requestModel): [collaboratorResult]
-    }
-
-    class Middleware["<AnchoredMiddlewareSymbol>"] {
-        +[intercept](requestContext): [middlewareResult]
-    }
-
-    class ExternalDependency["<AnchoredSecondOrThirdPartySymbol>"] {
-        +[invoke](collaboratorInput): [dependencyResult]
-    }
-
-    class DomainEntity["<DomainEntityOrDO>"] {
-        +[domainField]: [Type]
-        +[state]: [StatusEnum]
-    }
-
-    ContractBoundaryEntry --> RequestModel : consumes
-    ContractBoundaryEntry --> ResponseModel : maps/produces
-    ContractBoundaryEntry --> Collaborator : calls
-    ContractBoundaryEntry --> Middleware : traverses
-    Collaborator --> ExternalDependency : calls
-    ContractBoundaryEntry --> DomainEntity : reads/writes
+    ConcreteBoundary --> Collaborator
 ```
 
 ### Two-Party Package Relations
@@ -251,7 +198,7 @@ Mandatory rules:
 - Sequence MUST NOT merge multiple mandatory collaborators/dependencies into one synthetic participant label.
 - When `new` boundary/entry anchors hand off to an `existing` realization chain, the first hop MUST remain the new anchor and the reused repo-backed chain MUST appear as a subsequent explicit handoff.
 - Do not substitute the nearest `existing` controller/service for a `new` boundary when the new northbound interaction semantics are not identical.
-- `opt` blocks are allowed only for truly conditional branches; mandatory main-path calls MUST remain outside `opt`.
+- `opt` blocks are valid only for truly conditional branches; mandatory main-path calls MUST remain outside `opt`.
 - Main success path and key failure path MUST be traceable to `Primary TM IDs` / `TM IDs` / `TC IDs`.
 
 ### Behavior Paths
@@ -268,9 +215,9 @@ Mandatory rules:
 ```mermaid
 sequenceDiagram
     participant Initiator as "<ClientOrCaller>"
-    participant Boundary as "<ContractBoundaryAnchor>"
+    participant Boundary as "ConcreteBoundary.method"
     participant Middleware as "<AnchoredMiddlewareSymbol>"
-    participant Entry as "<ImplementationEntryAnchor>"
+    participant Entry as "ConcreteEntry.method"
     participant SecondParty as "<AnchoredSecondPartyCollaborator>"
     participant ThirdParty as "<AnchoredThirdPartyDependency>"
 
@@ -295,7 +242,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant Initiator as "<ClientOrCaller>"
-    participant Boundary as "<ContractBoundaryAnchorAndEntry>"
+    participant Boundary as "ConcreteBoundary.method"
     participant Middleware as "<AnchoredMiddlewareSymbol>"
     participant SecondParty as "<AnchoredSecondPartyCollaborator>"
     participant ThirdParty as "<AnchoredThirdPartyDependency>"
@@ -361,5 +308,8 @@ Keep this section short and explicit.
 - `new` anchors are planning-final for this binding and MUST stay concrete, uniquely named, and consistent across Interface Definition, UML, Sequence, and Test Projection.
 - If `new` anchors reuse `existing` repo-backed implementation, keep the design anchor and reused realization chain distinct instead of collapsing both into one symbol.
 - Any `new` operation-scoped holder/state class must close owner, creator, reader, and writer responsibilities before the binding can be treated as design-final.
+- the first hop MUST remain the new anchor and the reused repo-backed chain MUST appear as a subsequent explicit handoff.
+- owner, creator, reader, and writer closure MUST be explicit for any new holder/state class.
+- render both layers explicitly instead of replacing the design anchor with the nearest existing class.
 - If a gap is truly shared-semantic, route upstream to `/sdd.plan.data-model`.
 - Do not use helper docs (`README.md`, `docs/**`, `specs/**`, generated artifacts) as repo semantic anchors.

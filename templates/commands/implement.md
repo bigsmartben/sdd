@@ -1,5 +1,5 @@
 ---
-description: Execute the implementation plan by processing and executing all tasks defined in tasks.md
+description: Execute the implementation plan by processing tasks in tasks.md.
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks --implement-preflight
   ps: scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks -ImplementPreflight
@@ -13,95 +13,90 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+Run `{SCRIPT}` once from repo root; parse `FEATURE_DIR`, `AVAILABLE_DOCS`, `LOCAL_EXECUTION_PROTOCOL`, `IMPLEMENT_BOOTSTRAP`, and `TASKS_MANIFEST_BOOTSTRAP`.
+
 ## Goal
 
-`/sdd.implement` owns execution only.
-
-1. Consume task orchestration artifacts.
-2. Execute DAG-safe work in `strict` or `adaptive` mode.
-3. Update task completion state and report run status.
-
-Comprehensive audit ownership remains with `/sdd.analyze`.
-
-## Governance Guardrails (Mandatory)
-
-- **Authority rule**: `/sdd.implement` is authoritative only for runtime execution progress and task-state transitions. It MUST NOT override semantic authority in `spec.md`, `plan.md`, `data-model.md`, `test-matrix.md`, or `contracts/`.
-- **Stage boundary rule**: execute approved task packages only. Task execution state transitions within `tasks.md` (`pending → in-progress → done`) are in scope; backfilling planning/design artifacts, assigning implementation ownership semantics such as `Repo Anchor Role`, or rewriting contract/schema semantics are not.
-- **Gate ownership rule**: this stage enforces run-local execution safety and analyze-readiness gating only. Cross-artifact final PASS/FAIL remains owned by `/sdd.analyze`.
-- **Shared protocol rule**: apply **Unified Repository-First Gate Protocol (`URFGP`)** as the shared authority for repository-first execution gating and remediation routing.
+Execute approved task packages from `tasks.md`.
+`/sdd.implement` owns execution and task-state transitions only.
 
 ## Read Only
 
-1. Run `{SCRIPT}` once and parse `FEATURE_DIR`, `AVAILABLE_DOCS`, `LOCAL_EXECUTION_PROTOCOL`, `IMPLEMENT_BOOTSTRAP`, and `TASKS_MANIFEST_BOOTSTRAP`.
-2. Treat `IMPLEMENT_BOOTSTRAP.analyze_readiness` as the primary analyze hard gate.
-3. If `IMPLEMENT_BOOTSTRAP` is missing, malformed, contradictory, or unavailable, stop immediately and report the runtime bootstrap blocker.
-4. Parse optional runtime mode:
-   - `mode: strict` (default)
-   - `mode: adaptive`
-5. Parse optional explicit waiver: `waive-analyze-gate`.
-6. Runtime source preference:
-   - use `tasks.manifest.json` when schema validation passes
-   - prefer `TASKS_MANIFEST_BOOTSTRAP.validation` as the packaged manifest gate when available
-   - fallback to `tasks.md` parsing when manifest is missing or invalid
-7. Read `plan.md` only as control-plane context (`Shared Context Snapshot`, `Stage Queue`, `Artifact Status`, `Binding Projection Index`) and resolved artifact paths; do not treat it as a semantic source for architecture/contract/model requirements.
-8. Read support artifacts only when required by active tasks (`contracts/`, `data-model.md`, `test-matrix.md`, `research.md`).
-9. Read canonical repository-first baselines under `.specify/memory/repository-first/` for dependency/module-edge validation.
-10. Treat `LOCAL_EXECUTION_PROTOCOL` as the constitution-derived run-local execution packet for repository discovery, repo inspection, and bounded helper execution during this run.
-11. Treat `LOCAL_EXECUTION_PROTOCOL.runtime_tools` as the SDD core runtime inventory for this run: `specify-cli`, `git`, and `rg`.
-12. If additional repository discovery is required, use only `LOCAL_EXECUTION_PROTOCOL.repo_search.list_files_cmd` and `LOCAL_EXECUTION_PROTOCOL.repo_search.search_text_cmd`; if `repo_search.available = false`, stop and report the blocker instead of trial-and-error across ad hoc CLIs.
-13. If bounded Python helper execution is required, use only `LOCAL_EXECUTION_PROTOCOL.python.runner_cmd`; do not switch to user-managed interpreters, project-local virtual environments, or repo-local `uv run python`.
-14. When a task requires build/test/lint commands, execute only completion anchors or repo-backed scripts/config entries; do not guess alternate package managers or install tooling in this command.
-
-Manifest validation keys:
-
-- top-level: `schema_version`, `generated_at`, `generated_from`, `tasks`, `presentation`
-- `generated_from`: `plan_path`
-- `presentation`: `board_style`, `source_lineage`
-- task keys: `task_id`, `dependencies`, `if_scope`, `refs`, `target_paths`, `completion_anchors`, `conflict_hints`, `topo_layer`, `status`
+- `IMPLEMENT_BOOTSTRAP` packet (from `{SCRIPT}`)
+- `tasks.md` / `tasks.manifest.json` (DAG authority)
+- `contracts/` (active task context)
+- `data-model.md`, `test-matrix.md` (active task context)
+- `LOCAL_EXECUTION_PROTOCOL` (from `IMPLEMENT_BOOTSTRAP`; includes `LOCAL_EXECUTION_PROTOCOL.python.runner_cmd` and `LOCAL_EXECUTION_PROTOCOL.runtime_tools`)
+- `LOCAL_EXECUTION_PROTOCOL.repo_search.list_files_cmd`
+- `.specify/memory/repository-first/*.md` (canonical baselines)
+- Read `plan.md` only as control-plane context (`Shared Context Snapshot`, `Stage Queue`, `Artifact Status`, `Binding Projection Index`)
 
 ## Write Only
 
-1. Execute ready tasks by DAG dependency closure.
-2. Update completion checkboxes in `tasks.md` for completed tasks.
-3. Preserve source task lineage in adaptive mode.
-4. Emit progress signals (`start`, per-task transition, heartbeat, long-command before/after status).
-
-## Stop Conditions
-
-Stop immediately when any condition holds:
-
-1. Required task artifacts are missing or non-consumable.
-2. `IMPLEMENT_BOOTSTRAP.analyze_readiness.ready_for_implementation = false` and `waive-analyze-gate` is absent.
-3. `IMPLEMENT_BOOTSTRAP` is missing, malformed, contradictory, or unavailable.
-4. `IMPLEMENT_BOOTSTRAP.analyze_readiness.errors` contains blockers.
-5. Required DAG predecessors fail.
-6. Required canonical repository-first evidence for affected scope is missing, stale, or non-traceable.
-7. Runtime drift exceeds safe local adaptation in adaptive mode.
-8. Active execution targets rely on `new` repo anchors without explicit rejection evidence for `existing` and `extended`.
-9. Required repository discovery or helper execution is blocked because `LOCAL_EXECUTION_PROTOCOL` marks the capability unavailable.
-
-When gate is not ready and `waive-analyze-gate` is present, continue with explicit waiver notice.
-
-Do not invent missing semantics in this command:
-
-- no new external contracts
-- no lifecycle model invention
-- no conversion of `TODO(REPO_ANCHOR)` into executable semantics
-- no bypass of repo-anchor strategy priority (`existing -> extended -> new`)
-- no local CLI trial-and-error outside `LOCAL_EXECUTION_PROTOCOL` and repo-backed task anchors
-- no cross-artifact final PASS/FAIL claim in this stage
+- Implementation code, tests, and configuration files per task scope
+- Task-completion state transitions in `tasks.md`
 
 ## Final Output
 
-Return a concise execution summary:
+- Code, test, and configuration changes per task scope
+- Updated task-state in `tasks.md` for tasks executed in this run
 
-1. execution mode
-2. analyze gate status (`IMPLEMENT_BOOTSTRAP` pass or `waived`)
-3. completed / failed / blocked tasks
-4. dependency-closure validation result
-5. completion-anchor validation result
-6. `Repository-first Validation Trace` with consumed canonical dependency and module-edge rows, formatted as **Repository-First Evidence Bundle (`RFEB`)** entries:
-   - `fact -> conclusion`
-   - `source_refs`
-   - `signal_ids` and/or `module_edge_ids`
-7. follow-up remediation owner command when execution cannot continue
+## Prerequisite Gate
+
+Treat `IMPLEMENT_BOOTSTRAP.analyze_readiness` as the primary analyze hard gate.
+
+- If `IMPLEMENT_BOOTSTRAP.analyze_readiness.errors` contains blockers, stop immediately and report the runtime bootstrap blocker.
+- Pass `waive-analyze-gate` only when explicitly provided by the user.
+- no bypass of repo-anchor strategy priority (`existing -> extended -> new`).
+- no local CLI trial-and-error outside `LOCAL_EXECUTION_PROTOCOL`.
+
+## Governance / Authority
+
+- **Authority rule**: `tasks.md` is authoritative for execution progress. **MUST NOT** override semantics in `spec.md`, `plan.md`, `data-model.md`, `test-matrix.md`, or `contracts/`.
+- **Stage boundary rule**: Execute approved tasks only. **MUST NOT** backfill planning or design semantics.
+- **Shared protocol rule**: Apply **Unified Repository-First Gate Protocol (`URFGP`)**.
+- **Gate ownership rule**: Enforce run-local execution safety; final audit/PASS/FAIL remains with `/sdd.analyze`.
+
+## Repository-First Protocol
+
+- Apply **Repository-First Evidence Bundle (`RFEB`)** format for any anchor evidence emitted.
+
+## Reasoning Order
+
+1. **Bootstrap**: Resolve execution protocol and analyze-readiness gate from `IMPLEMENT_BOOTSTRAP`.
+2. **DAG Selection**: Identify ready tasks by dependency closure.
+3. **Validation**: Confirm Repository-first Validation Trace for affected repo scope.
+4. **Execution**: Execute completion anchors or repo-backed scripts; update completion state.
+
+## Artifact Quality Contract
+
+- Must: Produce implementation results that feel native to the repository and pass the completion anchors specified in `tasks.md`.
+- Strictly: No speculative design changes, no invented anchors.
+
+## Writeback Contract
+
+- Update task-state transitions in `tasks.md` only for tasks actually executed in this run.
+- Create code/config/test changes as required by tasks.
+- Do not rewrite `plan.md`, `spec.md`, `research.md`, `test-matrix.md`, `data-model.md`, or `contracts/`.
+
+## Output Contract
+
+- Results MUST follow repo-native patterns and upstream design.
+- Adapting to minor drift is allowed in `adaptive` mode; otherwise, stop and route to owner.
+- Task completion MUST be semantically complete (integration + validation).
+
+## Stop Conditions (MUST)
+
+Stop immediately if:
+1. `IMPLEMENT_BOOTSTRAP.analyze_readiness.ready_for_implementation = false`.
+2. Required DAG predecessors fail.
+3. Canonical repo evidence for affected scope is missing or stale.
+4. Active execution targets rely on `new` repo anchors without explicit rejection evidence.
+5. Local CLI trial-and-error required outside `LOCAL_EXECUTION_PROTOCOL`.
+
+## Handoff Decision
+
+Emit exactly these fields:
+- `Next Command`: Remediation owner command if blocked.
+- `Decision Basis`: Cite execution mode and gate status.
+- `Ready/Blocked`: Local readiness only.

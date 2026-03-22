@@ -177,6 +177,17 @@ These commands don't just save time—they enforce consistency and completeness:
 
 The commands embody SDD principles by treating specifications as executable artifacts rather than static documents. They transform the specification process from a necessary evil into the driving force of development.
 
+### Prompt Governance Style
+
+To keep AI outputs stable without turning prompts into essays, core command and template guidance should stay compact and directive:
+
+- `Must`
+- `Must not`
+- `Strictly`
+- `Reasoning Order`
+
+The goal is not more prose. The goal is clearer execution pressure on artifact quality, stage ownership, and repo fit.
+
 ### Template-Driven Quality: How Structure Constrains LLMs for Better Outcomes
 
 The true power of these commands lies not just in automation, but in how the templates guide LLM behavior toward higher-quality specifications. The templates act as sophisticated prompts that constrain the LLM's output in productive ways:

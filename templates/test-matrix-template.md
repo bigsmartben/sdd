@@ -11,6 +11,12 @@ Use this artifact to derive stable northbound interface partitions and project v
 - stable `BindingRowID` generation from `spec.md`
 - complete binding packets for selected bindings as downstream scope references
 
+## Artifact Quality Signals
+
+- Must: make binding identity and verification intent obvious in one pass.
+- Must not: turn packets into interface-design artifacts or verbose scenario prose.
+- Strictly: keep partition reasoning sharp, locator-strong, and downstream-usable.
+
 ## Coverage Strategy
 
 - [Coverage scope: which `UC / FR / UIF / UDD` paths must be verified and why]

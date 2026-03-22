@@ -354,6 +354,17 @@ Additional commands for enhanced quality and validation:
 | `/sdd.clarify`   | Clarify underspecified areas (recommended before `/sdd.plan`; formerly `/quizme`) |
 | `/sdd.checklist` | Generate standalone checklist artifacts in `checklists/*.md` as a vertical validation pass from active feature `plan.md` (does not backfill or redefine main-flow artifacts) |
 
+### Prompt Governance Style
+
+Core commands and templates intentionally use a short directive form:
+
+- `Must`
+- `Must not`
+- `Strictly`
+- `Reasoning Order`
+
+This keeps prompts highly directive for AI execution without letting governance prose grow uncontrollably.
+
 ### Environment Variables
 
 | Variable          | Description                                                                                                                                                                                                                                                                                            |

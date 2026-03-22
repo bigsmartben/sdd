@@ -20,12 +20,66 @@ def test_command_mapping_documents_authority_model():
     assert "Runtime template authority path for generation and output-structure commands is `.specify/templates/`." in content
 
 
+def test_supporting_governance_templates_define_artifact_quality_signals():
+    agent_template = read("templates/agent-file-template.md")
+    dep_matrix = read("templates/technical-dependency-matrix-template.md")
+    invocation = read("templates/module-invocation-spec-template.md")
+    ui_html_template = read("templates/ui-html-template.html")
+
+    assert "## Artifact Quality Signals" in agent_template
+    assert "Must: read like actionable project guidance for engineers and agents." in agent_template
+
+    assert "## Artifact Quality Signals" in dep_matrix
+    assert "Must: read like an exhaustive dependency-fact projection." in dep_matrix
+
+    assert "## Artifact Quality Signals" in invocation
+    assert "Must: read like concrete module-governance rules for the real repository." in invocation
+
+    assert "Artifact Quality Signals" in ui_html_template
+    assert "Must: feel like one coherent review prototype." in ui_html_template
+
+
+def test_docs_describe_compact_prompt_governance_style():
+    readme = read("README.md")
+    spec_driven = read("spec-driven.md")
+
+    assert "### Prompt Governance Style" in readme
+    assert "- `Must`" in readme
+    assert "- `Must not`" in readme
+    assert "- `Strictly`" in readme
+    assert "- `Reasoning Order`" in readme
+
+    assert "### Prompt Governance Style" in spec_driven
+    assert "- `Must`" in spec_driven
+    assert "- `Must not`" in spec_driven
+    assert "- `Strictly`" in spec_driven
+    assert "- `Reasoning Order`" in spec_driven
+
+
+def test_constitution_and_issue_projection_commands_define_artifact_quality_contracts():
+    constitution = read("templates/commands/constitution.md")
+    taskstoissues = read("templates/commands/taskstoissues.md")
+
+    assert "## Artifact Quality Contract" in constitution
+    assert "## Reasoning Order" in constitution
+    assert "Must: output a durable governance artifact senior maintainers can rely on." in constitution
+    assert "Strictly: keep rules normative, long-lived, and the single shortest source of truth." in constitution
+
+    assert "## Artifact Quality Contract" in taskstoissues
+    assert "## Reasoning Order" in taskstoissues
+    assert "Must: convert tasks into actionable execution tickets." in taskstoissues
+    assert "Skip anything that cannot become a clean ticket without inventing semantics." in taskstoissues
+
+
 def test_specify_and_plan_define_authority_vs_derived_views():
     specify = read("templates/commands/specify.md")
     plan = read("templates/commands/plan.md")
     plan_template = read("templates/plan-template.md")
 
     assert "`spec.md` becomes the authoritative feature-semantics artifact" in specify
+    assert "## Artifact Quality Contract" in specify
+    assert "Must: output one professional `spec.md`" in specify
+    assert "## Reasoning Order" in specify
     assert "`ui.html` generated later by `/sdd.specify.ui-html` is a derived prototype artifact" in specify
     assert "`/sdd.specify` writes `spec.md` only and MUST NOT directly generate `ui.html`." in specify
     assert "`/sdd.specify.ui-html` is an optional sidecar command; users decide if/when to invoke it." in specify
@@ -60,6 +114,13 @@ def test_tasks_implement_and_analyze_use_compact_contract_sections():
     assert "`signal_ids` (`SIG-*`" in tasks
     assert "`module_edge_ids`" in tasks
     assert "Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`" in tasks
+    assert "## Artifact Quality Contract" in tasks
+    assert "## Reasoning Order" in tasks
+    assert "## Writeback Contract" in tasks
+    assert "## Output Contract" in tasks
+    assert "Must: generate execution-ready work packages with clear dependencies, targets, and completion anchors." in tasks
+    assert "Create or refresh `tasks.md` and `tasks.manifest.json` only." in tasks
+    assert "do not repair upstream artifacts locally" in tasks
 
     assert "Treat `IMPLEMENT_BOOTSTRAP.analyze_readiness` as the primary analyze hard gate." in implement
     assert "stop immediately and report the runtime bootstrap blocker" in implement
@@ -73,6 +134,12 @@ def test_tasks_implement_and_analyze_use_compact_contract_sections():
     assert "Repository-First Evidence Bundle (`RFEB`)" in implement
     assert "Read `plan.md` only as control-plane context (`Shared Context Snapshot`, `Stage Queue`, `Artifact Status`, `Binding Projection Index`)" in implement
     assert "Repository-first Validation Trace" in implement
+    assert "## Artifact Quality Contract" in implement
+    assert "## Writeback Contract" in implement
+    assert "## Output Contract" in implement
+    assert "Produce implementation results that feel native to the repository" in implement
+    assert "Update task-state transitions in `tasks.md` only for tasks actually executed in this run." in implement
+    assert "Do not rewrite `plan.md`, `spec.md`, `research.md`, `test-matrix.md`, `data-model.md`, or `contracts/`" in implement
 
     assert "centralized audit entry and single concentrated audit step before `/sdd.implement`" in analyze
     assert "CRITICAL/HIGH findings MUST cite the authoritative source artifact(s) with concise supporting facts." in analyze
@@ -84,11 +151,41 @@ def test_tasks_implement_and_analyze_use_compact_contract_sections():
     assert "Gate Decision" in analyze
     assert "<!-- SDD_ANALYZE_RUN_BEGIN -->" in analyze
     assert "<!-- SDD_ANALYZE_RUN_END -->" in analyze
+    assert "## Artifact Quality Contract" in analyze
+    assert "## Reasoning Order" in analyze
+    assert "## Writeback Contract" in analyze
+    assert "## Output Contract" in analyze
+    assert "Must: produce one action-ready audit with prioritized findings and one authoritative gate decision." in analyze
+    assert "Append exactly one analyze run block to `ANALYZE_HISTORY`." in analyze
+    assert "never perform local repair in this stage" in analyze
+
+
+def test_clarify_ui_and_checklist_commands_define_artifact_quality_contracts():
+    clarify = read("templates/commands/clarify.md")
+    ui_html = read("templates/commands/specify.ui-html.md")
+    checklist = read("templates/commands/checklist.md")
+
+    assert "## Artifact Quality Contract" in clarify
+    assert "## Reasoning Order" in clarify
+    assert "Must: leave `spec.md` reading like a deliberate refinement" in clarify
+    assert "Strictly: preserve feature voice and synchronize all impacted `UC` / `FR` / `UIF` / `UDD` / `EC` anchors." in clarify
+
+    assert "## Artifact Quality Contract" in ui_html
+    assert "## Reasoning Order" in ui_html
+    assert "Must: produce one coherent review prototype that makes the dominant user intent obvious in one pass." in ui_html
+    assert "Strictly: every demonstrated interaction and state must trace back to `spec.md` and teach something real." in ui_html
+
+    assert "## Artifact Quality Contract" in checklist
+    assert "## Reasoning Order" in checklist
+    assert "Must: generate a checklist a strong reviewer would actually use." in checklist
+    assert "Strictly: every item must protect a real requirements-quality failure mode." in checklist
 
 
 def test_constitution_declares_repo_anchor_whitelist_and_blacklist():
     constitution = read("templates/constitution-template.md")
 
+    assert "## Artifact Quality Signals" in constitution
+    assert "Must: read like durable repository governance." in constitution
     assert "### Repo-Anchor Evidence Protocol" in constitution
     assert "**Source anchors**: source-code files/symbols" in constitution
     assert "**Engineering assembly facts**: build/module manifests" in constitution
@@ -109,6 +206,7 @@ def test_tasks_runtime_projection_and_hook_boundaries_stay_narrow():
     assert "same run-local execution graph used to render `tasks.md`" in tasks
     assert "Do not re-parse the just-written markdown to construct the manifest" in tasks
     assert "Invalidate run-local derived views" in tasks
+    assert "Write only execution decomposition artifacts." in tasks
 
 
 def test_analyze_boundary_owns_centralized_cross_artifact_audit_and_stale_gate():
@@ -117,10 +215,29 @@ def test_analyze_boundary_owns_centralized_cross_artifact_audit_and_stale_gate()
     assert "centralized audit entry and single concentrated audit step before `/sdd.implement`" in analyze
     assert "contract-projection drift governance" in analyze
     assert "route `/sdd.plan.test-matrix` to repair the upstream binding projection" in analyze
+    assert "Write only append-only audit history." in analyze
 
 
 def test_research_template_keeps_repo_first_as_optional_reference_not_primary_audit_input():
     research = read("templates/research-template.md")
 
+    assert "## Artifact Quality Signals" in research
+    assert "Must: read like a bounded decision memo." in research
     assert "For `/sdd.plan.research`, repository reuse evidence comes from source code and `.specify/memory/constitution.md`." in research
     assert "Repository-first baseline files are consumed by `/sdd.plan` as shared bootstrap inputs" in research
+
+
+def test_spec_template_declares_artifact_quality_signals():
+    spec_template = read("templates/spec-template.md")
+
+    assert "## Artifact Quality Signals *(mandatory)*" in spec_template
+    assert "Must: read like a professional product/requirements artifact." in spec_template
+    assert "Strictly: every section must sharpen scope, user-visible behavior, or downstream planning input." in spec_template
+
+
+def test_checklist_template_declares_artifact_quality_signals():
+    checklist_template = read("templates/checklist-template.md")
+
+    assert "## Artifact Quality Signals" in checklist_template
+    assert "Must: read like a real review checklist." in checklist_template
+    assert "Strictly: every item should expose a concrete requirements-quality risk." in checklist_template

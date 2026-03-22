@@ -35,6 +35,19 @@ Stage boundary rule (mandatory):
 - `/sdd.clarify` refines feature semantics in `spec.md` only.
 - Do not introduce planning/contract/task governance payloads (for example: repo-anchor strategy states, boundary tuple keys, `Repo Anchor Role`, contract schema fields, task orchestration directives, or implementation choreography).
 
+## Artifact Quality Contract
+
+- Must: leave `spec.md` reading like a deliberate refinement, not a pasted Q&A transcript.
+- Must not: append answers without integrating them into the affected semantic sections.
+- Strictly: preserve feature voice and synchronize all impacted `UC` / `FR` / `UIF` / `UDD` / `EC` anchors.
+- Output only: clarified feature semantics with no conversational residue or stage leakage.
+
+## Reasoning Order
+
+1. Detect only high-impact semantic ambiguity.
+2. Ask the minimum questions needed to close it.
+3. Integrate each answer directly into the authoritative spec surfaces before moving on.
+
 Gate ownership rule (mandatory):
 
 - `/sdd.clarify` MAY report local clarification coverage (`Resolved/Deferred/Clear/Outstanding`) for this spec only.

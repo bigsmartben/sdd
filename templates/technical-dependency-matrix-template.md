@@ -4,6 +4,12 @@
 **Canonical Path**: `.specify/memory/repository-first/technical-dependency-matrix.md`  
 **Primary Evidence**: Engineering assembly facts only (build-manifest auto-detection)
 
+## Artifact Quality Signals
+
+- Must: read like an exhaustive dependency-fact projection.
+- Must not: mix in first-party module edges, source-code semantics, or highlight-only samples.
+- Strictly: every row and signal must be derivable from detected manifests and concise evidence.
+
 Use this artifact to record 2nd/3rd-party dependency facts only.
 In-repo first-party module-to-module dependencies MUST NOT be modeled here.
 Exhaustiveness applies only after filtering out in-repo first-party module coordinates.

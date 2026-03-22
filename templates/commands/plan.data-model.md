@@ -1,10 +1,5 @@
 ---
-description: Generate the pending data-model.md artifact selected from the current feature branch plan.md.
-handoffs:
-  - label: Continue Contract Queue
-    agent: sdd.plan.contract
-    prompt: Run /sdd.plan.contract with the same active feature branch context.
-    send: true
+description: Generate data-model.md and align shared semantics from spec.md and test-matrix.md.
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json --data-model-preflight
   ps: scripts/powershell/check-prerequisites.ps1 -Json -DataModelPreflight
@@ -16,182 +11,102 @@ scripts:
 $ARGUMENTS
 ```
 
-You **MUST** consider the user input before proceeding (if not empty).
-
-## Argument Parsing
-
-Treat all `$ARGUMENTS` as optional scoped user context.
-Resolve `PLAN_FILE` from the current feature branch using `{SCRIPT}` defaults.
+Treat all `$ARGUMENTS` as optional direction.
+Resolve `PLAN_FILE` using `{SCRIPT}` defaults.
 
 ## Goal
 
-Generate exactly one `data-model.md` artifact by consuming the first pending `data-model` row from `PLAN_FILE`.
-This command is single-unit only and MUST NOT perform any other planning stage work.
-This stage performs shared semantic alignment for the selected `BindingRowID` set, not interface predesign.
-For this command, `selected BindingRowID set` means all currently projected `BindingRowID` rows in `PLAN_FILE` `Binding Projection Index` for this run-local snapshot.
-Primary semantic inputs are `spec.md`, `test-matrix.md`, and bounded repo semantic landing evidence:
+Generate one `data-model.md` for the current feature branch.
+Use `.specify/templates/data-model-template.md` only.
 
-- `Interface Partition Decisions` explain why bindings were split and which semantics stay interface-local
-- `Binding Packets` are the default downstream-demand projection input, including scope reference fields such as `User Intent`, `Request Semantics`, `Visible Result`, `Side Effect`, `Boundary Notes`, and `Repo Landing Hint`
-- `Scenario Matrix` / `Verification Case Anchors` are required verification inputs for confirming whether semantics are shared or binding-local
-- bounded repo semantic landing evidence is mandatory when this stage materializes a final semantic owner, lifecycle owner, or UML/class node
+`/sdd.plan.data-model` owns:
+- Shared business semantics (Shared Semantic Elements - SSE).
+- Shared owner/source alignment for entities and fields.
+- Vocabulary and lifecycle/invariant rules (Shared Field Vocabulary - SFV).
 
-`research.md` is optional clarification input only and MUST NOT be treated as the primary semantic source for this stage.
-The output MUST define only the shared, stable, reusable semantics that downstream `contract` work must reuse across bindings: shared entities, value objects, projections, owner/source alignment, lifecycle vocabulary, invariants, and any necessary new shared classes.
-Repo-first remains mandatory as the landing strategy for any final semantic owner, lifecycle owner, or UML/class node emitted by this artifact: apply `existing -> extended -> new`. If `existing` and `extended` cannot safely close a confirmed shared semantic, this stage MUST explicitly choose `new` here rather than leaving the ownership decision to `/sdd.plan.contract`.
-Do not define HTTP routes, controller/service/facade naming, contract-flavored shared names such as `*DTO`, `*Request`, `*Response`, `*Command`, or `*Result`, request/response shapes, operation-scoped command/result models, or repo interface-anchor placement here; those belong to `/sdd.plan.contract`.
-Downstream `/sdd.plan.contract` work MUST reuse shared refs produced here and MUST NOT redefine shared owners, owner/source alignment, lifecycle vocabulary, invariant vocabulary, or other confirmed shared semantics independently.
-Use `.specify/templates/data-model-template.md` only. If the runtime template is missing or unreadable, stop and report the blocker instead of inferring structure from mirrors or other `data-model.md` outputs.
-
-## Selection Rules
-
-1. Run `{SCRIPT}` once from repo root and parse `FEATURE_DIR`, `AVAILABLE_DOCS`, and `DATA_MODEL_BOOTSTRAP`
-2. Treat `DATA_MODEL_BOOTSTRAP.generation_readiness` as the primary queue/readiness gate for resolved paths, selected row, and output-path consistency
-3. If `DATA_MODEL_BOOTSTRAP.generation_readiness.ready_for_generation = true`, reuse the selected stage row, resolved `plan.md` / `spec.md` / `test-matrix.md` / `data-model.md` paths, `FEATURE_DIR`, and `state_machine_policy` from `DATA_MODEL_BOOTSTRAP`; do not rescan for alternate pending rows
-4. If `DATA_MODEL_BOOTSTRAP` is missing, malformed, contradictory, or unavailable, stop immediately and report the runtime bootstrap blocker
-5. When `ready_for_generation = false`, report blocking `generation_readiness.errors[].code/message/details` directly in runtime output; do not replace them with generic failure text
+The output MUST define only the shared, stable, reusable semantics — not operation-scoped types or interface-local names.
 
 ## Stage Packet (Data-Model Unit)
 
-Build one bounded run-local packet for the selected `data-model` row from:
+Run `{SCRIPT}` to resolve `FEATURE_DIR`, `PLAN_FILE`, and `DATA_MODEL_BOOTSTRAP`.
 
-- selected `Stage Queue` row in resolved `PLAN_FILE`
-- `Shared Context Snapshot` in resolved `PLAN_FILE`
-- `Repository-First Consumption Slice` in resolved `PLAN_FILE`
-- resolved `FEATURE_SPEC` path
-- resolved `test-matrix.md` path, with these mandatory sections:
-  - `Interface Partition Decisions`
-  - `UIF Full Path Coverage Graph (Mermaid)`
-  - `UIF Path Coverage Ledger`
-  - `Scenario Matrix`
-  - `Verification Case Anchors`
-  - `Binding Packets`
-- `Scenario Matrix` / `Verification Case Anchors` as required verification anchors for confirming whether a semantic is shared across bindings or remains binding-local
-- bounded repo semantic landing evidence referenced by the selected feature slice
-- optional `research.md` path only when `spec.md` + `test-matrix.md` wording leaves the shared-semantic boundary ambiguous
-- selected row status/output-path/blocker fields
+If `DATA_MODEL_BOOTSTRAP` is missing, malformed, contradictory, or unavailable, stop immediately and report a hard blocker.
 
-Use this packet as the default context for generation.
-Do not load additional artifacts unless the selected-row blocker cannot be resolved from those bounded inputs.
+1. Treat `DATA_MODEL_BOOTSTRAP.generation_readiness` as the primary queue/readiness gate.
+   - If `generation_readiness.ready_for_generation = false`, stop and report the bootstrap blocker; do not default to `/sdd.plan.contract`.
+   - Consume `DATA_MODEL_BOOTSTRAP.recovery_handoff`: if a recovery route is specified, route there and do not default to `/sdd.plan.contract`.
+2. Consume `DATA_MODEL_BOOTSTRAP.selected_stage` as the authoritative queue context for this run.
+   - runtime selection order is authoritative: first `pending` `data-model` row, then fallback `data-model` row, then synthetic row if absent.
+3. Do not recompute stage-row hard gates locally; bootstrap `generation_readiness` + `recovery_handoff` are the authority.
+4. Resolve and consume the packet's resolved `plan.md` / `spec.md` / `test-matrix.md` / `data-model.md` paths.
+5. Use this packet as the default context for generation.
 
-Apply the constitution-derived lifecycle applicability policy from `DATA_MODEL_BOOTSTRAP.state_machine_policy` while writing lifecycle sections:
+## Governance / Authority
 
-- For each declared lifecycle, count distinct stable states as `N`
-- Count unique effective transitions (`FromState -> ToState`) as `T`
-- If `N > 3` or `T >= 2N`, emit a full FSM package: transition table, transition pseudocode, and state diagram
-- Otherwise keep the lifecycle lightweight: state field definition, allowed transitions, forbidden transitions, and key invariants
-- If you still choose a full FSM below threshold, record explicit justification in the lifecycle section
-
-## Stop Conditions
-
-Stop immediately when any condition holds:
-
-1. Resolved branch-derived `PLAN_FILE` is missing or invalid
-2. `DATA_MODEL_BOOTSTRAP.generation_readiness.ready_for_generation = false`
-3. `DATA_MODEL_BOOTSTRAP` is missing, malformed, contradictory, or unavailable
-4. Any required `test-matrix.md` section is missing, or any projected `BindingRowID` packet is missing/non-consumable/incomplete
-5. Shared-semantic boundary or lifecycle evidence required by the selected unit cannot be resolved from the allowed inputs
-
-## Plan Control-Plane Input Path (Mandatory)
-
-Use only the resolved `PLAN_FILE` from `{SCRIPT}` as planning control plane.
-Ignore alternate `plan.md` paths from environment variables or repository discovery.
-Non-`plan.md` user files are allowed only when already listed in `Allowed Inputs`; they never redefine control-plane state.
-If `PLAN_FILE` is missing or non-consumable, stop and report a blocker.
-
-## Path Constraints
-
-- Stay inside the resolved `FEATURE_DIR` plus the explicit files listed in `Allowed Inputs`
-- Derive shared semantic elements from `FEATURE_SPEC` and `test-matrix.md` first
-- Use `Interface Partition Decisions` plus `Binding Packets` as the default downstream-demand projection input; use packet scope reference fields primarily to exclude interface-local detail from the shared model, and use `Scenario Matrix` / `Verification Case Anchors` as required verification anchors for shared-vs-local checks
-- Apply shared-semantic alignment across the full projected `BindingRowID` set for this run-local snapshot; do not narrow to ad hoc subsets unless a runtime blocker explicitly requires upstream repair first
-- Treat `research.md` as optional clarification only; do not let it override `spec.md` or `test-matrix.md`
-- Apply repo-first only as the landing strategy for final semantic owners, lifecycle owners, and UML/class nodes; it is not the primary semantic input source for this stage, but bounded repo landing evidence is still required when such nodes are materialized
-- Finish row selection and prerequisite checks before any broader reads; do not scan the repository for additional context, alternate `plan.md` paths, or other feature folders
-- Do not use any existing `data-model.md` outside the current target artifact path as an input or style source
-- Prefer section-level reads of `spec.md` and `test-matrix.md` that are relevant to the selected unit; avoid whole-file replay unless the selected row is blocked by missing local context
-
-## Shared-Semantic Alignment Rules (Mandatory)
-
-- Output only shared, stable, reusable semantics
-- Do not treat "used by two or more `BindingRowID` values" as sufficient proof of shared-semantic status by itself
-- A semantic used by two or more `BindingRowID` values SHOULD enter `data-model.md` only when it remains business-stable across those bindings and is not merely trigger-local, request-local, side-effect-local, or interface-partition-local detail
-- A semantic used by only one `BindingRowID` SHOULD stay in `/sdd.plan.contract` unless it is a globally stable business object, stable projection, or stable lifecycle that downstream contracts must not redefine independently
-- Include shared owner/source/lifecycle/invariant/projection vocabulary when contract runs would otherwise drift
-- If a shared semantic is materialized as a class, semantic owner, lifecycle owner, or UML node, it MUST follow repo-first landing order `existing -> extended -> new`
-- If `existing` and `extended` are both insufficient, `new` is the required outcome for this stage; do not defer that class/owner decision downstream
-- Shared semantic names and UML/class labels in this stage MUST avoid contract-flavored suffixes such as `*DTO`, `*Request`, `*Response`, `*Command`, and `*Result`, and MUST avoid interface-role labels such as `*Controller`, `*Service`, and `*Facade`
-- When `Anchor Status = new`, record repo-first strategy evidence for why `existing` and `extended` were rejected; if the concrete repo symbol does not yet exist, keep `Repo Anchor = TODO(REPO_ANCHOR)` instead of inventing a future `path::symbol`
-- Do not include interface-partition-only trigger semantics, request semantics, side-effect descriptions, single-binding request/response shapes, controller/service/facade naming, operation-specific DTO/command/result models, single-interface local validation detail, or realization-level collaborator chains
-- Treat `User Intent`, `Request Semantics`, `Visible Result`, `Side Effect`, `Boundary Notes`, and `Repo Landing Hint` as downstream scope-reference helpers only; they may justify exclusion from the shared model but they do not become shared semantics by themselves
-- Shared semantics that are confirmed by `spec.md` + `test-matrix.md` MUST be closed here at owner/source/lifecycle level; use `gap` only for genuine input/evidence blockers, not for unresolved ownership of an already-confirmed shared semantic
-- `/sdd.plan.contract` MUST reuse the shared refs chosen here and MUST NOT silently redefine shared owner/source/lifecycle/invariant semantics downstream
-
-## Shared-Semantic Consistency Checks (Lightweight)
-
-Before writing `done` status for the selected row, validate:
-
-- Every shared semantic element cites primary `UDD` / spec refs and the `BindingRowID(s)` that consume it
-- Every semantic elevated from `test-matrix.md` is justified as business-stable shared meaning rather than as repeated interface-partition metadata
-- Every single-binding semantic elevated into `data-model.md` includes explicit `Why Not Contract-Local` justification grounded in cross-role or globally stable semantics
-- Shared semantic names and UML/class labels remain free of contract-flavored names (`*DTO`, `*Request`, `*Response`, `*Command`, `*Result`) and interface-role labels (`*Controller`, `*Service`, `*Facade`)
-- Packet scope reference fields are used only to explain why a semantic stayed local or became shared; they are not copied verbatim into shared owner/source/vocabulary rows unless grounded by stable business semantics
-- Every owner/source alignment row resolves who owns the semantic and whether the downstream field/concept is authoritative, derived, or projected
-- Shared field vocabulary stays vocabulary-only; do not expand it into a full per-contract field dictionary
-- Lifecycle and invariant sections appear only when the state semantics are shared or globally stable for downstream reuse
-- Every final UML/class landing decision remains repo-first and MUST end in `existing`, `extended`, or explicit `new`; do not leave a confirmed shared semantic without a closed landing decision
-- Every `new` landing records repo-first strategy evidence, and unresolved concrete symbols stay `TODO(REPO_ANCHOR)` until a real repo symbol exists
-- `Downstream Contract Constraints` makes explicit which shared semantic refs each `BindingRowID` must reuse in `/sdd.plan.contract`, and those downstream contracts do not redefine shared owner/source/lifecycle/invariant semantics independently
-- If a required shared semantic cannot be closed only because authoritative input or evidence is missing, keep the blocker explicit in `data-model.md` and set the selected row `Blocker` instead of letting later stages backfill the model
-
-If any gate fails, do not mark the `data-model` row `done`; keep it non-done and populate `Blocker` with the exact missing shared-semantic evidence.
+- **Authority rule**: `data-model.md` is the shared-semantic authority for the feature branch.
+- **Stage boundary rule**: No operation-scoped DTOs or collaborator chains.
+  - Do not define HTTP routes, controller/service/facade naming, contract-flavored shared names such as `*DTO`, `*Request`, `*Response`, `*Command`, or `*Result`, request/response shapes, operation-scoped command/result models, or repo interface-anchor placement here; those belong to `/sdd.plan.contract`.
+- **Shared protocol rule**: Apply **Unified Repository-First Gate Protocol (URFGP)**.
 
 ## Allowed Inputs
 
-Read only:
+- `.specify/templates/data-model-template.md` (structure)
+- `PLAN_FILE` (queue state and shared snapshot)
+- `FEATURE_SPEC` (UDD / interactions authority)
+- `test-matrix.md` (binding packets authority)
+- Bounded repo evidence (existing entities, persistence models, shared services)
+- Use optional `research.md` path only when `spec.md` + `test-matrix.md` wording leaves the shared-semantic boundary ambiguous.
 
-- `.specify/templates/data-model-template.md` for output structure
-- selected `Stage Queue` row from the resolved `PLAN_FILE` only
-- `Shared Context Snapshot` from the resolved `PLAN_FILE` only
-- `Repository-First Consumption Slice` from the resolved `PLAN_FILE` only
-- resolved `FEATURE_SPEC`
-- resolved `test-matrix.md` (`Interface Partition Decisions`, `UIF Full Path Coverage Graph (Mermaid)`, `UIF Path Coverage Ledger`, `Scenario Matrix`, `Verification Case Anchors`, and `Binding Packets` required)
-- bounded repo semantic landing evidence referenced by the selected feature slice
-- optional `research.md`
+**Prohibited**: `contracts/` or broad symbol scans.
 
-### Conditional Inputs
+## Semantic Closure Rules
 
-Read additional files only when the selected-row blocker cannot be resolved from the stage packet.
-When conditional reads are required, prefer section-level rereads over whole-file replay.
+- Shared semantics that are confirmed by `spec.md` + `test-matrix.md` MUST be closed here at owner/source/lifecycle level.
+- If `existing` and `extended` are both insufficient, `new` is the required outcome for this stage.
+- If `existing` and `extended` cannot safely close a confirmed shared semantic, this stage MUST explicitly choose `new` here rather than deferring to contract.
+- If a confirmed shared semantic cannot land as `existing` or `extended`, introduce the required `new` class/owner/lifecycle here instead of deferring the decision.
+- When `Anchor Status = new`, record repo-first strategy evidence (explain why `existing` and `extended` were rejected).
+- Shared semantic names and UML/class labels in this stage MUST avoid contract-flavored suffixes.
+- Downstream `/sdd.plan.contract` work MUST reuse shared refs produced here; do not duplicate alignment.
 
-`data-model.md` remains the authoritative output for backbone shared semantics.
-`PLAN_FILE` remains queue state plus binding projection state only.
+## FSM Policy
 
-## Required Writeback
+- Consume `DATA_MODEL_BOOTSTRAP.state_machine_policy` for lifecycle thresholds.
+- If `N > 3` or `T >= 2N`, emit a full FSM package (state-transition table + Mermaid diagram).
+- Otherwise keep the lifecycle lightweight, but still include the transition table because it is a primary reader view.
 
-After generating `data-model.md`, update only:
+## Reasoning Order
 
-- selected `data-model` stage row `Status`, `Output Path`, `Blocker`
-- affected `Artifact Status` rows only when alignment output changes contract-scoped readiness; keep writeback minimal to blocker fields
-- do not rewrite `Binding Projection Index` rows or reopen `test-matrix` rows for this alignment path
+1. **Semantic Selection**: Distinguish shared business semantics from repeated interface details.
+2. **Owner Alignment**: Map each shared semantic to one repo-backed or `new` owner.
+3. **Closure**: Complete vocabulary and lifecycle rules for shared fields.
+
+## Artifact Quality Contract
+
+- Must: close reusable shared semantics, owner/source alignment, lifecycle, and invariants before contract design.
+- Strictly: Shared semantic names and UML/class labels MUST avoid contract-flavored suffixes.
+
+## Writeback Contract
+
+- Create or refresh `data-model.md` using the runtime template.
+- Modify only the selected `data-model` row plus blocker fields in `PLAN_FILE` `Stage Queue`.
+- `Status = done`, `Output Path`, `Blocker`.
+- May batch update only `Blocker` fields for affected `contract` rows in `PLAN_FILE` `Artifact Status` when shared-semantic readiness changes.
+- MUST NOT rewrite `Target Path` / `Status` in `Artifact Status`, `Binding Projection Index`, `spec.md`, or `test-matrix.md`.
+
+## Output Contract
+
+- **SSE Table**: MUST map each shared element to one `existing|extended|new|todo` anchor.
+- **SFV Table**: MUST reuse binding packet refs for meaning and boundary rules.
+- **Lifecycle Logic**: Capture vocabulary, meaning, and invariants only.
+- **Prohibited**: Interface-role names (`*DTO`, `*Request`, `*Response`, `*Controller`).
 
 ## Handoff Decision
 
-Emit a `Handoff Decision` section in the runtime output with exactly these fields:
+Emit exactly these fields:
+- `Next Command`: `DATA_MODEL_BOOTSTRAP.recovery_handoff.next_command`
+- `Decision Basis`: `DATA_MODEL_BOOTSTRAP.recovery_handoff.decision_basis`
+- `Selected Stage ID`: `DATA_MODEL_BOOTSTRAP.recovery_handoff.selected_stage_id`
+- `Ready/Blocked`: `DATA_MODEL_BOOTSTRAP.recovery_handoff.ready_blocked`
 
-- `Next Command`: `/sdd.plan.contract`
-- `Decision Basis`: Stage 2 interface partition decisions and binding packets remain authoritative for binding identity and test semantics; once shared semantic refs and constraints are aligned here, continue contract generation directly without rerunning `test-matrix`
-- `Selected Stage ID`: selected `data-model` stage row id
-- `Ready/Blocked`: `Ready` when the selected row is updated to `done`; otherwise `Blocked`
-
-`Ready/Blocked` is stage-local readiness only and MUST NOT be treated as cross-artifact final PASS/FAIL; centralized final gating belongs to `/sdd.analyze`.
-
-## Final Output
-
-Report:
-
-- resolved `PLAN_FILE`
-- selected stage row id
-- `data-model.md` path
-- updated stage status
-- `Handoff Decision` with `Next Command`, `Decision Basis`, `Selected Stage ID`, and `Ready/Blocked`
+When `Ready/Blocked = Ready`, continue contract generation directly without rerunning `test-matrix`.

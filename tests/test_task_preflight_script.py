@@ -1951,9 +1951,9 @@ def test_data_model_preflight_helper_flags_test_matrix_not_done(tmp_path):
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["generation_readiness"]["ready_for_generation"] is False
-    error_codes = [entry["code"] for entry in payload["generation_readiness"]["errors"]]
-    assert "test_matrix_stage_not_done" in error_codes
+    assert payload["generation_readiness"]["ready_for_generation"] is True
+    warning_codes = [entry["code"] for entry in payload["generation_readiness"]["warnings"]]
+    assert "test_matrix_stage_not_done" in warning_codes
 
 
 def test_data_model_preflight_helper_flags_missing_test_matrix_artifact(tmp_path):
@@ -2050,9 +2050,77 @@ def test_data_model_preflight_helper_flags_missing_pending_data_model_row(tmp_pa
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
+    assert payload["generation_readiness"]["ready_for_generation"] is True
+    warning_codes = [entry["code"] for entry in payload["generation_readiness"]["warnings"]]
+    assert "data_model_stage_not_pending" in warning_codes
+
+
+def test_data_model_preflight_helper_suggests_test_matrix_recovery_route(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_data_model_feature(feature_dir)
+
+    test_matrix_path = feature_dir / "test-matrix.md"
+    test_matrix_path.write_text(
+        test_matrix_path.read_text(encoding="utf-8").replace("## UIF Path Coverage Ledger\n", ""),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "data_model_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--research",
+            str(feature_dir / "research.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
     assert payload["generation_readiness"]["ready_for_generation"] is False
-    error_codes = [entry["code"] for entry in payload["generation_readiness"]["errors"]]
-    assert "data_model_stage_pending_missing" in error_codes
+    assert payload["recovery_handoff"]["next_command"] == "/sdd.plan.test-matrix"
+    assert payload["recovery_handoff"]["ready_blocked"] == "Blocked"
+
+
+def test_data_model_preflight_helper_suggests_plan_recovery_route_for_stage_queue_blocker(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_data_model_feature(feature_dir, data_model_status="done", include_data_model=True)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "data_model_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--research",
+            str(feature_dir / "research.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["generation_readiness"]["ready_for_generation"] is True
+    assert payload["recovery_handoff"]["next_command"] == "/sdd.plan.contract"
+    assert payload["recovery_handoff"]["ready_blocked"] == "Ready"
 
 
 def test_bash_check_prerequisites_can_embed_data_model_bootstrap(tmp_path):
@@ -2152,7 +2220,7 @@ def test_implement_command_prefers_implement_preflight_bootstrap():
     assert "Treat `IMPLEMENT_BOOTSTRAP.analyze_readiness` as the primary analyze hard gate." in implement_command
     assert "stop immediately and report the runtime bootstrap blocker" in implement_command
     assert "`IMPLEMENT_BOOTSTRAP.analyze_readiness.errors` contains blockers" in implement_command
-    assert "parse `feature_dir`, `available_docs`, `local_execution_protocol`, `implement_bootstrap`, and `tasks_manifest_bootstrap`" in implement_command.lower()
+    assert "parse `FEATURE_DIR`, `AVAILABLE_DOCS`, `LOCAL_EXECUTION_PROTOCOL`, `IMPLEMENT_BOOTSTRAP`, and `TASKS_MANIFEST_BOOTSTRAP`" in implement_command
     assert "LOCAL_EXECUTION_PROTOCOL.repo_search.list_files_cmd" in implement_command
     assert "no local CLI trial-and-error outside `LOCAL_EXECUTION_PROTOCOL`" in implement_command
 
@@ -2179,7 +2247,9 @@ def test_data_model_command_prefers_data_model_preflight_bootstrap():
     assert "scripts/bash/check-prerequisites.sh --json --data-model-preflight" in data_model_command
     assert "scripts/powershell/check-prerequisites.ps1 -Json -DataModelPreflight" in data_model_command
     assert "Treat `DATA_MODEL_BOOTSTRAP.generation_readiness` as the primary queue/readiness gate" in data_model_command
-    assert "reuse the selected stage row" in data_model_command
+    assert "Consume `DATA_MODEL_BOOTSTRAP.selected_stage` as the authoritative queue context for this run." in data_model_command
+    assert "runtime selection order is authoritative: first `pending` `data-model` row, then fallback `data-model` row, then synthetic row if absent." in data_model_command
+    assert "Do not recompute stage-row hard gates locally; bootstrap `generation_readiness` + `recovery_handoff` are the authority." in data_model_command
     assert "resolved `plan.md` / `spec.md` / `test-matrix.md` / `data-model.md` paths" in data_model_command
     assert "`DATA_MODEL_BOOTSTRAP.state_machine_policy`" in data_model_command
     assert "If `N > 3` or `T >= 2N`, emit a full FSM package" in data_model_command

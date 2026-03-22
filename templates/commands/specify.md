@@ -41,6 +41,19 @@ When generating or updating `spec.md`, keep output backbone-first and scoped to 
 - Local quality checks are required for this artifact, but `/sdd.specify` MUST NOT produce cross-artifact final PASS/FAIL decisions.
 - Cross-artifact final PASS/FAIL ownership remains centralized in `/sdd.analyze`.
 
+## Artifact Quality Contract
+
+- Must: output one professional `spec.md` that sharpens feature meaning for review, clarification, and planning.
+- Must not: emit brainstorming residue, generic SaaS filler, or implementation/design-stage content.
+- Strictly: use only grounded domain vocabulary; unsupported terms must be omitted or marked as assumptions.
+- Output only: feature semantics that downstream stages can consume without reinterpretation.
+
+## Reasoning Order
+
+1. Lock user-visible scope, actors, and outcomes from current input.
+2. Build backbone semantics in template order and remove ambiguity/duplication.
+3. Recheck that every section helps downstream review or planning before writing.
+
 ## Runtime Setup
 
 1. Generate a concise short name (2-4 words, action-noun style when possible).

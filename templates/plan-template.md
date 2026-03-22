@@ -11,6 +11,12 @@
 It is the orchestration authority for queue state, binding projection, and artifact execution status.
 It is not a semantic authority and MUST NOT supersede `spec.md`, `research.md`, `test-matrix.md`, `data-model.md`, or `contracts/`.
 
+## Artifact Quality Signals
+
+- Must: behave like a trustworthy control plane.
+- Must not: duplicate semantics or force child commands to guess intent.
+- Strictly: prefer stable ids, exact paths, and explicit statuses over prose.
+
 ## Shared Context Snapshot
 
 Shared bootstrap facts only.

@@ -12,6 +12,20 @@ Checklists here validate **requirements quality**, not implementation behavior.
 - Target: completeness, clarity, consistency, measurability, and scenario/edge coverage.
 - Non-target: execution correctness checks such as click/navigation/render/API-pass assertions.
 
+## Artifact Quality Contract
+
+- Generate a checklist that a strong reviewer would actually use.
+- Must: generate a checklist a strong reviewer would actually use.
+- Must not: devolve into implementation tests, lint slogans, or audit theater.
+- Strictly: every item must protect a real requirements-quality failure mode.
+- Output only: concise, review-ready requirement-quality questions.
+
+## Reasoning Order
+
+1. Lock checklist intent from the user request and current feature context.
+2. Select only the highest-signal quality gaps and traceability angles.
+3. Consolidate duplicates until each item changes what a reviewer will inspect.
+
 ## User Input
 
 ```text
