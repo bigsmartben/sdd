@@ -4,6 +4,7 @@ This is the latest set of releases that you can use with your agent of choice. W
 
 ## Changelog
 
+- chore: update documentation, templates and runtime logic for contract/task flow (v2.0.31)
 - feat: tighten task and data-model bootstrap validation
 - chore: align runtime artifact authority and preflight updates
 - matix优化
