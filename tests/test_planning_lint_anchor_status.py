@@ -5,10 +5,18 @@ from pathlib import Path
 
 import pytest
 
+ANCHOR_STATUSES = {"existing", "extended", "new", "todo"}
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LINT_SCRIPT = REPO_ROOT / "scripts" / "bash" / "run-planning-lint.sh"
 RULES_FILE = REPO_ROOT / "rules" / "planning-lint-rules.tsv"
+
+
+def _replace_exact(content: str, old: str, new: str, count: int = 1) -> str:
+    updated = content.replace(old, new, count)
+    assert updated != content, f"expected marker not found: {old}"
+    return updated
 
 
 def _write_feature_fixture(
@@ -170,6 +178,7 @@ def _write_feature_fixture(
         "**IF Scope (Required)**: IF-001",
         f"**Boundary Anchor (Required)**: {contract_boundary_anchor}",
         f"**Anchor Status (Required)**: {contract_anchor_status}",
+        "**Boundary Anchor Strategy Evidence (Required)**: N/A",
         "",
         "## Binding Context",
         "",
@@ -198,6 +207,11 @@ def _write_feature_fixture(
         "| Success Output | demo payload |",
         "| Failure Output | error payload |",
         "",
+        "### Shared Semantic Reuse",
+        "| Shared Semantic Ref | Constraint Type (Required Enum) | Applied To | Impact on Contract |",
+        "|---------------------|---------------------------------|------------|--------------------|",
+        "| SSE-001 | shared-semantic-element | request | Reuse shared semantic naming and meaning from data model. |",
+        "",
         "## UML Class Design",
         "",
         "### Resolved Type Inventory",
@@ -218,6 +232,7 @@ def _write_feature_fixture(
     contract_lines.extend(
         [
             f"**Implementation Entry Anchor Status (Required)**: {contract_entry_status}",
+            "**Implementation Entry Anchor Strategy Evidence (Required)**: N/A",
             "",
             "## Sequence Design",
             "- Boundary call enters controller and then reaches app handler.",
@@ -285,11 +300,11 @@ def _write_feature_fixture(
                 "",
                 "## Stage Queue",
                 "",
-                "| Stage ID | Command | Required Inputs | Output Path | Status | Source Fingerprint | Output Fingerprint | Blocker |",
-                "|----------|---------|-----------------|-------------|--------|--------------------|--------------------|---------|",
-                "| research | `/sdd.plan.research` | `plan.md`, `spec.md` | `research.md` | done | spec | research | none |",
-                "| test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md` | `test-matrix.md` | done | spec | test-matrix | none |",
-                "| data-model | `/sdd.plan.data-model` | `plan.md`, `spec.md`, `test-matrix.md` | `data-model.md` | done | spec+test-matrix | data-model | none |",
+                "| Stage ID | Command | Required Inputs | Output Path | Status | Blocker |",
+                "|----------|---------|-----------------|-------------|--------|---------|",
+                "| research | `/sdd.plan.research` | `plan.md`, `spec.md` | `research.md` | done | none |",
+                "| test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md` | `test-matrix.md` | done | none |",
+                "| data-model | `/sdd.plan.data-model` | `plan.md`, `spec.md`, `test-matrix.md` | `data-model.md` | done | none |",
                 "",
                 "## Binding Projection Index",
                 "",
@@ -299,9 +314,9 @@ def _write_feature_fixture(
                 "",
                 "## Artifact Status",
                 "",
-                "| BindingRowID | Unit Type | Target Path | Status | Source Fingerprint | Output Fingerprint | Blocker |",
-                "|--------------|-----------|-------------|--------|--------------------|--------------------|---------|",
-                "| BR-001 | contract | `contracts/demo.md` | pending | test-matrix:demo | pending | none |",
+                "| BindingRowID | Unit Type | Target Path | Status | Blocker |",
+                "|--------------|-----------|-------------|--------|---------|",
+                "| BR-001 | contract | `contracts/demo.md` | pending | none |",
                 "",
                 "## Handoff Protocol",
                 "",
@@ -391,6 +406,19 @@ def test_anchor_status_allowed_values_accepts_new(tmp_path: Path):
         packet_entry_anchor="DemoEntry.handle",
         packet_entry_status="new",
     )
+    # Override strategy evidence to provide proper format for "new" anchors
+    contract = feature_dir / "contracts" / "demo.md"
+    content = contract.read_text(encoding="utf-8")
+    content = content.replace(
+        "**Boundary Anchor Strategy Evidence (Required)**: N/A",
+        "**Boundary Anchor Strategy Evidence (Required)**: existing rejected: none; extended rejected: none",
+    )
+    content = content.replace(
+        "**Implementation Entry Anchor Strategy Evidence (Required)**: N/A",
+        "**Implementation Entry Anchor Strategy Evidence (Required)**: existing rejected: none; extended rejected: none",
+    )
+    contract.write_text(content, encoding="utf-8")
+
     payload = _run_planning_lint(feature_dir)
     assert payload["findings_total"] == 0
 
@@ -412,8 +440,38 @@ def test_anchor_status_allowed_values_rejects_composite_table_tokens(tmp_path: P
 def test_anchor_status_allowed_values_rejects_composite_label_tokens(tmp_path: Path):
     feature_dir = _write_feature_fixture(tmp_path, contract_anchor_status="`existing` and `new`")
     payload = _run_planning_lint(feature_dir)
-    assert payload["findings_total"] > 0
+    # Filter for RA-007 as other rules might trigger too (like strategy evidence)
     assert any(f["rule_id"] == "PLN-RA-007" for f in payload["findings"])
+
+
+def test_anchor_strategy_evidence_required_when_new_anchor_missing_rejections(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path, contract_anchor_status="`new`")
+    contract = feature_dir / "contracts" / "demo.md"
+    content = contract.read_text(encoding="utf-8")
+    content = _replace_exact(
+        content,
+        "**Boundary Anchor Strategy Evidence (Required)**: N/A",
+        "**Boundary Anchor Strategy Evidence (Required)**: logic required it",
+    )
+    contract.write_text(content, encoding="utf-8")
+
+    payload = _run_planning_lint(feature_dir)
+    assert any(f["rule_id"] == "PLN-RA-017" for f in payload["findings"])
+
+
+def test_anchor_strategy_evidence_accepts_required_rejections(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path, contract_anchor_status="`new`")
+    contract = feature_dir / "contracts" / "demo.md"
+    content = contract.read_text(encoding="utf-8")
+    content = _replace_exact(
+        content,
+        "**Boundary Anchor Strategy Evidence (Required)**: N/A",
+        "**Boundary Anchor Strategy Evidence (Required)**: existing rejected: none; extended rejected: none",
+    )
+    contract.write_text(content, encoding="utf-8")
+
+    payload = _run_planning_lint(feature_dir)
+    assert not any(f["rule_id"] == "PLN-RA-017" for f in payload["findings"])
 
 
 @pytest.mark.parametrize(
@@ -516,6 +574,32 @@ def test_dictionary_tier_is_required_in_contract_field_dictionary(tmp_path: Path
     payload = _run_planning_lint(feature_dir)
     assert payload["findings_total"] > 0
     assert any(f["rule_id"] == "PLN-ID-013" for f in payload["findings"])
+
+
+def test_shared_semantic_reuse_enum_validation(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    contract = feature_dir / "contracts" / "demo.md"
+    content = contract.read_text(encoding="utf-8")
+    content = _replace_exact(
+        content,
+        "| SSE-001 | shared-semantic-element | request | Reuse shared semantic naming and meaning from data model. |",
+        "| SSE-001 | invalid-type | request | Reuse shared semantic naming and meaning from data model. |",
+    )
+    contract.write_text(content, encoding="utf-8")
+
+    payload = _run_planning_lint(feature_dir)
+    assert any(f["rule_id"] == "PLN-RA-015" for f in payload["findings"])
+
+
+def test_contract_placeholder_detection(tmp_path: Path):
+    feature_dir = _write_feature_fixture(tmp_path)
+    contract = feature_dir / "contracts" / "demo.md"
+    content = contract.read_text(encoding="utf-8")
+    content += "\nSome placeholder like [operationId] or <BoundaryRequestModel>\n"
+    contract.write_text(content, encoding="utf-8")
+
+    payload = _run_planning_lint(feature_dir)
+    assert any(f["rule_id"] == "PLN-RA-016" for f in payload["findings"])
 
 
 def test_northbound_rule_flags_missing_label_entry_anchor_in_bash(tmp_path: Path):

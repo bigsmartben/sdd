@@ -77,8 +77,11 @@ Resolve `PLAN_FILE` from current feature branch using `{SCRIPT}` defaults.
 
 Manifest requirements:
 
-- Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`
-- `generated_from` keys: `plan_path`, `plan_source_fingerprint`, `contract_source_fingerprints`
+- Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`, `presentation`
+- `generated_from` minimal provenance: `plan_path` only
+- `presentation` MUST describe the enhanced task board projection without adding semantic task data.
+- `presentation.board_style` MUST be `enhanced`.
+- `presentation.source_lineage` MUST include `plan_path`.
 - Per-task required keys: `task_id`, `dependencies`, `if_scope`, `refs`, `target_paths`, `completion_anchors`, `conflict_hints`, `topo_layer`, `status`
 
 ## Stop Conditions
@@ -118,10 +121,11 @@ Return a concise execution summary:
 3. task totals (`GLOBAL` and each `IF-###`)
 4. DAG schedulability result
 5. manifest/task alignment result
-6. Repository-first explainable evidence: list only decision-relevant dependency/governance facts in `fact -> conclusion` format (path-level refs by default; add line refs only when ambiguity/conflict requires precision)
-7. Module-edge explainable evidence: list only decision-relevant invocation-governance facts in `fact -> conclusion` format (path-level refs by default; add line refs only when ambiguity/conflict requires precision)
-8. upstream alignment repair actions (if any)
-9. analyze handoff note
+6. enhanced board presentation summary: `presentation.board_style`, `presentation.source_lineage`, and minimal provenance scope
+7. Repository-first explainable evidence: list only decision-relevant dependency/governance facts in `fact -> conclusion` format (path-level refs by default; add line refs only when ambiguity/conflict requires precision)
+8. Module-edge explainable evidence: list only decision-relevant invocation-governance facts in `fact -> conclusion` format (path-level refs by default; add line refs only when ambiguity/conflict requires precision)
+9. upstream alignment repair actions (if any)
+10. analyze handoff note
 
 When evidence is emitted in this report, use **Repository-First Evidence Bundle (`RFEB`)**:
 

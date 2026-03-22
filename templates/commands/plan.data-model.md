@@ -69,7 +69,7 @@ Build one bounded run-local packet for the selected `data-model` row from:
 - `Scenario Matrix` / `Verification Case Anchors` as required verification anchors for confirming whether a semantic is shared across bindings or remains binding-local
 - bounded repo semantic landing evidence referenced by the selected feature slice
 - optional `research.md` path only when `spec.md` + `test-matrix.md` wording leaves the shared-semantic boundary ambiguous
-- selected row source/output fingerprint fields
+- selected row status/output-path/blocker fields
 
 Use this packet as the default context for generation.
 Do not load additional artifacts unless the selected-row blocker cannot be resolved from those bounded inputs.
@@ -171,8 +171,8 @@ When conditional reads are required, prefer section-level rereads over whole-fil
 
 After generating `data-model.md`, update only:
 
-- selected `data-model` stage row `Status`, `Output Path`, `Source Fingerprint`, `Output Fingerprint`, `Blocker`
-- affected `Artifact Status` rows only when alignment output changes contract-scoped readiness; keep writeback minimal to blocker/fingerprint fields
+- selected `data-model` stage row `Status`, `Output Path`, `Blocker`
+- affected `Artifact Status` rows only when alignment output changes contract-scoped readiness; keep writeback minimal to blocker fields
 - do not rewrite `Binding Projection Index` rows or reopen `test-matrix` rows for this alignment path
 
 ## Handoff Decision

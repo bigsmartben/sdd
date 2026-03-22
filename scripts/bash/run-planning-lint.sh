@@ -25,9 +25,11 @@ Supported rule kinds:
   - anchor_status_allowed_values
   - northbound_controller_required
   - repo_anchor_paths_exist
-  - plan_status_consistency
-  - binding_projection_stable_only
-  - binding_tuple_projection_sync
+    - plan_status_consistency
+    - binding_projection_stable_only
+    - binding_tuple_projection_sync
+    - shared_semantic_reuse_enum
+    - anchor_strategy_evidence_required
 EOF
 }
 
@@ -1370,8 +1372,139 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
             done
             ;;
 
+        shared_semantic_reuse_enum)
+            allowed_csv="$(get_param "$params" "allowed")"
+            if [[ -z "$allowed_csv" ]]; then
+                add_finding "$id" "$severity" "$glob" 0 "Rule params missing required key: allowed" "Fix rules TSV params for this rule."
+                continue
+            fi
+
+            IFS=',' read -r -a allowed_tokens <<< "$allowed_csv"
+            type_header_regex='^Constraint[ _-]*Type([[:space:]]*\([^)]*\))?$'
+
+            for file_path in "${matched_files[@]}"; do
+                rel_file="${file_path#$FEATURE_DIR/}"
+                line_no=0
+                in_table=false
+                type_col=-1
+
+                while IFS= read -r line || [[ -n "$line" ]]; do
+                    line_no=$((line_no + 1))
+
+                    if parse_markdown_cells "$line"; then
+                        cells=("${MARKDOWN_CELLS[@]}")
+
+                        # Check if this row is a separator row
+                        is_separator=true
+                        for cell in "${cells[@]}"; do
+                            if [[ ! "$cell" =~ ^:?-{3,}:?$ ]]; then
+                                is_separator=false
+                                break
+                            fi
+                        done
+
+                        if [[ "$in_table" == false ]]; then
+                            idx=0
+                            for cell in "${cells[@]}"; do
+                                if [[ "$cell" =~ $type_header_regex ]]; then
+                                    type_col=$idx
+                                    break
+                                fi
+                                idx=$((idx + 1))
+                            done
+                            if [[ $type_col -ge 0 ]]; then
+                                in_table=true
+                            fi
+                            continue
+                        fi
+
+                        if [[ "$is_separator" == true ]]; then
+                            continue
+                        fi
+
+                        if [[ $type_col -ge ${#cells[@]} ]]; then
+                            continue
+                        fi
+
+                        type_value="${cells[$type_col]}"
+                        [[ "$type_value" == "N/A" ]] && continue
+
+                        found=false
+                        for allowed in "${allowed_tokens[@]}"; do
+                            if [[ "$type_value" == "$allowed" ]]; then
+                                found=true
+                                break
+                            fi
+                        done
+
+                        if [[ "$found" == false ]]; then
+                            add_finding "$id" "$severity" "$rel_file" "$line_no" "$message Invalid type: $type_value. Allowed: $allowed_csv" "$remediation"
+                        fi
+                        continue
+                    fi
+                    in_table=false
+                    type_col=-1
+                done < "$file_path"
+            done
+            ;;
+
+        anchor_strategy_evidence_required)
+            anchor_status_label_regex='^[[:space:]]*([-*][[:space:]]*)?(\*\*)?(Boundary[ _-]*Anchor[ _-]*Status|Implementation[ _-]*Entry[ _-]*Anchor[ _-]*Status|Anchor[ _-]*Status)([[:space:]]*\([^)]*\))?(\*\*)?[[:space:]]*:[[:space:]]*(.+)$'
+            strategy_label_regex='^[[:space:]]*([-*][[:space:]]*)?(\*\*)?(Boundary[ _-]*Anchor[ _-]*Strategy[ _-]*Evidence|Implementation[ _-]*Entry[ _-]*Anchor[ _-]*Strategy[ _-]*Evidence|Anchor[ _-]*Strategy[ _-]*Evidence)([[:space:]]*\([^)]*\))?(\*\*)?[[:space:]]*:[[:space:]]*(.+)$'
+
+            for file_path in "${matched_files[@]}"; do
+                rel_file="${file_path#$FEATURE_DIR/}"
+                line_no=0
+                pending_status=""
+                pending_type=""
+                pending_line=0
+
+                while IFS= read -r line || [[ -n "$line" ]]; do
+                    line_no=$((line_no + 1))
+
+                    if [[ "$line" =~ $anchor_status_label_regex ]]; then
+                        pending_type="${BASH_REMATCH[3]}"
+                        pending_status="$(extract_anchor_status_token "${BASH_REMATCH[6]-}")"
+                        pending_line=$line_no
+                        continue
+                    fi
+
+                    if [[ "$line" =~ $strategy_label_regex ]] && [[ -n "$pending_type" ]]; then
+                        strategy_type="${BASH_REMATCH[3]}"
+                        evidence_norm="$(normalize_markdown_scalar "${BASH_REMATCH[6]-}")"
+
+                        is_match=false
+                        if [[ "$pending_type" == "Boundary"* && "$strategy_type" == "Boundary"* ]]; then
+                            is_match=true
+                        elif [[ "$pending_type" == "Implementation"* && "$strategy_type" == "Implementation"* ]]; then
+                            is_match=true
+                        elif [[ "$pending_type" == "Anchor"* && "$strategy_type" == "Boundary"* ]]; then
+                            is_match=true
+                        elif [[ "$pending_type" == "Anchor"* && "$strategy_type" == "Anchor"* ]]; then
+                            is_match=true
+                        fi
+
+                        if [[ "$is_match" == true ]]; then
+                            if [[ "$pending_status" == "new" ]]; then
+                                if ! grep -qiE "existing[ _-]+rejected" <<< "$evidence_norm" || ! grep -qiE "extended[ _-]+rejected" <<< "$evidence_norm"; then
+                                    add_finding "$id" "$severity" "$rel_file" "$line_no" "$message Anchor status is 'new' but evidence is missing 'existing rejected' or 'extended rejected'. Evidence: $evidence_norm" "$remediation"
+                                fi
+                            fi
+                            pending_status=""
+                            pending_type=""
+                            pending_line=0
+                        fi
+                    fi
+                done < "$file_path"
+
+                if [[ "$pending_status" == "new" ]]; then
+                    add_finding "$id" "$severity" "$rel_file" "$pending_line" "$message Anchor status is 'new' but strategy evidence label is missing for $pending_type." "$remediation"
+                fi
+            done
+            ;;
+
         *)
-            add_finding "$id" "$severity" "$glob" 0 "Unsupported rule kind: $kind" "Use one of: file_regex_forbidden, file_regex_required_any, component_symbols_exist, anchor_status_allowed_values, northbound_controller_required, repo_anchor_paths_exist, plan_status_consistency, binding_projection_stable_only, binding_tuple_projection_sync."
+            add_finding "$id" "$severity" "$glob" 0 "Unsupported rule kind: $kind" "Use one of: file_regex_forbidden, file_regex_required_any, component_symbols_exist, anchor_status_allowed_values, northbound_controller_required, repo_anchor_paths_exist, plan_status_consistency, binding_projection_stable_only, binding_tuple_projection_sync, shared_semantic_reuse_enum, anchor_strategy_evidence_required."
             ;;
     esac
 

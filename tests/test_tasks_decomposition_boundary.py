@@ -41,8 +41,11 @@ def test_tasks_command_deterministic_mapping_and_manifest_schema():
     assert "one work package maps to exactly one `operationId` or one shared prerequisite objective" in content
     assert "one work package maps to exactly one target path cluster or one command target" in content
     assert "one work package maps to exactly one primary completion anchor" in content
-    assert "Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`" in content
-    assert "`generated_from` keys: `plan_path`, `plan_source_fingerprint`, `contract_source_fingerprints`" in content
+    assert "Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`, `presentation`" in content
+    assert "`generated_from` minimal provenance: `plan_path` only" in content
+    assert "`presentation` MUST describe the enhanced task board projection without adding semantic task data." in content
+    assert "`presentation.board_style` MUST be `enhanced`." in content
+    assert "`presentation.source_lineage` MUST include `plan_path`." in content
     assert "Repository-First Evidence Bundle (`RFEB`)" in content
     assert "`source_refs`" in content
     assert "`signal_ids` (`SIG-*` rows" in content
@@ -69,7 +72,7 @@ def test_manifest_schema_contract_between_tasks_and_implement():
     implement_command = read("templates/commands/implement.md")
 
     assert "Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`" in tasks_command
-    assert "`generated_from` keys: `plan_path`, `plan_source_fingerprint`, `contract_source_fingerprints`" in tasks_command
+    assert "`generated_from` minimal provenance: `plan_path` only" in tasks_command
     assert "use `tasks.manifest.json` when schema validation passes" in implement_command
     assert "fallback to `tasks.md` parsing when manifest is missing or invalid" in implement_command
     assert "task keys: `task_id`, `dependencies`, `if_scope`, `refs`, `target_paths`, `completion_anchors`, `conflict_hints`, `topo_layer`, `status`" in implement_command

@@ -40,11 +40,11 @@ Do not place stage prose, audit payload, or execution logs here.
 
 ## Stage Queue
 
-| Stage ID | Command | Required Inputs | Output Path | Status | Source Fingerprint | Output Fingerprint | Blocker |
-|----------|---------|-----------------|-------------|--------|--------------------|--------------------|---------|
-| research | `/sdd.plan.research` | `plan.md`, `spec.md`, constitution, targeted repo anchors | `research.md` | pending | [fingerprint] | [fingerprint] | [none] |
-| test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md`, bounded repo slice | `test-matrix.md` | pending | [fingerprint] | [fingerprint] | [none] |
-| data-model | `/sdd.plan.data-model` | `plan.md`, `spec.md`, `test-matrix.md`, bounded repo semantic slice | `data-model.md` | pending | [fingerprint] | [fingerprint] | [none] |
+| Stage ID | Command | Required Inputs | Output Path | Status | Blocker |
+|----------|---------|-----------------|-------------|--------|---------|
+| research | `/sdd.plan.research` | `plan.md`, `spec.md`, constitution, targeted repo anchors | `research.md` | pending | [none] |
+| test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md`, bounded repo slice | `test-matrix.md` | pending | [none] |
+| data-model | `/sdd.plan.data-model` | `plan.md`, `spec.md`, `test-matrix.md`, bounded repo semantic slice | `data-model.md` | pending | [none] |
 
 Rules:
 
@@ -81,8 +81,8 @@ Rules:
 
 Track minimum planning artifacts derived from each `BindingRowID`.
 
-| BindingRowID | Unit Type | Target Path | Status | Source Fingerprint | Output Fingerprint | Blocker |
-|--------------|-----------|-------------|--------|--------------------|--------------------|---------|
+| BindingRowID | Unit Type | Target Path | Status | Blocker |
+|--------------|-----------|-------------|--------|---------|
 <!-- Keep table body empty until binding rows exist. -->
 
 Rules:
@@ -90,15 +90,15 @@ Rules:
 - `contract` is tracked as the single per-binding interface design artifact.
 - Write scope is command-specific:
   - `/sdd.plan.test-matrix` may batch initialize one `contract` row per projected `BindingRowID`.
-  - `/sdd.plan.data-model` may batch update only blocker/fingerprint fields for affected `contract` rows.
+  - `/sdd.plan.data-model` may batch update only blocker fields for affected `contract` rows.
   - `/sdd.plan.contract` updates exactly one selected `contract` row per run.
-- Child commands may write only status, target path, blocker, and fingerprints.
+- Child commands may write only status, target path, and blocker.
 
 ## Handoff Protocol
 
 - `/sdd.plan` initializes `Shared Context Snapshot`, `Stage Queue`, and the empty downstream ledgers.
 - `/sdd.plan.research` advances `research`.
 - `/sdd.plan.test-matrix` advances `test-matrix` and initializes `Binding Projection Index` plus `Artifact Status`.
-- `/sdd.plan.data-model` advances `data-model` and may update contract-readiness blockers/fingerprints only.
+- `/sdd.plan.data-model` advances `data-model` and may update contract-readiness blockers only.
 - `/sdd.plan.contract` advances `Artifact Status` one row at a time.
 - `/sdd.tasks` starts only after `research`, `test-matrix`, `data-model`, and all required `contract` rows are `done`.

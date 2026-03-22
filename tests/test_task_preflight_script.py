@@ -227,11 +227,11 @@ Demo planning control plane.
 
 ## Stage Queue
 
-| Stage ID | Command | Required Inputs | Output Path | Status | Source Fingerprint | Output Fingerprint | Blocker |
-|----------|---------|-----------------|-------------|--------|--------------------|--------------------|---------|
-| research | `/sdd.plan.research` | `plan.md` | `research.md` | done | a | b | [none] |
-| test-matrix | `/sdd.plan.test-matrix` | `plan.md` | `test-matrix.md` | done | a | b | [none] |
-| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | done | a | b | [none] |
+| Stage ID | Command | Required Inputs | Output Path | Status | Blocker |
+|----------|---------|-----------------|-------------|--------|---------|
+| research | `/sdd.plan.research` | `plan.md` | `research.md` | done | [none] |
+| test-matrix | `/sdd.plan.test-matrix` | `plan.md` | `test-matrix.md` | done | [none] |
+| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | done | [none] |
 
 ## Binding Projection Index
 
@@ -241,9 +241,9 @@ Demo planning control plane.
 
 ## Artifact Status
 
-| BindingRowID | Unit Type | Target Path | Status | Source Fingerprint | Output Fingerprint | Blocker |
-|--------------|-----------|-------------|--------|--------------------|--------------------|---------|
-| BindingRowID-001 | contract | `contracts/create-task.md` | {contract_status} | a | b | [none] |
+| BindingRowID | Unit Type | Target Path | Status | Blocker |
+|--------------|-----------|-------------|--------|---------|
+| BindingRowID-001 | contract | `contracts/create-task.md` | {contract_status} | [none] |
 
 ## Handoff Protocol
 
@@ -276,8 +276,10 @@ def _write_tasks_and_analyze_history(feature_dir: Path, gate_decision: str = "PA
                 "generated_at": "2026-03-18T00:00:00Z",
                 "generated_from": {
                     "plan_path": str(feature_dir / "plan.md"),
-                    "plan_source_fingerprint": plan_sha,
-                    "contract_source_fingerprints": {},
+                },
+                "presentation": {
+                    "board_style": "enhanced",
+                    "source_lineage": ["plan_path"],
                 },
                 "tasks": [
                     {
@@ -396,11 +398,11 @@ Demo planning control plane.
 
 ## Stage Queue
 
-| Stage ID | Command | Required Inputs | Output Path | Status | Source Fingerprint | Output Fingerprint | Blocker |
-|----------|---------|-----------------|-------------|--------|--------------------|--------------------|---------|
-| research | `/sdd.plan.research` | `plan.md`, `spec.md` | `research.md` | {research_status} | a | b | [none] |
-| test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md` | `test-matrix.md` | {test_matrix_status} | a | b | [none] |
-| data-model | `/sdd.plan.data-model` | `plan.md`, `spec.md`, `test-matrix.md` | `data-model.md` | {data_model_status} | a | b | [none] |
+| Stage ID | Command | Required Inputs | Output Path | Status | Blocker |
+|----------|---------|-----------------|-------------|--------|---------|
+| research | `/sdd.plan.research` | `plan.md`, `spec.md` | `research.md` | {research_status} | [none] |
+| test-matrix | `/sdd.plan.test-matrix` | `plan.md`, `spec.md` | `test-matrix.md` | {test_matrix_status} | [none] |
+| data-model | `/sdd.plan.data-model` | `plan.md`, `spec.md`, `test-matrix.md` | `data-model.md` | {data_model_status} | [none] |
 
 ## Binding Projection Index
 
@@ -409,8 +411,8 @@ Demo planning control plane.
 
 ## Artifact Status
 
-| BindingRowID | Unit Type | Target Path | Status | Source Fingerprint | Output Fingerprint | Blocker |
-|--------------|-----------|-------------|--------|--------------------|--------------------|---------|
+| BindingRowID | Unit Type | Target Path | Status | Blocker |
+|--------------|-----------|-------------|--------|---------|
 
 ## Handoff Protocol
 
@@ -613,8 +615,8 @@ def test_task_preflight_helper_flags_status_without_contract_target_path(tmp_pat
     plan_text = plan_path.read_text(encoding="utf-8")
     plan_path.write_text(
         plan_text.replace(
-            "| BindingRowID-001 | contract | `contracts/create-task.md` | done | a | b | [none] |",
-            "| BindingRowID-001 | contract |  | done | a | b | [none] |",
+            "| BindingRowID-001 | contract | `contracts/create-task.md` | done | [none] |",
+            "| BindingRowID-001 | contract |  | done | [none] |",
         ),
         encoding="utf-8",
     )
@@ -654,7 +656,7 @@ def test_task_preflight_helper_surfaces_incomplete_stage_queue_blocker(tmp_path)
 
     plan_path = feature_dir / "plan.md"
     plan_text = plan_path.read_text(encoding="utf-8")
-    plan_path.write_text(plan_text.replace("| test-matrix | `/sdd.plan.test-matrix` | `plan.md` | `test-matrix.md` | done | a | b | [none] |", "| test-matrix | `/sdd.plan.test-matrix` | `plan.md` | `test-matrix.md` | pending | a | b | [none] |"), encoding="utf-8")
+    plan_path.write_text(plan_text.replace("| test-matrix | `/sdd.plan.test-matrix` | `plan.md` | `test-matrix.md` | done | [none] |", "| test-matrix | `/sdd.plan.test-matrix` | `plan.md` | `test-matrix.md` | pending | [none] |"), encoding="utf-8")
 
     result = subprocess.run(
         [
@@ -694,8 +696,8 @@ def test_task_preflight_helper_requires_pending_data_model_stage(tmp_path):
     plan_text = plan_path.read_text(encoding="utf-8")
     plan_path.write_text(
         plan_text.replace(
-            "| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | done | a | b | [none] |",
-            "| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | pending | a | b | [none] |",
+            "| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | done | [none] |",
+            "| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | pending | [none] |",
         ),
         encoding="utf-8",
     )
@@ -738,8 +740,8 @@ def test_task_preflight_helper_ignores_data_model_blocker_when_stage_is_done(tmp
     plan_text = plan_path.read_text(encoding="utf-8")
     plan_path.write_text(
         plan_text.replace(
-            "| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | done | a | b | [none] |",
-            "| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | done | a | b | shared_semantic_alignment_required |",
+            "| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | done | [none] |",
+            "| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | done | shared_semantic_alignment_required |",
         ),
         encoding="utf-8",
     )
@@ -1448,11 +1450,11 @@ def test_task_preflight_helper_ignores_template_placeholder_binding_rows(tmp_pat
 
 ## Stage Queue
 
-| Stage ID | Command | Required Inputs | Output Path | Status | Source Fingerprint | Output Fingerprint | Blocker |
-|----------|---------|-----------------|-------------|--------|--------------------|--------------------|---------|
-| research | `/sdd.plan.research` | `plan.md` | `research.md` | done | a | b | [none] |
-| test-matrix | `/sdd.plan.test-matrix` | `plan.md` | `test-matrix.md` | done | a | b | [none] |
-| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | done | a | b | [none] |
+| Stage ID | Command | Required Inputs | Output Path | Status | Blocker |
+|----------|---------|-----------------|-------------|--------|---------|
+| research | `/sdd.plan.research` | `plan.md` | `research.md` | done | [none] |
+| test-matrix | `/sdd.plan.test-matrix` | `plan.md` | `test-matrix.md` | done | [none] |
+| data-model | `/sdd.plan.data-model` | `plan.md` | `data-model.md` | done | [none] |
 
 ## Binding Projection Index
 
@@ -1462,9 +1464,9 @@ def test_task_preflight_helper_ignores_template_placeholder_binding_rows(tmp_pat
 
 ## Artifact Status
 
-| BindingRowID | Unit Type | Target Path | Status | Source Fingerprint | Output Fingerprint | Blocker |
-|--------------|-----------|-------------|--------|--------------------|--------------------|---------|
-| [BindingRowID-001] | [contract] | [contracts/create-task.md] | [pending] | [a] | [b] | [none] |
+| BindingRowID | Unit Type | Target Path | Status | Blocker |
+|--------------|-----------|-------------|--------|---------|
+| [BindingRowID-001] | [contract] | [contracts/create-task.md] | [pending] | [none] |
 """,
         encoding="utf-8",
     )
@@ -1508,8 +1510,8 @@ def test_task_preflight_helper_parses_escaped_pipe_cells_in_artifact_status(tmp_
     plan_text = plan_path.read_text(encoding="utf-8")
     plan_path.write_text(
         plan_text.replace(
-            "| BindingRowID-001 | contract | `contracts/create-task.md` | done | a | b | [none] |",
-            "| BindingRowID-001 | contract | `contracts/create-task.md` | done | test-matrix:abc\\|binding:BindingRowID-001 | b | [none] |",
+            "| BindingRowID-001 | contract | `contracts/create-task.md` | done | [none] |",
+            r"| BindingRowID-001 | contract | `contracts/create-task.md` | done | test-matrix:abc\|binding:BindingRowID-001 |",
         ),
         encoding="utf-8",
     )
@@ -1550,8 +1552,8 @@ def test_data_model_preflight_helper_parses_escaped_pipe_cells_in_stage_queue(tm
     plan_text = plan_path.read_text(encoding="utf-8")
     plan_path.write_text(
         plan_text.replace(
-            "| research | `/sdd.plan.research` | `plan.md`, `spec.md` | `research.md` | done | a | b | [none] |",
-            "| research | `/sdd.plan.research` | `plan.md`, `spec.md` | `research.md` | done | spec:abc\\|research:def | b | [none] |",
+            "| research | `/sdd.plan.research` | `plan.md`, `spec.md` | `research.md` | done | [none] |",
+            r"| research | `/sdd.plan.research` | `plan.md`, `spec.md` | `research.md` | done | spec:abc\|research:def |",
         ),
         encoding="utf-8",
     )
@@ -1628,8 +1630,7 @@ def test_bash_check_prerequisites_can_embed_tasks_bootstrap(tmp_path):
     freshness = protocol["baseline_freshness"]
     assert freshness["generated_at_utc"]["status"] == "available"
     assert isinstance(freshness["generated_at_utc"]["value"], str)
-    assert freshness["source_manifest_fingerprints"]["status"] == "unknown"
-    assert freshness["source_manifest_fingerprints"]["reason"] == "source_manifest_fingerprints_unavailable"
+    assert "source_manifest_fingerprints" not in freshness
 
 
 def test_bash_check_prerequisites_supports_feature_prefixed_branch_default(tmp_path):
@@ -1697,7 +1698,7 @@ def test_bash_check_prerequisites_task_preflight_uses_branch_inferred_plan_file(
     assert payload["TASKS_BOOTSTRAP"]["execution_readiness"]["ready_for_task_generation"] is True
 
 
-def test_implement_preflight_helper_reports_pass_when_latest_analyze_pass_matches_fingerprints(tmp_path):
+def test_implement_preflight_helper_reports_pass_when_latest_analyze_gate_is_pass(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
     _write_minimal_feature(feature_dir)
     _write_tasks_and_analyze_history(feature_dir, gate_decision="PASS")
@@ -1762,36 +1763,6 @@ def test_implement_preflight_helper_flags_non_pass_gate(tmp_path):
     assert "gate_decision_not_pass" in error_codes
 
 
-def test_implement_preflight_helper_flags_fingerprint_mismatch(tmp_path):
-    feature_dir = tmp_path / "specs" / "001-demo"
-    _write_minimal_feature(feature_dir)
-    _write_tasks_and_analyze_history(feature_dir, gate_decision="PASS", mismatched_hashes=True)
-
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(REPO_ROOT / "scripts" / "implement_preflight.py"),
-            "--feature-dir",
-            str(feature_dir),
-            "--spec",
-            str(feature_dir / "spec.md"),
-            "--plan",
-            str(feature_dir / "plan.md"),
-            "--tasks",
-            str(feature_dir / "tasks.md"),
-            "--analyze-history",
-            str(feature_dir / "audits" / "analyze-history.md"),
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    assert result.returncode == 0, result.stderr
-    payload = json.loads(result.stdout)
-    assert payload["analyze_readiness"]["ready_for_implementation"] is False
-    error_codes = [entry["code"] for entry in payload["analyze_readiness"]["errors"]]
-    assert "analyze_fingerprint_mismatch" in error_codes
 
 
 def test_bash_check_prerequisites_can_embed_implement_bootstrap(tmp_path):
@@ -1845,11 +1816,9 @@ def test_bash_check_prerequisites_can_embed_implement_bootstrap(tmp_path):
     freshness = protocol["baseline_freshness"]
     assert freshness["generated_at_utc"]["status"] == "available"
     assert isinstance(freshness["generated_at_utc"]["value"], str)
-    assert freshness["source_manifest_fingerprints"]["status"] == "available"
-    assert freshness["source_manifest_fingerprints"]["missing_keys"] == []
-    assert freshness["source_manifest_fingerprints"]["value"]["spec_sha256"] == payload["IMPLEMENT_BOOTSTRAP"]["latest_run"]["fingerprints"]["spec_sha256"]
-    assert freshness["source_manifest_fingerprints"]["value"]["plan_sha256"] == payload["IMPLEMENT_BOOTSTRAP"]["latest_run"]["fingerprints"]["plan_sha256"]
-    assert freshness["source_manifest_fingerprints"]["value"]["tasks_sha256"] == payload["IMPLEMENT_BOOTSTRAP"]["latest_run"]["fingerprints"]["tasks_sha256"]
+    assert "source_manifest_fingerprints" not in freshness
+    assert payload["IMPLEMENT_BOOTSTRAP"]["latest_run"]["gate_decision"] == "PASS"
+    assert isinstance(payload["IMPLEMENT_BOOTSTRAP"]["latest_run"]["run_at_utc"], str)
     assert "TASKS_MANIFEST_BOOTSTRAP" in payload
     assert payload["TASKS_MANIFEST_BOOTSTRAP"]["schema_version"] == "1.0"
     assert payload["TASKS_MANIFEST_BOOTSTRAP"]["validation"]["valid"] is True
@@ -2150,8 +2119,11 @@ def test_tasks_command_prefers_task_preflight_bootstrap():
     assert "LOCAL_EXECUTION_PROTOCOL.repo_search.list_files_cmd" in tasks_command
     assert "LOCAL_EXECUTION_PROTOCOL.repo_search.available = false" in tasks_command
     assert "Generate `tasks.manifest.json` from the same run-local execution graph used to render `tasks.md`." in tasks_command
-    assert "Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`" in tasks_command
-    assert "`generated_from` keys: `plan_path`, `plan_source_fingerprint`, `contract_source_fingerprints`" in tasks_command
+    assert "Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`, `presentation`" in tasks_command
+    assert "`generated_from` minimal provenance: `plan_path` only" in tasks_command
+    assert "`presentation` MUST describe the enhanced task board projection without adding semantic task data." in tasks_command
+    assert "`presentation.board_style` MUST be `enhanced`." in tasks_command
+    assert "`presentation.source_lineage` MUST include `plan_path`." in tasks_command
 
     if mapping_doc is not None:
         assert "prerequisite script may emit `TASKS_BOOTSTRAP` as a derived preflight packet" in mapping_doc

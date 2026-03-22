@@ -1,5 +1,0 @@
-version: 1
-display_name: Release Gate
-short_description: Deterministic, gated release runner
-default_prompt: Run deterministic release preflight/publish for this repository with strict full-agent asset gates and no path guessing.
-

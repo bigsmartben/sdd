@@ -6,7 +6,6 @@ import re
 from pathlib import Path
 from typing import Any
 
-from specify_cli.runtime_common import compute_sha256
 from specify_cli.runtime_gate_protocol import build_repository_first_gate_protocol
 
 
@@ -17,10 +16,8 @@ IMPLEMENT_BASELINE_CODE_TO_CATEGORY = {
     "missing_required_artifacts": "missing",
     "analyze_history_missing": "missing",
     "analyze_run_block_missing": "missing",
-    "analyze_fingerprints_missing": "missing",
     "gate_decision_missing": "non_traceable",
     "gate_decision_not_pass": "stale",
-    "analyze_fingerprint_mismatch": "stale",
 }
 
 
@@ -48,7 +45,6 @@ def normalize_gate_decision(raw: str) -> str:
 def build_analyze_readiness(
     *,
     required_paths: dict[str, Path],
-    current_fingerprints: dict[str, str],
     analyze_history_path: Path,
 ) -> tuple[dict[str, Any], dict[str, Any] | None]:
     errors: list[dict[str, Any]] = []
@@ -100,19 +96,11 @@ def build_analyze_readiness(
         }, latest_run
 
     run_at = extract_marker(latest_block, "Run At (UTC):")
-    spec_sha = extract_marker(latest_block, "Spec SHA256:")
-    plan_sha = extract_marker(latest_block, "Plan SHA256:")
-    tasks_sha = extract_marker(latest_block, "Tasks SHA256:")
     gate_decision = normalize_gate_decision(extract_marker(latest_block, "Gate Decision:"))
 
     latest_run = {
         "run_at_utc": run_at,
         "gate_decision": gate_decision,
-        "fingerprints": {
-            "spec_sha256": spec_sha,
-            "plan_sha256": plan_sha,
-            "tasks_sha256": tasks_sha,
-        },
     }
 
     if not gate_decision:
@@ -125,41 +113,6 @@ def build_analyze_readiness(
                 "details": {"gate_decision": gate_decision},
             }
         )
-
-    missing_fingerprint_labels = sorted(
-        [
-            label
-            for label, value in {
-                "spec_sha256": spec_sha,
-                "plan_sha256": plan_sha,
-                "tasks_sha256": tasks_sha,
-            }.items()
-            if not value
-        ]
-    )
-    if missing_fingerprint_labels:
-        errors.append(
-            {
-                "code": "analyze_fingerprints_missing",
-                "message": "Latest analyze run is missing required fingerprints.",
-                "details": {"fingerprints": missing_fingerprint_labels},
-            }
-        )
-    else:
-        mismatches: list[dict[str, str]] = []
-        for artifact_name, key in (("spec.md", "spec_sha256"), ("plan.md", "plan_sha256"), ("tasks.md", "tasks_sha256")):
-            current = current_fingerprints[key]
-            analyze = latest_run["fingerprints"][key]
-            if analyze != current:
-                mismatches.append({"artifact": artifact_name, "analyze": analyze, "current": current})
-        if mismatches:
-            errors.append(
-                {
-                    "code": "analyze_fingerprint_mismatch",
-                    "message": "Latest analyze fingerprints do not match current artifact fingerprints.",
-                    "details": {"mismatches": mismatches},
-                }
-            )
 
     return {
         "ready_for_implementation": len(errors) == 0,
@@ -183,29 +136,15 @@ def build_implement_bootstrap_payload(
         "plan.md": plan_path,
         "tasks.md": tasks_path,
     }
-    current_fingerprints = {
-        "spec_sha256": compute_sha256(spec_path),
-        "plan_sha256": compute_sha256(plan_path),
-        "tasks_sha256": compute_sha256(tasks_path),
-    }
     analyze_readiness, latest_run = build_analyze_readiness(
         required_paths=required_paths,
-        current_fingerprints=current_fingerprints,
         analyze_history_path=analyze_history_path,
     )
-    source_manifest_fingerprints = None
-    if latest_run and isinstance(latest_run.get("fingerprints"), dict):
-        source_manifest_fingerprints = {
-            "spec_sha256": str(latest_run["fingerprints"].get("spec_sha256", "")),
-            "plan_sha256": str(latest_run["fingerprints"].get("plan_sha256", "")),
-            "tasks_sha256": str(latest_run["fingerprints"].get("tasks_sha256", "")),
-        }
     repository_first_gate_protocol = build_repository_first_gate_protocol(
         gate_name="implement_bootstrap",
         readiness=analyze_readiness,
         ready_field="ready_for_implementation",
         code_to_category=IMPLEMENT_BASELINE_CODE_TO_CATEGORY,
-        source_manifest_fingerprints=source_manifest_fingerprints,
     )
 
     return {
@@ -215,7 +154,6 @@ def build_implement_bootstrap_payload(
         "plan_path": str(plan_path),
         "tasks_path": str(tasks_path),
         "analyze_history_path": str(analyze_history_path),
-        "current_fingerprints": current_fingerprints,
         "latest_run": latest_run,
         "analyze_readiness": analyze_readiness,
         "repository_first_gate_protocol": repository_first_gate_protocol,

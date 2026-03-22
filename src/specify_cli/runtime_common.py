@@ -2,23 +2,12 @@
 
 from __future__ import annotations
 
-import hashlib
 import re
 from collections import Counter
 from pathlib import Path
 
 
 PLACEHOLDER_TOKEN_RE = re.compile(r"^\[[^\]]+\]$")
-
-
-def compute_sha256(path: Path) -> str:
-    if not path.is_file():
-        return ""
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(65536), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def clean_cell(value: str) -> str:

@@ -48,6 +48,7 @@ This stage MUST NOT redefine how the binding was cut from `spec.md`; binding pro
    - `Unit Type = contract`
    - `Status = pending`
 5. If no pending or blocked contract row exists, stop and report that the contract queue is complete
+   - Note: `Artifact Status` contract rows are seeded by `/sdd.plan.test-matrix`; if `Artifact Status` contains no contract rows while the `test-matrix` stage row is `done`, this indicates a missing writeback — route back to `/sdd.plan.test-matrix` to repair before proceeding
 6. Resolve the matching `BindingRowID` row in `Binding Projection Index`
 7. Require `test-matrix` stage row to be `done`
 8. Require `data-model` stage row to be `done`; if not, stop and route back to `/sdd.plan.data-model`
@@ -222,8 +223,6 @@ Update only the selected contract row in `Artifact Status`:
 
 - `Target Path`
 - `Status`
-- `Source Fingerprint`
-- `Output Fingerprint`
 - `Blocker`
 
 If repo-backed verification finds a binding-projection error or shared-semantic gap, keep it explicit in the generated contract and route repair to `/sdd.plan.test-matrix` or `/sdd.plan.data-model`; do not rewrite upstream planning artifacts from this command.

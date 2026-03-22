@@ -1383,7 +1383,6 @@ def build_task_bootstrap_payload(
         readiness=execution_readiness,
         ready_field="ready_for_task_generation",
         code_to_category=TASK_BASELINE_CODE_TO_CATEGORY,
-        source_manifest_fingerprints=None,
     )
 
     return {
