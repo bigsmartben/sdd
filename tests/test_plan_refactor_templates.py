@@ -230,8 +230,8 @@ def test_contract_template_contains_unified_realization_requirements():
     assert "### Cross-Interface Smoke Candidate (Required)" in content
     assert "### Resolved Type Inventory" in content
     assert "Angle-bracket labels in the examples below are template scaffolding only and MUST be replaced before the artifact can be `done`." in content
-    assert "| Sequence closure | success/failure paths include mandatory second-party, third-party, and middleware calls | [ok / gap] |" in content
-    assert "| UML closure | class diagram and two-party package relations both present and consistent with sequence | [ok / gap] |" in content
+    assert "| Sequence closure | success/failure paths include mandatory second-party, third-party, and middleware calls | [Behavior Paths rows, Sequence Sx refs] | [ok / gap] |" in content
+    assert "| UML closure | class diagram and two-party package relations both present and consistent with sequence | [Class Diagram refs, Two-Party Package Relations rows] | [ok / gap] |" in content
     assert "`new` \\| `todo`" in content
     assert "ConcreteBoundary.method" in content
     assert "ConcreteEntry.method" in content

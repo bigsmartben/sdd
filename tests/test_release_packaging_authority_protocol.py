@@ -87,6 +87,7 @@ def _prepare_packaging_fixture(tmp_path: Path) -> None:
         ".github/workflows/scripts",
         "agent_templates",
         "memory",
+        "rules",
         "scripts",
         "src",
         "templates",
@@ -107,10 +108,12 @@ def _assert_packaged_runtime_templates(package_root: Path) -> None:
     runtime_spec = package_root / ".specify" / "templates" / "spec-template.md"
     runtime_plan = package_root / ".specify" / "templates" / "plan-template.md"
     runtime_ui_html = package_root / ".specify" / "templates" / "ui-html-template.html"
+    runtime_rules = package_root / ".specify" / "rules" / "planning-lint-rules.tsv"
 
     assert runtime_spec.exists(), f"missing runtime spec template: {runtime_spec}"
     assert runtime_plan.exists(), f"missing runtime plan template: {runtime_plan}"
     assert runtime_ui_html.exists(), f"missing runtime ui.html template: {runtime_ui_html}"
+    assert runtime_rules.exists(), f"missing runtime planning lint rules: {runtime_rules}"
 
     spec_text = runtime_spec.read_text(encoding="utf-8")
     plan_text = runtime_plan.read_text(encoding="utf-8")

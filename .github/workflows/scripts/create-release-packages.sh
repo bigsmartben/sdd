@@ -281,6 +281,11 @@ build_variant() {
     find templates -type f -not -path "templates/commands/*" -not -name "vscode-settings.json" -exec cp --parents {} "$spec_dir"/ \;
   fi
 
+  if [[ -f rules/planning-lint-rules.tsv ]]; then
+    mkdir -p "$spec_dir/rules"
+    cp rules/planning-lint-rules.tsv "$spec_dir/rules/planning-lint-rules.tsv"
+  fi
+
   case $agent in
     claude)
       mkdir -p "$base_dir/.claude/commands"

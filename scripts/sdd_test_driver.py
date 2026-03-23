@@ -172,7 +172,7 @@ def run_sdd_flow(target_dir: Path, feature_description: str) -> int:
         log_error(str(exc))
         return exc.exit_code
 
-    rules_path = target_dir / "rules" / "planning-lint-rules.tsv"
+    rules_path = target_dir / ".specify" / "rules" / "planning-lint-rules.tsv"
     required_paths = [
         config.create_feature_script,
         config.setup_plan_script,

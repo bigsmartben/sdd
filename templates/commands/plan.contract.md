@@ -119,12 +119,17 @@ After each run, check whether all `contract` rows are done. If so:
 
 - Must: close one `BindingRowID` with concrete names, anchors, field semantics, realization, and test projection.
 - Strictly: `Operation ID` MUST be concrete (not `N/A`).
+- Strictly: output the full contract skeleton from `.specify/templates/contract-template.md`; simplified/summary-only contract layouts are forbidden.
+- Strictly: the artifact MUST include at least these sections/subsections before it can be considered complete: `Artifact Quality Signals (Normative)`, `Northbound Entry Rules (Normative)`, `Full Field Dictionary (Operation-scoped)`, `Two-Party Package Relations`, `Test Projection Slice`, and `Closure Check`.
+- Generate the full skeleton first, then fill sections in fixed order: `Binding Context -> Interface Definition -> UML Class Design -> Sequence Design -> Test Projection -> Closure Check`.
+- Each filled section MUST include at least one concrete evidence pointer (`spec.md` / `test-matrix.md` / `data-model.md` / repo anchor); generic statements without evidence pointers are invalid.
 
 ## Writeback Contract
 
 - Generate or refresh exactly one contract artifact for the selected `BindingRowID`.
 - Update only the selected `Artifact Status` row in `PLAN_FILE`: `Target Path`, `Status`, `Blocker`.
-- `Status = done` only when `Operation ID` is concrete and key field gaps are resolved.
+- `Status = done` only when `Operation ID` is concrete, required contract sections/tables are all present, all `Closure Check` rows are `ok`, each `Closure Check` row includes explicit `Evidence Pointer(s)`, and key field gaps are resolved.
+- If any required contract section/table is missing, any `Closure Check` row is `gap`, or required evidence pointers are missing, keep `Status = blocked` and set `Blocker` accordingly; never mark a simplified or evidence-empty artifact as `done`.
 - Do not modify `Stage Queue`, `Binding Projection Index`, or unrelated `Artifact Status` rows.
 - **MUST NOT** rewrite `spec.md`, `plan.md` stage queue, or unrelated artifacts.
 
@@ -136,6 +141,7 @@ After each run, check whether all `contract` rows are done. If so:
 - **Sequence Design**: MUST be end-to-end contiguous, starting from client entry.
 - **UML Class Design**: MUST cover all sequence participants and methods.
 - **Test Projection**: Derive `Main Pass Anchor` and smoke candidates from `test-matrix.md`.
+- **Closure Evidence**: each `Closure Check` row MUST include `Evidence Pointer(s)` that reference concrete rows/anchors from field dictionary, UML/package relations, sequence steps, TM/TC anchors, or repo symbols.
 
 ## Handoff Decision
 

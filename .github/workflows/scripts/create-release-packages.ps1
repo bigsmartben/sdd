@@ -344,6 +344,12 @@ function Build-Variant {
         }
     }
 
+    if (Test-Path "rules/planning-lint-rules.tsv") {
+        $rulesDestDir = Join-Path $specDir "rules"
+        New-Item -ItemType Directory -Path $rulesDestDir -Force | Out-Null
+        Copy-Item -Path "rules/planning-lint-rules.tsv" -Destination (Join-Path $rulesDestDir "planning-lint-rules.tsv") -Force
+    }
+
     switch ($Agent) {
         'claude' {
             $cmdDir = Join-Path $baseDir ".claude/commands"

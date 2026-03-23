@@ -45,6 +45,12 @@ def test_release_packaging_templates_snapshot_and_path_rewrite_rules_are_consist
     assert "s@(/?)templates/@.specify/templates/@g" in bash_release
     assert "-replace '(/?)\\btemplates/', '.specify/templates/'" in pwsh_release
 
+    # Runtime rules snapshot: planning lint rules must be packaged under .specify/rules
+    assert "rules/planning-lint-rules.tsv" in bash_release
+    assert "$spec_dir/rules" in bash_release
+    assert "rules/planning-lint-rules.tsv" in pwsh_release
+    assert "$rulesDestDir = Join-Path $specDir \"rules\"" in pwsh_release
+
 
 def test_release_packaging_rewrites_memory_and_scripts_paths_on_both_platforms():
     bash_release = read(".github/workflows/scripts/create-release-packages.sh")

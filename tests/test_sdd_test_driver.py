@@ -20,7 +20,7 @@ def _load_driver_module():
 def _build_minimal_repo(tmp_path: Path) -> tuple[Path, Path]:
     repo_dir = tmp_path / "repo"
     scripts_bash = repo_dir / "scripts" / "bash"
-    rules_dir = repo_dir / "rules"
+    rules_dir = repo_dir / ".specify" / "rules"
 
     scripts_bash.mkdir(parents=True)
     rules_dir.mkdir(parents=True)

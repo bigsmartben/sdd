@@ -15,6 +15,8 @@
 
 - Must: be strong enough for implementation to start without reopening basics.
 - Strictly: Concrete anchors only; no placeholder labels in final artifact.
+- Strictly: Every major section MUST include at least one concrete evidence pointer (`spec.md` / `test-matrix.md` / `data-model.md` / repo anchor).
+- Strictly: Generic claims without evidence pointers are invalid.
 - `contract` is responsible for first-time production of `Boundary Anchor`, `Implementation Entry Anchor`, request/response surface, UML closure, sequence closure, and test projection for this binding.
 
 Angle-bracket labels in the examples below are template scaffolding only and MUST be replaced before the artifact can be `done`.
@@ -186,6 +188,11 @@ classDiagram
 This subsection is required.
 Model the first-party package/module ownership and dependency direction explicitly.
 
+Minimum closure requirements:
+
+- When `Boundary Anchor != Implementation Entry Anchor`, include at least one row for `Boundary package -> Entry package` and at least one row for `Entry package -> mandatory collaborator package`.
+- When `Boundary Anchor == Implementation Entry Anchor`, include at least one row for `Boundary/Entry package -> mandatory collaborator package`.
+
 | From Package | To Package | Relation Type | Covered Classes | Reason |
 |--------------|------------|---------------|-----------------|--------|
 | [package/module A] | [package/module B] | [`depends-on` / `calls` / `owns-model` / `crosses-boundary`] | [Boundary / Entry / DTO / Entity / Collaborator classes] | [why this 2-party package relation is required] |
@@ -291,12 +298,12 @@ If this operation does not participate in feature-level smoke flow, keep `Candid
 
 Keep this section short and explicit.
 
-| Check Item | Required Evidence | Status |
-|------------|-------------------|--------|
-| Interface-definition closure | request/response surface + full field dictionary + shared semantic reuse are all present | [ok / gap] |
-| UML closure | class diagram and two-party package relations both present and consistent with sequence | [ok / gap] |
-| Sequence closure | success/failure paths include mandatory second-party, third-party, and middleware calls | [ok / gap] |
-| Test closure | `TM/TC`, pass/failure anchors, and command/assertion signal are present | [ok / gap] |
+| Check Item | Required Evidence | Evidence Pointer(s) | Status |
+|------------|-------------------|---------------------|--------|
+| Interface-definition closure | request/response surface + full field dictionary + shared semantic reuse are all present | [Contract Summary rows, Field Dictionary rows, Shared Semantic Reuse rows] | [ok / gap] |
+| UML closure | class diagram and two-party package relations both present and consistent with sequence | [Class Diagram refs, Two-Party Package Relations rows] | [ok / gap] |
+| Sequence closure | success/failure paths include mandatory second-party, third-party, and middleware calls | [Behavior Paths rows, Sequence Sx refs] | [ok / gap] |
+| Test closure | `TM/TC`, pass/failure anchors, and command/assertion signal are present | [Test Projection Slice row, Smoke Candidate row, TM/TC refs] | [ok / gap] |
 
 ## Upstream References
 
