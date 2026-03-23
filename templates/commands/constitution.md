@@ -35,6 +35,9 @@ Use `.specify/templates/constitution-template.md` only.
 - `.specify/templates/constitution-template.md` (structure)
 - `.specify/memory/constitution.md` (existing state)
 - Repository manifests (pom.xml, package.json, pyproject.toml, go.mod)
+- If `repo-first-affecting`, `.specify/templates/technical-dependency-matrix-template.md` (dependency baseline structure)
+- If `repo-first-affecting`, `.specify/templates/module-invocation-spec-template.md` (invocation baseline structure)
+- For repo-first refresh, each artifact MUST be projected from its corresponding template; MUST NOT synthesize structure from constitution prose alone.
 
 **Prohibited**: `plan.md` queue state, `tasks.md`, or ad hoc CLI guesses.
 
@@ -57,9 +60,13 @@ Use `.specify/templates/constitution-template.md` only.
 ## Repo-First Baseline Pipeline (Mandatory)
 
 1. **Manifest Detection**: Process Maven, Node, Python, and Go manifests.
-2. **Canonical Paths**: Output only to `.specify/memory/repository-first/`.
-3. **Traceability**: Emit `fact -> conclusion` reasoning for all matrix rows.
-4. **Refined Invocation**: Directions MUST cover concrete first-party module edges.
+2. **Template Authority**: Read `.specify/templates/technical-dependency-matrix-template.md` and `.specify/templates/module-invocation-spec-template.md` for structure authority.
+3. **Canonical Paths**: Output only to `.specify/memory/repository-first/`.
+4. **Generation Order**: Generate `technical-dependency-matrix.md` first, then `module-invocation-spec.md`; invocation governance MUST reference existing matrix facts/`SIG-*` rows only.
+5. **Traceability**: Emit `fact -> conclusion` reasoning for all matrix rows.
+6. **Matrix Completeness**: Dependency matrix MUST be exhaustive for the filtered product/runtime dependency set and MUST NOT emit highlight-only subsets.
+7. **2nd/3rd Classification Completeness**: Organization-owned or organization-coordinated dependencies not produced in-repo and classified as `2nd` MUST NOT be omitted.
+8. **Refined Invocation**: Directions MUST cover concrete first-party module edges.
 
 ## Writeback Contract
 
