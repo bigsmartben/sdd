@@ -55,6 +55,9 @@ def test_constitution_command_uses_active_agent_command_directory_guidance():
     assert "`.specify/templates/constitution-template.md` (structure)" in content
     assert "`.specify/memory/constitution.md` (existing state)" in content
     assert "Repository manifests (pom.xml, package.json, pyproject.toml, go.mod)" in content
+    assert "If `repo-first-affecting`, `.specify/templates/technical-dependency-matrix-template.md` (dependency baseline structure)" in content
+    assert "If `repo-first-affecting`, `.specify/templates/module-invocation-spec-template.md` (invocation baseline structure)" in content
+    assert "For repo-first refresh, each artifact MUST be projected from its corresponding template; MUST NOT synthesize structure from constitution prose alone." in content
     assert "**Prohibited**: `plan.md` queue state, `tasks.md`, or ad hoc CLI guesses." in content
 
 
@@ -74,9 +77,17 @@ def test_constitution_command_owns_repository_first_baseline_pipeline():
     assert "Repo-First Baseline Pipeline (Mandatory)" in content
     assert ".specify/memory/repository-first/" in content
     assert "Manifest Detection" in content
+    assert "Template Authority" in content
     assert "Canonical Paths" in content
+    assert "Generation Order" in content
     assert "Traceability" in content
+    assert "Matrix Completeness" in content
+    assert "2nd/3rd Classification Completeness" in content
     assert "Refined Invocation" in content
+    assert "Generate `technical-dependency-matrix.md` first, then `module-invocation-spec.md`" in content
+    assert "invocation governance MUST reference existing matrix facts/`SIG-*` rows only" in content
+    assert "Dependency matrix MUST be exhaustive for the filtered product/runtime dependency set and MUST NOT emit highlight-only subsets." in content
+    assert "Organization-owned or organization-coordinated dependencies not produced in-repo and classified as `2nd` MUST NOT be omitted." in content
 
 
 def test_constitution_command_defines_runtime_fast_path_and_bounded_reads():
