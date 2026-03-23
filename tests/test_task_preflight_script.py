@@ -1238,6 +1238,100 @@ def test_task_preflight_helper_blocks_binding_context_coverage_drift(tmp_path):
     assert "contract_binding_context_coverage_drift" in error_codes
 
 
+def test_task_preflight_helper_allows_reference_case_and_separator_variants(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(feature_dir)
+    contract_path = feature_dir / "contracts" / "create-task.md"
+    contract_text = contract_path.read_text(encoding="utf-8")
+    contract_path.write_text(
+        contract_text.replace(
+            "| Main | [UIF-Path-001] create task | controller -> service | task created | N/A | S1 | TM-001 / TC-001 |",
+            "| Main | [uif-path-001] create task | controller -> service | task created | N/A | S1 | tm-001 / tc-001 |",
+        ).replace(
+            "| Failure | [UIF-Path-001] create task invalid | controller -> service -> error | N/A | validation error | S2 | TM-001 / TC-002 |",
+            "| Failure | [uif-path-001] create task invalid | controller -> service -> error | N/A | validation error | S2 | tm-001 / tc-002 |",
+        ).replace(
+            "| IF-001 | createTask | Integration | [TM-001] | [TM-001] | [TC-001, TC-002] | task create success | task create failure | pytest -k createTask |",
+            "| IF-001 | createTask | Integration | [tm-001] | [tm-001] | [tc-001, tc-002] | task create success | task create failure | pytest -k createTask |",
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "task_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+            "--test-matrix",
+            str(feature_dir / "test-matrix.md"),
+            "--contracts-dir",
+            str(feature_dir / "contracts"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert len(payload["ready_unit_inventory"]) == 1
+    assert payload["execution_readiness"]["ready_for_task_generation"] is True
+    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
+    assert "contract_binding_context_coverage_drift" not in error_codes
+    assert "contract_units_not_execution_ready" not in error_codes
+
+
+def test_task_preflight_helper_allows_anchor_spacing_variants(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(feature_dir)
+    contract_path = feature_dir / "contracts" / "create-task.md"
+    contract_text = contract_path.read_text(encoding="utf-8")
+    contract_path.write_text(
+        contract_text.replace(
+            "**Implementation Entry Anchor (Required)**: src/app/tasks_controller.py::TasksController.create_task",
+            "**Implementation Entry Anchor (Required)**: src/app/tasks_controller.py :: TasksController . create_task",
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "task_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+            "--test-matrix",
+            str(feature_dir / "test-matrix.md"),
+            "--contracts-dir",
+            str(feature_dir / "contracts"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert len(payload["ready_unit_inventory"]) == 1
+    assert payload["execution_readiness"]["ready_for_task_generation"] is True
+    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
+    assert "contract_anchor_inventory_mismatch" not in error_codes
+    assert "contract_units_not_execution_ready" not in error_codes
+
+
 def test_task_preflight_helper_blocks_anchor_inventory_mismatch(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
     _write_minimal_feature(feature_dir)
@@ -1436,6 +1530,177 @@ def test_task_preflight_helper_blocks_missing_anchor_strategy_evidence_for_new_a
     assert payload["execution_readiness"]["ready_for_task_generation"] is False
     error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
     assert "new_anchor_strategy_evidence_missing" in error_codes
+
+
+def test_task_preflight_helper_blocks_new_anchor_repo_path_overclaim(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(
+        feature_dir,
+        boundary_anchor_status="new",
+        implementation_entry_anchor_status="new",
+        boundary_anchor_strategy_evidence="existing rejected: no consumer-visible route fit; extended rejected: semantic mismatch",
+        implementation_entry_anchor_strategy_evidence="existing rejected: no entry fits operation; extended rejected: signature mismatch",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "task_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+            "--test-matrix",
+            str(feature_dir / "test-matrix.md"),
+            "--contracts-dir",
+            str(feature_dir / "contracts"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["execution_readiness"]["ready_for_task_generation"] is False
+    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
+    assert "new_anchor_repo_path_overclaim" in error_codes
+
+
+def test_task_preflight_helper_allows_new_anchor_design_target_name_without_repo_path(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(
+        feature_dir,
+        boundary_anchor_status="new",
+        implementation_entry_anchor="TaskEntry.execute",
+        implementation_entry_anchor_status="new",
+        boundary_anchor_strategy_evidence="existing rejected: no consumer-visible route fit; extended rejected: semantic mismatch",
+        implementation_entry_anchor_strategy_evidence="existing rejected: no entry fits operation; extended rejected: signature mismatch",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "task_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+            "--test-matrix",
+            str(feature_dir / "test-matrix.md"),
+            "--contracts-dir",
+            str(feature_dir / "contracts"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["execution_readiness"]["ready_for_task_generation"] is True
+    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
+    assert "new_anchor_repo_path_overclaim" not in error_codes
+
+
+def test_task_preflight_helper_warns_when_new_anchor_symbol_not_observable_in_repo_file(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(
+        feature_dir,
+        implementation_entry_anchor="src/app/task_entry.py::TaskEntry.execute",
+        implementation_entry_anchor_status="new",
+        implementation_entry_anchor_strategy_evidence="existing rejected: no entry fits operation; extended rejected: signature mismatch",
+    )
+
+    repo_symbol_path = feature_dir.parent.parent / "src" / "app" / "task_entry.py"
+    repo_symbol_path.parent.mkdir(parents=True, exist_ok=True)
+    repo_symbol_path.write_text(
+        """class TaskRunner:\n    def run(self):\n        return 'ok'\n""",
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "task_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+            "--test-matrix",
+            str(feature_dir / "test-matrix.md"),
+            "--contracts-dir",
+            str(feature_dir / "contracts"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["execution_readiness"]["ready_for_task_generation"] is True
+    warning_codes = [entry["code"] for entry in payload["execution_readiness"]["warnings"]]
+    assert "new_anchor_symbol_unverified" in warning_codes
+    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
+    assert "new_anchor_repo_path_overclaim" not in error_codes
+
+
+def test_task_preflight_helper_accepts_new_anchor_symbol_when_observable_in_repo_file(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(
+        feature_dir,
+        implementation_entry_anchor="src/app/task_entry.py::TaskEntry.execute",
+        implementation_entry_anchor_status="new",
+        implementation_entry_anchor_strategy_evidence="existing rejected: no entry fits operation; extended rejected: signature mismatch",
+    )
+
+    repo_symbol_path = feature_dir.parent.parent / "src" / "app" / "task_entry.py"
+    repo_symbol_path.parent.mkdir(parents=True, exist_ok=True)
+    repo_symbol_path.write_text(
+        """class TaskEntry:\n    def execute(self):\n        return 'ok'\n""",
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "task_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+            "--test-matrix",
+            str(feature_dir / "test-matrix.md"),
+            "--contracts-dir",
+            str(feature_dir / "contracts"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["execution_readiness"]["ready_for_task_generation"] is True
+    warning_codes = [entry["code"] for entry in payload["execution_readiness"]["warnings"]]
+    assert "new_anchor_symbol_unverified" not in warning_codes
 
 
 def test_task_preflight_helper_ignores_template_placeholder_binding_rows(tmp_path):

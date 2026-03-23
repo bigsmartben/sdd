@@ -14,6 +14,38 @@
 
 ---
 
+## Shared Semantic Class Model
+
+This is a primary reader view for shared semantic ownership and relationships.
+Render only shared business-semantics classes/value objects/projections/lifecycles/policies.
+
+```mermaid
+classDiagram
+    class SharedEntity {
+        +stableField
+    }
+
+    class SharedLifecycle {
+        <<lifecycle>>
+        +state
+    }
+
+    class SharedProjection {
+        <<projection>>
+        +derivedValue
+    }
+
+    SharedEntity --> SharedLifecycle : owns
+    SharedEntity --> SharedProjection : projects
+```
+
+Rendering rules:
+- Keep only shared semantics; do not render operation-scoped DTOs/request/response/collaborator chains.
+- Every node/relation MUST map to one `SSE-*` row and corresponding owner/source closure.
+- If a confirmed shared semantic cannot land as `existing` or `extended`, render the required `new` class and close it in `SSE` / `OSA` / lifecycle tables.
+
+---
+
 ## Shared Semantic Elements (SSE)
 
 **Rules**: MUST map to `existing | extended | new | todo`. **Prohibited**: Directory-only paths.
@@ -56,9 +88,25 @@ Lifecycle policy:
 - Apply the constitution lifecycle policy per shared lifecycle.
 - Otherwise keep the lifecycle lightweight, but still include the transition table because it is a primary reader view.
 
+### Lifecycle Summary
+
 | Lifecycle Ref | State Owner | Stable States | Invariant Ref(s) | Consumed By BindingRowID(s) | Required Model |
 |---|---|---|---|---|---|
 | LC-001 | [StateOwner] | [State list] | [INV-*] | [BindingRowIDs] | [fsm/lightweight] |
+
+### State Transition Table
+
+| Lifecycle Ref | From State | Trigger / Condition | To State | Transition Type | Notes / Invariant Ref(s) | Consumed By BindingRowID(s) |
+|---|---|---|---|---|---|---|
+| LC-001 | [from] | [trigger] | [to] | [allowed/forbidden] | [INV-* or notes] | [BindingRowIDs] |
+
+### State Diagram (when `Required Model = fsm`)
+
+```mermaid
+stateDiagram-v2
+    [*] --> Initial
+    Initial --> Next: trigger
+```
 
 ---
 

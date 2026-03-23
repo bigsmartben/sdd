@@ -4,6 +4,8 @@ This is the latest set of releases that you can use with your agent of choice. W
 
 ## Changelog
 
+- feat: tighten new-anchor contract governance with path-overclaim blocking and soft `path::Symbol` observability warnings
+- chore: clarify contract/data-model prompt rules for design-target anchors and shared semantic reader views
 - chore: compress prompt templates and enforce baseline style governance (v2.0.32)
 - chore: update documentation, templates and runtime logic for contract/task flow (v2.0.31)
 - feat: tighten task and data-model bootstrap validation

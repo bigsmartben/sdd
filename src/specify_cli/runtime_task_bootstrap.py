@@ -59,6 +59,8 @@ TASK_BASELINE_CODE_TO_CATEGORY = {
     "contract_anchor_inventory_mismatch": "non_traceable",
     "contract_anchor_status_invalid": "non_traceable",
     "new_anchor_strategy_evidence_missing": "non_traceable",
+    "new_anchor_repo_path_overclaim": "non_traceable",
+    "new_anchor_symbol_unverified": "non_traceable",
     "operation_id_missing": "non_traceable",
     "binding_context_section_missing": "missing",
     "interface_definition_section_missing": "missing",
@@ -122,6 +124,72 @@ def normalize_symbol(value: str) -> str:
     return clean_cell(value).strip("`").strip()
 
 
+REFERENCE_TOKEN_PATTERNS: dict[str, re.Pattern[str]] = {
+    "uif_path": re.compile(r"\bUIF-Path-[A-Za-z0-9_.-]+\b", flags=re.IGNORECASE),
+    "tm_id": re.compile(r"\bTM-[A-Za-z0-9_.-]+\b", flags=re.IGNORECASE),
+    "tc_id": re.compile(r"\bTC-[A-Za-z0-9_.-]+\b", flags=re.IGNORECASE),
+}
+
+
+def normalize_reference_token(value: str) -> str:
+    normalized = normalize_symbol(value).strip("[]")
+    if not normalized:
+        return ""
+    return normalized.upper()
+
+
+def build_declared_reference_index(values: list[str]) -> dict[str, str]:
+    refs: dict[str, str] = {}
+    for value in values:
+        normalized = normalize_reference_token(value)
+        if normalized and normalized not in refs:
+            refs[normalized] = normalize_symbol(value)
+    return refs
+
+
+def collect_reference_tokens(*sections: str) -> dict[str, set[str]]:
+    observed = {key: set() for key in REFERENCE_TOKEN_PATTERNS}
+    candidate_slices: list[str] = []
+    for section in sections:
+        if not section:
+            continue
+        candidate_slices.append(section)
+        candidate_slices.extend(
+            value
+            for row in parse_markdown_table(section)
+            for value in row.values()
+            if clean_cell(value)
+        )
+
+    for candidate in candidate_slices:
+        for key, pattern in REFERENCE_TOKEN_PATTERNS.items():
+            observed[key].update(
+                normalized
+                for match in pattern.finditer(candidate)
+                if (normalized := normalize_reference_token(match.group(0)))
+            )
+    return observed
+
+
+def normalize_anchor_for_comparison(anchor: str) -> str:
+    normalized = normalize_symbol(anchor)
+    if not normalized:
+        return ""
+
+    normalized = re.sub(r"\s*::\s*", "::", normalized)
+    normalized = re.sub(r"\s*\.\s*", ".", normalized)
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+
+    if normalized.upper().startswith("HTTP "):
+        parts = normalized.split(maxsplit=2)
+        protocol = parts[0].upper()
+        method = parts[1].upper() if len(parts) > 1 else ""
+        remainder = parts[2] if len(parts) > 2 else ""
+        normalized = " ".join(part for part in (protocol, method, remainder) if part)
+
+    return normalized
+
+
 def extract_required_anchor(content: str, label: str) -> str:
     pattern = rf"(?m)^\*\*{re.escape(label)}\*\*:\s*(.+?)\s*$"
     match = re.search(pattern, content)
@@ -138,7 +206,7 @@ def has_existing_extended_rejection_evidence(value: str) -> bool:
 
 
 def boundary_anchor_requires_inventory_match(anchor: str) -> bool:
-    normalized = normalize_symbol(anchor)
+    normalized = normalize_anchor_for_comparison(anchor)
     if not normalized:
         return False
     if normalized.upper().startswith("HTTP "):
@@ -146,6 +214,65 @@ def boundary_anchor_requires_inventory_match(anchor: str) -> bool:
     if normalized == "TODO(REPO_ANCHOR)":
         return False
     return "::" in normalized or re.match(r"^[A-Z][A-Za-z0-9_.$-]*\.[A-Za-z_$][A-Za-z0-9_$.-]*$", normalized) is not None
+
+
+def extract_repo_path_from_anchor(anchor: str) -> str:
+    normalized = normalize_anchor_for_comparison(anchor)
+    if "::" not in normalized:
+        return ""
+    path_part = normalize_symbol(normalized.split("::", 1)[0])
+    if not path_part or path_part.upper() == "TODO(REPO_ANCHOR)":
+        return ""
+    if path_part.lower().startswith("http "):
+        return ""
+    return path_part
+
+
+def extract_symbol_from_anchor(anchor: str) -> str:
+    normalized = normalize_anchor_for_comparison(anchor)
+    if "::" not in normalized:
+        return ""
+    symbol_part = normalize_symbol(normalized.split("::", 1)[1])
+    if not symbol_part or symbol_part.upper() == "TODO(REPO_ANCHOR)":
+        return ""
+    return symbol_part
+
+
+def anchor_symbol_looks_present(path: Path, symbol: str) -> bool:
+    if not symbol:
+        return True
+
+    try:
+        content = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return False
+
+    normalized_symbol = normalize_symbol(symbol)
+    if not normalized_symbol:
+        return True
+    if normalized_symbol in content:
+        return True
+
+    symbol_parts = [
+        re.sub(r"\(\)$", "", part)
+        for part in re.split(r"[.$]", normalized_symbol)
+        if part
+    ]
+    required_tokens = symbol_parts[-2:] if len(symbol_parts) >= 2 else symbol_parts
+    if not required_tokens:
+        return True
+
+    return all(
+        re.search(rf"(?<![A-Za-z0-9_]){re.escape(token)}(?![A-Za-z0-9_])", content) is not None
+        for token in required_tokens
+    )
+
+
+def infer_repo_root_from_feature_dir(feature_dir: Path) -> Path:
+    for candidate in (feature_dir, *feature_dir.parents):
+        if candidate.name == "specs":
+            return candidate.parent
+    return feature_dir.parent
 
 
 def load_binding_contract_packets(test_matrix_path: Path) -> dict[str, dict[str, Any]]:
@@ -179,7 +306,7 @@ def load_binding_contract_packets(test_matrix_path: Path) -> dict[str, dict[str,
     return packets
 
 
-def inspect_contract_artifact(contract_path_abs: str) -> dict[str, Any]:
+def inspect_contract_artifact(contract_path_abs: str, *, repo_root_abs: str | None = None) -> dict[str, Any]:
     inspection = {
         "binding_context_section_present": False,
         "interface_definition_section_present": False,
@@ -216,6 +343,10 @@ def inspect_contract_artifact(contract_path_abs: str) -> dict[str, Any]:
         "implementation_entry_anchor_strategy_evidence": "",
         "invalid_anchor_status_fields": [],
         "missing_new_anchor_strategy_evidence_fields": [],
+        "new_anchor_nonexistent_repo_path_fields": [],
+        "new_anchor_nonexistent_repo_path_rows": [],
+        "new_anchor_symbol_unverified_fields": [],
+        "new_anchor_symbol_unverified_rows": [],
         "operation_id": "",
     }
     if not contract_path_abs or not Path(contract_path_abs).is_file():
@@ -303,13 +434,58 @@ def inspect_contract_artifact(contract_path_abs: str) -> dict[str, Any]:
         inspection["missing_new_anchor_strategy_evidence_fields"].append(
             "Implementation Entry Anchor Strategy Evidence (Required)"
         )
-    declared_uif_refs = split_ref_cell(binding_context.get("UIF Path Ref(s)", ""))
-    declared_tm_ids = split_ref_cell(binding_context.get("TM IDs", ""))
-    declared_tc_ids = split_ref_cell(binding_context.get("TC IDs", ""))
+
+    for field_name, anchor_status, anchor_value in (
+        ("Boundary Anchor (Required)", top_boundary_anchor_status, extract_required_anchor(content, "Boundary Anchor (Required)")),
+        (
+            "Implementation Entry Anchor (Required)",
+            top_implementation_entry_anchor_status,
+            extract_required_anchor(content, "Implementation Entry Anchor (Required)"),
+        ),
+    ):
+        if anchor_status != "new":
+            continue
+        anchor_repo_path = extract_repo_path_from_anchor(anchor_value)
+        if not anchor_repo_path:
+            continue
+        if Path(anchor_repo_path).is_absolute():
+            anchor_repo_path_abs = Path(anchor_repo_path)
+        elif repo_root_abs:
+            anchor_repo_path_abs = Path(repo_root_abs) / anchor_repo_path
+        else:
+            anchor_repo_path_abs = Path(contract_path_abs).parent / anchor_repo_path
+
+        if not anchor_repo_path_abs.is_file():
+            inspection["new_anchor_nonexistent_repo_path_fields"].append(field_name)
+            inspection["new_anchor_nonexistent_repo_path_rows"].append(
+                {
+                    "field": field_name,
+                    "anchor": normalize_symbol(anchor_value),
+                    "path": anchor_repo_path,
+                    "path_abs": str(anchor_repo_path_abs),
+                }
+            )
+            continue
+
+        anchor_symbol = extract_symbol_from_anchor(anchor_value)
+        if anchor_symbol and not anchor_symbol_looks_present(anchor_repo_path_abs, anchor_symbol):
+            inspection["new_anchor_symbol_unverified_fields"].append(field_name)
+            inspection["new_anchor_symbol_unverified_rows"].append(
+                {
+                    "field": field_name,
+                    "anchor": normalize_symbol(anchor_value),
+                    "path": anchor_repo_path,
+                    "path_abs": str(anchor_repo_path_abs),
+                    "symbol": anchor_symbol,
+                }
+            )
+    declared_uif_refs = build_declared_reference_index(split_ref_cell(binding_context.get("UIF Path Ref(s)", "")))
+    declared_tm_ids = build_declared_reference_index(split_ref_cell(binding_context.get("TM IDs", "")))
+    declared_tc_ids = build_declared_reference_index(split_ref_cell(binding_context.get("TC IDs", "")))
 
     behavior_paths = extract_subsection(content, "Behavior Paths", level=3) or ""
     test_projection_slice = extract_subsection(content, "Test Projection Slice", level=3) or ""
-    behavior_and_test_projection = f"{behavior_paths}\n{test_projection_slice}"
+    observed_reference_tokens = collect_reference_tokens(behavior_paths, test_projection_slice)
     smoke_candidate_rows = parse_markdown_table(
         extract_subsection(content, "Cross-Interface Smoke Candidate (Required)", level=3)
     )
@@ -336,17 +512,23 @@ def inspect_contract_artifact(contract_path_abs: str) -> dict[str, Any]:
                     }
                 )
 
-    if declared_uif_refs and behavior_and_test_projection.strip():
+    if declared_uif_refs and (behavior_paths.strip() or test_projection_slice.strip()):
         inspection["missing_uif_path_refs_in_behavior_or_test_projection"] = [
-            ref for ref in declared_uif_refs if ref not in behavior_and_test_projection
+            canonical_ref
+            for normalized_ref, canonical_ref in declared_uif_refs.items()
+            if normalized_ref not in observed_reference_tokens["uif_path"]
         ]
-    if declared_tm_ids and behavior_and_test_projection.strip():
+    if declared_tm_ids and (behavior_paths.strip() or test_projection_slice.strip()):
         inspection["missing_tm_ids_in_behavior_or_test_projection"] = [
-            ref for ref in declared_tm_ids if ref not in behavior_and_test_projection
+            canonical_ref
+            for normalized_ref, canonical_ref in declared_tm_ids.items()
+            if normalized_ref not in observed_reference_tokens["tm_id"]
         ]
-    if declared_tc_ids and behavior_and_test_projection.strip():
+    if declared_tc_ids and (behavior_paths.strip() or test_projection_slice.strip()):
         inspection["missing_tc_ids_in_behavior_or_test_projection"] = [
-            ref for ref in declared_tc_ids if ref not in behavior_and_test_projection
+            canonical_ref
+            for normalized_ref, canonical_ref in declared_tc_ids.items()
+            if normalized_ref not in observed_reference_tokens["tc_id"]
         ]
 
     inspection["binding_context_coverage_drift"] = bool(
@@ -357,6 +539,8 @@ def inspect_contract_artifact(contract_path_abs: str) -> dict[str, Any]:
 
     top_boundary_anchor = extract_required_anchor(content, "Boundary Anchor (Required)")
     top_entry_anchor = extract_required_anchor(content, "Implementation Entry Anchor (Required)")
+    normalized_top_boundary_anchor = normalize_anchor_for_comparison(top_boundary_anchor)
+    normalized_top_entry_anchor = normalize_anchor_for_comparison(top_entry_anchor)
     resolved_type_inventory = parse_markdown_table(extract_subsection(content, "Resolved Type Inventory", level=3))
     boundary_inventory_anchor = ""
     entry_inventory_anchor = ""
@@ -368,15 +552,21 @@ def inspect_contract_artifact(contract_path_abs: str) -> dict[str, Any]:
         if role == "implementation-entry":
             entry_inventory_anchor = concrete_name
 
+    normalized_boundary_inventory_anchor = normalize_anchor_for_comparison(boundary_inventory_anchor)
+    normalized_entry_inventory_anchor = normalize_anchor_for_comparison(entry_inventory_anchor)
     anchor_mismatch_details: list[str] = []
     if (
-        top_boundary_anchor
-        and boundary_inventory_anchor
+        normalized_top_boundary_anchor
+        and normalized_boundary_inventory_anchor
         and boundary_anchor_requires_inventory_match(top_boundary_anchor)
-        and top_boundary_anchor != boundary_inventory_anchor
+        and normalized_top_boundary_anchor != normalized_boundary_inventory_anchor
     ):
         anchor_mismatch_details.append("Boundary Anchor != Resolved Type Inventory boundary-entry")
-    if top_entry_anchor and entry_inventory_anchor and top_entry_anchor != entry_inventory_anchor:
+    if (
+        normalized_top_entry_anchor
+        and normalized_entry_inventory_anchor
+        and normalized_top_entry_anchor != normalized_entry_inventory_anchor
+    ):
         anchor_mismatch_details.append("Implementation Entry Anchor != Resolved Type Inventory implementation-entry")
     inspection["anchor_inventory_mismatch"] = bool(anchor_mismatch_details)
     inspection["anchor_inventory_mismatch_details"] = anchor_mismatch_details
@@ -389,6 +579,7 @@ def build_unit_inventory(
     feature_dir: Path,
     binding_packets: dict[str, dict[str, Any]],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    repo_root_abs = str(infer_repo_root_from_feature_dir(feature_dir))
     artifacts_by_binding: dict[str, dict[str, dict[str, str]]] = {}
     for row in artifact_rows:
         binding_row_id = clean_cell(row.get("BindingRowID", ""))
@@ -405,7 +596,7 @@ def build_unit_inventory(
         contract_row = artifacts_by_binding.get(binding_row_id, {}).get("contract", {})
         contract_target_path_abs = resolve_target_path(feature_dir, contract_row.get("Target Path", ""))
         contract_exists = bool(contract_target_path_abs) and Path(contract_target_path_abs).is_file()
-        contract_inspection = inspect_contract_artifact(contract_target_path_abs)
+        contract_inspection = inspect_contract_artifact(contract_target_path_abs, repo_root_abs=repo_root_abs)
 
         uc_id = clean_cell(row.get("UC ID", ""))
         uif_id = clean_cell(row.get("UIF ID", ""))
@@ -533,6 +724,18 @@ def build_unit_inventory(
                 "missing_new_anchor_strategy_evidence_fields": contract_inspection[
                     "missing_new_anchor_strategy_evidence_fields"
                 ],
+                "new_anchor_nonexistent_repo_path_fields": contract_inspection[
+                    "new_anchor_nonexistent_repo_path_fields"
+                ],
+                "new_anchor_nonexistent_repo_path_rows": contract_inspection[
+                    "new_anchor_nonexistent_repo_path_rows"
+                ],
+                "new_anchor_symbol_unverified_fields": contract_inspection[
+                    "new_anchor_symbol_unverified_fields"
+                ],
+                "new_anchor_symbol_unverified_rows": contract_inspection[
+                    "new_anchor_symbol_unverified_rows"
+                ],
                 "closure_check_section_present": contract_inspection["closure_check_section_present"],
                 "interface_definition_closure_check_present": contract_inspection[
                     "interface_definition_closure_check_present"
@@ -583,6 +786,7 @@ def build_unit_inventory(
             and not unit["contract"]["cross_interface_smoke_candidate_missing_signals"]
             and not unit["contract"]["invalid_anchor_status_fields"]
             and not unit["contract"]["missing_new_anchor_strategy_evidence_fields"]
+            and not unit["contract"]["new_anchor_nonexistent_repo_path_fields"]
             and unit["contract"]["closure_check_section_present"]
             and unit["contract"]["interface_definition_closure_check_present"]
             and unit["contract"]["uml_closure_check_present"]
@@ -926,6 +1130,50 @@ def build_task_execution_readiness(
                 "code": "new_anchor_strategy_evidence_missing",
                 "message": "Some done contract rows use `new` anchors without explicit rejection evidence for both `existing` and `extended`.",
                 "details": {"rows": missing_new_anchor_strategy_rows},
+            }
+        )
+
+    new_anchor_repo_path_overclaim_rows = sorted(
+        [
+            {
+                "binding_row_id": unit["binding_row_id"],
+                "rows": unit["contract"]["new_anchor_nonexistent_repo_path_rows"],
+            }
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and unit["contract"]["new_anchor_nonexistent_repo_path_fields"]
+        ],
+        key=lambda item: item["binding_row_id"],
+    )
+    if new_anchor_repo_path_overclaim_rows:
+        errors.append(
+            {
+                "code": "new_anchor_repo_path_overclaim",
+                "message": "Some done contract rows mark anchors as `new` but overclaim non-existent repo file anchors; prefer design-target naming or TODO(REPO_ANCHOR) until landing is closed.",
+                "details": {"rows": new_anchor_repo_path_overclaim_rows},
+            }
+        )
+
+    new_anchor_symbol_unverified_rows = sorted(
+        [
+            {
+                "binding_row_id": unit["binding_row_id"],
+                "rows": unit["contract"]["new_anchor_symbol_unverified_rows"],
+            }
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and unit["contract"]["new_anchor_symbol_unverified_fields"]
+        ],
+        key=lambda item: item["binding_row_id"],
+    )
+    if new_anchor_symbol_unverified_rows:
+        warnings.append(
+            {
+                "code": "new_anchor_symbol_unverified",
+                "message": "Some done contract rows use `new` repo anchors whose `::Symbol` is not clearly observable in the target file; verify landing or prefer design-target naming / TODO(REPO_ANCHOR).",
+                "details": {"rows": new_anchor_symbol_unverified_rows},
             }
         )
 
