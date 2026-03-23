@@ -53,9 +53,12 @@ Its core outputs are fixed:
 Purpose: fix exactly which upstream requirement-projection unit this contract closes.
 Keep this section locator-oriented; do not restate full upstream prose.
 Treat upstream packet scope-reference fields as binding-range inputs only. This stage finalizes `Operation ID`, boundary landing, concrete DTO naming, and realization design.
+`Binding Packets` in `test-matrix.md` is the semantic authority for this section.
+Do not reinterpret packet meaning locally; copy locator fields deterministically and resolve only contract-local closure fields.
 
 | Field | Value |
 |-------|-------|
+| `Binding Packet Source` | [`test-matrix.md` `Binding Packets` row for selected `BindingRowID`] |
 | `BindingRowID` | [BR-###] |
 | `Operation ID` | [operationId] |
 | `IF Scope` | [IF-### or N/A] |

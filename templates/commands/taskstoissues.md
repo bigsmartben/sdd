@@ -46,3 +46,17 @@ You **MUST** consider the user input before proceeding (if not empty).
 
    > [!CAUTION]
    > UNDER NO CIRCUMSTANCES EVER CREATE ISSUES IN REPOSITORIES THAT DO NOT MATCH THE REMOTE URL
+
+## Stop Conditions
+
+Stop immediately if:
+1. `tasks.md` is missing or unresolvable.
+2. The Git remote is not a GitHub URL — do not create any issues.
+3. The resolved repository does not match the remote URL.
+
+## Handoff Decision
+
+Emit exactly these fields:
+- `Next Command`: `/sdd.implement` (after issues are created) or context-derived.
+- `Decision Basis`: Created issue URLs and count; list any skipped tasks with reason.
+- `Ready/Blocked`: Local readiness only.

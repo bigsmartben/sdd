@@ -60,6 +60,17 @@ Use `.specify/templates/ui-html-template.html` only.
 - **Rule-Driven**: Consume UDD boundary/null/display rules in UI states.
 - **Review Surfaces**: Dedicate areas to `UIF Interaction View` and `UDD-backed View State` for audit.
 
+## Writeback Contract
+
+- Write to `specs/YYYYMMDD-slug/ui.html` only.
+- **MUST NOT** modify `spec.md`, `plan.md`, or any planning artifact.
+
+## Stop Conditions
+
+Stop immediately if:
+1. `.specify/templates/ui-html-template.html` is missing or unreadable.
+2. `SPEC_FILE` is missing or unresolvable from current branch context.
+
 ## Handoff Decision
 
 Emit exactly these fields:

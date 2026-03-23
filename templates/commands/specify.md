@@ -121,14 +121,20 @@ Handling failures:
 - Non-clarification issues: fix and re-validate, up to 3 iterations.
 - Clarification markers remain: ask focused clarification questions (max 5 total), update spec, then re-validate.
 
-## Completion Report
+## Stop Conditions
 
-Report:
+Stop immediately if:
+1. `{SCRIPT}` returns non-parseable JSON or fails to create or switch the feature branch.
+2. `.specify/templates/spec-template.md` is missing or unreadable.
+3. After 3 validation iterations, mandatory template sections are still incomplete.
 
-- `BRANCH_NAME`
-- `SPEC_FILE` absolute path
-- readiness recommendation (`/sdd.clarify` first, then `/sdd.plan`)
-- if user explicitly skips clarification, warn about increased downstream rework risk
-- if checklist-style requirements quality validation is requested, route to `/sdd.checklist` after `/sdd.plan`
+## Handoff Decision
+
+Emit exactly these fields:
+- `Next Command`: `/sdd.clarify` (recommended; warn that skipping increases downstream rework risk) or `/sdd.plan` (if user explicitly skips clarification).
+- `Decision Basis`: Cite `SPEC_FILE` path, branch created, and whether clarification markers remain.
+- `Ready/Blocked`: Local readiness only.
+
+Also report: `BRANCH_NAME`, `SPEC_FILE` absolute path, and whether `/sdd.checklist` was requested after `/sdd.plan`.
 
 Note: the script initializes `specs/<feature-key>/spec.md` and, in Git repos, switches to the resolved feature branch.

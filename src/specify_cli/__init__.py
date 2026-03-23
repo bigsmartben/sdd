@@ -327,6 +327,15 @@ SCRIPT_TYPE_CHOICES = {"sh": "POSIX Shell (bash/zsh)", "ps": "PowerShell"}
 
 CLAUDE_LOCAL_PATH = Path.home() / ".claude" / "local" / "claude"
 
+# Some agent keys differ from their actual executable names.
+# Keep a centralized candidate list so init/check/preflight share the same
+# detection behavior and diagnostics.
+TOOL_COMMAND_CANDIDATES: dict[str, list[str]] = {
+    "claude": [str(CLAUDE_LOCAL_PATH), "claude"],
+    "kiro-cli": ["kiro-cli", "kiro"],
+    "qodercli": ["qoder", "qodercli"],
+}
+
 BANNER = """
 ███████╗██████╗ ███████╗ ██████╗██╗███████╗██╗   ██╗
 ██╔════╝██╔══██╗██╔════╝██╔════╝██║██╔════╝╚██╗ ██╔╝
@@ -589,6 +598,33 @@ def run_command(cmd: list[str], check_return: bool = True, capture: bool = False
             raise
         return None
 
+
+def _tool_cli_candidates(tool: str) -> list[str]:
+    """Return executable candidate names/paths for a tool key."""
+    return TOOL_COMMAND_CANDIDATES.get(tool, [tool])
+
+
+def _resolve_tool_command(tool: str) -> tuple[bool, Optional[str], list[str]]:
+    """Resolve the first available executable candidate for a tool key."""
+    candidates = _tool_cli_candidates(tool)
+
+    for candidate in candidates:
+        if not candidate:
+            continue
+
+        # Absolute path candidate (e.g. Claude local shim).
+        candidate_path = Path(candidate)
+        if candidate_path.is_absolute():
+            if candidate_path.exists() and candidate_path.is_file():
+                return True, str(candidate_path), candidates
+            continue
+
+        resolved = shutil.which(candidate)
+        if resolved is not None:
+            return True, resolved, candidates
+
+    return False, None, candidates
+
 def check_tool(tool: str, tracker: StepTracker = None) -> bool:
     """Check if a tool is installed. Optionally update tracker.
     
@@ -599,29 +635,14 @@ def check_tool(tool: str, tracker: StepTracker = None) -> bool:
     Returns:
         True if tool is found, False otherwise
     """
-    # Special handling for Claude CLI after `claude migrate-installer`
-    # See: https://github.com/bigsmartben/sdd/issues/123
-    # The migrate-installer command REMOVES the original executable from PATH
-    # and creates an alias at ~/.claude/local/claude instead
-    # This path should be prioritized over other claude executables in PATH
-    if tool == "claude":
-        if CLAUDE_LOCAL_PATH.exists() and CLAUDE_LOCAL_PATH.is_file():
-            if tracker:
-                tracker.complete(tool, "available")
-            return True
-    
-    if tool == "kiro-cli":
-        # Kiro currently supports both executable names. Prefer kiro-cli and
-        # accept kiro as a compatibility fallback.
-        found = shutil.which("kiro-cli") is not None or shutil.which("kiro") is not None
-    else:
-        found = shutil.which(tool) is not None
+    found, resolved_cmd, candidates = _resolve_tool_command(tool)
     
     if tracker:
         if found:
-            tracker.complete(tool, "available")
+            detail = f"available ({Path(resolved_cmd).name})" if resolved_cmd else "available"
+            tracker.complete(tool, detail)
         else:
-            tracker.error(tool, "not found")
+            tracker.error(tool, f"not found (tried: {', '.join(candidates)})")
     
     return found
 
@@ -709,8 +730,9 @@ def detect_runtime_preflight(
     agent_config = AGENT_CONFIG.get(ai_assistant)
     if check_agent_cli and agent_config and agent_config.get("requires_cli"):
         if not check_tool(ai_assistant):
+            candidates = ", ".join(_tool_cli_candidates(ai_assistant))
             result["errors"].append(
-                f"{agent_config['name']} CLI is required but not detected in PATH."
+                f"{agent_config['name']} CLI is required but not detected in PATH. Tried commands: {candidates}."
             )
         else:
             result["details"].append(f"{ai_assistant} CLI detected")
@@ -1639,8 +1661,10 @@ def init(
         if agent_config and agent_config["requires_cli"]:
             install_url = agent_config["install_url"]
             if not check_tool(selected_ai):
+                candidates = ", ".join(_tool_cli_candidates(selected_ai))
                 error_panel = Panel(
                     f"[cyan]{selected_ai}[/cyan] not found\n"
+                    f"Tried command(s): [cyan]{candidates}[/cyan]\n"
                     f"Install from: [cyan]{install_url}[/cyan]\n"
                     f"{agent_config['name']} is required to continue with this project type.\n\n"
                     "Tip: Use [cyan]--ignore-agent-tools[/cyan] to skip this check",

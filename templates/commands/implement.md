@@ -20,7 +20,7 @@ Run `{SCRIPT}` once from repo root; parse `FEATURE_DIR`, `AVAILABLE_DOCS`, `LOCA
 Execute approved task packages from `tasks.md`.
 `/sdd.implement` owns execution and task-state transitions only.
 
-## Read Only
+## Allowed Inputs
 
 - `IMPLEMENT_BOOTSTRAP` packet (from `{SCRIPT}`)
 - `tasks.md` / `tasks.manifest.json` (DAG authority)
@@ -30,16 +30,6 @@ Execute approved task packages from `tasks.md`.
 - `LOCAL_EXECUTION_PROTOCOL.repo_search.list_files_cmd`
 - `.specify/memory/repository-first/*.md` (canonical baselines)
 - Read `plan.md` only as control-plane context (`Shared Context Snapshot`, `Stage Queue`, `Artifact Status`, `Binding Projection Index`)
-
-## Write Only
-
-- Implementation code, tests, and configuration files per task scope
-- Task-completion state transitions in `tasks.md`
-
-## Final Output
-
-- Code, test, and configuration changes per task scope
-- Updated task-state in `tasks.md` for tasks executed in this run
 
 ## Prerequisite Gate
 

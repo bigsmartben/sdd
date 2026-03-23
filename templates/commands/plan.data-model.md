@@ -68,6 +68,7 @@ If `DATA_MODEL_BOOTSTRAP` is missing, malformed, contradictory, or unavailable, 
 - When `Anchor Status = new`, record repo-first strategy evidence (explain why `existing` and `extended` were rejected).
 - Shared semantic names and UML/class labels in this stage MUST avoid contract-flavored suffixes.
 - Downstream `/sdd.plan.contract` work MUST reuse shared refs produced here; do not duplicate alignment.
+- Shared-semantic authority remains in `data-model.md`; downstream `contract` must consume by `SSE/OSA/SFV/LC/INV/DCC` refs and must not restate shared semantics as local prose authority.
 
 ## FSM Policy
 
@@ -99,6 +100,7 @@ If `DATA_MODEL_BOOTSTRAP` is missing, malformed, contradictory, or unavailable, 
 - **SSE Table**: MUST map each shared element to one `existing|extended|new|todo` anchor.
 - **SFV Table**: MUST reuse binding packet refs for meaning and boundary rules.
 - **Lifecycle Logic**: Capture vocabulary, meaning, and invariants only.
+- **Determinism Rule**: when a shared semantic is unresolved, keep an explicit blocker row/ref and route downstream as `blocked`; do not emit dual interpretations.
 - **Prohibited**: Interface-role names (`*DTO`, `*Request`, `*Response`, `*Controller`).
 
 ## Handoff Decision

@@ -26,7 +26,7 @@ Use `.specify/templates/tasks-template.md` only.
 - Mapping each task to its design refs and target paths.
 - Defining completion anchors for execution validation.
 
-## Read Only
+## Allowed Inputs
 
 - `TASKS_BOOTSTRAP` packet (from `{SCRIPT}`)
 - `plan.md` — Stage Queue / Artifact Status / Shared Context Snapshot
@@ -36,22 +36,6 @@ Use `.specify/templates/tasks-template.md` only.
 - `LOCAL_EXECUTION_PROTOCOL` (from `TASKS_BOOTSTRAP`; includes `LOCAL_EXECUTION_PROTOCOL.python.runner_cmd` and `LOCAL_EXECUTION_PROTOCOL.runtime_tools`)
 - `LOCAL_EXECUTION_PROTOCOL.repo_search.list_files_cmd`
 - If `LOCAL_EXECUTION_PROTOCOL.repo_search.available = false`, do not run repo-search commands; continue with available runtime tools only.
-
-## Write Only
-
-- `tasks.md`
-- `tasks.manifest.json`
-
-## Final Output
-
-- `tasks.md` — execution-ordered work packages using `Task DAG`, `GLOBAL`, and `IF-###` scopes
-- `tasks.manifest.json` — machine-readable manifest
-  - Generate `tasks.manifest.json` from the same run-local execution graph used to render `tasks.md`.
-  - Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`, `presentation`
-  - `generated_from` minimal provenance: `plan_path` only
-  - `presentation` MUST describe the enhanced task board projection without adding semantic task data.
-  - `presentation.board_style` MUST be `enhanced`.
-  - `presentation.source_lineage` MUST include `plan_path`.
 
 ## Prerequisite Gate
 
@@ -104,6 +88,10 @@ Treat `TASKS_BOOTSTRAP.execution_readiness` as the primary hard gate.
 ## Writeback Contract
 
 - Create or refresh `tasks.md` and `tasks.manifest.json` only.
+- Generate `tasks.manifest.json` from the same run-local execution graph used to render `tasks.md`; do not re-parse the just-written markdown.
+  - Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`, `presentation`.
+  - `generated_from` minimal provenance: `plan_path` only.
+  - `presentation.board_style` MUST be `enhanced`; `presentation.source_lineage` MUST include `plan_path`.
 - **MUST NOT** rewrite `plan.md`, `spec.md`, or design artifacts.
 
 ## Output Contract

@@ -93,7 +93,7 @@ def test_tasks_implement_and_analyze_use_compact_contract_sections():
     implement = read("templates/commands/implement.md")
     analyze = read("templates/commands/analyze.md")
 
-    for marker in ("## Goal", "## Read Only", "## Write Only", "## Final Output"):
+    for marker in ("## Goal", "## Allowed Inputs"):
         assert marker in tasks
         assert marker in implement
         assert marker in analyze
