@@ -23,24 +23,10 @@ Update `analyze-history.md` with the gate decision (`PASS|FAIL`).
 - Detecting ambiguity, contradiction, or coverage drift.
 - Verification of `new` repo anchor strategy evidence.
 
-## Read Only
+## Allowed Inputs
 
 - All generated feature artifacts (`spec.md`, `plan.md`, `tasks.md`, `contracts/`, `data-model.md`, `test-matrix.md`)
 - `.specify/memory/repository-first/*.md` (canonical baselines)
-
-## Write Only
-
-- `analyze-history.md` (append-only: one run block per invocation)
-
-## Final Output
-
-- One analyze run block appended to `ANALYZE_HISTORY`:
-
-```
-<!-- SDD_ANALYZE_RUN_BEGIN -->
-...Gate Decision, Findings, Routing...
-<!-- SDD_ANALYZE_RUN_END -->
-```
 
 ## Governance / Authority
 
@@ -84,7 +70,7 @@ Projection drift routing:
 
 ## Writeback Contract
 
-- Append exactly one analyze run block to `ANALYZE_HISTORY` in `analyze-history.md`.
+- Append exactly one run block to `analyze-history.md` using `<!-- SDD_ANALYZE_RUN_BEGIN -->` / `<!-- SDD_ANALYZE_RUN_END -->` markers.
 - **MUST NOT** rewrite `spec.md`, `plan.md`, `contracts/`, or `tasks.md`.
 
 ## Output Contract

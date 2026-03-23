@@ -958,3 +958,83 @@ class TestCheckCommandRuntimePreflight:
         plain = re.sub(r'\x1b\[[0-9;]*m', '', result.output)
         assert "Runtime Environment Preflight" in plain
         assert "higher first-run success rate" not in plain
+
+
+class TestAgentCliDetectionCandidates:
+    """Verify agent-key to executable-name candidate detection logic."""
+
+    def test_check_tool_qodercli_accepts_qoder_binary(self, monkeypatch):
+        calls = []
+
+        def fake_which(name: str):
+            calls.append(name)
+            if name == "qoder":
+                return "/usr/bin/qoder"
+            return None
+
+        monkeypatch.setattr(specify_cli.shutil, "which", fake_which)
+
+        assert specify_cli.check_tool("qodercli") is True
+        assert calls[0] == "qoder"
+
+    def test_check_tool_qodercli_falls_back_to_qodercli_binary(self, monkeypatch):
+        def fake_which(name: str):
+            if name == "qodercli":
+                return "/usr/bin/qodercli"
+            return None
+
+        monkeypatch.setattr(specify_cli.shutil, "which", fake_which)
+
+        assert specify_cli.check_tool("qodercli") is True
+
+    def test_detect_runtime_preflight_includes_tried_candidate_commands(self, monkeypatch):
+        def fake_which(name: str):
+            if name == "bash":
+                return "/bin/bash"
+            return None
+
+        monkeypatch.setattr(specify_cli.shutil, "which", fake_which)
+        monkeypatch.setattr(specify_cli, "_probe_runtime_command", lambda *_args, **_kwargs: (True, "ok"))
+
+        preflight = specify_cli.detect_runtime_preflight(
+            ai_assistant="qodercli",
+            script_type="sh",
+            check_agent_cli=True,
+        )
+
+        assert any("Tried commands: qoder, qodercli" in item for item in preflight["errors"])
+
+    def test_init_agent_detection_error_panel_shows_tried_candidates(self, tmp_path, monkeypatch):
+        from typer.testing import CliRunner
+
+        runner = CliRunner()
+        target = tmp_path / "qoder-proj"
+
+        original_check_tool = specify_cli.check_tool
+
+        def fake_check_tool(tool: str, tracker=None):
+            if tool == "qodercli":
+                return False
+            return original_check_tool(tool, tracker=tracker)
+
+        monkeypatch.setattr(specify_cli, "check_tool", fake_check_tool)
+
+        result = runner.invoke(app, ["init", str(target), "--ai", "qodercli", "--script", "sh", "--no-git"])
+
+        assert result.exit_code == 1
+        plain = re.sub(r'\x1b\[[0-9;]*m', '', result.output)
+        assert "Agent Detection Error" in plain
+        assert "Tried command(s): qoder, qodercli" in plain
+
+    def test_check_tool_supports_absolute_candidate_path(self, tmp_path, monkeypatch):
+        fake_local_cli = tmp_path / "claude-local"
+        fake_local_cli.write_text("#!/bin/sh\n", encoding="utf-8")
+
+        monkeypatch.setitem(
+            specify_cli.TOOL_COMMAND_CANDIDATES,
+            "claude",
+            [str(fake_local_cli), "claude"],
+        )
+        monkeypatch.setattr(specify_cli.shutil, "which", lambda _name: None)
+
+        assert specify_cli.check_tool("claude") is True

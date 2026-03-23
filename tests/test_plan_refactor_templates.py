@@ -99,7 +99,7 @@ def test_contract_command_uses_test_matrix_as_default_semantic_source():
 
     assert "Treat the matched `Binding Projection Index` row as a minimal locator ledger only" in content
     assert "Treat the selected packet as demand projection only through" in content
-    assert "Treat the selected packet as a downstream scope-reference packet, not as a predesigned contract seed." in content
+    assert "Treat the selected packet as the semantic authority for binding meaning in this run." in content
     assert "if absent, stop and route back to `/sdd.plan.test-matrix`" in content
     assert "Reconstruct request / response meaning from `UC`, `FR`, `UIF`, `UDD`, and scenario refs before reading repo evidence." in content
     assert "If repo-backed verification finds a binding-projection error or shared-semantic gap" in content
@@ -157,7 +157,7 @@ def test_research_data_model_and_test_matrix_are_packet_first():
     assert "Use this packet as the default context for generation." in research
     assert "module-root or directory-only placeholders such as `aidm-api/` are invalid" in research
     assert "Every `Source Path / Symbol` value must be a concrete file path or `path/to/file.ext::Symbol`" in research_template
-    assert "## Artifact Quality Contract" in research
+    assert "Generate `research.md` as a high-signal evidence artifact" in research
     assert "## Writeback Contract" in research
     assert "## Output Contract" in research
     assert "Generate `research.md` as a high-signal evidence artifact" in research
@@ -467,11 +467,10 @@ def test_checklist_command_uses_branch_inferred_plan_input_with_hard_gate():
     content = read("templates/commands/checklist.md")
     assert "Treat all `$ARGUMENTS` as checklist context input." in content
     assert "## Artifact Quality Contract" in content
-    assert "Generate a checklist that a strong reviewer would actually use" in content
-    assert "Resolve `PLAN_FILE` from current feature branch using `{SCRIPT}` defaults." in content
-    assert "If branch-derived `PLAN_FILE` is missing or invalid, stop immediately and report the blocker." in content
-    assert "Run `{SCRIPT}` from repo root. Parse JSON for FEATURE_DIR and AVAILABLE_DOCS list." in content
-    assert "plan.md (required; must match resolved PLAN_FILE)" in content
+    assert "generate a checklist a strong reviewer would actually use" in content
+    assert "Resolve `PLAN_FILE` from the current feature branch using `{SCRIPT}` defaults." in content
+    assert "Run `{SCRIPT}` from repo root; parse `FEATURE_DIR` and `AVAILABLE_DOCS`." in content
+    assert "plan.md` (required; must match resolved `PLAN_FILE`)" in content
     assert "If present, the first positional token is `PLAN_FILE`" not in content
     assert "`/sdd.checklist <path/to/plan.md> [checklist-context...]`" not in content
     assert "--plan-file <PLAN_FILE>" not in content

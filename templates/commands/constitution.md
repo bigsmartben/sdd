@@ -61,6 +61,18 @@ Use `.specify/templates/constitution-template.md` only.
 3. **Traceability**: Emit `fact -> conclusion` reasoning for all matrix rows.
 4. **Refined Invocation**: Directions MUST cover concrete first-party module edges.
 
+## Writeback Contract
+
+- Write to `.specify/memory/constitution.md` only.
+- Refresh `.specify/memory/repository-first/*.md` only when the impact mapping identifies a `repo-first-affecting` change.
+- **MUST NOT** modify `plan.md`, `tasks.md`, or any spec artifact.
+
+## Stop Conditions
+
+Stop immediately if:
+1. `.specify/templates/constitution-template.md` is missing or unreadable.
+2. Repository manifests cannot be located and the change is `repo-first-affecting`.
+
 ## Handoff Decision
 
 Emit a **Sync Impact Report** (HTML comment) plus:

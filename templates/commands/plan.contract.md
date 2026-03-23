@@ -36,9 +36,10 @@ Use `.specify/templates/contract-template.md` only.
 4. Find the first `contract` row in `Artifact Status` with `Status = blocked|pending`.
 5. Attempt to resolve one selected binding packet in `test-matrix.md` by the same `BindingRowID`; if absent, stop and route back to `/sdd.plan.test-matrix`.
 6. Treat the matched `Binding Projection Index` row as a minimal locator ledger only — do not treat it as a complete design seed.
-7. Treat the selected packet as a downstream scope-reference packet, not as a predesigned contract seed.
-8. Treat the selected packet as demand projection only through the end of bounded repo closure.
-9. If inconsistencies found, stop and route back to `/sdd.plan.test-matrix`.
+7. Treat the selected packet as the semantic authority for binding meaning in this run.
+8. Copy packet locator fields deterministically into contract `Binding Context`; do not reinterpret packet meaning locally.
+9. Treat the selected packet as demand projection only through the end of bounded repo closure.
+10. If inconsistencies found, stop and route back to `/sdd.plan.test-matrix`.
 
 ## Governance / Authority
 
@@ -61,6 +62,7 @@ Use `.specify/templates/contract-template.md` only.
 ## Semantic Reconstruction
 
 Reconstruct request / response meaning from `UC`, `FR`, `UIF`, `UDD`, and scenario refs before reading repo evidence.
+Use the selected `Binding Packets` row as binding semantic authority; resolve ambiguity by routing upstream instead of local reinterpretation.
 
 Required scope for bounded repo reads:
 - required collaborators and middleware

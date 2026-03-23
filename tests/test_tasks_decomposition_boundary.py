@@ -11,13 +11,12 @@ def read(rel_path: str) -> str:
 def test_tasks_command_enforces_preflight_and_hard_stop():
     content = read("templates/commands/tasks.md")
 
-    assert "Resolve `PLAN_FILE` from current feature branch using `{SCRIPT}` defaults." in content
     assert "scripts/bash/check-prerequisites.sh --json --task-preflight" in content
     assert "scripts/powershell/check-prerequisites.ps1 -Json -TaskPreflight" in content
     assert "Run `{SCRIPT}` once from repo root." in content
     assert "Treat `TASKS_BOOTSTRAP.execution_readiness` as the primary hard gate." in content
     assert "stop immediately and report the runtime bootstrap blocker" in content
-    assert "Stop immediately when any condition holds:" in content
+    assert "Stop immediately if:" in content
     assert "`TASKS_BOOTSTRAP.execution_readiness.errors` contains blockers" in content
     assert "LOCAL_EXECUTION_PROTOCOL.repo_search.list_files_cmd" in content
     assert "Active executable tuples select `new` repo anchors but lack explicit rejection evidence for `existing` and `extended`" in content
@@ -28,27 +27,22 @@ def test_tasks_command_enforces_preflight_and_hard_stop():
 def test_tasks_command_keeps_execution_only_boundary():
     content = read("templates/commands/tasks.md")
 
-    assert "`/sdd.tasks` owns execution decomposition only." in content
-    assert "do not redesign in this command." in content
-    assert "does **not** own comprehensive audit concerns" in content
-    assert "Route those to `/sdd.analyze`." in content
+    assert "No design/modeling; only task decomposition and orchestration." in content
+    assert "Keep contract projection authoritative for the current run." in content
+    assert "do not repair upstream artifacts locally" in content
+    assert "`Next Command`: `/sdd.analyze`" in content
 
 
 def test_tasks_command_deterministic_mapping_and_manifest_schema():
     content = read("templates/commands/tasks.md")
 
-    assert "Enforce deterministic mapping rules during task generation:" in content
-    assert "one work package maps to exactly one `operationId` or one shared prerequisite objective" in content
-    assert "one work package maps to exactly one target path cluster or one command target" in content
-    assert "one work package maps to exactly one primary completion anchor" in content
+    assert "same run-local execution graph used to render `tasks.md` drives the manifest generation." in content
     assert "Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`, `presentation`" in content
     assert "`generated_from` minimal provenance: `plan_path` only" in content
-    assert "`presentation` MUST describe the enhanced task board projection without adding semantic task data." in content
-    assert "`presentation.board_style` MUST be `enhanced`." in content
-    assert "`presentation.source_lineage` MUST include `plan_path`." in content
+    assert "`presentation.board_style` MUST be `enhanced`; `presentation.source_lineage` MUST include `plan_path`." in content
     assert "Repository-First Evidence Bundle (`RFEB`)" in content
     assert "`source_refs`" in content
-    assert "`signal_ids` (`SIG-*` rows" in content
+    assert "`signal_ids` (`SIG-*` from `.specify/memory/repository-first/`)" in content
     assert "`module_edge_ids`" in content
 
 
@@ -71,12 +65,12 @@ def test_manifest_schema_contract_between_tasks_and_implement():
     tasks_command = read("templates/commands/tasks.md")
     implement_command = read("templates/commands/implement.md")
 
-    assert "Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`" in tasks_command
+    assert "Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`, `presentation`" in tasks_command
     assert "`generated_from` minimal provenance: `plan_path` only" in tasks_command
-    assert "use `tasks.manifest.json` when schema validation passes" in implement_command
-    assert "fallback to `tasks.md` parsing when manifest is missing or invalid" in implement_command
-    assert "task keys: `task_id`, `dependencies`, `if_scope`, `refs`, `target_paths`, `completion_anchors`, `conflict_hints`, `topo_layer`, `status`" in implement_command
-    assert "Active execution targets rely on `new` repo anchors without explicit rejection evidence for `existing` and `extended`." in implement_command
+    assert "`tasks.md` / `tasks.manifest.json` (DAG authority)" in implement_command
+    assert "parse `FEATURE_DIR`, `AVAILABLE_DOCS`, `LOCAL_EXECUTION_PROTOCOL`, `IMPLEMENT_BOOTSTRAP`, and `TASKS_MANIFEST_BOOTSTRAP`" in implement_command
+    assert "Execute approved task packages from `tasks.md`." in implement_command
+    assert "Active execution targets rely on `new` repo anchors without explicit rejection evidence." in implement_command
     assert "LOCAL_EXECUTION_PROTOCOL" in implement_command
     assert "no bypass of repo-anchor strategy priority (`existing -> extended -> new`)" in implement_command
     assert "Unified Repository-First Gate Protocol (`URFGP`)" in implement_command

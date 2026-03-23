@@ -113,6 +113,7 @@ Rules:
 ## Binding Packets
 
 Purpose: complete downstream scope-reference packet for the selected interaction unit.
+`Binding Packets` is the single semantic authority for binding meaning consumed by downstream stages.
 
 | BindingRowID | IF Scope | User Intent | Trigger Ref(s) | Request Semantics | Visible Result | Side Effect | Boundary Notes | Repo Landing Hint | UIF Path Ref(s) | UDD Ref(s) | Primary TM IDs | TM IDs | TC IDs | Test Scope | Spec Ref(s) | Scenario Ref(s) | Success Ref(s) | Edge Ref(s) |
 |--------------|----------|-------------|----------------|-------------------|----------------|-------------|----------------|-------------------|-----------------|------------|----------------|--------|--------|------------|-------------|-----------------|----------------|-------------|
@@ -180,4 +181,5 @@ Purpose: complete downstream scope-reference packet for the selected interaction
 - `UIF Full Path Coverage Graph (Mermaid)` completes the spec overview UIF by integrating `UC`-local UIF paths into one replay aid for the same binding/test semantics, not a second implementation authority.
 - `UIF Path Coverage Ledger` guarantees full selected-scope UIF path accounting even when the Mermaid graph intentionally compresses equivalent branches.
 - Packets should remove rebinding work without duplicating `spec.md` prose.
+- Downstream stages must treat `Binding Packets` as binding semantic authority and treat `plan.md` `Binding Projection Index` as selection/scheduling ledger only.
 - Downstream stages may consume these packets, but they must not rewrite `BindingRowID` or binding meaning.

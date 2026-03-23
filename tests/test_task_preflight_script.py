@@ -2186,12 +2186,10 @@ def test_tasks_command_prefers_task_preflight_bootstrap():
     assert "`TASKS_BOOTSTRAP.execution_readiness.errors` contains blockers" in tasks_command
     assert "LOCAL_EXECUTION_PROTOCOL.repo_search.list_files_cmd" in tasks_command
     assert "LOCAL_EXECUTION_PROTOCOL.repo_search.available = false" in tasks_command
-    assert "Generate `tasks.manifest.json` from the same run-local execution graph used to render `tasks.md`." in tasks_command
+    assert "same run-local execution graph used to render `tasks.md` drives the manifest generation." in tasks_command
     assert "Top-level keys: `schema_version`, `generated_at`, `generated_from`, `tasks`, `presentation`" in tasks_command
     assert "`generated_from` minimal provenance: `plan_path` only" in tasks_command
-    assert "`presentation` MUST describe the enhanced task board projection without adding semantic task data." in tasks_command
-    assert "`presentation.board_style` MUST be `enhanced`." in tasks_command
-    assert "`presentation.source_lineage` MUST include `plan_path`." in tasks_command
+    assert "`presentation.board_style` MUST be `enhanced`; `presentation.source_lineage` MUST include `plan_path`." in tasks_command
 
     if mapping_doc is not None:
         assert "prerequisite script may emit `TASKS_BOOTSTRAP` as a derived preflight packet" in mapping_doc

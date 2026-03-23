@@ -111,3 +111,16 @@ Behavior rules:
 - If quota reached with unresolved high-impact categories remaining, explicitly flag them under Deferred with rationale.
 
 Context for prioritization: {ARGS}
+
+## Stop Conditions
+
+Stop immediately if:
+1. `{SCRIPT}` JSON parse fails — route user to re-run `/sdd.specify` or fix feature-branch context.
+2. `FEATURE_SPEC` is missing — instruct user to run `/sdd.specify` first; do not create a new spec here.
+
+## Handoff Decision
+
+Emit exactly these fields:
+- `Next Command`: `/sdd.plan` (when clarification is complete) or `/sdd.specify` (if spec is missing or requires major rework).
+- `Decision Basis`: Clarification coverage summary by area (`Resolved`/`Deferred`/`Clear`/`Outstanding`).
+- `Ready/Blocked`: Local readiness only.

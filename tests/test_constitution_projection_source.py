@@ -11,152 +11,93 @@ def read(rel_path: str) -> str:
 def test_constitution_template_defines_owner_boundaries_and_terms():
     content = read("templates/constitution-template.md")
 
-    assert (
-        "At least one principle MUST define ownership boundaries for `Generation Rule`, `Validation Rule`, and `Hard Execution Gate`."
-        in content
-    )
-    assert '"Generation Rule" means long-lived constraints enforced during artifact generation.' in content
-    assert '"Validation Rule" means centralized audit checks that detect cross-artifact inconsistencies.' in content
-    assert '"Hard Execution Gate" means minimum run-blocking checks required for safe execution.' in content
+    assert "## Governance & Terminology" in content
+    assert '"URFGP"** (Unified Repository-First Gate Protocol)' in content
+    assert '"RFEB"** (Repository-First Evidence Bundle)' in content
 
-    assert "### Dependency Matrix Baseline" not in content
-    assert "## Project-Level Fact Sources" not in content
-    assert "### Repository-First Principle" not in content
-    assert "### Ownership Boundary Baseline" not in content
     assert "### Repo-Anchor Evidence Protocol" in content
     assert ".specify/memory/repository-first/technical-dependency-matrix.md" in content
     assert ".specify/memory/repository-first/module-invocation-spec.md" in content
-    assert "Reasoning-fact minimality (hard rule):" in content
-    assert "downstream outputs MUST include concise reasoning facts that map" in content
-    assert "path-level references are the default; line-level references are optional" in content
-    assert "Detail ownership (hard rule):" in content
-    assert "matrix row schema, signal derivation details, and invocation row coverage" in content
     assert "evaluate and apply in strict order: `existing` -> `extended` -> `new`" in content
-    assert "`existing` (reuse) MUST be selected first" in content
-    assert "`new` is allowed only after explicit rejection evidence for both `existing` and `extended`" in content
-    assert "generation commands (`/sdd.plan.*`) own recording the evaluation and selected strategy" in content
-    assert "`/sdd.analyze` owns compliance validation and MUST fail when `new` anchor evidence is missing" in content
-    assert "`/sdd.tasks` and `/sdd.implement` own execution blocking" in content
-    assert "/sdd.analyze" in content
-    assert "/sdd.tasks" in content
-    assert "/sdd.implement" in content
+    assert "`new` is only valid when both `existing` and `extended` are explicitly rejected with evidence" in content
+
     assert "## Local Execution Protocol Governance" in content
     assert "SSOT for local execution rules" in content
     assert "`specify-cli` tool runtime" in content
-    assert "MUST NOT install missing tools, mutate `PATH`, or switch" in content
-    assert "Writing guidance only; do not surface this scaffold in the runtime constitution:" in content
-    assert content.index("## Terminology & Boundary Definitions") < content.index("### Repo-Anchor Evidence Protocol")
-    assert content.index("### Repo-Anchor Evidence Protocol") < content.index("## State Machine Applicability Gate")
-    assert content.index("## State Machine Applicability Gate") < content.index("## Local Execution Protocol Governance")
+    assert "Installing missing tools, mutating `PATH`, or switching package managers during a run" in content
+    assert content.index("## Governance & Terminology") < content.index("### Repo-Anchor Evidence Protocol")
+    assert content.index("### Repo-Anchor Evidence Protocol") < content.index("## Local Execution Protocol Governance")
 
 
 def test_constitution_command_blocks_lint_detail_embedding_and_dual_authority_expansion():
     content = read("templates/commands/constitution.md")
 
-    assert "Adding or materially expanding generation/validation/execution ownership boundaries is always `MINOR`." in content
-    assert "do not embed mechanical lint catalog details" in content
-    assert "does not include lint-catalog implementation details" in content
-    assert "Do not duplicate one normative rule into competing expansions across multiple command templates" in content
+    assert "Use `.specify/templates/constitution-template.md` only." in content
+    assert "`/sdd.constitution` owns:" in content
+    assert "Unified Repository-First Gate Protocol (URFGP) authority." in content
+    assert "Constitution defines boundaries; commands implement them." in content
 
 
 def test_constitution_command_groups_alignment_work_and_avoids_redundant_restatements():
     content = read("templates/commands/constitution.md")
 
-    assert "Review and refresh impacted artifact families only; avoid mechanical full-repo rewrites of unchanged downstream files." in content
-    assert "Prefer targeted references over restating the same rule text across multiple downstream templates." in content
-    assert "command templates and `LOCAL_EXECUTION_PROTOCOL` packets are derived execution views" in content
-    assert "Keep this report delta-oriented; do not restate unchanged template inventories or canonical baseline details beyond status." in content
-    assert "reference the Sync Impact Report instead of restating it" in content
+    assert "**Impact Mapping**" in content
+    assert "Identify if the change is `governance-only`, `template-affecting`, or `repo-first-affecting`" in content
+    assert "**Downstream Alignment**: Update impacted alignment families only (skip if governance-only)." in content
+    assert "Refresh `.specify/memory/repository-first/*.md` only when the impact mapping identifies a `repo-first-affecting` change." in content
+    assert "**MUST NOT** modify `plan.md`, `tasks.md`, or any spec artifact." in content
 
 
 def test_constitution_command_uses_active_agent_command_directory_guidance():
     content = read("templates/commands/constitution.md")
 
-    assert "read only impacted command files in the active agent command directory" in content
-    assert ".roo/commands/*.md" in content
-    assert ".claude/commands/*.md" in content
-    assert ".github/agents/*.agent.md" in content
-    assert ".gemini/commands/*.toml" in content
-    assert "If `templates/commands/*.md` exists in this repository, treat it as mirror/reference and update only impacted files." in content
-    assert "Runtime template authority path is `.specify/templates/`" in content
-    assert "Runtime workspace rule" in content
+    assert "## Allowed Inputs" in content
+    assert "`.specify/templates/constitution-template.md` (structure)" in content
+    assert "`.specify/memory/constitution.md` (existing state)" in content
+    assert "Repository manifests (pom.xml, package.json, pyproject.toml, go.mod)" in content
+    assert "**Prohibited**: `plan.md` queue state, `tasks.md`, or ad hoc CLI guesses." in content
 
 
 def test_constitution_command_uses_current_constitution_state_not_placeholder_premise():
     content = read("templates/commands/constitution.md")
 
-    assert "Treat the current file as the authoritative working constitution" in content
+    assert "Update or initialize the project constitution at `.specify/memory/constitution.md`." in content
     assert ".specify/templates/constitution-template.md" in content
-    assert "stop and report the blocker" in content
-    assert "Do not substitute `templates/constitution-template.md` or any other template location." in content
-    assert "do not force a template-token rewrite pass" in content
+    assert "Stop immediately if:" in content
+    assert "Write to `.specify/memory/constitution.md` only." in content
     assert "This file is a TEMPLATE containing placeholder tokens" not in content
-    assert "This command runs against the runtime workspace only." in content
-    assert "Treat the target runtime repo and the Spec Kit source repo as different workspaces." not in content
 
 
 def test_constitution_command_owns_repository_first_baseline_pipeline():
     content = read("templates/commands/constitution.md")
 
-    assert "Repository-first global baseline pipeline (mandatory)" in content
+    assert "Repo-First Baseline Pipeline (Mandatory)" in content
     assert ".specify/memory/repository-first/" in content
-    assert "technical-dependency-matrix.md" in content
-    assert "module-invocation-spec.md" in content
-    assert "Detect build manifests from repo root using deterministic priority" in content
-    assert "Maven: `pom.xml`" in content
-    assert "Node: `package.json`" in content
-    assert "Python: `pyproject.toml`" in content
-    assert "Go: `go.mod`" in content
-    assert "never read or stat bare projection filenames from repo root" in content
-    assert "`created`" in content
-    assert "`updated`" in content
-    assert "`unchanged`" in content
-    assert "`deleted`" in content
-    assert "Matrix rows MUST be exhaustive for the filtered product/runtime dependency set; do not emit highlight-only subsets." in content
-    assert "Emit one row per dependency usage; do not collapse multiple modules, scopes, version sources, or evidence locations into one summary row." in content
-    assert "Preserve version divergence, version-source-mix, and `unresolved` as governance signals" in content
-    assert "Keep supporting evidence explainable as `fact -> conclusion`" in content
-    assert "Every dependency-governance signal MUST be derivable from emitted matrix rows only." in content
-    assert "Detailed matrix row schema, allowed value vocabularies, and signal derivation mechanics are owned by `.specify/templates/technical-dependency-matrix-template.md`" in content
-    assert "Allowed/forbidden direction tables MUST cover the concrete first-party module edges found in the target runtime repo." in content
-    assert "Use concrete module-to-module rows as the primary representation; layer summaries are optional metadata only." in content
-    assert "do not emit speculative future-signal rows" in content
-    assert "Every dependency-governance rule MUST reference an existing `SIG-*` row (or explicit matrix fact summary)" in content
-    assert "Invocation row schema and field-level constraints are owned by `.specify/templates/module-invocation-spec-template.md`" in content
+    assert "Manifest Detection" in content
+    assert "Canonical Paths" in content
+    assert "Traceability" in content
+    assert "Refined Invocation" in content
 
 
 def test_constitution_command_defines_runtime_fast_path_and_bounded_reads():
     content = read("templates/commands/constitution.md")
 
-    assert "Build one run-local **change impact map** before broad reads" in content
+    assert "Impact Mapping" in content
     assert "`governance-only`" in content
     assert "`template-affecting`" in content
     assert "`repo-first-affecting`" in content
-    assert "Resolve impacted families from the change impact map first, then read/update only those families." in content
-    assert "Do not run directory-wide or repository-wide exploratory scans" in content
-    assert "Repository-first fast path gate (evaluate before regeneration)" in content
-    assert "If no trigger is true, keep canonical baseline files as-is and mark each artifact `unchanged` without template re-render." in content
-    assert "Apply a **bounded evidence budget** for this run" in content
-    assert "Runtime guidance docs (`README.md`, `docs/quickstart.md`, agent docs) are **opt-in by trigger** only" in content
-    assert "Keep runtime output concise: no unchanged-file inventories" in content
+    assert "Baseline Refresh" in content
+    assert "Reproject repo-first artifacts only when manifests change or `repo-first-affecting`." in content
 
 
 def test_constitution_command_enforces_repo_anchor_priority_and_ownership_split():
     content = read("templates/commands/constitution.md")
 
-    assert "Ensure `Repo-Anchor Evidence Protocol` keeps the strict strategy priority `existing -> extended -> new`." in content
-    assert "Ensure every `new` anchor policy statement includes mandatory rejection evidence requirements for `existing` and `extended`." in content
-    assert "Keep command ownership boundaries explicit for repo-anchor strategy:" in content
-    assert "`/sdd.plan.*` records strategy selection evidence" in content
-    assert "`/sdd.analyze` validates `new`-anchor evidence and fails when missing" in content
-    assert "`/sdd.tasks` and `/sdd.implement` block execution when active tuples remain unresolved or missing required strategy evidence" in content
-    assert "Repo-anchor strategy wording preserves strict priority semantics (`existing -> extended -> new`) and explicit rejection-evidence requirements for `new`." in content
-    assert "Unified Repository-First Gate Protocol (`URFGP`)" in content
-    assert "/sdd.plan`, `/sdd.tasks`, `/sdd.implement`, and `/sdd.analyze` MUST reference `URFGP`" in content
-    assert "Repository-First Evidence Bundle (`RFEB`)" in content
-    assert "`source_refs`" in content
-    assert "`signal_ids` (`SIG-*`" in content
-    assert "`module_edge_ids`" in content
+    assert "**Strategy Priority**: Preserve `existing -> extended -> new` for repo-anchors." in content
+    assert "**Protocol rule**: **Unified Repository-First Gate Protocol (URFGP)** is the shared authority." in content
+    assert "Repository-First baseline generation (Dependency Matrix / Module Invocation Spec)." in content
+    assert "Unified Repository-First Gate Protocol (URFGP)" in content
+    assert "**RFEB Format**: Standardize repository-first output evidence bundle format." in content
 
 
 def test_repository_first_templates_require_complete_and_explainable_outputs():

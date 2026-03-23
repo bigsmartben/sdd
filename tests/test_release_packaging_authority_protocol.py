@@ -25,30 +25,17 @@ PACKAGED_COMMAND_DIR_OVERRIDES = {
 }
 EXPECTED_MARKERS = [
     "`spec.md` becomes the authoritative feature-semantics artifact",
-    "derived views only; they MUST NOT override upstream artifacts or downstream stage artifacts",
-    "authoritative for planning queue state and binding-projection rows only",
+    "derived working views only",
+    "`plan.md` is authoritative for queue state only",
     "matrix dependency facts plus `SIG-*` governance signals including divergence, version-source-mix, and `unresolved`",
     "using concrete module-to-module rows as the primary representation",
     "Repository-first explainable evidence",
     "Repository-first Validation Trace",
     "CRITICAL/HIGH findings MUST cite the authoritative source artifact(s)",
-    "## UIF + UDD Coverage Protocol (MUST)",
-    "## Deterministic Prototype Selection Protocol (MUST)",
-    "Every demonstrated user interaction MUST trace back to an explicit `UIF` node.",
-    "The prototype should visibly dedicate a primary review surface to the selected `UIF` path/node progression",
-    "Only surface the subset of completed `Entity.field` rows needed to make the selected interaction understandable from the user's point of view.",
-    "Every business-significant datum that appears inside the demonstrated interaction MUST trace back to explicit completed `Entity.field` rows.",
-    "The prototype should visibly dedicate a peer review surface to step-level `UDD` feedback",
-    "Otherwise, choose exactly one primary walkthrough by this priority order:",
-    "`UIF Interaction View` MUST enumerate the selected `UIF` nodes in execution order",
-    "`UDD-backed View State` MUST map each selected `UIF` node to the user-visible feedback or state change",
-    "Do not make IDs, coverage ledgers, or audit-style badges the dominant visible content of the prototype.",
-    "`ui.html` should deliver a tool, not a document page.",
-    "Organize the experience around a closed interaction loop: context -> action -> system feedback -> completion/result -> next action",
-    "`ui.html` MUST make the core expression of `spec.md` easier to perceive through interaction",
-    "Start by extracting one plain-language expression sentence from `spec.md`",
-    "`UIF Coverage Summary`",
-    "`UDD Coverage Summary`",
+    "## Interaction & Coverage Rules (MUST)",
+    "**UIF Coverage**: Prototype MUST trace to explicit `UIF` nodes.",
+    "**UDD Binding**: Visible data MUST trace to completed `Entity.field` rows.",
+    "**Review Surfaces**: Dedicate areas to `UIF Interaction View` and `UDD-backed View State` for audit.",
 ]
 
 
@@ -128,8 +115,8 @@ def _assert_packaged_runtime_templates(package_root: Path) -> None:
     spec_text = runtime_spec.read_text(encoding="utf-8")
     plan_text = runtime_plan.read_text(encoding="utf-8")
 
-    assert "Scenario Type (happy/alternate/validation/exception/retry/recovery/cancel/timeout/permission/duplicate)" in spec_text
-    assert "Do not collapse later FRs to capability-only shorthand." in spec_text
+    assert "### N.2 Environment Edge Cases" in spec_text
+    assert "EC-001" in spec_text and "EC-005" in spec_text
     assert "Planning Control Plane" in plan_text
 
 

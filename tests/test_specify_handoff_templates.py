@@ -20,28 +20,15 @@ def test_specify_command_keeps_current_flow_and_treats_ui_html_as_optional_sidec
     assert "`/sdd.specify.ui-html` is an optional sidecar command; users decide if/when to invoke it." in specify
     assert "run `/sdd.specify.ui-html` for an interactive prototype if needed" not in specify
 
-    assert "Treat all `$ARGUMENTS` as optional prototype direction." in ui_html
+    assert "Treat all `$ARGUMENTS` as optional direction." in ui_html
     assert ".specify/templates/ui-html-template.html" in ui_html
-    assert "Generate exactly one review-ready `ui.html` focused interactive tool" in ui_html
-    assert "## UIF + UDD Coverage Protocol (MUST)" in ui_html
-    assert "## Deterministic Prototype Selection Protocol (MUST)" in ui_html
-    assert "Every demonstrated user interaction MUST trace back to an explicit `UIF` node." in ui_html
-    assert "The prototype should visibly dedicate a primary review surface to the selected `UIF` path/node progression" in ui_html
-    assert "Only surface the subset of completed `Entity.field` rows needed to make the selected interaction understandable from the user's point of view." in ui_html
-    assert "Every business-significant datum that appears inside the demonstrated interaction MUST trace back to explicit completed `Entity.field` rows." in ui_html
-    assert "The prototype should visibly dedicate a peer review surface to step-level `UDD` feedback" in ui_html
-    assert "Otherwise, choose exactly one primary walkthrough by this priority order:" in ui_html
-    assert "`UIF Interaction View` MUST enumerate the selected `UIF` nodes in execution order" in ui_html
-    assert "`UDD-backed View State` MUST map each selected `UIF` node to the user-visible feedback or state change" in ui_html
-    assert "If any required tie cannot be broken using explicit refs, spec order, or completed UDD evidence, stop and report the blocker instead of choosing heuristically." in ui_html
-    assert "Do not make IDs, coverage ledgers, or audit-style badges the dominant visible content of the prototype." in ui_html
-    assert "`ui.html` should deliver a tool, not a document page." in ui_html
-    assert "Organize the experience around a closed interaction loop: context -> action -> system feedback -> completion/result -> next action" in ui_html
-    assert "`ui.html` MUST make the core expression of `spec.md` easier to perceive through interaction" in ui_html
-    assert "Start by extracting one plain-language expression sentence from `spec.md`" in ui_html
-    assert "the one dominant semantic through-line the user should understand after one pass" in ui_html
-    assert "`UIF Coverage Summary`" in ui_html
-    assert "`UDD Coverage Summary`" in ui_html
+    assert "Generate one review-ready `ui.html` prototype for walkthroughs, UX review, and interaction validation." in ui_html
+    assert "## Interaction & Coverage Rules (MUST)" in ui_html
+    assert "**UIF Coverage**: Prototype MUST trace to explicit `UIF` nodes." in ui_html
+    assert "**UDD Binding**: Visible data MUST trace to completed `Entity.field` rows." in ui_html
+    assert "**Review Surfaces**: Dedicate areas to `UIF Interaction View` and `UDD-backed View State` for audit." in ui_html
+    assert "`ui.html` is a derived artifact." in ui_html
+    assert "No planning governance semantics (tuples/anchors/contracts) in the prototype." in ui_html
     assert "`Next Command`: `/sdd.clarify`" in ui_html
     assert "`/sdd.plan`" in ui_html
 
@@ -50,11 +37,14 @@ def test_spec_template_stays_unsplit_and_ui_html_template_exists():
     spec_template = read("templates/spec-template.md")
     ui_html_template = read("templates/ui-html-template.html")
 
-    assert "### This Stage Outputs" in spec_template
-    assert "[spec.md](spec.md) (this document)" in spec_template
-    assert "[ui.html](ui.html)" not in spec_template
-    assert "Scenario Type (happy/alternate/validation/exception/retry/recovery/cancel/timeout/permission/duplicate)" in spec_template
-    assert "Do not collapse later FRs to capability-only shorthand." in spec_template
+    assert "# Feature Specification: [FEATURE NAME]" in spec_template
+    assert "**Input**: \"$ARGUMENTS\"" in spec_template
+    assert "## § 1 Global Context *(mandatory)*" in spec_template
+    assert "## § 2 UC Overview *(mandatory)*" in spec_template
+    assert "## § N Global Acceptance Criteria *(mandatory)*" in spec_template
+    assert "`research.md` via `/sdd.plan.research`" in spec_template
+    assert "`test-matrix.md` via `/sdd.plan.test-matrix`" in spec_template
+    assert "`data-model.md` via `/sdd.plan.data-model`" in spec_template
     assert "UI Preview" in ui_html_template
     assert "spec.md" in ui_html_template
     assert "Primary Tool Loop" in ui_html_template
@@ -87,10 +77,10 @@ def test_spec_and_commands_require_semantically_aligned_edge_case_refs():
     assert "EC-*` references remain semantically aligned across `Path Inventory`, `Exception Paths`, FR blocks, and `N.2 Environment Edge Cases`" in specify
     assert "every FR block includes `Capability`, `Given/When/Then`, `UDD (user-visible data) refs`, and `Success criteria`" in specify
     assert "add `EC-005+` instead of overloading an unrelated edge-case id" in clarify
-    assert "`EC-*` identifiers are semantic anchors, not a fixed four-slot checklist." in spec_template
-    assert "Do not point a retry path at a re-entry EC, or a permission path at a duplicate-click EC." in spec_template
-    assert "Use `validation` for user-visible guardrails that block progression on empty, invalid, or incomplete input while the user remains on the current step." in spec_template
-    assert "Every `EC-*` cited from `Path Inventory`, `Exception Paths`, FR blocks, `test-matrix.md`, or `contracts/` MUST describe the same edge semantics textually." in spec_template
+    assert "`EC-*` IDs are semantic anchors" in spec_template
+    assert "Overloading IDs for unrelated behaviors" in spec_template
+    assert "### N.2 Environment Edge Cases" in spec_template
+    assert "EC-001" in spec_template and "EC-005" in spec_template
 
 
 def test_docs_and_cli_describe_optional_ui_html_command():
