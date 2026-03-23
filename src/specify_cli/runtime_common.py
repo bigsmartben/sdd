@@ -105,6 +105,12 @@ def resolve_target_path(feature_dir: Path, raw_path: str) -> str:
     candidate = Path(normalized)
     if candidate.is_absolute():
         return str(candidate)
+    # Accept repo-relative Stage Queue / Artifact Status paths when callers
+    # accidentally write `specs/<feature>/...` instead of feature-local paths.
+    # This avoids duplicating `specs/<feature>/` as
+    # `<feature_dir>/specs/<feature>/...`.
+    if candidate.parts and candidate.parts[0] == "specs" and feature_dir.parent.name == "specs":
+        return str((feature_dir.parent.parent / candidate).resolve())
     return str((feature_dir / candidate).resolve())
 
 

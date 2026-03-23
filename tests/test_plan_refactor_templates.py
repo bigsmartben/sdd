@@ -259,6 +259,10 @@ def test_data_model_template_requires_new_anchor_evidence_and_owner_closure():
     content = read("templates/data-model-template.md")
     assert "## Artifact Quality Signals" in content
     assert "Must: read like a shared business-semantic backbone." in content
+    assert "## Shared Semantic Class Model" in content
+    assert "classDiagram" in content
+    assert "### State Transition Table" in content
+    assert "stateDiagram-v2" in content
 
     assert "**Stage**: Stage 3 Shared Semantic Alignment" in content
     assert "If a semantic is used by only one `BindingRowID`, leave it to `/sdd.plan.contract`" in content

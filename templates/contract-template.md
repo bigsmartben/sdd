@@ -43,6 +43,9 @@ Its core outputs are fixed:
 - `new` \| `todo` is only valid after explicit rejection of `existing` and `extended` with evidence.
 - `extended` is valid only for same-entity field/state expansion.
 - `new` is normative only when selected `spec.md` / `data-model.md` / `test-matrix.md` slices plus bounded repo reads fully close the binding design and this stage can assign one concrete repository-facing boundary/entry target for implementation.
+- `new` anchors are design-final implementation targets for this binding run; they are not automatic proof that the symbol already exists in the repository at contract-generation time.
+- For `new` anchors whose concrete repo symbol is not yet present in bounded repo evidence, prefer concrete design-target naming (for example `ConcreteEntry.method`) or `TODO(REPO_ANCHOR)` instead of fabricating repo file anchors.
+- Use `path/to/file.ext::Symbol` for `new` anchors only when bounded repo evidence closes that path/symbol landing for this binding.
 - When `Anchor Status (Required) = new`, `Boundary Anchor Strategy Evidence (Required)` MUST include explicit rejection evidence for both `existing` and `extended`.
 - When `Implementation Entry Anchor Status (Required) = new`, `Implementation Entry Anchor Strategy Evidence (Required)` MUST include explicit rejection evidence for both `existing` and `extended`.
 - When an anchor status is not `new`, set the corresponding strategy evidence field to `N/A`.

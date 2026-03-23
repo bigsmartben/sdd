@@ -93,6 +93,9 @@ Apply the anchor decision order `existing -> extended -> new -> todo`.
 - freeze that naming for this run and finish the contract instead of reopening anchor search loops.
 - After bounded reads, stop anchor hunting and transition to closure output for this run.
 - If `existing` and `extended` are both insufficient, design concrete `new` anchors — this stage may produce concrete `new` anchors when bounded repo evidence closes the naming.
+- `new` anchors are design-final implementation targets for this binding run; they are not automatic proof that the symbol already exists in the repository.
+- If a `new` anchor symbol is not yet present in bounded repo evidence, do not fabricate repo file anchors; prefer concrete design-target naming (for example `ConcreteEntry.method`) or `TODO(REPO_ANCHOR)` when landing cannot be closed.
+- Use `path/to/file.ext::Symbol` for `new` anchors only when bounded repo evidence closes that landing path/family for this binding.
 
 ## Stop Local Refinement Rules
 
