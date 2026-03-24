@@ -17,7 +17,7 @@ from specify_cli.runtime_common import (
 )
 
 
-DATA_MODEL_BOOTSTRAP_SCHEMA_VERSION = "1.3"
+DATA_MODEL_BOOTSTRAP_SCHEMA_VERSION = "1.4"
 DATA_MODEL_SECTION_HEADINGS = (
     "Summary",
     "Shared Context Snapshot",
@@ -36,10 +36,49 @@ DATA_MODEL_TEST_MATRIX_REQUIRED_SECTIONS = (
 )
 STATE_MACHINE_POLICY = {
     "decision_owner": "/sdd.plan.data-model",
+    "required_model_kinds": ["lightweight", "fsm"],
     "full_fsm_rule": "N > 3 or T >= 2N",
+    "lifecycle_summary_required_fields": [
+        "lifecycle_ref",
+        "state_owner",
+        "stable_states",
+        "invariant_refs",
+        "consumed_binding_row_ids",
+        "required_model",
+    ],
+    "invariant_catalog_required_fields": [
+        "invariant_ref",
+        "lifecycle_ref",
+        "rule_kind",
+        "statement",
+        "owner_scope",
+        "consumed_binding_row_ids",
+    ],
+    "required_sections_by_model": {
+        "lightweight": ["lifecycle_summary", "invariant_catalog", "state_transition_table"],
+        "fsm": [
+            "lifecycle_summary",
+            "invariant_catalog",
+            "state_transition_table",
+            "transition_pseudocode",
+            "state_diagram",
+        ],
+    },
+    "required_components_by_model": {
+        "lightweight": [
+            "allowed_transitions",
+            "forbidden_transitions",
+            "key_invariants",
+        ],
+        "fsm": [
+            "transition_table",
+            "transition_pseudocode",
+            "state_diagram",
+            "key_invariants",
+        ],
+    },
     "full_fsm_required_components": ["transition_table", "transition_pseudocode", "state_diagram"],
     "lightweight_model_required_components": [
-        "state_field_definition",
         "allowed_transitions",
         "forbidden_transitions",
         "key_invariants",

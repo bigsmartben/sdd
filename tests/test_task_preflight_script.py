@@ -2254,8 +2254,26 @@ def test_data_model_preflight_helper_reports_ready_when_research_done_and_data_m
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["schema_version"] == "1.3"
+    assert payload["schema_version"] == "1.4"
     assert payload["state_machine_policy"]["full_fsm_rule"] == "N > 3 or T >= 2N"
+    assert payload["state_machine_policy"]["required_model_kinds"] == ["lightweight", "fsm"]
+    assert payload["state_machine_policy"]["required_sections_by_model"]["lightweight"] == [
+        "lifecycle_summary",
+        "invariant_catalog",
+        "state_transition_table",
+    ]
+    assert payload["state_machine_policy"]["required_sections_by_model"]["fsm"] == [
+        "lifecycle_summary",
+        "invariant_catalog",
+        "state_transition_table",
+        "transition_pseudocode",
+        "state_diagram",
+    ]
+    assert payload["state_machine_policy"]["required_components_by_model"]["lightweight"] == [
+        "allowed_transitions",
+        "forbidden_transitions",
+        "key_invariants",
+    ]
     assert payload["shared_semantic_boundary_policy"]["forbidden_contract_suffixes"] == [
         "DTO",
         "Request",
@@ -2281,6 +2299,11 @@ def test_data_model_preflight_helper_reports_ready_when_research_done_and_data_m
         "transition_table",
         "transition_pseudocode",
         "state_diagram",
+    ]
+    assert payload["state_machine_policy"]["lightweight_model_required_components"] == [
+        "allowed_transitions",
+        "forbidden_transitions",
+        "key_invariants",
     ]
     assert payload["required_sections"]["summary"] is True
     assert payload["required_sections"]["shared_context_snapshot"] is True
@@ -2652,7 +2675,7 @@ def test_bash_check_prerequisites_can_embed_data_model_bootstrap(tmp_path):
     payload = json.loads(result.stdout)
     assert payload["FEATURE_DIR"].replace("\\", "/").endswith("/repo/specs/20250708-demo")
     assert "DATA_MODEL_BOOTSTRAP" in payload
-    assert payload["DATA_MODEL_BOOTSTRAP"]["schema_version"] == "1.3"
+    assert payload["DATA_MODEL_BOOTSTRAP"]["schema_version"] == "1.4"
     assert payload["DATA_MODEL_BOOTSTRAP"]["shared_semantic_boundary_policy"]["forbidden_contract_suffixes"] == [
         "DTO",
         "Request",
@@ -2662,6 +2685,7 @@ def test_bash_check_prerequisites_can_embed_data_model_bootstrap(tmp_path):
     ]
     assert payload["DATA_MODEL_BOOTSTRAP"]["shared_semantic_boundary_policy"]["new_anchor_requires_strategy_evidence"] is True
     assert payload["DATA_MODEL_BOOTSTRAP"]["shared_semantic_boundary_policy"]["contract_must_reuse_shared_refs"] is True
+    assert payload["DATA_MODEL_BOOTSTRAP"]["state_machine_policy"]["required_model_kinds"] == ["lightweight", "fsm"]
     assert payload["DATA_MODEL_BOOTSTRAP"]["generation_readiness"]["ready_for_generation"] is True
 
 
@@ -2747,7 +2771,10 @@ def test_data_model_command_prefers_data_model_preflight_bootstrap():
     assert "Do not recompute stage-row hard gates locally; bootstrap `generation_readiness` + `recovery_handoff` are the authority." in data_model_command
     assert "resolved `plan.md` / `spec.md` / `test-matrix.md` / `data-model.md` paths" in data_model_command
     assert "`DATA_MODEL_BOOTSTRAP.state_machine_policy`" in data_model_command
-    assert "If `N > 3` or `T >= 2N`, emit a full FSM package" in data_model_command
+    assert "required_model_kinds" in data_model_command
+    assert "required_sections_by_model" in data_model_command
+    assert "required_components_by_model" in data_model_command
+    assert "If `N > 3` or `T >= 2N`, emit `Required Model = fsm` and include transition table, transition pseudocode, invariant catalog rows, and state diagram." in data_model_command
     assert "If `DATA_MODEL_BOOTSTRAP` is missing, malformed, contradictory, or unavailable" in data_model_command
 
     assert "--data-model-preflight" in bash_script

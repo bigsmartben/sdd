@@ -172,10 +172,16 @@ def test_research_data_model_and_test_matrix_are_packet_first():
     assert "Shared semantic names and UML/class labels in this stage MUST avoid contract-flavored suffixes" in data_model
     assert "When `Anchor Status = new`, record repo-first strategy evidence" in data_model
     assert "`DATA_MODEL_BOOTSTRAP.state_machine_policy`" in data_model
-    assert "If `N > 3` or `T >= 2N`, emit a full FSM package" in data_model
+    assert "Use `DATA_MODEL_BOOTSTRAP.state_machine_policy.required_model_kinds` as the allowed `Required Model` vocabulary." in data_model
+    assert "Use `DATA_MODEL_BOOTSTRAP.state_machine_policy.required_sections_by_model` as the authoritative section contract for `lightweight` vs `fsm`." in data_model
+    assert "Use `DATA_MODEL_BOOTSTRAP.state_machine_policy.required_components_by_model` as the authoritative lifecycle-closure checklist." in data_model
+    assert "If `N > 3` or `T >= 2N`, emit `Required Model = fsm` and include transition table, transition pseudocode, invariant catalog rows, and state diagram." in data_model
+    assert "`lightweight` rows MUST still close allowed transitions, forbidden transitions, and key invariants through `Invariant Catalog` + `State Transition Table`." in data_model
     assert "If `existing` and `extended` are both insufficient, `new` is the required outcome for this stage" in data_model
     assert "If `existing` and `extended` cannot safely close a confirmed shared semantic, this stage MUST explicitly choose `new` here" in data_model
     assert "Shared semantics that are confirmed by `spec.md` + `test-matrix.md` MUST be closed here at owner/source/lifecycle level" in data_model
+    assert "Every lifecycle row MUST cite concrete `INV-*` refs; invariant closure belongs here, not in `/sdd.plan.contract`." in data_model
+    assert "Every shared field, projection, derived value, and lifecycle state MUST close to one explicit owner/source row in `Owner / Source Alignment`." in data_model
     assert "- `Next Command`: `DATA_MODEL_BOOTSTRAP.recovery_handoff.next_command`" in data_model
     assert "- `Decision Basis`: `DATA_MODEL_BOOTSTRAP.recovery_handoff.decision_basis`" in data_model
     assert "- `Selected Stage ID`: `DATA_MODEL_BOOTSTRAP.recovery_handoff.selected_stage_id`" in data_model
@@ -189,7 +195,8 @@ def test_research_data_model_and_test_matrix_are_packet_first():
     assert "## Reasoning Order" in data_model
     assert "## Writeback Contract" in data_model
     assert "## Output Contract" in data_model
-    assert "Must: close reusable shared semantics, owner/source alignment, lifecycle, and invariants before contract design." in data_model
+    assert "Must: close reusable shared semantics, owner/source alignment, lifecycle, invariants, and downstream reuse constraints before contract design." in data_model
+    assert "make it obvious why a semantic is shared, who owns it, which `INV-*` refs govern it, and why contract cannot invent an alternative local model." in data_model
     assert "Modify only the selected `data-model` row plus blocker fields" in data_model
     assert "May batch update only `Blocker` fields for affected `contract` rows in `PLAN_FILE` `Artifact Status`" in data_model
     assert "MUST NOT rewrite `Target Path` / `Status` in `Artifact Status`" in data_model
@@ -275,13 +282,21 @@ def test_data_model_template_requires_new_anchor_evidence_and_owner_closure():
     assert "- `Anchor Status` MUST use the repo-anchor decision vocabulary `existing | extended | new | todo`; prefer `existing | extended | new` in this stage and use `todo` only for genuine evidence blockers." in content
     assert "- `Repo-First Strategy Evidence` MUST be explicit whenever `Anchor Status = new`; explain why `existing` and `extended` were rejected, and use `N/A` only for non-`new` rows." in content
     assert "- `Anchor Role` MUST align to the repo-anchor role taxonomy `owner | state-source | projection-source | carrier | partial-lineage`." in content
+    assert "- `Why Not Contract-Local` MUST explain why the semantic would become unstable, duplicated, or contradictory if deferred to `/sdd.plan.contract`." in content
     assert "contract-flavored/interface-role names such as `*DTO`, `*Request`, `*Response`, `*Command`, `*Result`, `*Controller`, `*Service`, or `*Facade`" in content
     assert "`contract` MUST reuse these shared refs and MUST NOT redefine shared owner/source alignment, lifecycle vocabulary, invariant vocabulary, or other confirmed shared semantics independently." in content
     assert "| SFV ID | Semantic Owner | Meaning | Primary UDD Ref(s) | Required Semantics | Null / Boundary Rule | Shared By BindingRowID(s) |" in content
     assert "If a confirmed shared semantic cannot land as `existing` or `extended`, introduce the required `new` class/owner/lifecycle here instead of deferring the decision." in content
     assert "- Otherwise keep the lifecycle lightweight, but still include the transition table because it is a primary reader view." in content
     assert "- Apply the constitution lifecycle policy per shared lifecycle." in content
+    assert "- Every lifecycle row MUST cite concrete `INV-*` refs and one explicit `State Owner`." in content
     assert "| Lifecycle Ref | State Owner | Stable States | Invariant Ref(s) | Consumed By BindingRowID(s) | Required Model |" in content
+    assert "### Invariant Catalog" in content
+    assert "| INV ID | Lifecycle Ref | Rule Kind | Invariant / Transition Rule | Owner / Scope | Consumed By BindingRowID(s) |" in content
+    assert "Every `lightweight` lifecycle MUST have `Invariant Catalog` rows that cover `allowed-transition`, `forbidden-transition`, and `key-invariant`." in content
+    assert "### Transition Pseudocode (when `Required Model = fsm`)" in content
+    assert "| Lifecycle Ref | Transition Case | Pseudocode / Decision Steps | Invariant Ref(s) |" in content
+    assert "Force `/sdd.plan.contract` to cite `SSE-*`, `OSA-*`, `SFV-*`, `LC-*`, `INV-*`, and `DCC-*` refs instead of restating shared semantics locally." in content
     assert "| DCC ID | BindingRowID | Required Shared Semantic Ref(s) | Constraint Type | Contract Impact |" in content
 
 

@@ -32,9 +32,11 @@ Supported rule kinds:
   - repo_anchor_paths_exist
     - plan_status_consistency
     - binding_projection_stable_only
-    - binding_tuple_projection_sync
-    - shared_semantic_reuse_enum
-    - anchor_strategy_evidence_required
+  - binding_tuple_projection_sync
+  - shared_semantic_reuse_enum
+  - anchor_strategy_evidence_required
+  - data_model_semantic_closure
+  - data_model_single_binding_shared_warning
 "@
 }
 
@@ -389,6 +391,65 @@ function Get-AnchorStatusToken {
     }
 
     return ''
+}
+
+function Normalize-RuleToken {
+    param([string]$Value)
+
+    $normalized = (Normalize-MarkdownScalar -Value $Value).ToLowerInvariant()
+    $normalized = $normalized -replace '[_\s]+', '-'
+    $normalized = $normalized -replace '-+', '-'
+    return $normalized.Trim('-')
+}
+
+function Get-SemanticRefTokens {
+    param(
+        [string]$Value,
+        [string]$Pattern = '(SSE|OSA|SFV|LC|INV|DCC)-[A-Za-z0-9_.-]+'
+    )
+
+    $normalized = Normalize-MarkdownScalar -Value $Value
+    if ([string]::IsNullOrWhiteSpace($normalized)) {
+        return @()
+    }
+
+    $matches = [regex]::Matches($normalized, $Pattern)
+    if ($matches.Count -eq 0) {
+        return @()
+    }
+
+    $seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    $tokens = New-Object System.Collections.Generic.List[string]
+    foreach ($match in $matches) {
+        $token = $match.Value
+        if (-not [string]::IsNullOrWhiteSpace($token) -and $seen.Add($token)) {
+            $tokens.Add($token) | Out-Null
+        }
+    }
+    return @($tokens.ToArray())
+}
+
+function Test-SingleBindingReasonWeak {
+    param([string]$Reason)
+
+    $normalized = (Normalize-MarkdownScalar -Value $Reason).ToLowerInvariant()
+    if ([string]::IsNullOrWhiteSpace($normalized)) {
+        return $true
+    }
+
+    if ($normalized -in @('n/a', 'na', 'none', '[none]', 'todo', 'tbd')) {
+        return $true
+    }
+
+    if ($normalized.Length -lt 24) {
+        return $true
+    }
+
+    if ($normalized -notmatch '(shared|reuse|reused|reusable|lifecycle|invariant|owner|source|stable|consisten|cross[- ]binding|duplicate|contradict)') {
+        return $true
+    }
+
+    return $false
 }
 
 function Get-PlanBindingTupleData {
@@ -1516,8 +1577,569 @@ foreach ($row in $rows) {
             }
         }
 
+        'data_model_semantic_closure' {
+            foreach ($file in $matched) {
+                $lines = @(Get-Content -Path $file.FullPath -ErrorAction Stop)
+                $currentSection = ''
+                $currentSubsection = ''
+                $currentTable = ''
+                $lifecycleSummaryLine = 0
+                $invariantCatalogLine = 0
+                $transitionTableLine = 0
+                $transitionPseudocodeLine = 0
+                $stateDiagramLine = 0
+                $hasStateDiagram = $false
+                $summaryHeaderSeen = $false
+                $invariantHeaderSeen = $false
+                $transitionHeaderSeen = $false
+                $pseudocodeHeaderSeen = $false
+                $summaryLifecycleIndex = -1
+                $summaryOwnerIndex = -1
+                $summaryInvariantIndex = -1
+                $summaryModelIndex = -1
+                $invariantIdIndex = -1
+                $invariantLifecycleIndex = -1
+                $invariantKindIndex = -1
+                $transitionLifecycleIndex = -1
+                $pseudocodeLifecycleIndex = -1
+                $sseIdIndex = -1
+                $osaIdIndex = -1
+                $osaOwnerIndex = -1
+                $sfvIdIndex = -1
+                $dccIdIndex = -1
+                $dccRequiredRefsIndex = -1
+                $lifecycleRows = @{}
+                $invariantAllowed = @{}
+                $invariantForbidden = @{}
+                $invariantKey = @{}
+                $transitionRows = @{}
+                $pseudocodeRows = @{}
+                $sseIds = @{}
+                $osaIds = @{}
+                $osaOwnerValues = @{}
+                $sfvIds = @{}
+                $lcIds = @{}
+                $invIds = @{}
+                $dccIds = @{}
+                $dccRequiredRefsById = @{}
+                $dccLines = @{}
+
+                for ($i = 0; $i -lt $lines.Count; $i++) {
+                    $lineNumber = $i + 1
+                    $line = $lines[$i]
+                    $trimmed = $line.Trim()
+
+                    $h2Match = [regex]::Match($trimmed, '^##\s+(.+)$')
+                    if ($h2Match.Success) {
+                        $currentSection = $h2Match.Groups[1].Value.Trim()
+                        $currentSubsection = ''
+                        $currentTable = ''
+                        continue
+                    }
+
+                    $h3Match = [regex]::Match($trimmed, '^###\s+(.+)$')
+                    if ($h3Match.Success) {
+                        $currentSubsection = $h3Match.Groups[1].Value.Trim()
+                        $currentTable = ''
+                        switch ($currentSubsection) {
+                            'Lifecycle Summary' { $lifecycleSummaryLine = $lineNumber }
+                            'Invariant Catalog' { $invariantCatalogLine = $lineNumber }
+                            'State Transition Table' { $transitionTableLine = $lineNumber }
+                            'Transition Pseudocode (when `Required Model = fsm`)' { $transitionPseudocodeLine = $lineNumber }
+                        }
+                        continue
+                    }
+
+                    if ($currentSection -eq 'Business Invariants & Lifecycle Rules' -and $line -match 'stateDiagram-v2') {
+                        $hasStateDiagram = $true
+                        if ($stateDiagramLine -eq 0) {
+                            $stateDiagramLine = $lineNumber
+                        }
+                    }
+
+                    switch ($currentSection) {
+                        'Shared Semantic Elements (SSE)' { $currentTable = 'sse' }
+                        'Shared Semantic Elements' { $currentTable = 'sse' }
+                        'Owner / Source Alignment' { $currentTable = 'osa' }
+                        'Shared Field Vocabulary (SFV)' { $currentTable = 'sfv' }
+                        'Shared Field Vocabulary' { $currentTable = 'sfv' }
+                        'Downstream Contract Constraints' { $currentTable = 'dcc' }
+                        default {
+                            switch ($currentSubsection) {
+                                'Lifecycle Summary' { $currentTable = 'lifecycle_summary' }
+                                'Invariant Catalog' { $currentTable = 'invariant_catalog' }
+                                'State Transition Table' { $currentTable = 'state_transition_table' }
+                                'Transition Pseudocode (when `Required Model = fsm`)' { $currentTable = 'transition_pseudocode' }
+                                default { $currentTable = '' }
+                            }
+                        }
+                    }
+
+                    if ([string]::IsNullOrWhiteSpace($currentTable)) {
+                        continue
+                    }
+
+                    $cells = @(Get-MarkdownCells -Line $line)
+                    if ($cells.Count -eq 0) {
+                        switch ($currentTable) {
+                            'sse' { $sseIdIndex = -1 }
+                            'osa' {
+                                $osaIdIndex = -1
+                                $osaOwnerIndex = -1
+                            }
+                            'sfv' { $sfvIdIndex = -1 }
+                            'dcc' {
+                                $dccIdIndex = -1
+                                $dccRequiredRefsIndex = -1
+                            }
+                            'lifecycle_summary' {
+                                $summaryLifecycleIndex = -1
+                                $summaryOwnerIndex = -1
+                                $summaryInvariantIndex = -1
+                                $summaryModelIndex = -1
+                            }
+                            'invariant_catalog' {
+                                $invariantIdIndex = -1
+                                $invariantLifecycleIndex = -1
+                                $invariantKindIndex = -1
+                            }
+                            'state_transition_table' { $transitionLifecycleIndex = -1 }
+                            'transition_pseudocode' { $pseudocodeLifecycleIndex = -1 }
+                        }
+                        continue
+                    }
+
+                    if ($currentTable -eq 'sse') {
+                        if ($sseIdIndex -lt 0) {
+                            for ($idx = 0; $idx -lt $cells.Count; $idx++) {
+                                if ($cells[$idx] -eq 'SSE ID') {
+                                    $sseIdIndex = $idx
+                                    break
+                                }
+                            }
+                            continue
+                        }
+                        if (Test-MarkdownSeparatorRow -Cells $cells) {
+                            continue
+                        }
+                        if ($sseIdIndex -ge $cells.Count) {
+                            continue
+                        }
+                        $sseId = Normalize-MarkdownScalar -Value $cells[$sseIdIndex]
+                        if (-not [string]::IsNullOrWhiteSpace($sseId)) {
+                            $sseIds[$sseId] = $lineNumber
+                        }
+                        continue
+                    }
+
+                    if ($currentTable -eq 'osa') {
+                        if ($osaIdIndex -lt 0) {
+                            for ($idx = 0; $idx -lt $cells.Count; $idx++) {
+                                switch ($cells[$idx]) {
+                                    'OSA ID' { $osaIdIndex = $idx }
+                                    'Owner Class / Semantic Owner' { $osaOwnerIndex = $idx }
+                                }
+                            }
+                            continue
+                        }
+                        if (Test-MarkdownSeparatorRow -Cells $cells) {
+                            continue
+                        }
+                        if ($osaIdIndex -ge $cells.Count) {
+                            continue
+                        }
+                        $osaId = Normalize-MarkdownScalar -Value $cells[$osaIdIndex]
+                        if (-not [string]::IsNullOrWhiteSpace($osaId)) {
+                            $osaIds[$osaId] = $lineNumber
+                        }
+                        if ($osaOwnerIndex -ge 0 -and $osaOwnerIndex -lt $cells.Count) {
+                            $ownerKey = (Normalize-MarkdownScalar -Value $cells[$osaOwnerIndex]).ToLowerInvariant()
+                            if (-not [string]::IsNullOrWhiteSpace($ownerKey)) {
+                                $osaOwnerValues[$ownerKey] = $lineNumber
+                            }
+                        }
+                        continue
+                    }
+
+                    if ($currentTable -eq 'sfv') {
+                        if ($sfvIdIndex -lt 0) {
+                            for ($idx = 0; $idx -lt $cells.Count; $idx++) {
+                                if ($cells[$idx] -eq 'SFV ID') {
+                                    $sfvIdIndex = $idx
+                                    break
+                                }
+                            }
+                            continue
+                        }
+                        if (Test-MarkdownSeparatorRow -Cells $cells) {
+                            continue
+                        }
+                        if ($sfvIdIndex -ge $cells.Count) {
+                            continue
+                        }
+                        $sfvId = Normalize-MarkdownScalar -Value $cells[$sfvIdIndex]
+                        if (-not [string]::IsNullOrWhiteSpace($sfvId)) {
+                            $sfvIds[$sfvId] = $lineNumber
+                        }
+                        continue
+                    }
+
+                    if ($currentTable -eq 'dcc') {
+                        if ($dccIdIndex -lt 0) {
+                            for ($idx = 0; $idx -lt $cells.Count; $idx++) {
+                                switch ($cells[$idx]) {
+                                    'DCC ID' { $dccIdIndex = $idx }
+                                    'Required Shared Semantic Ref(s)' { $dccRequiredRefsIndex = $idx }
+                                }
+                            }
+                            continue
+                        }
+                        if (Test-MarkdownSeparatorRow -Cells $cells) {
+                            continue
+                        }
+                        if ($dccIdIndex -ge $cells.Count) {
+                            continue
+                        }
+                        $dccId = Normalize-MarkdownScalar -Value $cells[$dccIdIndex]
+                        if ([string]::IsNullOrWhiteSpace($dccId)) {
+                            continue
+                        }
+                        $dccIds[$dccId] = $lineNumber
+                        $dccLines[$dccId] = $lineNumber
+                        $dccRequiredRefsById[$dccId] = if ($dccRequiredRefsIndex -ge 0 -and $dccRequiredRefsIndex -lt $cells.Count) {
+                            Normalize-MarkdownListCell -Value $cells[$dccRequiredRefsIndex]
+                        } else {
+                            ''
+                        }
+                        continue
+                    }
+
+                    if ($currentTable -eq 'lifecycle_summary') {
+                        if ($summaryLifecycleIndex -lt 0) {
+                            for ($idx = 0; $idx -lt $cells.Count; $idx++) {
+                                switch ($cells[$idx]) {
+                                    'Lifecycle Ref' { $summaryLifecycleIndex = $idx }
+                                    'State Owner' { $summaryOwnerIndex = $idx }
+                                    'Invariant Ref(s)' { $summaryInvariantIndex = $idx }
+                                    'Required Model' { $summaryModelIndex = $idx }
+                                }
+                            }
+                            if ($summaryLifecycleIndex -ge 0) {
+                                $summaryHeaderSeen = $true
+                            }
+                            continue
+                        }
+                        if (Test-MarkdownSeparatorRow -Cells $cells) {
+                            continue
+                        }
+                        if ($summaryLifecycleIndex -ge $cells.Count) {
+                            continue
+                        }
+                        $lifecycleRef = Normalize-MarkdownScalar -Value $cells[$summaryLifecycleIndex]
+                        if ([string]::IsNullOrWhiteSpace($lifecycleRef)) {
+                            continue
+                        }
+                        $lifecycleRows[$lifecycleRef] = [PSCustomObject]@{
+                            Line       = $lineNumber
+                            StateOwner = if ($summaryOwnerIndex -ge 0 -and $summaryOwnerIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$summaryOwnerIndex] } else { '' }
+                            Invariants = if ($summaryInvariantIndex -ge 0 -and $summaryInvariantIndex -lt $cells.Count) { Normalize-MarkdownListCell -Value $cells[$summaryInvariantIndex] } else { '' }
+                            Model      = if ($summaryModelIndex -ge 0 -and $summaryModelIndex -lt $cells.Count) { Normalize-RuleToken -Value $cells[$summaryModelIndex] } else { '' }
+                        }
+                        $lcIds[$lifecycleRef] = $lineNumber
+                        continue
+                    }
+
+                    if ($currentTable -eq 'invariant_catalog') {
+                        if ($invariantIdIndex -lt 0 -or $invariantLifecycleIndex -lt 0 -or $invariantKindIndex -lt 0) {
+                            for ($idx = 0; $idx -lt $cells.Count; $idx++) {
+                                switch ($cells[$idx]) {
+                                    'INV ID' { $invariantIdIndex = $idx }
+                                    'Lifecycle Ref' { $invariantLifecycleIndex = $idx }
+                                    'Rule Kind' { $invariantKindIndex = $idx }
+                                }
+                            }
+                            if ($invariantLifecycleIndex -ge 0 -and $invariantKindIndex -ge 0) {
+                                $invariantHeaderSeen = $true
+                            }
+                            continue
+                        }
+                        if (Test-MarkdownSeparatorRow -Cells $cells) {
+                            continue
+                        }
+                        if ($invariantLifecycleIndex -ge $cells.Count -or $invariantKindIndex -ge $cells.Count) {
+                            continue
+                        }
+                        $lifecycleRef = Normalize-MarkdownScalar -Value $cells[$invariantLifecycleIndex]
+                        $ruleKind = Normalize-RuleToken -Value $cells[$invariantKindIndex]
+                        if ([string]::IsNullOrWhiteSpace($lifecycleRef) -or [string]::IsNullOrWhiteSpace($ruleKind)) {
+                            continue
+                        }
+                        if ($invariantIdIndex -ge 0 -and $invariantIdIndex -lt $cells.Count) {
+                            $invId = Normalize-MarkdownScalar -Value $cells[$invariantIdIndex]
+                            if (-not [string]::IsNullOrWhiteSpace($invId)) {
+                                $invIds[$invId] = $lineNumber
+                            }
+                        }
+                        switch ($ruleKind) {
+                            'allowed-transition' { $invariantAllowed[$lifecycleRef] = 1 + [int]($invariantAllowed[$lifecycleRef] ?? 0) }
+                            'forbidden-transition' { $invariantForbidden[$lifecycleRef] = 1 + [int]($invariantForbidden[$lifecycleRef] ?? 0) }
+                            'key-invariant' { $invariantKey[$lifecycleRef] = 1 + [int]($invariantKey[$lifecycleRef] ?? 0) }
+                        }
+                        continue
+                    }
+
+                    if ($currentTable -eq 'state_transition_table') {
+                        if ($transitionLifecycleIndex -lt 0) {
+                            for ($idx = 0; $idx -lt $cells.Count; $idx++) {
+                                if ($cells[$idx] -eq 'Lifecycle Ref') {
+                                    $transitionLifecycleIndex = $idx
+                                    break
+                                }
+                            }
+                            if ($transitionLifecycleIndex -ge 0) {
+                                $transitionHeaderSeen = $true
+                            }
+                            continue
+                        }
+                        if (Test-MarkdownSeparatorRow -Cells $cells) {
+                            continue
+                        }
+                        if ($transitionLifecycleIndex -ge $cells.Count) {
+                            continue
+                        }
+                        $lifecycleRef = Normalize-MarkdownScalar -Value $cells[$transitionLifecycleIndex]
+                        if ([string]::IsNullOrWhiteSpace($lifecycleRef)) {
+                            continue
+                        }
+                        $transitionRows[$lifecycleRef] = 1 + [int]($transitionRows[$lifecycleRef] ?? 0)
+                        continue
+                    }
+
+                    if ($currentTable -eq 'transition_pseudocode') {
+                        if ($pseudocodeLifecycleIndex -lt 0) {
+                            for ($idx = 0; $idx -lt $cells.Count; $idx++) {
+                                if ($cells[$idx] -eq 'Lifecycle Ref') {
+                                    $pseudocodeLifecycleIndex = $idx
+                                    break
+                                }
+                            }
+                            if ($pseudocodeLifecycleIndex -ge 0) {
+                                $pseudocodeHeaderSeen = $true
+                            }
+                            continue
+                        }
+                        if (Test-MarkdownSeparatorRow -Cells $cells) {
+                            continue
+                        }
+                        if ($pseudocodeLifecycleIndex -ge $cells.Count) {
+                            continue
+                        }
+                        $lifecycleRef = Normalize-MarkdownScalar -Value $cells[$pseudocodeLifecycleIndex]
+                        if ([string]::IsNullOrWhiteSpace($lifecycleRef)) {
+                            continue
+                        }
+                        $pseudocodeRows[$lifecycleRef] = 1 + [int]($pseudocodeRows[$lifecycleRef] ?? 0)
+                    }
+                }
+
+                if ($lifecycleSummaryLine -eq 0 -or -not $summaryHeaderSeen) {
+                    Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lifecycleSummaryLine -Message "$($row.message) Missing ``### Lifecycle Summary`` table." -Remediation $row.remediation
+                    continue
+                }
+                if ($invariantCatalogLine -eq 0 -or -not $invariantHeaderSeen) {
+                    Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $invariantCatalogLine -Message "$($row.message) Missing ``### Invariant Catalog`` table." -Remediation $row.remediation
+                }
+                if ($transitionTableLine -eq 0 -or -not $transitionHeaderSeen) {
+                    Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $transitionTableLine -Message "$($row.message) Missing ``### State Transition Table`` table." -Remediation $row.remediation
+                }
+                if ($lifecycleRows.Count -eq 0) {
+                    Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lifecycleSummaryLine -Message "$($row.message) ``Lifecycle Summary`` has no lifecycle rows." -Remediation $row.remediation
+                    continue
+                }
+
+                foreach ($lifecycleRef in $lifecycleRows.Keys) {
+                    $lifecycle = $lifecycleRows[$lifecycleRef]
+                    if ([string]::IsNullOrWhiteSpace($lifecycle.StateOwner) -or $lifecycle.StateOwner -eq 'N/A' -or $lifecycle.StateOwner -eq '[none]') {
+                        Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lifecycle.Line -Message "$($row.message) Lifecycle Ref $lifecycleRef is missing ``State Owner`` closure in ``Lifecycle Summary``." -Remediation $row.remediation
+                    } else {
+                        $ownerRefs = @(Get-SemanticRefTokens -Value $lifecycle.StateOwner -Pattern '(SSE|OSA)-[A-Za-z0-9_.-]+')
+                        if ($ownerRefs.Count -gt 0) {
+                            $resolvedOwnerRefCount = 0
+                            $unresolvedOwnerRefs = New-Object System.Collections.Generic.List[string]
+                            foreach ($ownerRef in $ownerRefs) {
+                                if ($ownerRef -like 'OSA-*') {
+                                    if ($osaIds.ContainsKey($ownerRef)) {
+                                        $resolvedOwnerRefCount++
+                                    } else {
+                                        $unresolvedOwnerRefs.Add($ownerRef) | Out-Null
+                                    }
+                                } elseif ($ownerRef -like 'SSE-*') {
+                                    if ($sseIds.ContainsKey($ownerRef)) {
+                                        $resolvedOwnerRefCount++
+                                    } else {
+                                        $unresolvedOwnerRefs.Add($ownerRef) | Out-Null
+                                    }
+                                }
+                            }
+                            if ($resolvedOwnerRefCount -eq 0) {
+                                Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lifecycle.Line -Message "$($row.message) Lifecycle Ref $lifecycleRef ``State Owner`` does not resolve to existing ``SSE/OSA`` refs: $($unresolvedOwnerRefs -join ',')." -Remediation $row.remediation
+                            }
+                        } else {
+                            $ownerKey = (Normalize-MarkdownScalar -Value $lifecycle.StateOwner).ToLowerInvariant()
+                            if (-not [string]::IsNullOrWhiteSpace($ownerKey) -and -not $osaOwnerValues.ContainsKey($ownerKey)) {
+                                Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lifecycle.Line -Message "$($row.message) Lifecycle Ref $lifecycleRef ``State Owner`` must map to an existing ``SSE/OSA`` owner row; no matching ``Owner / Source Alignment`` owner was found." -Remediation $row.remediation
+                            }
+                        }
+                    }
+
+                    if ([string]::IsNullOrWhiteSpace($lifecycle.Invariants) -or $lifecycle.Invariants -notmatch 'INV-') {
+                        Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lifecycle.Line -Message "$($row.message) Lifecycle Ref $lifecycleRef is missing concrete ``Invariant Ref(s)`` in ``Lifecycle Summary``." -Remediation $row.remediation
+                    }
+
+                    if ($lifecycle.Model -notin @('lightweight', 'fsm')) {
+                        Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lifecycle.Line -Message "$($row.message) Lifecycle Ref $lifecycleRef uses invalid ``Required Model`` value '$($lifecycle.Model)'; expected ``lightweight`` or ``fsm``." -Remediation $row.remediation
+                        continue
+                    }
+
+                    if ($lifecycle.Model -eq 'lightweight') {
+                        if ([int]($transitionRows[$lifecycleRef] ?? 0) -eq 0) {
+                            Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lifecycle.Line -Message "$($row.message) Lifecycle Ref $lifecycleRef is ``lightweight`` but ``State Transition Table`` has no rows for it." -Remediation $row.remediation
+                        }
+                        if ([int]($invariantAllowed[$lifecycleRef] ?? 0) -eq 0) {
+                            Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lifecycle.Line -Message "$($row.message) Lifecycle Ref $lifecycleRef is ``lightweight`` but ``Invariant Catalog`` is missing an ``allowed-transition`` row." -Remediation $row.remediation
+                        }
+                        if ([int]($invariantForbidden[$lifecycleRef] ?? 0) -eq 0) {
+                            Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lifecycle.Line -Message "$($row.message) Lifecycle Ref $lifecycleRef is ``lightweight`` but ``Invariant Catalog`` is missing a ``forbidden-transition`` row." -Remediation $row.remediation
+                        }
+                        if ([int]($invariantKey[$lifecycleRef] ?? 0) -eq 0) {
+                            Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lifecycle.Line -Message "$($row.message) Lifecycle Ref $lifecycleRef is ``lightweight`` but ``Invariant Catalog`` is missing a ``key-invariant`` row." -Remediation $row.remediation
+                        }
+                    }
+
+                    if ($lifecycle.Model -eq 'fsm') {
+                        if ([int]($transitionRows[$lifecycleRef] ?? 0) -eq 0) {
+                            Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lifecycle.Line -Message "$($row.message) Lifecycle Ref $lifecycleRef is ``fsm`` but ``State Transition Table`` has no rows for it." -Remediation $row.remediation
+                        }
+                        if ($transitionPseudocodeLine -eq 0 -or -not $pseudocodeHeaderSeen -or [int]($pseudocodeRows[$lifecycleRef] ?? 0) -eq 0) {
+                            Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lifecycle.Line -Message "$($row.message) Lifecycle Ref $lifecycleRef is ``fsm`` but ``Transition Pseudocode`` is missing required rows." -Remediation $row.remediation
+                        }
+                        if (-not $hasStateDiagram) {
+                            Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line ($(if ($stateDiagramLine -gt 0) { $stateDiagramLine } else { $lifecycle.Line })) -Message "$($row.message) Lifecycle Ref $lifecycleRef is ``fsm`` but no ``stateDiagram-v2`` was found." -Remediation $row.remediation
+                        }
+                        if ([int]($invariantKey[$lifecycleRef] ?? 0) -eq 0) {
+                            Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lifecycle.Line -Message "$($row.message) Lifecycle Ref $lifecycleRef is ``fsm`` but ``Invariant Catalog`` is missing a ``key-invariant`` row." -Remediation $row.remediation
+                        }
+                    }
+                }
+
+                foreach ($dccId in $dccIds.Keys) {
+                    $refsValue = $dccRequiredRefsById[$dccId]
+                    $lineNumber = [int]($dccLines[$dccId] ?? 0)
+                    $dccRefs = @(Get-SemanticRefTokens -Value $refsValue -Pattern '(SSE|OSA|SFV|LC|INV|DCC)-[A-Za-z0-9_.-]+')
+                    if ($dccRefs.Count -eq 0) {
+                        Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lineNumber -Message "$($row.message) DCC row $dccId is missing resolvable ``Required Shared Semantic Ref(s)`` tokens (``SSE/OSA/SFV/LC/INV/DCC-*``)." -Remediation $row.remediation
+                        continue
+                    }
+                    $unresolved = New-Object System.Collections.Generic.List[string]
+                    foreach ($requiredRef in $dccRefs) {
+                        switch -Regex ($requiredRef) {
+                            '^SSE-' { if (-not $sseIds.ContainsKey($requiredRef)) { $unresolved.Add($requiredRef) | Out-Null } }
+                            '^OSA-' { if (-not $osaIds.ContainsKey($requiredRef)) { $unresolved.Add($requiredRef) | Out-Null } }
+                            '^SFV-' { if (-not $sfvIds.ContainsKey($requiredRef)) { $unresolved.Add($requiredRef) | Out-Null } }
+                            '^LC-' { if (-not $lcIds.ContainsKey($requiredRef)) { $unresolved.Add($requiredRef) | Out-Null } }
+                            '^INV-' { if (-not $invIds.ContainsKey($requiredRef)) { $unresolved.Add($requiredRef) | Out-Null } }
+                            '^DCC-' { if (-not $dccIds.ContainsKey($requiredRef)) { $unresolved.Add($requiredRef) | Out-Null } }
+                        }
+                    }
+                    if ($unresolved.Count -gt 0) {
+                        Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lineNumber -Message "$($row.message) DCC row $dccId references unknown shared-semantic refs: $($unresolved -join ',')." -Remediation $row.remediation
+                    }
+                }
+            }
+        }
+
+        'data_model_single_binding_shared_warning' {
+            foreach ($file in $matched) {
+                $lines = @(Get-Content -Path $file.FullPath -ErrorAction Stop)
+                $currentSection = ''
+                $inSseTable = $false
+                $sseIdIndex = -1
+                $consumedIndex = -1
+                $whyIndex = -1
+
+                for ($i = 0; $i -lt $lines.Count; $i++) {
+                    $lineNumber = $i + 1
+                    $line = $lines[$i]
+                    $trimmed = $line.Trim()
+
+                    $h2Match = [regex]::Match($trimmed, '^##\s+(.+)$')
+                    if ($h2Match.Success) {
+                        $currentSection = $h2Match.Groups[1].Value.Trim()
+                        $inSseTable = $false
+                        $sseIdIndex = -1
+                        $consumedIndex = -1
+                        $whyIndex = -1
+                        continue
+                    }
+
+                    if ($currentSection -ne 'Shared Semantic Elements (SSE)' -and $currentSection -ne 'Shared Semantic Elements') {
+                        continue
+                    }
+
+                    $cells = @(Get-MarkdownCells -Line $line)
+                    if ($cells.Count -eq 0) {
+                        $inSseTable = $false
+                        $sseIdIndex = -1
+                        $consumedIndex = -1
+                        $whyIndex = -1
+                        continue
+                    }
+
+                    if (-not $inSseTable) {
+                        for ($idx = 0; $idx -lt $cells.Count; $idx++) {
+                            switch ($cells[$idx]) {
+                                'SSE ID' { $sseIdIndex = $idx }
+                                'Consumed By BindingRowID(s)' { $consumedIndex = $idx }
+                                'Why Not Contract-Local' { $whyIndex = $idx }
+                            }
+                        }
+                        if ($sseIdIndex -ge 0 -and $consumedIndex -ge 0 -and $whyIndex -ge 0) {
+                            $inSseTable = $true
+                        }
+                        continue
+                    }
+
+                    if (Test-MarkdownSeparatorRow -Cells $cells) {
+                        continue
+                    }
+
+                    if ($sseIdIndex -ge $cells.Count -or $consumedIndex -ge $cells.Count -or $whyIndex -ge $cells.Count) {
+                        continue
+                    }
+
+                    $sseId = Normalize-MarkdownScalar -Value $cells[$sseIdIndex]
+                    if ([string]::IsNullOrWhiteSpace($sseId)) {
+                        continue
+                    }
+                    $consumedCell = Normalize-MarkdownListCell -Value $cells[$consumedIndex]
+                    $whyNotLocal = Normalize-MarkdownScalar -Value $cells[$whyIndex]
+                    $bindingSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                    foreach ($item in ($consumedCell -split ',')) {
+                        $bindingId = Normalize-MarkdownScalar -Value $item
+                        if (-not [string]::IsNullOrWhiteSpace($bindingId)) {
+                            [void]$bindingSet.Add($bindingId)
+                        }
+                    }
+
+                    if ($bindingSet.Count -eq 1 -and (Test-SingleBindingReasonWeak -Reason $whyNotLocal)) {
+                        Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $lineNumber -Message "$($row.message) SSE row $sseId is consumed by a single binding but ``Why Not Contract-Local`` rationale is weak (``$whyNotLocal``)." -Remediation $row.remediation
+                    }
+                }
+            }
+        }
+
         default {
-            Add-Finding -RuleId $row.id -Severity $row.severity -File $row.glob -Line 0 -Message "Unsupported rule kind: $($row.kind)" -Remediation 'Use one of: file_regex_forbidden, file_regex_required_any, component_symbols_exist, anchor_status_allowed_values, northbound_controller_required, repo_anchor_paths_exist, plan_status_consistency, binding_projection_stable_only, binding_tuple_projection_sync, shared_semantic_reuse_enum, anchor_strategy_evidence_required.'
+            Add-Finding -RuleId $row.id -Severity $row.severity -File $row.glob -Line 0 -Message "Unsupported rule kind: $($row.kind)" -Remediation 'Use one of: file_regex_forbidden, file_regex_required_any, component_symbols_exist, anchor_status_allowed_values, northbound_controller_required, repo_anchor_paths_exist, plan_status_consistency, binding_projection_stable_only, binding_tuple_projection_sync, shared_semantic_reuse_enum, anchor_strategy_evidence_required, data_model_semantic_closure, data_model_single_binding_shared_warning.'
         }
     }
 }
