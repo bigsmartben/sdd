@@ -33,10 +33,8 @@ Use `.specify/templates/plan-template.md` only.
 - explicit handoff order: `sdd.plan.research -> sdd.plan.test-matrix -> sdd.plan.data-model -> sdd.plan.contract`.
 
 `Binding Projection Index` columns:
-- `BindingRowID`, `UC ID`, `UIF ID`, `FR ID`, `IF ID / IF Scope`, `Trigger Ref(s)`, `Primary TM IDs`, `TC IDs`
-- `UIF Path Ref(s)`
-- `UDD Ref(s)`
-- `Test Scope`
+- `BindingRowID`
+- `Packet Source`
 
 Do not add `Boundary Anchor` or other design output columns to the index — those belong to contracts.
 
@@ -59,7 +57,7 @@ Do not add `Boundary Anchor` or other design output columns to the index — tho
 1. **Prerequisite Check**: Resolve `FEATURE_DIR` and `FEATURE_SPEC`.
 2. **Snapshot**: Capture spec/repo metadata into the `Shared Context Snapshot`.
 3. **Queue Initialization**: Seed `Stage Queue` in fixed order (`research`, `test-matrix`, `data-model`).
-4. **Index Seed**: Initialize empty `Binding Projection Index` with correct column headers.
+4. **Index Seed**: Initialize empty `Binding Projection Index` with registry-only column headers.
 
 ## Artifact Quality Contract
 
@@ -76,7 +74,7 @@ Do not add `Boundary Anchor` or other design output columns to the index — tho
 ## Output Contract
 
 - **Stage Queue**: MUST use lowercase tokens (`pending`, `in_progress`, `done`, `blocked`).
-- **Index Projection**: Initialize empty index with correct column headers; wait for `test-matrix` to populate rows.
+- **Index Projection**: Initialize empty registry index with `BindingRowID` and `Packet Source` only; wait for `test-matrix` to populate rows.
 - **Prohibited**: Stage prose, audit payloads, or execution logs in the artifact.
 
 ## Handoff Decision

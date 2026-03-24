@@ -64,22 +64,21 @@ Rules:
 ## Binding Projection Index
 
 Initialize empty until `test-matrix.md` creates stable rows.
-Project stable binding keys only; do not copy scenario text or contract-design conclusions.
+Project stable binding keys only; do not copy packet payload or contract-design conclusions.
 
-| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | Trigger Ref(s) | Primary TM IDs | TC IDs | UIF Path Ref(s) | UDD Ref(s) | Test Scope |
-|--------------|-------|--------|-------|------------------|----------------|----------------|--------|-----------------|------------|------------|
+| BindingRowID | Packet Source |
+|--------------|---------------|
 <!-- Keep table body empty until /sdd.plan.test-matrix projects stable binding rows. -->
 
 Rules:
 
 - Each row must be uniquely identifiable.
 - `BindingRowID` is the plan-local identifier for one stable binding row projected from `test-matrix.md`.
-- `Binding Projection Index` is a projection ledger only; it is not a semantic authority.
+- `Binding Projection Index` is a registry ledger only; it is not a semantic authority.
 - Semantic authority for binding meaning is the matching `Binding Packets` row in `test-matrix.md`.
-- `IF ID / IF Scope` stores one normalized IF scope token (`IF-###` or `N/A`) for downstream selection; do not pack mixed labels/prose into this cell.
-- `UC ID`, `UIF ID`, and `FR ID` must use deterministic id encoding (comma-separated ids, stable sort, no prose) when multiple refs are needed.
-- Keep only the minimal selection and scheduling fields needed for downstream `plan.contract` and `plan.data-model`.
-- Do not mirror packet-level scope reference fields such as `User Intent`, `Request Semantics`, `Visible Result`, `Side Effect`, `Boundary Notes`, or `Repo Landing Hint` into this index; those remain authoritative only in `test-matrix.md`.
+- `Packet Source` MUST point to the authoritative binding packet row using a stable source form such as `test-matrix.md#Binding Packets:BR-001`.
+- Keep only the minimal selection and scheduling fields needed for downstream `plan.contract`, `plan.data-model`, and `/sdd.tasks` bootstrap resolution.
+- Do not mirror packet-level scope reference fields such as `IF Scope`, `Trigger Ref(s)`, `UIF Path Ref(s)`, `UDD Ref(s)`, `Primary TM IDs`, `TC IDs`, `Test Scope`, `User Intent`, `Request Semantics`, `Visible Result`, `Side Effect`, `Boundary Notes`, or `Repo Landing Hint` into this index; those remain authoritative only in `test-matrix.md`.
 - `Boundary Anchor`, `Implementation Entry Anchor`, anchor statuses, DTO anchors, collaborator anchors, lifecycle refs, invariant refs, and realization design remain downstream responsibilities.
 - Downstream commands MUST use this index for row selection only and MUST read `test-matrix.md` for binding semantics.
 - Keep this index aligned only from `/sdd.plan.test-matrix`; if binding meaning changes later, repair upstream and regenerate the projection instead of letting downstream commands rewrite it.

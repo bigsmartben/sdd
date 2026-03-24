@@ -7,9 +7,15 @@ from pathlib import Path
 from typing import Any
 
 from specify_cli.runtime_common import (
+    BINDING_PACKET_REQUIRED_FIELDS,
+    build_binding_resolution_state,
+    canonical_packet_source,
     clean_cell,
     extract_section,
+    load_binding_index_entries,
+    load_binding_packet_catalog,
     normalize_stage_ids,
+    normalize_packet_source_ref,
     parse_markdown_table,
     resolve_target_path,
     split_csv_cell,
@@ -50,7 +56,10 @@ TASK_BASELINE_CODE_TO_CATEGORY = {
     "done_contract_target_missing": "missing",
     "incomplete_stage_queue": "stale",
     "contract_rows_not_done": "stale",
-    "binding_projection_packet_drift": "stale",
+    "binding_packet_source_unresolved": "missing",
+    "binding_projection_duplicate_binding_row_id": "non_traceable",
+    "binding_projection_duplicate_packet_source": "non_traceable",
+    "binding_packets_duplicate_binding_row_id": "non_traceable",
     "binding_projection_missing_required_fields": "non_traceable",
     "test_matrix_required_sections_missing": "missing",
     "contract_placeholder_names_present": "non_traceable",
@@ -273,37 +282,6 @@ def infer_repo_root_from_feature_dir(feature_dir: Path) -> Path:
         if candidate.name == "specs":
             return candidate.parent
     return feature_dir.parent
-
-
-def load_binding_contract_packets(test_matrix_path: Path) -> dict[str, dict[str, Any]]:
-    if not test_matrix_path.is_file():
-        return {}
-
-    document = test_matrix_path.read_text(encoding="utf-8")
-    packet_rows = parse_markdown_table(
-        extract_section(document, "Binding Packets"),
-        filter_placeholder_first_cell=True,
-    )
-    packets: dict[str, dict[str, Any]] = {}
-    for row in packet_rows:
-        binding_row_id = clean_cell(row.get("BindingRowID", ""))
-        if not binding_row_id:
-            continue
-        packets[binding_row_id] = {
-            "binding_row_id": binding_row_id,
-            "trigger_refs": split_ref_cell(row.get("Trigger Ref(s)", "")),
-            "if_scope": clean_cell(row.get("IF Scope", "")),
-            "uif_path_refs": split_ref_cell(row.get("UIF Path Ref(s)", "")),
-            "udd_refs": split_ref_cell(row.get("UDD Ref(s)", "")),
-            "primary_tm_ids": split_ref_cell(row.get("Primary TM IDs", "")),
-            "tc_ids": split_ref_cell(row.get("TC IDs", "")),
-            "test_scope": clean_cell(row.get("Test Scope", "")),
-            "spec_refs": split_ref_cell(row.get("Spec Ref(s)", "")),
-            "scenario_refs": split_ref_cell(row.get("Scenario Ref(s)", "")),
-            "success_refs": split_ref_cell(row.get("Success Ref(s)", "")),
-            "edge_refs": split_ref_cell(row.get("Edge Ref(s)", "")),
-        }
-    return packets
 
 
 def inspect_contract_artifact(contract_path_abs: str, *, repo_root_abs: str | None = None) -> dict[str, Any]:
@@ -574,10 +552,9 @@ def inspect_contract_artifact(contract_path_abs: str, *, repo_root_abs: str | No
 
 
 def build_unit_inventory(
-    binding_rows: list[dict[str, str]],
+    binding_resolution_entries: list[dict[str, Any]],
     artifact_rows: list[dict[str, str]],
     feature_dir: Path,
-    binding_packets: dict[str, dict[str, Any]],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     repo_root_abs = str(infer_repo_root_from_feature_dir(feature_dir))
     artifacts_by_binding: dict[str, dict[str, dict[str, str]]] = {}
@@ -591,82 +568,63 @@ def build_unit_inventory(
     unit_inventory: list[dict[str, Any]] = []
     ready_unit_inventory: list[dict[str, Any]] = []
 
-    for row in binding_rows:
-        binding_row_id = clean_cell(row.get("BindingRowID", ""))
+    for resolution_entry in binding_resolution_entries:
+        binding_row_id = clean_cell(resolution_entry.get("binding_row_id", ""))
+        packet_source = normalize_packet_source_ref(resolution_entry.get("packet_source", ""))
+        expected_packet_source = canonical_packet_source(binding_row_id)
         contract_row = artifacts_by_binding.get(binding_row_id, {}).get("contract", {})
         contract_target_path_abs = resolve_target_path(feature_dir, contract_row.get("Target Path", ""))
         contract_exists = bool(contract_target_path_abs) and Path(contract_target_path_abs).is_file()
         contract_inspection = inspect_contract_artifact(contract_target_path_abs, repo_root_abs=repo_root_abs)
 
-        uc_id = clean_cell(row.get("UC ID", ""))
-        uif_id = clean_cell(row.get("UIF ID", ""))
-        fr_id = clean_cell(row.get("FR ID", ""))
-        if_scope = clean_cell(row.get("IF ID / IF Scope", ""))
-        trigger_refs = split_ref_cell(row.get("Trigger Ref(s)", ""))
-        primary_tm_ids = split_ref_cell(row.get("Primary TM IDs", ""))
-        tc_ids = split_ref_cell(row.get("TC IDs", ""))
         operation_id = contract_inspection["operation_id"]
-        uif_path_refs = split_ref_cell(row.get("UIF Path Ref(s)", ""))
-        udd_refs = split_ref_cell(row.get("UDD Ref(s)", ""))
-        test_scope = clean_cell(row.get("Test Scope", ""))
-        packet = binding_packets.get(binding_row_id, {})
+        source_binding_row_id = clean_cell(resolution_entry.get("source_binding_row_id", ""))
+        packet_resolution_error = clean_cell(resolution_entry.get("resolution_error", ""))
+        packet = resolution_entry.get("packet", {}) if not packet_resolution_error else {}
 
-        missing_binding_projection_fields = [
-            field_name
-            for field_name, field_value in (
-                ("UC ID", uc_id),
-                ("UIF ID", uif_id),
-                ("FR ID", fr_id),
-                ("IF ID / IF Scope", if_scope),
-                ("Trigger Ref(s)", trigger_refs),
-                ("Primary TM IDs", primary_tm_ids),
-                ("TC IDs", tc_ids),
-                ("UIF Path Ref(s)", uif_path_refs),
-                ("UDD Ref(s)", udd_refs),
-                ("Test Scope", test_scope),
-            )
-            if not field_value
-        ]
+        if_scope = clean_cell(packet.get("if_scope", ""))
+        trigger_refs = list(packet.get("trigger_refs", []))
+        primary_tm_ids = list(packet.get("primary_tm_ids", []))
+        tm_ids = list(packet.get("tm_ids", []))
+        tc_ids = list(packet.get("tc_ids", []))
+        uif_path_refs = list(packet.get("uif_path_refs", []))
+        udd_refs = list(packet.get("udd_refs", []))
+        test_scope = clean_cell(packet.get("test_scope", ""))
+
+        missing_binding_projection_fields = list(resolution_entry.get("missing_fields", []))
 
         missing_binding_packet_fields = []
         if packet:
-            for field_name, field_value in (
-                ("Trigger Ref(s)", packet.get("trigger_refs", [])),
-                ("IF Scope", packet.get("if_scope", "")),
-                ("UIF Path Ref(s)", packet.get("uif_path_refs", [])),
-                ("UDD Ref(s)", packet.get("udd_refs", [])),
-                ("Primary TM IDs", packet.get("primary_tm_ids", [])),
-                ("TC IDs", packet.get("tc_ids", [])),
-                ("Test Scope", packet.get("test_scope", "")),
-                ("Spec Ref(s)", packet.get("spec_refs", [])),
-                ("Scenario Ref(s)", packet.get("scenario_refs", [])),
-                ("Success Ref(s)", packet.get("success_refs", [])),
-                ("Edge Ref(s)", packet.get("edge_refs", [])),
-            ):
-                if not field_value:
-                    missing_binding_packet_fields.append(field_name)
-
-        has_projection_drift = bool(packet) and any(
-            (
-                trigger_refs != packet.get("trigger_refs", []),
-                if_scope != packet.get("if_scope", ""),
-                primary_tm_ids != packet.get("primary_tm_ids", []),
-                tc_ids != packet.get("tc_ids", []),
-                uif_path_refs != packet.get("uif_path_refs", []),
-                udd_refs != packet.get("udd_refs", []),
-                test_scope != packet.get("test_scope", ""),
-            )
-        )
+            packet_field_presence = {
+                "BindingRowID": binding_row_id,
+                "IF Scope": packet.get("if_scope", ""),
+                "Trigger Ref(s)": packet.get("trigger_refs", []),
+                "UIF Path Ref(s)": packet.get("uif_path_refs", []),
+                "UDD Ref(s)": packet.get("udd_refs", []),
+                "Primary TM IDs": packet.get("primary_tm_ids", []),
+                "TM IDs": packet.get("tm_ids", []),
+                "TC IDs": packet.get("tc_ids", []),
+                "Test Scope": packet.get("test_scope", ""),
+                "Spec Ref(s)": packet.get("spec_refs", []),
+                "Scenario Ref(s)": packet.get("scenario_refs", []),
+                "Success Ref(s)": packet.get("success_refs", []),
+                "Edge Ref(s)": packet.get("edge_refs", []),
+            }
+            missing_binding_packet_fields = [
+                field_name
+                for field_name in BINDING_PACKET_REQUIRED_FIELDS
+                if not packet_field_presence.get(field_name)
+            ]
 
         unit = {
             "binding_row_id": binding_row_id,
-            "uc_id": uc_id,
-            "uif_id": uif_id,
-            "fr_id": fr_id,
+            "packet_source": packet_source,
+            "expected_packet_source": expected_packet_source,
             "if_scope": if_scope,
             "operation_id": operation_id,
             "trigger_refs": trigger_refs,
             "primary_tm_ids": primary_tm_ids,
+            "tm_ids": tm_ids,
             "tc_ids": tc_ids,
             "uif_path_refs": uif_path_refs,
             "udd_refs": udd_refs,
@@ -675,18 +633,21 @@ def build_unit_inventory(
             "missing_binding_packet_fields": missing_binding_packet_fields,
             "binding_packet": {
                 "present": bool(packet),
+                "source": packet_source,
+                "source_binding_row_id": source_binding_row_id,
+                "resolution_error": packet_resolution_error,
                 "trigger_refs": packet.get("trigger_refs", []),
                 "if_scope": packet.get("if_scope", ""),
                 "uif_path_refs": packet.get("uif_path_refs", []),
                 "udd_refs": packet.get("udd_refs", []),
                 "primary_tm_ids": packet.get("primary_tm_ids", []),
+                "tm_ids": packet.get("tm_ids", []),
                 "tc_ids": packet.get("tc_ids", []),
                 "test_scope": packet.get("test_scope", ""),
                 "spec_refs": packet.get("spec_refs", []),
                 "scenario_refs": packet.get("scenario_refs", []),
                 "success_refs": packet.get("success_refs", []),
                 "edge_refs": packet.get("edge_refs", []),
-                "has_projection_drift": has_projection_drift,
             },
             "contract": {
                 "status": clean_cell(contract_row.get("Status", "")),
@@ -768,7 +729,7 @@ def build_unit_inventory(
             not missing_binding_projection_fields
             and packet
             and not missing_binding_packet_fields
-            and not has_projection_drift
+            and not packet_resolution_error
             and unit["contract"]["status"] == "done"
             and contract_exists
             and operation_id
@@ -813,6 +774,7 @@ def build_task_execution_readiness(
     artifact_status: list[dict[str, Any]],
     unit_inventory: list[dict[str, Any]],
     ready_unit_inventory: list[dict[str, Any]],
+    binding_resolution_state: dict[str, Any],
 ) -> dict[str, Any]:
     errors: list[dict[str, Any]] = []
     warnings: list[dict[str, Any]] = []
@@ -879,8 +841,42 @@ def build_task_execution_readiness(
             }
         )
 
+    duplicate_binding_projection_rows = binding_resolution_state["binding_projection_duplicate_binding_row_ids"]
+    if duplicate_binding_projection_rows:
+        errors.append(
+            {
+                "code": "binding_projection_duplicate_binding_row_id",
+                "message": "Binding Projection Index contains duplicate BindingRowID rows.",
+                "details": {"binding_row_ids": duplicate_binding_projection_rows},
+            }
+        )
+
+    duplicate_binding_projection_packet_sources = binding_resolution_state["binding_projection_duplicate_packet_sources"]
+    if duplicate_binding_projection_packet_sources:
+        errors.append(
+            {
+                "code": "binding_projection_duplicate_packet_source",
+                "message": "Binding Projection Index contains duplicate Packet Source values.",
+                "details": {"rows": duplicate_binding_projection_packet_sources},
+            }
+        )
+
+    duplicate_binding_packet_rows = binding_resolution_state["binding_packets_duplicate_binding_row_ids"]
+    if duplicate_binding_packet_rows:
+        errors.append(
+            {
+                "code": "binding_packets_duplicate_binding_row_id",
+                "message": "test-matrix.md contains duplicate Binding Packet rows for the same BindingRowID.",
+                "details": {"binding_row_ids": duplicate_binding_packet_rows},
+            }
+        )
+
     missing_binding_packet_rows = sorted(
-        [unit["binding_row_id"] for unit in unit_inventory if not unit["binding_packet"]["present"]]
+        [
+            unit["binding_row_id"]
+            for unit in unit_inventory
+            if unit["binding_packet"]["resolution_error"] == "binding_packet_not_found"
+        ]
     )
     if missing_binding_packet_rows:
         warnings.append(
@@ -908,19 +904,25 @@ def build_task_execution_readiness(
             }
         )
 
-    binding_projection_packet_drift_rows = sorted(
+    unresolved_packet_source_rows = sorted(
         [
-            unit["binding_row_id"]
+            {
+                "binding_row_id": unit["binding_row_id"],
+                "packet_source": unit["packet_source"],
+                "expected_packet_source": unit["expected_packet_source"],
+                "reason": unit["binding_packet"]["resolution_error"],
+            }
             for unit in unit_inventory
-            if unit["binding_packet"]["present"] and unit["binding_packet"]["has_projection_drift"]
-        ]
+            if unit["binding_packet"]["resolution_error"]
+        ],
+        key=lambda item: item["binding_row_id"],
     )
-    if binding_projection_packet_drift_rows:
+    if unresolved_packet_source_rows:
         errors.append(
             {
-                "code": "binding_projection_packet_drift",
-                "message": "Some binding rows drift from their authoritative Binding Packets.",
-                "details": {"binding_row_ids": binding_projection_packet_drift_rows},
+                "code": "binding_packet_source_unresolved",
+                "message": "Some binding rows do not resolve cleanly to authoritative Binding Packets.",
+                "details": {"rows": unresolved_packet_source_rows},
             }
         )
 
@@ -1543,9 +1545,13 @@ def build_task_bootstrap_payload(
     missing_sections = [name for name, present in required_sections.items() if not present]
 
     stage_rows = parse_markdown_table(sections["Stage Queue"])
-    binding_rows = parse_markdown_table(sections["Binding Projection Index"], filter_placeholder_first_cell=True)
     artifact_rows = parse_markdown_table(sections["Artifact Status"], filter_placeholder_first_cell=True)
-    binding_packets = load_binding_contract_packets(test_matrix_path)
+    binding_projection_index = load_binding_index_entries(document)
+    binding_packet_catalog = load_binding_packet_catalog(test_matrix_path)
+    binding_resolution_state = build_binding_resolution_state(
+        binding_projection_index,
+        binding_packet_catalog,
+    )
     test_matrix_document = test_matrix_path.read_text(encoding="utf-8") if test_matrix_path.is_file() else ""
     missing_test_matrix_sections = [
         heading
@@ -1562,23 +1568,6 @@ def build_task_bootstrap_payload(
             "blocker": clean_cell(row.get("Blocker", "")),
         }
         for row in stage_rows
-    ]
-
-    binding_projection_index = [
-        {
-            "binding_row_id": clean_cell(row.get("BindingRowID", "")),
-            "uc_id": clean_cell(row.get("UC ID", "")),
-            "uif_id": clean_cell(row.get("UIF ID", "")),
-            "fr_id": clean_cell(row.get("FR ID", "")),
-            "if_scope": clean_cell(row.get("IF ID / IF Scope", "")),
-            "trigger_refs": split_ref_cell(row.get("Trigger Ref(s)", "")),
-            "primary_tm_ids": split_ref_cell(row.get("Primary TM IDs", "")),
-            "tc_ids": split_ref_cell(row.get("TC IDs", "")),
-            "uif_path_refs": split_ref_cell(row.get("UIF Path Ref(s)", "")),
-            "udd_refs": split_ref_cell(row.get("UDD Ref(s)", "")),
-            "test_scope": clean_cell(row.get("Test Scope", "")),
-        }
-        for row in binding_rows
     ]
 
     artifact_status = [
@@ -1611,10 +1600,9 @@ def build_task_bootstrap_payload(
     )
 
     unit_inventory, ready_unit_inventory = build_unit_inventory(
-        binding_rows,
+        binding_resolution_state["entries"],
         artifact_rows,
         feature_dir,
-        binding_packets,
     )
     execution_readiness = build_task_execution_readiness(
         missing_sections=missing_sections,
@@ -1625,6 +1613,7 @@ def build_task_bootstrap_payload(
         artifact_status=artifact_status,
         unit_inventory=unit_inventory,
         ready_unit_inventory=ready_unit_inventory,
+        binding_resolution_state=binding_resolution_state,
     )
     repository_first_gate_protocol = build_repository_first_gate_protocol(
         gate_name="task_bootstrap",
@@ -1651,7 +1640,7 @@ def build_task_bootstrap_payload(
         "incomplete_stage_ids": incomplete_stage_ids,
         "binding_row_count": len(binding_projection_index),
         "binding_projection_index": binding_projection_index,
-        "binding_contract_packet_count": len(binding_packets),
+        "binding_contract_packet_count": binding_packet_catalog["binding_packet_count"],
         "missing_test_matrix_sections": missing_test_matrix_sections,
         "artifact_status": artifact_status,
         "artifact_status_summary": summarize_status_rows(artifact_rows),

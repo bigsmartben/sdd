@@ -235,9 +235,9 @@ Demo planning control plane.
 
 ## Binding Projection Index
 
-| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | Trigger Ref(s) | Primary TM IDs | TC IDs | UIF Path Ref(s) | UDD Ref(s) | Test Scope |
-|--------------|-------|--------|-------|------------------|----------------|----------------|--------|-----------------|------------|------------|
-| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | [UIF-001.trigger] | [TM-001] | TC-001, TC-002 | [UIF-Path-001] | [UDD-001] | {test_scope} |
+| BindingRowID | Packet Source |
+|--------------|---------------|
+| BindingRowID-001 | test-matrix.md#Binding Packets:BindingRowID-001 |
 
 ## Artifact Status
 
@@ -406,8 +406,8 @@ Demo planning control plane.
 
 ## Binding Projection Index
 
-| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | Trigger Ref(s) | Primary TM IDs | TC IDs | UIF Path Ref(s) | UDD Ref(s) | Test Scope |
-|--------------|-------|--------|-------|------------------|----------------|----------------|--------|-----------------|------------|------------|
+| BindingRowID | Packet Source |
+|--------------|---------------|
 
 ## Artifact Status
 
@@ -471,7 +471,8 @@ def test_task_preflight_helper_emits_contract_unit_inventory(tmp_path):
     assert unit["uif_path_refs"] == ["UIF-Path-001"]
     assert unit["udd_refs"] == ["UDD-001"]
     assert unit["binding_packet"]["present"] is True
-    assert unit["binding_packet"]["has_projection_drift"] is False
+    assert unit["binding_packet"]["resolution_error"] == ""
+    assert unit["packet_source"] == "test-matrix.md#Binding Packets:BindingRowID-001"
     assert unit["contract"]["target_path"] == "contracts/create-task.md"
     assert unit["contract"]["exists"] is True
     assert unit["contract"]["binding_context_section_present"] is True
@@ -1381,8 +1382,8 @@ def test_task_preflight_helper_flags_missing_binding_projection_tuple_fields(tmp
     plan_text = plan_path.read_text(encoding="utf-8")
     plan_path.write_text(
         plan_text.replace(
-            "| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | [UIF-001.trigger] | [TM-001] | TC-001, TC-002 | [UIF-Path-001] | [UDD-001] | Integration |",
-            "| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | [UIF-001.trigger] | [TM-001] | TC-001, TC-002 |  |  | Integration |",
+            "| BindingRowID-001 | test-matrix.md#Binding Packets:BindingRowID-001 |",
+            "| BindingRowID-001 |  |",
         ),
         encoding="utf-8",
     )
@@ -1459,8 +1460,10 @@ def test_task_preflight_helper_blocks_binding_projection_packet_drift(tmp_path):
     plan_path = feature_dir / "plan.md"
     plan_text = plan_path.read_text(encoding="utf-8")
     plan_path.write_text(
-        plan_text.replace("| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | [UIF-001.trigger] | [TM-001] | TC-001, TC-002 | [UIF-Path-001] | [UDD-001] | Integration |",
-                          "| BindingRowID-001 | UC-001 | UIF-001 | FR-001 | IF-001 | [UIF-001.trigger-v2] | [TM-001] | TC-001, TC-002 | [UIF-Path-001] | [UDD-001] | Integration |"),
+        plan_text.replace(
+            "| BindingRowID-001 | test-matrix.md#Binding Packets:BindingRowID-001 |",
+            "| BindingRowID-001 | test-matrix.md#Binding Packets:BindingRowID-999 |",
+        ),
         encoding="utf-8",
     )
 
@@ -1490,7 +1493,143 @@ def test_task_preflight_helper_blocks_binding_projection_packet_drift(tmp_path):
     payload = json.loads(result.stdout)
     assert payload["execution_readiness"]["ready_for_task_generation"] is False
     error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
-    assert "binding_projection_packet_drift" in error_codes
+    assert "binding_packet_source_unresolved" in error_codes
+
+
+def test_task_preflight_helper_blocks_duplicate_binding_projection_binding_row_ids(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(feature_dir)
+
+    plan_path = feature_dir / "plan.md"
+    plan_text = plan_path.read_text(encoding="utf-8")
+    plan_path.write_text(
+        plan_text.replace(
+            "| BindingRowID-001 | test-matrix.md#Binding Packets:BindingRowID-001 |\n",
+            "| BindingRowID-001 | test-matrix.md#Binding Packets:BindingRowID-001 |\n"
+            "| BindingRowID-001 | test-matrix.md#Binding Packets:BindingRowID-001 |\n",
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "task_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+            "--test-matrix",
+            str(feature_dir / "test-matrix.md"),
+            "--contracts-dir",
+            str(feature_dir / "contracts"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
+    assert "binding_projection_duplicate_binding_row_id" in error_codes
+
+
+def test_task_preflight_helper_blocks_duplicate_binding_projection_packet_sources(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(feature_dir)
+
+    plan_path = feature_dir / "plan.md"
+    plan_text = plan_path.read_text(encoding="utf-8")
+    plan_path.write_text(
+        plan_text.replace(
+            "## Artifact Status\n",
+            "## Artifact Status\n",
+        ).replace(
+            "| BindingRowID-001 | test-matrix.md#Binding Packets:BindingRowID-001 |\n\n## Artifact Status",
+            "| BindingRowID-001 | test-matrix.md#Binding Packets:BindingRowID-001 |\n"
+            "| BindingRowID-002 | test-matrix.md#Binding Packets:BindingRowID-001 |\n\n## Artifact Status",
+        ).replace(
+            "| BindingRowID-001 | contract | `contracts/create-task.md` | done | [none] |",
+            "| BindingRowID-001 | contract | `contracts/create-task.md` | done | [none] |\n"
+            "| BindingRowID-002 | contract | `contracts/create-task.md` | done | [none] |",
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "task_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+            "--test-matrix",
+            str(feature_dir / "test-matrix.md"),
+            "--contracts-dir",
+            str(feature_dir / "contracts"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
+    assert "binding_projection_duplicate_packet_source" in error_codes
+
+
+def test_task_preflight_helper_blocks_duplicate_binding_packet_rows(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(feature_dir)
+
+    test_matrix_path = feature_dir / "test-matrix.md"
+    test_matrix_text = test_matrix_path.read_text(encoding="utf-8")
+    test_matrix_path.write_text(
+        test_matrix_text.replace(
+            "| BindingRowID-001 | IF-001 | Create task | [UIF-001.trigger] | Input semantics only | Task created | create | permission-gated | task-entry-family | [UIF-Path-001] | [UDD-001] | [TM-001] | [TM-001] | [TC-001, TC-002] | Integration | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] |\n",
+            "| BindingRowID-001 | IF-001 | Create task | [UIF-001.trigger] | Input semantics only | Task created | create | permission-gated | task-entry-family | [UIF-Path-001] | [UDD-001] | [TM-001] | [TM-001] | [TC-001, TC-002] | Integration | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] |\n"
+            "| BindingRowID-001 | IF-001 | Create task | [UIF-001.trigger] | Input semantics only | Task created | create | permission-gated | task-entry-family | [UIF-Path-001] | [UDD-001] | [TM-001] | [TM-001] | [TC-001, TC-002] | Integration | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] |\n",
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "task_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+            "--test-matrix",
+            str(feature_dir / "test-matrix.md"),
+            "--contracts-dir",
+            str(feature_dir / "contracts"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
+    assert "binding_packets_duplicate_binding_row_id" in error_codes
 
 
 def test_task_preflight_helper_blocks_missing_anchor_strategy_evidence_for_new_anchors(tmp_path):
@@ -1723,9 +1862,9 @@ def test_task_preflight_helper_ignores_template_placeholder_binding_rows(tmp_pat
 
 ## Binding Projection Index
 
-| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | Trigger Ref(s) | Primary TM IDs | TC IDs | UIF Path Ref(s) | UDD Ref(s) | Test Scope |
-|--------------|-------|--------|-------|------------------|----------------|----------------|--------|-----------------|------------|------------|
-| [BindingRowID-001] | [UC-001] | [UIF-001] | [FR-001] | [IF-001] | [UIF-001.trigger] | [TM-001] | [TC-001, TC-002] | [UIF-Path-001] | [UDD-001] | [Integration] |
+| BindingRowID | Packet Source |
+|--------------|---------------|
+| [BindingRowID-001] | [test-matrix.md#Binding Packets:BindingRowID-001] |
 
 ## Artifact Status
 
@@ -2287,6 +2426,99 @@ def test_data_model_preflight_helper_flags_missing_required_test_matrix_sections
     assert payload["generation_readiness"]["ready_for_generation"] is False
     error_codes = [entry["code"] for entry in payload["generation_readiness"]["errors"]]
     assert "test_matrix_required_sections_missing" in error_codes
+
+
+def test_data_model_preflight_helper_flags_duplicate_binding_projection_binding_row_ids(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_data_model_feature(feature_dir)
+
+    plan_path = feature_dir / "plan.md"
+    plan_text = plan_path.read_text(encoding="utf-8")
+    plan_path.write_text(
+        plan_text.replace(
+            "|--------------|---------------|\n\n## Artifact Status",
+            "|--------------|---------------|\n"
+            "| BR-001 | test-matrix.md#Binding Packets:BR-001 |\n"
+            "| BR-001 | test-matrix.md#Binding Packets:BR-001 |\n\n## Artifact Status",
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "data_model_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--research",
+            str(feature_dir / "research.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    error_codes = [entry["code"] for entry in payload["generation_readiness"]["errors"]]
+    assert "binding_projection_duplicate_binding_row_id" in error_codes
+
+
+def test_data_model_preflight_helper_flags_duplicate_binding_packet_rows(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_data_model_feature(feature_dir)
+
+    plan_path = feature_dir / "plan.md"
+    plan_text = plan_path.read_text(encoding="utf-8")
+    plan_path.write_text(
+        plan_text.replace(
+            "|--------------|---------------|\n\n## Artifact Status",
+            "|--------------|---------------|\n| BR-001 | test-matrix.md#Binding Packets:BR-001 |\n\n## Artifact Status",
+        ),
+        encoding="utf-8",
+    )
+
+    test_matrix_path = feature_dir / "test-matrix.md"
+    test_matrix_text = test_matrix_path.read_text(encoding="utf-8")
+    test_matrix_path.write_text(
+        test_matrix_text.replace(
+            "| BR-001 | IF-001 | Demo intent | [UIF-001.trigger] | Input semantics only | Demo visible | none | N/A | demo-entry-family | [UIF-Path-001] | [UDD-001] | [TM-001] | [TM-001] | [TC-001] | Integration | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] |\n",
+            "| BR-001 | IF-001 | Demo intent | [UIF-001.trigger] | Input semantics only | Demo visible | none | N/A | demo-entry-family | [UIF-Path-001] | [UDD-001] | [TM-001] | [TM-001] | [TC-001] | Integration | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] |\n"
+            "| BR-001 | IF-001 | Demo intent | [UIF-001.trigger] | Input semantics only | Demo visible | none | N/A | demo-entry-family | [UIF-Path-001] | [UDD-001] | [TM-001] | [TM-001] | [TC-001] | Integration | [UC-001, FR-001] | [S1] | [SC-001] | [EC-001] |\n",
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "data_model_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--research",
+            str(feature_dir / "research.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    error_codes = [entry["code"] for entry in payload["generation_readiness"]["errors"]]
+    assert "binding_packets_duplicate_binding_row_id" in error_codes
 
 
 def test_data_model_preflight_helper_flags_missing_pending_data_model_row(tmp_path):

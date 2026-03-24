@@ -33,8 +33,7 @@ def _write_feature_fixture(
     packet_entry_status: str = "existing",
     include_research_trigger: bool = False,
     plan_feature_status: str = "planning-in-progress",
-    plan_uif_path_refs: str = "[UIF-Path-001]",
-    plan_udd_refs: str = "[UDD-001]",
+    plan_packet_source: str = "test-matrix.md#Binding Packets:BR-001",
     plan_test_scope: str = "Integration",
     data_model_strategy_evidence: str | None = None,
 ) -> Path:
@@ -319,9 +318,9 @@ def _write_feature_fixture(
                 "",
                 "## Binding Projection Index",
                 "",
-                "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | Trigger Ref(s) | Primary TM IDs | TC IDs | UIF Path Ref(s) | UDD Ref(s) | Test Scope |",
-                "|--------------|-------|--------|-------|------------------|----------------|----------------|--------|-----------------|------------|------------|",
-                f"| BR-001 | UC-001 | UIF-001 | FR-001 | IF-001 | [UIF-001.trigger] | [TM-001] | TC-001 | {plan_uif_path_refs} | {plan_udd_refs} | {plan_test_scope} |",
+                "| BindingRowID | Packet Source |",
+                "|--------------|---------------|",
+                f"| BR-001 | {plan_packet_source} |",
                 "",
                 "## Artifact Status",
                 "",
@@ -683,7 +682,7 @@ def test_binding_tuple_projection_sync_accepts_aligned_artifacts(tmp_path: Path)
 def test_binding_tuple_projection_sync_flags_plan_projection_drift(tmp_path: Path):
     feature_dir = _write_feature_fixture(
         tmp_path,
-        plan_udd_refs="[UDD-999]",
+        plan_packet_source="test-matrix.md#Binding Packets:BR-999",
     )
     payload = _run_planning_lint(feature_dir)
     assert payload["findings_total"] > 0
@@ -871,8 +870,8 @@ def test_binding_projection_index_rejects_contract_design_columns(tmp_path: Path
     plan = feature_dir / "plan.md"
     plan.write_text(
         plan.read_text(encoding="utf-8").replace(
-            "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | Trigger Ref(s) | Primary TM IDs | TC IDs | UIF Path Ref(s) | UDD Ref(s) | Test Scope |",
-            "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | Trigger Ref(s) | Primary TM IDs | TC IDs | UIF Path Ref(s) | UDD Ref(s) | Boundary Anchor | Test Scope |",
+            "| BindingRowID | Packet Source |",
+            "| BindingRowID | Packet Source | Boundary Anchor |",
         ),
         encoding="utf-8",
     )

@@ -45,7 +45,7 @@ Treat `TASKS_BOOTSTRAP.execution_readiness` as the primary hard gate.
 - do not recompute full hard gates by re-deriving complete `plan.md` tables from scratch; the bootstrap packet is the authority.
 - Active executable tuples select `new` repo anchors but lack explicit rejection evidence for `existing` and `extended` — treat this as a hard blocker.
 - Any selected `contract` row is missing `Full Field Dictionary (Operation-scoped)` — treat this as a hard blocker.
-- binding-packet projection stability must be confirmed before decomposition.
+- binding-packet source resolution must be confirmed before decomposition.
 
 ## Governance / Authority
 
@@ -55,7 +55,7 @@ Treat `TASKS_BOOTSTRAP.execution_readiness` as the primary hard gate.
 - Keep contract projection authoritative for the current run.
 - On projection drift, emit upstream writeback actions only:
   - `/sdd.specify` — if spec drift is the root cause
-  - `/sdd.plan.test-matrix` — if binding-packet projection is unstable
+  - `/sdd.plan.test-matrix` — if binding-packet source resolution or packet authority is unstable
   - do not repair upstream artifacts locally
 
 ## Repository-First Protocol

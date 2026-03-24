@@ -24,6 +24,7 @@ wheels/
 .history
 demos/
 demo-cline/
+implementation_*.md
 
 # Virtual environments
 venv/
