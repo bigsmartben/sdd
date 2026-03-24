@@ -34,7 +34,7 @@ TASK_SECTION_HEADINGS = (
     "Artifact Status",
     "Handoff Protocol",
 )
-UNRESOLVED_CONTRACT_NAME_RE = re.compile(r"<([A-Z][A-Za-z0-9]+)>")
+UNRESOLVED_CONTRACT_NAME_RE = re.compile(r"(?<![A-Za-z0-9_])<([A-Z][A-Za-z0-9]+)>(?![A-Za-z0-9_])")
 TASK_REQUIRED_STAGE_IDS = {"research", "test-matrix", "data-model"}
 TASK_REQUIRED_TEST_MATRIX_SECTIONS = (
     "Interface Partition Decisions",
