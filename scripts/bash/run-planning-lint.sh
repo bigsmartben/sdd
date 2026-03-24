@@ -370,6 +370,43 @@ normalize_markdown_list_cell() {
     printf '%s' "$value"
 }
 
+canonical_packet_source() {
+    local binding_row_id
+    binding_row_id="$(normalize_markdown_scalar "$1")"
+    if [[ -z "$binding_row_id" ]]; then
+        printf ''
+        return 0
+    fi
+    printf 'test-matrix.md#Binding Packets:%s' "$binding_row_id"
+}
+
+normalize_packet_source_ref() {
+    local value
+    value="$(normalize_markdown_scalar "$1")"
+    if [[ -z "$value" ]]; then
+        printf ''
+        return 0
+    fi
+
+    if [[ "$value" =~ ^[Tt][Ee][Ss][Tt]-[Mm][Aa][Tt][Rr][Ii][Xx]\.md[[:space:]]*#[[:space:]]*[Bb]inding([[:space:]]|-)?[Pp]ackets[[:space:]]*:[[:space:]]*([A-Za-z0-9_.-]+)[[:space:]]*$ ]]; then
+        printf '%s' "$(canonical_packet_source "${BASH_REMATCH[2]}")"
+        return 0
+    fi
+
+    printf '%s' "$value"
+}
+
+packet_source_binding_row_id() {
+    local normalized
+    normalized="$(normalize_packet_source_ref "$1")"
+    if [[ "$normalized" =~ ^test-matrix\.md#Binding\ Packets:([A-Za-z0-9_.-]+)$ ]]; then
+        printf '%s' "${BASH_REMATCH[1]}"
+        return 0
+    fi
+
+    printf ''
+}
+
 extract_anchor_status_token() {
     local raw normalized token
     raw="$1"
@@ -1076,6 +1113,7 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                 declare -A plan_uif=()
                 declare -A plan_udd=()
                 declare -A plan_test_scope=()
+                declare -A plan_packet_source=()
                 declare -A packet_operation=()
                 declare -A packet_if_scope=()
                 declare -A packet_tm=()
@@ -1095,6 +1133,8 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                 uif_path_idx=-1
                 udd_ref_idx=-1
                 test_scope_idx=-1
+                packet_source_idx=-1
+                has_packet_source_column=false
                 line_no=0
 
                 while IFS= read -r line || [[ -n "$line" ]]; do
@@ -1111,6 +1151,7 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                         uif_path_idx=-1
                         udd_ref_idx=-1
                         test_scope_idx=-1
+                        packet_source_idx=-1
                         continue
                     fi
 
@@ -1142,12 +1183,17 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                         uif_path_idx=-1
                         udd_ref_idx=-1
                         test_scope_idx=-1
+                        packet_source_idx=-1
 
                         idx=0
                         for cell in "${cells[@]}"; do
                             case "$cell" in
                                 "BindingRowID")
                                     binding_row_idx=$idx
+                                    ;;
+                                "Packet Source")
+                                    packet_source_idx=$idx
+                                    has_packet_source_column=true
                                     ;;
                                 "Trigger Ref(s)")
                                     operation_idx=$idx
@@ -1199,6 +1245,9 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                     [[ -z "$binding_id" ]] && continue
 
                     plan_line["$binding_id"]=$line_no
+                    if [[ $packet_source_idx -ge 0 && $packet_source_idx -lt ${#cells[@]} ]]; then
+                        plan_packet_source["$binding_id"]="$(normalize_packet_source_ref "${cells[$packet_source_idx]}")"
+                    fi
                     if [[ $operation_idx -ge 0 && $operation_idx -lt ${#cells[@]} ]]; then
                         plan_operation["$binding_id"]="$(normalize_markdown_list_cell "${cells[$operation_idx]}")"
                     fi
@@ -1361,6 +1410,17 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
                 for binding_id in "${!plan_line[@]}"; do
                     if [[ -z "${packet_line[$binding_id]:-}" ]]; then
                         add_finding "$id" "$severity" "$rel_file" "${plan_line[$binding_id]}" "$message BindingRowID $binding_id is present in `Binding Projection Index` but missing from `test-matrix.md` `Binding Packets`." "$remediation"
+                        continue
+                    fi
+
+                    if [[ "$has_packet_source_column" == true ]]; then
+                        plan_source="${plan_packet_source[$binding_id]:-}"
+                        expected_source="$(canonical_packet_source "$binding_id")"
+                        source_binding_id="$(packet_source_binding_row_id "$plan_source")"
+
+                        if [[ -z "$plan_source" || -z "$source_binding_id" || "$source_binding_id" != "$binding_id" || "$plan_source" != "$expected_source" ]]; then
+                            add_finding "$id" "$severity" "$rel_file" "${plan_line[$binding_id]}" "$message BindingRowID $binding_id differs from `test-matrix.md` `Binding Packets` for minimal projection fields." "$remediation"
+                        fi
                         continue
                     fi
 

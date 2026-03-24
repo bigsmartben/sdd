@@ -91,6 +91,7 @@ Once a feature specification exists, `/sdd.plan` initializes the planning contro
 1. **Specification Analysis**: Reads and understands the feature requirements, user stories, and acceptance criteria from the current feature branch `spec.md`
 2. **Constitutional Compliance**: Ensures alignment with project constitution and architectural principles
 3. **Control-Plane Initialization**: Writes `plan.md` with `Shared Context Snapshot`, `Stage Queue`, `Binding Projection Index`, and `Artifact Status`
+   - `Binding Projection Index` is a registry-only lookup ledger; binding semantics are owned by `test-matrix.md` `Binding Packets`
 4. **Queue-Driven Planning**: The child commands `/sdd.plan.research`, `/sdd.plan.test-matrix`, `/sdd.plan.data-model`, and repeated `/sdd.plan.contract` generate stage artifacts one queue unit at a time
 
 ### The `/sdd.tasks` Command

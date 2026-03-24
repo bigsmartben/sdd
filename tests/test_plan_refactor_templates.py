@@ -58,7 +58,7 @@ def test_plan_template_tracks_only_contract_artifacts():
     assert "## Artifact Quality Signals" in content
     assert "Must: behave like a trustworthy control plane." in content
     assert "`contract` is tracked as the single per-binding interface design artifact." in content
-    assert "| BindingRowID | UC ID | UIF ID | FR ID | IF ID / IF Scope | Trigger Ref(s) | Primary TM IDs | TC IDs | UIF Path Ref(s) | UDD Ref(s) | Test Scope |" in content
+    assert "| BindingRowID | Packet Source |" in content
     assert "minimal selection and scheduling fields" in content
     assert "regenerate the projection instead of letting downstream commands rewrite it" in content
     assert "<!-- Keep table body empty until /sdd.plan.test-matrix projects stable binding rows. -->" in content
@@ -72,9 +72,8 @@ def test_plan_and_test_matrix_templates_precompute_contract_bootstrap_inputs():
     test_matrix_command = read("templates/commands/plan.test-matrix.md")
     test_matrix_template = read("templates/test-matrix-template.md")
 
-    assert "- `UIF Path Ref(s)`" in plan
-    assert "- `UDD Ref(s)`" in plan
-    assert "- `Test Scope`" in plan
+    assert "- `BindingRowID`" in plan
+    assert "- `Packet Source`" in plan
     assert "Do not add `Boundary Anchor`" in plan
 
     assert "## Binding Packet Requirements" in test_matrix_command
@@ -315,7 +314,7 @@ def test_tasks_command_uses_contract_as_realization_source():
     assert "Terminology note (compatibility, non-normative)" not in content
     assert "detail doc defines a narrower repo-backed internal handoff entry" not in content
     assert "Any selected `contract` row is missing `Full Field Dictionary (Operation-scoped)`" in content
-    assert "binding-packet projection stability" in content
+    assert "binding-packet source resolution" in content
 
 
 def test_tasks_template_is_contract_only():

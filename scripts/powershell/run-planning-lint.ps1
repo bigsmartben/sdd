@@ -339,6 +339,45 @@ function Normalize-MarkdownListCell {
     return ($parts -join ',')
 }
 
+function Get-CanonicalPacketSource {
+    param([string]$BindingRowId)
+
+    $normalized = Normalize-MarkdownScalar -Value $BindingRowId
+    if ([string]::IsNullOrWhiteSpace($normalized)) {
+        return ''
+    }
+
+    return "test-matrix.md#Binding Packets:$normalized"
+}
+
+function Normalize-PacketSourceRef {
+    param([string]$Value)
+
+    $normalized = Normalize-MarkdownScalar -Value $Value
+    if ([string]::IsNullOrWhiteSpace($normalized)) {
+        return ''
+    }
+
+    $match = [regex]::Match($normalized, '(?i)^test-matrix\.md\s*#\s*binding(?:\s|-)?packets\s*:\s*([A-Za-z0-9_.-]+)\s*$')
+    if ($match.Success) {
+        return Get-CanonicalPacketSource -BindingRowId $match.Groups[1].Value
+    }
+
+    return $normalized
+}
+
+function Get-PacketSourceBindingRowId {
+    param([string]$Value)
+
+    $normalized = Normalize-PacketSourceRef -Value $Value
+    $match = [regex]::Match($normalized, '^test-matrix\.md#Binding Packets:([A-Za-z0-9_.-]+)$')
+    if ($match.Success) {
+        return $match.Groups[1].Value
+    }
+
+    return ''
+}
+
 function Get-AnchorStatusToken {
     param([string]$Value)
 
@@ -367,6 +406,8 @@ function Get-PlanBindingTupleData {
     $uifPathIndex = -1
     $uddRefIndex = -1
     $testScopeIndex = -1
+    $packetSourceIndex = -1
+    $hasPacketSourceColumn = $false
 
     for ($i = 0; $i -lt $lines.Count; $i++) {
         $line = $lines[$i]
@@ -384,6 +425,7 @@ function Get-PlanBindingTupleData {
             $uifPathIndex = -1
             $uddRefIndex = -1
             $testScopeIndex = -1
+            $packetSourceIndex = -1
             continue
         }
 
@@ -402,6 +444,7 @@ function Get-PlanBindingTupleData {
             $uifPathIndex = -1
             $uddRefIndex = -1
             $testScopeIndex = -1
+            $packetSourceIndex = -1
             continue
         }
 
@@ -414,10 +457,15 @@ function Get-PlanBindingTupleData {
             $uifPathIndex = -1
             $uddRefIndex = -1
             $testScopeIndex = -1
+            $packetSourceIndex = -1
 
             for ($idx = 0; $idx -lt $cells.Count; $idx++) {
                 switch ($cells[$idx]) {
                     'BindingRowID' { $bindingRowIndex = $idx }
+                    'Packet Source' {
+                        $packetSourceIndex = $idx
+                        $hasPacketSourceColumn = $true
+                    }
                     'Trigger Ref(s)' { $operationIndex = $idx }
                     'IF ID / IF Scope' { $ifScopeIndex = $idx }
                     'Primary TM IDs' { $tmIndex = $idx }
@@ -449,6 +497,9 @@ function Get-PlanBindingTupleData {
 
         $rows[$bindingId] = [PSCustomObject]@{
             Line       = $lineNumber
+            PacketSource = if ($packetSourceIndex -ge 0 -and $packetSourceIndex -lt $cells.Count) { Normalize-PacketSourceRef -Value $cells[$packetSourceIndex] } else { '' }
+            ExpectedPacketSource = Get-CanonicalPacketSource -BindingRowId $bindingId
+            SourceBindingRowId = if ($packetSourceIndex -ge 0 -and $packetSourceIndex -lt $cells.Count) { Get-PacketSourceBindingRowId -Value $cells[$packetSourceIndex] } else { '' }
             Operation  = if ($operationIndex -ge 0 -and $operationIndex -lt $cells.Count) { Normalize-MarkdownListCell -Value $cells[$operationIndex] } else { '' }
             IfScope    = if ($ifScopeIndex -ge 0 -and $ifScopeIndex -lt $cells.Count) { Normalize-MarkdownScalar -Value $cells[$ifScopeIndex] } else { '' }
             TmId       = if ($tmIndex -ge 0 -and $tmIndex -lt $cells.Count) { Normalize-MarkdownListCell -Value $cells[$tmIndex] } else { '' }
@@ -459,7 +510,10 @@ function Get-PlanBindingTupleData {
         }
     }
 
-    return [PSCustomObject]@{ Rows = $rows }
+    return [PSCustomObject]@{
+        Rows = $rows
+        HasPacketSourceColumn = $hasPacketSourceColumn
+    }
 }
 
 function Get-TestMatrixBindingPackets {
@@ -1316,6 +1370,16 @@ foreach ($row in $rows) {
                     $planRow = $planData.Rows[$bindingId]
                     if (-not $packetRows.ContainsKey($bindingId)) {
                         Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $planRow.Line -Message "$($row.message) BindingRowID $bindingId is present in `Binding Projection Index` but missing from `test-matrix.md` `Binding Packets`." -Remediation $row.remediation
+                        continue
+                    }
+
+                    if ($planData.HasPacketSourceColumn) {
+                        if ([string]::IsNullOrWhiteSpace($planRow.PacketSource) -or
+                            [string]::IsNullOrWhiteSpace($planRow.SourceBindingRowId) -or
+                            $planRow.SourceBindingRowId -ne $bindingId -or
+                            $planRow.PacketSource -ne $planRow.ExpectedPacketSource) {
+                            Add-Finding -RuleId $row.id -Severity $row.severity -File $file.RelPath -Line $planRow.Line -Message "$($row.message) BindingRowID $bindingId differs from `test-matrix.md` `Binding Packets` for minimal projection fields." -Remediation $row.remediation
+                        }
                         continue
                     }
 

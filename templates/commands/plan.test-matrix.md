@@ -48,6 +48,12 @@ Each binding packet MUST provide:
 - `UDD Ref(s)`
 - stable binding projection for those interface units
 
+Each projected plan index row MUST provide:
+- `BindingRowID`
+- `Packet Source`
+
+`Packet Source` MUST point back to the authoritative `Binding Packets` row; do not mirror packet payload fields into `plan.md`.
+
 `Path Type` is verification coverage metadata only — do not promote it to interface-design input.
 
 ## Governance / Authority
@@ -76,12 +82,13 @@ Each binding packet MUST provide:
 
 - Must: output stable binding cuts, verification semantics, and reusable packets from `spec.md`.
 - Strictly: `BindingRowID` MUST be stable — do not reassign after first projection.
+- Strictly: `plan.md` index rows MUST be registry-only and MUST reference packet authority instead of duplicating packet fields.
 
 ## Writeback Contract
 
 Update exactly three targets in `PLAN_FILE`:
 - Selected `test-matrix` stage row (`Status = done`, `Output Path`, `Blocker`).
-- `Binding Projection Index`: Refresh `Binding Projection Index` by `BindingRowID`; replace matching rows, do not append duplicates.
+- `Binding Projection Index`: Refresh `Binding Projection Index` by `BindingRowID`; replace matching rows, do not append duplicates. Emit only `BindingRowID` + `Packet Source` registry rows.
 - `Artifact Status`: Keep exactly one `contract` row per projected `BindingRowID` (`Unit Type = contract`, `Status = pending`).
 
 **MUST NOT** rewrite `spec.md` or other planning artifacts.
