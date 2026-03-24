@@ -81,29 +81,18 @@ def _write_feature_fixture(
                 "    class DemoAggregate",
                 "```",
                 "",
-                "## Shared Lifecycle State Machines",
+                "## Shared Semantic Elements (SSE)",
                 "",
-                "### Lifecycle Summary",
-                "",
-                "| Lifecycle Ref | State Owner | Stable States | Invariant Ref(s) | Consumed By BindingRowID(s) | Required Model |",
-                "|---------------|-------------|---------------|------------------|-----------------------------|----------------|",
-                "| LC-001 | DemoAggregate.status | [`Open`, `Closed`] | [INV-001] | [BR-001] | Lightweight |",
-                "",
-                "### State Transition Table",
-                "",
-                "| Lifecycle Ref | From State | Trigger / Condition | To State | Transition Type | Notes / Invariant Ref(s) | Consumed By BindingRowID(s) |",
-                "|---------------|------------|---------------------|----------|-----------------|--------------------------|-----------------------------|",
-                "| LC-001 | `Open` | complete | `Closed` | allowed | [INV-001] | [BR-001] |",
-                "",
-                "| SSE ID | Kind | Name | Business Meaning | Primary UDD Ref(s) | Primary Spec Ref(s) | Consumed By BindingRowID(s) | Anchor Status | Repo-First Strategy Evidence | Repo Anchor | Anchor Role | Status |",
-                "|--------|------|------|------------------|--------------------|---------------------|-----------------------------|---------------|------------------------------|-------------|-------------|--------|",
-                f"| SSE-001 | entity | DemoAggregate | demo | [UDD-001] | [FR-001] | [BR-001] | {test_matrix_status} | {data_model_strategy_evidence} | src/domain/demo.py::DemoAggregate | owner | defined |",
+                "| SSE ID | Kind | Name | Business Meaning | Primary UDD Ref(s) | Primary Spec Ref(s) | Consumed By BindingRowID(s) | Why Not Contract-Local | Anchor Status | Repo-First Strategy Evidence | Repo Anchor | Anchor Role | Status |",
+                "|--------|------|------|------------------|--------------------|---------------------|-----------------------------|------------------------|---------------|------------------------------|-------------|-------------|--------|",
+                f"| SSE-001 | entity | DemoAggregate | demo | [UDD-001] | [FR-001] | [BR-001] | Shared lifecycle and owner semantics are reused across bindings | {test_matrix_status} | {data_model_strategy_evidence} | src/domain/demo.py::DemoAggregate | owner | defined |",
                 "",
                 "## Owner / Source Alignment",
                 "",
                 "| OSA ID | Semantic Ref | Owner Class / Semantic Owner | Source Type | Source Ref(s) | Consumed Field / Concept | Consumed By BindingRowID(s) | Notes |",
                 "|--------|--------------|------------------------------|-------------|---------------|--------------------------|-----------------------------|-------|",
                 "| OSA-001 | SSE-001 | DemoAggregate | authoritative | [UDD-001] | Demo aggregate | [BR-001] | Stable owner |",
+                "| OSA-002 | SSE-001 | DemoAggregate.status | authoritative | src/domain/demo.py::DemoAggregate | Lifecycle state owner | [BR-001] | State owner stays in shared model |",
                 "",
                 "## Shared Field Vocabulary",
                 "",
@@ -111,11 +100,33 @@ def _write_feature_fixture(
                 "|--------|----------------|---------|--------------------|--------------------|----------------------|---------------------------|",
                 "| SFV-001 | DemoAggregate.demoId | Demo identifier | [UDD-001] | Stable demo identity | Never null | [BR-001] |",
                 "",
+                "## Business Invariants & Lifecycle Rules",
+                "",
+                "### Lifecycle Summary",
+                "",
+                "| Lifecycle Ref | State Owner | Stable States | Invariant Ref(s) | Consumed By BindingRowID(s) | Required Model |",
+                "|---------------|-------------|---------------|------------------|-----------------------------|----------------|",
+                "| LC-001 | DemoAggregate.status | [`Open`, `Closed`] | [INV-001, INV-002, INV-003] | [BR-001] | lightweight |",
+                "",
+                "### Invariant Catalog",
+                "",
+                "| INV ID | Lifecycle Ref | Rule Kind | Invariant / Transition Rule | Owner / Scope | Consumed By BindingRowID(s) |",
+                "|--------|---------------|-----------|-----------------------------|---------------|-----------------------------|",
+                "| INV-001 | LC-001 | allowed-transition | `Open -> Closed` on complete | DemoAggregate.status | [BR-001] |",
+                "| INV-002 | LC-001 | forbidden-transition | `Closed -> Open` is forbidden | DemoAggregate.status | [BR-001] |",
+                "| INV-003 | LC-001 | key-invariant | Closed demos remain immutable | DemoAggregate.status | [BR-001] |",
+                "",
+                "### State Transition Table",
+                "",
+                "| Lifecycle Ref | From State | Trigger / Condition | To State | Transition Type | Notes / Invariant Ref(s) | Consumed By BindingRowID(s) |",
+                "|---------------|------------|---------------------|----------|-----------------|--------------------------|-----------------------------|",
+                "| LC-001 | `Open` | complete | `Closed` | allowed | [INV-001] | [BR-001] |",
+                "",
                 "## Downstream Contract Constraints",
                 "",
                 "| DCC ID | BindingRowID | Required Shared Semantic Ref(s) | Constraint Type | Contract Impact |",
                 "|--------|--------------|---------------------------------|-----------------|-----------------|",
-                "| DCC-001 | BR-001 | [SSE-001, OSA-001, SFV-001] | owner | Reuse shared demo aggregate semantics |",
+                "| DCC-001 | BR-001 | [SSE-001, OSA-001, OSA-002, SFV-001, LC-001, INV-001, INV-002, INV-003] | reuse | Reuse shared demo aggregate semantics and lifecycle authority |",
             ]
         ),
         encoding="utf-8",
@@ -733,6 +744,121 @@ def test_data_model_new_anchors_require_strategy_evidence(tmp_path: Path):
     payload = _run_planning_lint(feature_dir)
     assert payload["findings_total"] > 0
     assert any(f["rule_id"] == "PLN-DM-009" for f in payload["findings"])
+
+
+@pytest.mark.parametrize("runner", [_run_planning_lint, _run_planning_lint_powershell], ids=["bash", "powershell"])
+def test_data_model_lifecycle_summary_requires_owner_invariant_refs_and_model(tmp_path: Path, runner):
+    feature_dir = _write_feature_fixture(tmp_path)
+    data_model = feature_dir / "data-model.md"
+    content = data_model.read_text(encoding="utf-8")
+    content = _replace_exact(
+        content,
+        "| LC-001 | DemoAggregate.status | [`Open`, `Closed`] | [INV-001, INV-002, INV-003] | [BR-001] | lightweight |",
+        "| LC-001 |  | [`Open`, `Closed`] | [none] | [BR-001] | invalid-model |",
+    )
+    data_model.write_text(content, encoding="utf-8")
+
+    payload = runner(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-DM-010" for f in payload["findings"])
+
+
+@pytest.mark.parametrize("runner", [_run_planning_lint, _run_planning_lint_powershell], ids=["bash", "powershell"])
+def test_data_model_lightweight_lifecycle_requires_allowed_forbidden_and_key_invariants(tmp_path: Path, runner):
+    feature_dir = _write_feature_fixture(tmp_path)
+    data_model = feature_dir / "data-model.md"
+    content = data_model.read_text(encoding="utf-8")
+    content = _replace_exact(
+        content,
+        "| INV-002 | LC-001 | forbidden-transition | `Closed -> Open` is forbidden | DemoAggregate.status | [BR-001] |\n",
+        "",
+    )
+    data_model.write_text(content, encoding="utf-8")
+
+    payload = runner(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-DM-010" for f in payload["findings"])
+
+
+@pytest.mark.parametrize("runner", [_run_planning_lint, _run_planning_lint_powershell], ids=["bash", "powershell"])
+def test_data_model_lightweight_lifecycle_requires_transition_table_rows(tmp_path: Path, runner):
+    feature_dir = _write_feature_fixture(tmp_path)
+    data_model = feature_dir / "data-model.md"
+    content = data_model.read_text(encoding="utf-8")
+    content = _replace_exact(
+        content,
+        "| LC-001 | `Open` | complete | `Closed` | allowed | [INV-001] | [BR-001] |\n",
+        "",
+    )
+    data_model.write_text(content, encoding="utf-8")
+
+    payload = runner(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-DM-010" for f in payload["findings"])
+
+
+@pytest.mark.parametrize("runner", [_run_planning_lint, _run_planning_lint_powershell], ids=["bash", "powershell"])
+def test_data_model_fsm_lifecycle_requires_transition_pseudocode_and_state_diagram(tmp_path: Path, runner):
+    feature_dir = _write_feature_fixture(tmp_path)
+    data_model = feature_dir / "data-model.md"
+    content = data_model.read_text(encoding="utf-8")
+    content = _replace_exact(content, "| [BR-001] | lightweight |", "| [BR-001] | fsm |")
+    data_model.write_text(content, encoding="utf-8")
+
+    payload = runner(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-DM-010" for f in payload["findings"])
+
+
+@pytest.mark.parametrize("runner", [_run_planning_lint, _run_planning_lint_powershell], ids=["bash", "powershell"])
+def test_data_model_lifecycle_state_owner_must_map_to_existing_sse_or_osa(tmp_path: Path, runner):
+    feature_dir = _write_feature_fixture(tmp_path)
+    data_model = feature_dir / "data-model.md"
+    content = data_model.read_text(encoding="utf-8")
+    content = _replace_exact(
+        content,
+        "| LC-001 | DemoAggregate.status | [`Open`, `Closed`] | [INV-001, INV-002, INV-003] | [BR-001] | lightweight |",
+        "| LC-001 | UnknownOwner.status | [`Open`, `Closed`] | [INV-001, INV-002, INV-003] | [BR-001] | lightweight |",
+    )
+    data_model.write_text(content, encoding="utf-8")
+
+    payload = runner(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-DM-010" for f in payload["findings"])
+
+
+@pytest.mark.parametrize("runner", [_run_planning_lint, _run_planning_lint_powershell], ids=["bash", "powershell"])
+def test_data_model_dcc_refs_must_resolve_to_existing_shared_refs(tmp_path: Path, runner):
+    feature_dir = _write_feature_fixture(tmp_path)
+    data_model = feature_dir / "data-model.md"
+    content = data_model.read_text(encoding="utf-8")
+    content = _replace_exact(
+        content,
+        "| DCC-001 | BR-001 | [SSE-001, OSA-001, OSA-002, SFV-001, LC-001, INV-001, INV-002, INV-003] | reuse | Reuse shared demo aggregate semantics and lifecycle authority |",
+        "| DCC-001 | BR-001 | [SSE-001, OSA-001, OSA-002, SFV-001, LC-001, INV-001, INV-999] | reuse | Reuse shared demo aggregate semantics and lifecycle authority |",
+    )
+    data_model.write_text(content, encoding="utf-8")
+
+    payload = runner(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-DM-010" for f in payload["findings"])
+
+
+@pytest.mark.parametrize("runner", [_run_planning_lint, _run_planning_lint_powershell], ids=["bash", "powershell"])
+def test_data_model_single_binding_shared_semantic_warns_when_reason_is_weak(tmp_path: Path, runner):
+    feature_dir = _write_feature_fixture(tmp_path)
+    data_model = feature_dir / "data-model.md"
+    content = data_model.read_text(encoding="utf-8")
+    content = _replace_exact(
+        content,
+        "Shared lifecycle and owner semantics are reused across bindings",
+        "N/A",
+    )
+    data_model.write_text(content, encoding="utf-8")
+
+    payload = runner(feature_dir)
+    assert payload["findings_total"] > 0
+    assert any(f["rule_id"] == "PLN-DM-011" for f in payload["findings"])
 
 
 def test_repo_anchor_paths_must_resolve_to_real_files(tmp_path: Path):

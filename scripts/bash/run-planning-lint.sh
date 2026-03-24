@@ -25,11 +25,13 @@ Supported rule kinds:
   - anchor_status_allowed_values
   - northbound_controller_required
   - repo_anchor_paths_exist
-    - plan_status_consistency
-    - binding_projection_stable_only
-    - binding_tuple_projection_sync
-    - shared_semantic_reuse_enum
-    - anchor_strategy_evidence_required
+  - plan_status_consistency
+  - binding_projection_stable_only
+  - binding_tuple_projection_sync
+  - shared_semantic_reuse_enum
+  - anchor_strategy_evidence_required
+  - data_model_semantic_closure
+  - data_model_single_binding_shared_warning
 EOF
 }
 
@@ -421,6 +423,53 @@ extract_anchor_status_token() {
     done
 
     printf ''
+}
+
+normalize_rule_token() {
+    local value normalized
+    value="$(normalize_markdown_scalar "$1")"
+    normalized="$(echo "$value" | tr '[:upper:]' '[:lower:]')"
+    normalized="${normalized//_/-}"
+    normalized="${normalized// /-}"
+    normalized="$(echo "$normalized" | sed 's/--*/-/g')"
+    printf '%s' "$normalized"
+}
+
+extract_semantic_ref_tokens() {
+    local value="$1"
+    local pattern="${2:-"(SSE|OSA|SFV|LC|INV|DCC)-[A-Za-z0-9_.-]+"}"
+    local normalized
+    normalized="$(normalize_markdown_scalar "$value")"
+    if [[ -z "$normalized" ]]; then
+        return 0
+    fi
+    grep -oE "$pattern" <<< "$normalized" | sort -u || true
+}
+
+single_binding_reason_is_weak() {
+    local reason lower
+    reason="$(normalize_markdown_scalar "$1")"
+    lower="$(echo "$reason" | tr '[:upper:]' '[:lower:]')"
+
+    if [[ -z "$lower" ]]; then
+        return 0
+    fi
+
+    case "$lower" in
+        "n/a"|"na"|"none"|"[none]"|"todo"|"tbd")
+            return 0
+            ;;
+    esac
+
+    if [[ ${#lower} -lt 24 ]]; then
+        return 0
+    fi
+
+    if ! grep -qiE '(shared|reuse|reused|reusable|lifecycle|invariant|owner|source|stable|consisten|cross[- ]binding|duplicate|contradict)' <<< "$lower"; then
+        return 0
+    fi
+
+    return 1
 }
 
 parse_args() {
@@ -1563,8 +1612,636 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
             done
             ;;
 
+        data_model_semantic_closure)
+            for file_path in "${matched_files[@]}"; do
+                rel_file="${file_path#$FEATURE_DIR/}"
+                current_section=""
+                current_subsection=""
+                current_table=""
+                line_no=0
+                lifecycle_summary_line=0
+                invariant_catalog_line=0
+                transition_table_line=0
+                transition_pseudocode_line=0
+                state_diagram_line=0
+                has_state_diagram=false
+                summary_header_seen=false
+                invariant_header_seen=false
+                transition_header_seen=false
+                pseudocode_header_seen=false
+                summary_lifecycle_idx=-1
+                summary_owner_idx=-1
+                summary_invariant_idx=-1
+                summary_model_idx=-1
+                invariant_id_idx=-1
+                invariant_lifecycle_idx=-1
+                invariant_kind_idx=-1
+                transition_lifecycle_idx=-1
+                pseudocode_lifecycle_idx=-1
+                sse_id_idx=-1
+                osa_id_idx=-1
+                osa_owner_idx=-1
+                sfv_id_idx=-1
+                dcc_id_idx=-1
+                dcc_required_refs_idx=-1
+                declare -A lifecycle_line=()
+                declare -A lifecycle_model=()
+                declare -A lifecycle_owner=()
+                declare -A lifecycle_invariants=()
+                declare -A invariant_allowed=()
+                declare -A invariant_forbidden=()
+                declare -A invariant_key=()
+                declare -A transition_rows=()
+                declare -A pseudocode_rows=()
+                declare -A sse_ids=()
+                declare -A osa_ids=()
+                declare -A osa_owner_values=()
+                declare -A sfv_ids=()
+                declare -A lc_ids=()
+                declare -A inv_ids=()
+                declare -A dcc_ids=()
+                declare -A dcc_required_refs=()
+                declare -A dcc_line=()
+
+                while IFS= read -r line || [[ -n "$line" ]]; do
+                    line_no=$((line_no + 1))
+
+                    if [[ "$line" =~ ^##[[:space:]]+(.+)$ ]]; then
+                        current_section="$(trim "${BASH_REMATCH[1]}")"
+                        current_subsection=""
+                        current_table=""
+                        continue
+                    fi
+
+                    if [[ "$line" =~ ^###[[:space:]]+(.+)$ ]]; then
+                        current_subsection="$(trim "${BASH_REMATCH[1]}")"
+                        current_table=""
+                        case "$current_subsection" in
+                            "Lifecycle Summary")
+                                lifecycle_summary_line=$line_no
+                                ;;
+                            "Invariant Catalog")
+                                invariant_catalog_line=$line_no
+                                ;;
+                            "State Transition Table")
+                                transition_table_line=$line_no
+                                ;;
+                            "Transition Pseudocode (when \`Required Model = fsm\`)")
+                                transition_pseudocode_line=$line_no
+                                ;;
+                        esac
+                        continue
+                    fi
+
+                    if [[ "$current_section" == "Business Invariants & Lifecycle Rules" ]] && grep -q 'stateDiagram-v2' <<< "$line"; then
+                        has_state_diagram=true
+                        [[ $state_diagram_line -eq 0 ]] && state_diagram_line=$line_no
+                    fi
+
+                    case "$current_section" in
+                        "Shared Semantic Elements (SSE)"|"Shared Semantic Elements")
+                            current_table="sse"
+                            ;;
+                        "Owner / Source Alignment")
+                            current_table="osa"
+                            ;;
+                        "Shared Field Vocabulary (SFV)"|"Shared Field Vocabulary")
+                            current_table="sfv"
+                            ;;
+                        "Downstream Contract Constraints")
+                            current_table="dcc"
+                            ;;
+                        *)
+                            case "$current_subsection" in
+                                "Lifecycle Summary")
+                                    current_table="lifecycle_summary"
+                                    ;;
+                                "Invariant Catalog")
+                                    current_table="invariant_catalog"
+                                    ;;
+                                "State Transition Table")
+                                    current_table="state_transition_table"
+                                    ;;
+                                "Transition Pseudocode (when \`Required Model = fsm\`)")
+                                    current_table="transition_pseudocode"
+                                    ;;
+                                *)
+                                    current_table=""
+                                    ;;
+                            esac
+                            ;;
+                    esac
+
+                    if [[ -z "$current_table" ]]; then
+                        continue
+                    fi
+
+                    if ! parse_markdown_cells "$line"; then
+                        case "$current_table" in
+                            lifecycle_summary)
+                                summary_lifecycle_idx=-1
+                                summary_owner_idx=-1
+                                summary_invariant_idx=-1
+                                summary_model_idx=-1
+                                ;;
+                            invariant_catalog)
+                                invariant_id_idx=-1
+                                invariant_lifecycle_idx=-1
+                                invariant_kind_idx=-1
+                                ;;
+                            state_transition_table)
+                                transition_lifecycle_idx=-1
+                                ;;
+                            transition_pseudocode)
+                                pseudocode_lifecycle_idx=-1
+                                ;;
+                            sse)
+                                sse_id_idx=-1
+                                ;;
+                            osa)
+                                osa_id_idx=-1
+                                osa_owner_idx=-1
+                                ;;
+                            sfv)
+                                sfv_id_idx=-1
+                                ;;
+                            dcc)
+                                dcc_id_idx=-1
+                                dcc_required_refs_idx=-1
+                                ;;
+                        esac
+                        continue
+                    fi
+
+                    cells=("${MARKDOWN_CELLS[@]}")
+                    is_separator=true
+                    for cell in "${cells[@]}"; do
+                        if [[ ! "$cell" =~ ^:?-{3,}:?$ ]]; then
+                            is_separator=false
+                            break
+                        fi
+                    done
+
+                    case "$current_table" in
+                        sse)
+                            if [[ $sse_id_idx -lt 0 ]]; then
+                                idx=0
+                                for cell in "${cells[@]}"; do
+                                    if [[ "$cell" == "SSE ID" ]]; then
+                                        sse_id_idx=$idx
+                                        break
+                                    fi
+                                    idx=$((idx + 1))
+                                done
+                                continue
+                            fi
+                            [[ "$is_separator" == true ]] && continue
+                            [[ $sse_id_idx -ge ${#cells[@]} ]] && continue
+                            sse_id="$(normalize_markdown_scalar "${cells[$sse_id_idx]}")"
+                            [[ -z "$sse_id" ]] && continue
+                            sse_ids["$sse_id"]=$line_no
+                            ;;
+                        osa)
+                            if [[ $osa_id_idx -lt 0 ]]; then
+                                idx=0
+                                for cell in "${cells[@]}"; do
+                                    case "$cell" in
+                                        "OSA ID")
+                                            osa_id_idx=$idx
+                                            ;;
+                                        "Owner Class / Semantic Owner")
+                                            osa_owner_idx=$idx
+                                            ;;
+                                    esac
+                                    idx=$((idx + 1))
+                                done
+                                continue
+                            fi
+                            [[ "$is_separator" == true ]] && continue
+                            [[ $osa_id_idx -ge ${#cells[@]} ]] && continue
+                            osa_id="$(normalize_markdown_scalar "${cells[$osa_id_idx]}")"
+                            [[ -n "$osa_id" ]] && osa_ids["$osa_id"]=$line_no
+                            if [[ $osa_owner_idx -ge 0 && $osa_owner_idx -lt ${#cells[@]} ]]; then
+                                owner_key="$(normalize_markdown_scalar "${cells[$osa_owner_idx]}")"
+                                owner_key="$(echo "$owner_key" | tr '[:upper:]' '[:lower:]')"
+                                [[ -n "$owner_key" ]] && osa_owner_values["$owner_key"]=$line_no
+                            fi
+                            ;;
+                        sfv)
+                            if [[ $sfv_id_idx -lt 0 ]]; then
+                                idx=0
+                                for cell in "${cells[@]}"; do
+                                    if [[ "$cell" == "SFV ID" ]]; then
+                                        sfv_id_idx=$idx
+                                        break
+                                    fi
+                                    idx=$((idx + 1))
+                                done
+                                continue
+                            fi
+                            [[ "$is_separator" == true ]] && continue
+                            [[ $sfv_id_idx -ge ${#cells[@]} ]] && continue
+                            sfv_id="$(normalize_markdown_scalar "${cells[$sfv_id_idx]}")"
+                            [[ -n "$sfv_id" ]] && sfv_ids["$sfv_id"]=$line_no
+                            ;;
+                        dcc)
+                            if [[ $dcc_id_idx -lt 0 ]]; then
+                                idx=0
+                                for cell in "${cells[@]}"; do
+                                    case "$cell" in
+                                        "DCC ID")
+                                            dcc_id_idx=$idx
+                                            ;;
+                                        "Required Shared Semantic Ref(s)")
+                                            dcc_required_refs_idx=$idx
+                                            ;;
+                                    esac
+                                    idx=$((idx + 1))
+                                done
+                                continue
+                            fi
+                            [[ "$is_separator" == true ]] && continue
+                            [[ $dcc_id_idx -ge ${#cells[@]} ]] && continue
+                            dcc_id="$(normalize_markdown_scalar "${cells[$dcc_id_idx]}")"
+                            [[ -z "$dcc_id" ]] && continue
+                            dcc_ids["$dcc_id"]=$line_no
+                            dcc_line["$dcc_id"]=$line_no
+                            if [[ $dcc_required_refs_idx -ge 0 && $dcc_required_refs_idx -lt ${#cells[@]} ]]; then
+                                dcc_required_refs["$dcc_id"]="$(normalize_markdown_list_cell "${cells[$dcc_required_refs_idx]}")"
+                            else
+                                dcc_required_refs["$dcc_id"]=""
+                            fi
+                            ;;
+                        lifecycle_summary)
+                            if [[ $summary_lifecycle_idx -lt 0 ]]; then
+                                idx=0
+                                for cell in "${cells[@]}"; do
+                                    case "$cell" in
+                                        "Lifecycle Ref")
+                                            summary_lifecycle_idx=$idx
+                                            ;;
+                                        "State Owner")
+                                            summary_owner_idx=$idx
+                                            ;;
+                                        "Invariant Ref(s)")
+                                            summary_invariant_idx=$idx
+                                            ;;
+                                        "Required Model")
+                                            summary_model_idx=$idx
+                                            ;;
+                                    esac
+                                    idx=$((idx + 1))
+                                done
+                                if [[ $summary_lifecycle_idx -ge 0 ]]; then
+                                    summary_header_seen=true
+                                fi
+                                continue
+                            fi
+
+                            [[ "$is_separator" == true ]] && continue
+                            [[ $summary_lifecycle_idx -ge ${#cells[@]} ]] && continue
+
+                            lifecycle_ref="$(normalize_markdown_scalar "${cells[$summary_lifecycle_idx]}")"
+                            [[ -z "$lifecycle_ref" ]] && continue
+                            lifecycle_line["$lifecycle_ref"]=$line_no
+                            lc_ids["$lifecycle_ref"]=$line_no
+                            owner_value=""
+                            invariant_value=""
+                            model_value=""
+                            if [[ $summary_owner_idx -ge 0 && $summary_owner_idx -lt ${#cells[@]} ]]; then
+                                owner_value="$(normalize_markdown_scalar "${cells[$summary_owner_idx]}")"
+                            fi
+                            if [[ $summary_invariant_idx -ge 0 && $summary_invariant_idx -lt ${#cells[@]} ]]; then
+                                invariant_value="$(normalize_markdown_list_cell "${cells[$summary_invariant_idx]}")"
+                            fi
+                            if [[ $summary_model_idx -ge 0 && $summary_model_idx -lt ${#cells[@]} ]]; then
+                                model_value="$(normalize_rule_token "${cells[$summary_model_idx]}")"
+                            fi
+                            lifecycle_owner["$lifecycle_ref"]="$owner_value"
+                            lifecycle_invariants["$lifecycle_ref"]="$invariant_value"
+                            lifecycle_model["$lifecycle_ref"]="$model_value"
+                            ;;
+                        invariant_catalog)
+                            if [[ $invariant_lifecycle_idx -lt 0 || $invariant_kind_idx -lt 0 || $invariant_id_idx -lt 0 ]]; then
+                                idx=0
+                                for cell in "${cells[@]}"; do
+                                    case "$cell" in
+                                        "INV ID")
+                                            invariant_id_idx=$idx
+                                            ;;
+                                        "Lifecycle Ref")
+                                            invariant_lifecycle_idx=$idx
+                                            ;;
+                                        "Rule Kind")
+                                            invariant_kind_idx=$idx
+                                            ;;
+                                    esac
+                                    idx=$((idx + 1))
+                                done
+                                if [[ $invariant_lifecycle_idx -ge 0 && $invariant_kind_idx -ge 0 ]]; then
+                                    invariant_header_seen=true
+                                fi
+                                continue
+                            fi
+
+                            [[ "$is_separator" == true ]] && continue
+                            [[ $invariant_lifecycle_idx -ge ${#cells[@]} || $invariant_kind_idx -ge ${#cells[@]} ]] && continue
+                            lifecycle_ref="$(normalize_markdown_scalar "${cells[$invariant_lifecycle_idx]}")"
+                            rule_kind="$(normalize_rule_token "${cells[$invariant_kind_idx]}")"
+                            [[ -z "$lifecycle_ref" || -z "$rule_kind" ]] && continue
+                            if [[ $invariant_id_idx -ge 0 && $invariant_id_idx -lt ${#cells[@]} ]]; then
+                                inv_id="$(normalize_markdown_scalar "${cells[$invariant_id_idx]}")"
+                                [[ -n "$inv_id" ]] && inv_ids["$inv_id"]=$line_no
+                            fi
+                            case "$rule_kind" in
+                                allowed-transition)
+                                    invariant_allowed["$lifecycle_ref"]=$(( ${invariant_allowed["$lifecycle_ref"]:-0} + 1 ))
+                                    ;;
+                                forbidden-transition)
+                                    invariant_forbidden["$lifecycle_ref"]=$(( ${invariant_forbidden["$lifecycle_ref"]:-0} + 1 ))
+                                    ;;
+                                key-invariant)
+                                    invariant_key["$lifecycle_ref"]=$(( ${invariant_key["$lifecycle_ref"]:-0} + 1 ))
+                                    ;;
+                            esac
+                            ;;
+                        state_transition_table)
+                            if [[ $transition_lifecycle_idx -lt 0 ]]; then
+                                idx=0
+                                for cell in "${cells[@]}"; do
+                                    if [[ "$cell" == "Lifecycle Ref" ]]; then
+                                        transition_lifecycle_idx=$idx
+                                        break
+                                    fi
+                                    idx=$((idx + 1))
+                                done
+                                if [[ $transition_lifecycle_idx -ge 0 ]]; then
+                                    transition_header_seen=true
+                                fi
+                                continue
+                            fi
+
+                            [[ "$is_separator" == true ]] && continue
+                            [[ $transition_lifecycle_idx -ge ${#cells[@]} ]] && continue
+                            lifecycle_ref="$(normalize_markdown_scalar "${cells[$transition_lifecycle_idx]}")"
+                            [[ -z "$lifecycle_ref" ]] && continue
+                            transition_rows["$lifecycle_ref"]=$(( ${transition_rows["$lifecycle_ref"]:-0} + 1 ))
+                            ;;
+                        transition_pseudocode)
+                            if [[ $pseudocode_lifecycle_idx -lt 0 ]]; then
+                                idx=0
+                                for cell in "${cells[@]}"; do
+                                    if [[ "$cell" == "Lifecycle Ref" ]]; then
+                                        pseudocode_lifecycle_idx=$idx
+                                        break
+                                    fi
+                                    idx=$((idx + 1))
+                                done
+                                if [[ $pseudocode_lifecycle_idx -ge 0 ]]; then
+                                    pseudocode_header_seen=true
+                                fi
+                                continue
+                            fi
+
+                            [[ "$is_separator" == true ]] && continue
+                            [[ $pseudocode_lifecycle_idx -ge ${#cells[@]} ]] && continue
+                            lifecycle_ref="$(normalize_markdown_scalar "${cells[$pseudocode_lifecycle_idx]}")"
+                            [[ -z "$lifecycle_ref" ]] && continue
+                            pseudocode_rows["$lifecycle_ref"]=$(( ${pseudocode_rows["$lifecycle_ref"]:-0} + 1 ))
+                            ;;
+                    esac
+                done < "$file_path"
+
+                if [[ $lifecycle_summary_line -eq 0 || "$summary_header_seen" == false ]]; then
+                    add_finding "$id" "$severity" "$rel_file" "${lifecycle_summary_line:-0}" "$message Missing `### Lifecycle Summary` table." "$remediation"
+                    continue
+                fi
+                if [[ $invariant_catalog_line -eq 0 || "$invariant_header_seen" == false ]]; then
+                    add_finding "$id" "$severity" "$rel_file" "${invariant_catalog_line:-0}" "$message Missing `### Invariant Catalog` table." "$remediation"
+                fi
+                if [[ $transition_table_line -eq 0 || "$transition_header_seen" == false ]]; then
+                    add_finding "$id" "$severity" "$rel_file" "${transition_table_line:-0}" "$message Missing `### State Transition Table` table." "$remediation"
+                fi
+                if [[ ${#lifecycle_line[@]} -eq 0 ]]; then
+                    add_finding "$id" "$severity" "$rel_file" "$lifecycle_summary_line" "$message `Lifecycle Summary` has no lifecycle rows." "$remediation"
+                    continue
+                fi
+
+                for lifecycle_ref in "${!lifecycle_line[@]}"; do
+                    lifecycle_row_line="${lifecycle_line[$lifecycle_ref]}"
+                    owner_value="${lifecycle_owner[$lifecycle_ref]:-}"
+                    invariant_value="${lifecycle_invariants[$lifecycle_ref]:-}"
+                    model_value="${lifecycle_model[$lifecycle_ref]:-}"
+
+                    if [[ -z "$owner_value" || "$owner_value" == "N/A" || "$owner_value" == "[none]" ]]; then
+                        add_finding "$id" "$severity" "$rel_file" "$lifecycle_row_line" "$message Lifecycle Ref $lifecycle_ref is missing `State Owner` closure in `Lifecycle Summary`." "$remediation"
+                    else
+                        owner_refs_found=0
+                        owner_refs_resolved=0
+                        unresolved_owner_refs=()
+                        while IFS= read -r owner_ref; do
+                            [[ -z "$owner_ref" ]] && continue
+                            owner_refs_found=$((owner_refs_found + 1))
+                            if [[ "$owner_ref" == OSA-* ]]; then
+                                if [[ -n "${osa_ids[$owner_ref]:-}" ]]; then
+                                    owner_refs_resolved=$((owner_refs_resolved + 1))
+                                else
+                                    unresolved_owner_refs+=("$owner_ref")
+                                fi
+                            elif [[ "$owner_ref" == SSE-* ]]; then
+                                if [[ -n "${sse_ids[$owner_ref]:-}" ]]; then
+                                    owner_refs_resolved=$((owner_refs_resolved + 1))
+                                else
+                                    unresolved_owner_refs+=("$owner_ref")
+                                fi
+                            fi
+                        done < <(extract_semantic_ref_tokens "$owner_value" '(SSE|OSA)-[A-Za-z0-9_.-]+')
+
+                        owner_key="$(echo "$(normalize_markdown_scalar "$owner_value")" | tr '[:upper:]' '[:lower:]')"
+                        if [[ $owner_refs_found -gt 0 ]]; then
+                            if [[ $owner_refs_resolved -eq 0 ]]; then
+                                add_finding "$id" "$severity" "$rel_file" "$lifecycle_row_line" "$message Lifecycle Ref $lifecycle_ref `State Owner` does not resolve to existing `SSE/OSA` refs: $(IFS=','; echo "${unresolved_owner_refs[*]}")." "$remediation"
+                            fi
+                        elif [[ -z "${osa_owner_values[$owner_key]:-}" ]]; then
+                            add_finding "$id" "$severity" "$rel_file" "$lifecycle_row_line" "$message Lifecycle Ref $lifecycle_ref `State Owner` must map to an existing `SSE/OSA` owner row; no matching `Owner / Source Alignment` owner was found." "$remediation"
+                        fi
+                    fi
+
+                    if [[ -z "$invariant_value" || ! "$invariant_value" =~ INV- ]]; then
+                        add_finding "$id" "$severity" "$rel_file" "$lifecycle_row_line" "$message Lifecycle Ref $lifecycle_ref is missing concrete `Invariant Ref(s)` in `Lifecycle Summary`." "$remediation"
+                    fi
+
+                    if [[ "$model_value" != "lightweight" && "$model_value" != "fsm" ]]; then
+                        add_finding "$id" "$severity" "$rel_file" "$lifecycle_row_line" "$message Lifecycle Ref $lifecycle_ref uses invalid `Required Model` value '$model_value'; expected `lightweight` or `fsm`." "$remediation"
+                        continue
+                    fi
+
+                    if [[ "$model_value" == "lightweight" ]]; then
+                        if [[ ${transition_rows["$lifecycle_ref"]:-0} -eq 0 ]]; then
+                            add_finding "$id" "$severity" "$rel_file" "$lifecycle_row_line" "$message Lifecycle Ref $lifecycle_ref is `lightweight` but `State Transition Table` has no rows for it." "$remediation"
+                        fi
+                        if [[ ${invariant_allowed["$lifecycle_ref"]:-0} -eq 0 ]]; then
+                            add_finding "$id" "$severity" "$rel_file" "$lifecycle_row_line" "$message Lifecycle Ref $lifecycle_ref is `lightweight` but `Invariant Catalog` is missing an `allowed-transition` row." "$remediation"
+                        fi
+                        if [[ ${invariant_forbidden["$lifecycle_ref"]:-0} -eq 0 ]]; then
+                            add_finding "$id" "$severity" "$rel_file" "$lifecycle_row_line" "$message Lifecycle Ref $lifecycle_ref is `lightweight` but `Invariant Catalog` is missing a `forbidden-transition` row." "$remediation"
+                        fi
+                        if [[ ${invariant_key["$lifecycle_ref"]:-0} -eq 0 ]]; then
+                            add_finding "$id" "$severity" "$rel_file" "$lifecycle_row_line" "$message Lifecycle Ref $lifecycle_ref is `lightweight` but `Invariant Catalog` is missing a `key-invariant` row." "$remediation"
+                        fi
+                    fi
+
+                    if [[ "$model_value" == "fsm" ]]; then
+                        if [[ ${transition_rows["$lifecycle_ref"]:-0} -eq 0 ]]; then
+                            add_finding "$id" "$severity" "$rel_file" "$lifecycle_row_line" "$message Lifecycle Ref $lifecycle_ref is `fsm` but `State Transition Table` has no rows for it." "$remediation"
+                        fi
+                        if [[ $transition_pseudocode_line -eq 0 || "$pseudocode_header_seen" == false || ${pseudocode_rows["$lifecycle_ref"]:-0} -eq 0 ]]; then
+                            add_finding "$id" "$severity" "$rel_file" "$lifecycle_row_line" "$message Lifecycle Ref $lifecycle_ref is `fsm` but `Transition Pseudocode` is missing required rows." "$remediation"
+                        fi
+                        if [[ "$has_state_diagram" == false ]]; then
+                            add_finding "$id" "$severity" "$rel_file" "${state_diagram_line:-$lifecycle_row_line}" "$message Lifecycle Ref $lifecycle_ref is `fsm` but no `stateDiagram-v2` was found." "$remediation"
+                        fi
+                        if [[ ${invariant_key["$lifecycle_ref"]:-0} -eq 0 ]]; then
+                            add_finding "$id" "$severity" "$rel_file" "$lifecycle_row_line" "$message Lifecycle Ref $lifecycle_ref is `fsm` but `Invariant Catalog` is missing a `key-invariant` row." "$remediation"
+                        fi
+                    fi
+                done
+
+                for dcc_id in "${!dcc_ids[@]}"; do
+                    dcc_line_no="${dcc_line[$dcc_id]}"
+                    refs_value="${dcc_required_refs[$dcc_id]:-}"
+                    dcc_ref_count=0
+                    unresolved_dcc_refs=()
+                    while IFS= read -r required_ref; do
+                        [[ -z "$required_ref" ]] && continue
+                        dcc_ref_count=$((dcc_ref_count + 1))
+                        case "$required_ref" in
+                            SSE-*)
+                                [[ -z "${sse_ids[$required_ref]:-}" ]] && unresolved_dcc_refs+=("$required_ref")
+                                ;;
+                            OSA-*)
+                                [[ -z "${osa_ids[$required_ref]:-}" ]] && unresolved_dcc_refs+=("$required_ref")
+                                ;;
+                            SFV-*)
+                                [[ -z "${sfv_ids[$required_ref]:-}" ]] && unresolved_dcc_refs+=("$required_ref")
+                                ;;
+                            LC-*)
+                                [[ -z "${lc_ids[$required_ref]:-}" ]] && unresolved_dcc_refs+=("$required_ref")
+                                ;;
+                            INV-*)
+                                [[ -z "${inv_ids[$required_ref]:-}" ]] && unresolved_dcc_refs+=("$required_ref")
+                                ;;
+                            DCC-*)
+                                [[ -z "${dcc_ids[$required_ref]:-}" ]] && unresolved_dcc_refs+=("$required_ref")
+                                ;;
+                        esac
+                    done < <(extract_semantic_ref_tokens "$refs_value" '(SSE|OSA|SFV|LC|INV|DCC)-[A-Za-z0-9_.-]+')
+
+                    if [[ $dcc_ref_count -eq 0 ]]; then
+                        add_finding "$id" "$severity" "$rel_file" "$dcc_line_no" "$message DCC row $dcc_id is missing resolvable `Required Shared Semantic Ref(s)` tokens (`SSE/OSA/SFV/LC/INV/DCC-*`)." "$remediation"
+                        continue
+                    fi
+                    if [[ ${#unresolved_dcc_refs[@]} -gt 0 ]]; then
+                        add_finding "$id" "$severity" "$rel_file" "$dcc_line_no" "$message DCC row $dcc_id references unknown shared-semantic refs: $(IFS=','; echo "${unresolved_dcc_refs[*]}")." "$remediation"
+                    fi
+                done
+            done
+            ;;
+
+        data_model_single_binding_shared_warning)
+            for file_path in "${matched_files[@]}"; do
+                rel_file="${file_path#$FEATURE_DIR/}"
+                line_no=0
+                current_section=""
+                in_sse_table=false
+                sse_id_idx=-1
+                consumed_idx=-1
+                why_idx=-1
+
+                while IFS= read -r line || [[ -n "$line" ]]; do
+                    line_no=$((line_no + 1))
+
+                    if [[ "$line" =~ ^##[[:space:]]+(.+)$ ]]; then
+                        current_section="$(trim "${BASH_REMATCH[1]}")"
+                        in_sse_table=false
+                        sse_id_idx=-1
+                        consumed_idx=-1
+                        why_idx=-1
+                        continue
+                    fi
+
+                    if [[ "$current_section" != "Shared Semantic Elements (SSE)" && "$current_section" != "Shared Semantic Elements" ]]; then
+                        continue
+                    fi
+
+                    if ! parse_markdown_cells "$line"; then
+                        in_sse_table=false
+                        sse_id_idx=-1
+                        consumed_idx=-1
+                        why_idx=-1
+                        continue
+                    fi
+
+                    cells=("${MARKDOWN_CELLS[@]}")
+                    is_separator=true
+                    for cell in "${cells[@]}"; do
+                        if [[ ! "$cell" =~ ^:?-{3,}:?$ ]]; then
+                            is_separator=false
+                            break
+                        fi
+                    done
+
+                    if [[ "$in_sse_table" == false ]]; then
+                        idx=0
+                        for cell in "${cells[@]}"; do
+                            case "$cell" in
+                                "SSE ID")
+                                    sse_id_idx=$idx
+                                    ;;
+                                "Consumed By BindingRowID(s)")
+                                    consumed_idx=$idx
+                                    ;;
+                                "Why Not Contract-Local")
+                                    why_idx=$idx
+                                    ;;
+                            esac
+                            idx=$((idx + 1))
+                        done
+                        if [[ $sse_id_idx -ge 0 && $consumed_idx -ge 0 && $why_idx -ge 0 ]]; then
+                            in_sse_table=true
+                        fi
+                        continue
+                    fi
+
+                    [[ "$is_separator" == true ]] && continue
+                    [[ $sse_id_idx -ge ${#cells[@]} || $consumed_idx -ge ${#cells[@]} || $why_idx -ge ${#cells[@]} ]] && continue
+
+                    sse_id="$(normalize_markdown_scalar "${cells[$sse_id_idx]}")"
+                    consumed_csv="$(normalize_markdown_list_cell "${cells[$consumed_idx]}")"
+                    why_value="$(normalize_markdown_scalar "${cells[$why_idx]}")"
+                    [[ -z "$sse_id" ]] && continue
+
+                    declare -A seen_bindings=()
+                    unique_count=0
+                    IFS=',' read -r -a binding_items <<< "$consumed_csv"
+                    for binding_item in "${binding_items[@]}"; do
+                        binding_id="$(normalize_markdown_scalar "$binding_item")"
+                        [[ -z "$binding_id" ]] && continue
+                        if [[ -z "${seen_bindings[$binding_id]:-}" ]]; then
+                            seen_bindings["$binding_id"]=1
+                            unique_count=$((unique_count + 1))
+                        fi
+                    done
+
+                    if [[ $unique_count -eq 1 ]] && single_binding_reason_is_weak "$why_value"; then
+                        add_finding "$id" "$severity" "$rel_file" "$line_no" "$message SSE row $sse_id is consumed by a single binding but `Why Not Contract-Local` rationale is weak (`$why_value`)." "$remediation"
+                    fi
+                done < "$file_path"
+            done
+            ;;
+
         *)
-            add_finding "$id" "$severity" "$glob" 0 "Unsupported rule kind: $kind" "Use one of: file_regex_forbidden, file_regex_required_any, component_symbols_exist, anchor_status_allowed_values, northbound_controller_required, repo_anchor_paths_exist, plan_status_consistency, binding_projection_stable_only, binding_tuple_projection_sync, shared_semantic_reuse_enum, anchor_strategy_evidence_required."
+            add_finding "$id" "$severity" "$glob" 0 "Unsupported rule kind: $kind" "Use one of: file_regex_forbidden, file_regex_required_any, component_symbols_exist, anchor_status_allowed_values, northbound_controller_required, repo_anchor_paths_exist, plan_status_consistency, binding_projection_stable_only, binding_tuple_projection_sync, shared_semantic_reuse_enum, anchor_strategy_evidence_required, data_model_semantic_closure, data_model_single_binding_shared_warning."
             ;;
     esac
 
