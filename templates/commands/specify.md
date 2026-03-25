@@ -84,14 +84,14 @@ Script rules:
 3. Apply informed defaults first. Add `[NEEDS CLARIFICATION: ...]` only for high-impact ambiguities with no safe default. Max 5 markers.
 4. Build required template sections in order:
    - `§ 1 Global Context` (`1.1 Actors`, `1.2 System Boundary`, `1.3 UI Data Dictionary`)
-   - `§ 2 UC Overview` and FR index
-   - per-UC UX/UI blocks (`3.1`~`3.5`) for interactive and user-facing flows
-   - `N.1 Success Criteria`, `N.2 Environment Edge Cases`, `Assumptions / Open Questions`
+   - `§ 2 UC Overview` with UC list, FR index, global `2.2 UX - Interaction Flow` Mermaid, and `2.3 Global Interaction Rules`
+   - `§ 3 UC Details` with one nested five-part block per UC (`3.1`, `3.1.1`~`3.1.5`; `3.2`, `3.2.1`~`3.2.5`; ...)
+   - `§ 4 Global Acceptance Criteria` (`4.1 Success Criteria`, `4.2 Environment Edge Cases`) and `Assumptions / Open Questions`
 5. Enforce edge-case anchor semantics:
    - Treat `EC-*` as semantic anchors, not a fixed four-item bucket list.
    - Add `EC-005+` whenever retry, re-entry, permission/access, duplicate/dedup, timeout/transport, validation, or recovery behavior is semantically distinct.
    - Use `validation` as a first-class `Path Inventory` scenario type when the user-visible behavior is a guardrail that blocks progression on empty, invalid, or incomplete input while preserving the current step.
-   - Keep `Path Inventory`, `Exception Paths`, FR blocks, and `N.2 Environment Edge Cases` textually aligned on the same `EC-*` meaning.
+   - Keep `Path Inventory`, `Exception Paths`, FR blocks, and `4.2 Environment Edge Cases` textually aligned on the same `EC-*` meaning.
 6. Write `SPEC_FILE` using template heading order; do not add governance/process-control payload sections.
 
 ## Self-Validation
@@ -111,8 +111,11 @@ Validate the generated `spec.md`:
 - every FR block includes `Capability`, `Given/When/Then`, `UDD (user-visible data) refs`, and `Success criteria`; FRs that cite exception or `EC-*` behavior also include `Failure / edge behavior`
 - requirements are testable and unambiguous
 - success criteria are measurable and technology-agnostic
+- `§ 2` includes one global `UX - Interaction Flow` Mermaid before UC detail expansion
+- every UC stays under `§ 3 UC Details`, using nested numbering like `3.1`, `3.1.1`~`3.1.5`, `3.2`, `3.2.1`~`3.2.5`
+- global acceptance is written under fixed `§ 4` / `4.1` / `4.2` headings with no placeholder text left in the output
 - no unresolved `[NEEDS CLARIFICATION]` markers remain
-- `EC-*` references remain semantically aligned across `Path Inventory`, `Exception Paths`, FR blocks, and `N.2 Environment Edge Cases`
+- `EC-*` references remain semantically aligned across `Path Inventory`, `Exception Paths`, FR blocks, and `4.2 Environment Edge Cases`
 - no planning-stage governance payload sections are introduced
 - no cross-artifact final PASS/FAIL conclusion is emitted
 

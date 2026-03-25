@@ -62,10 +62,10 @@ Execution steps:
 2. Load `FEATURE_SPEC` and build an internal ambiguity map (Clear / Partial / Missing) across:
    - Backbone & Boundaries (`1.1`, `1.2`, terminology)
    - User-Visible Data Backbone (`1.3 UI Data Dictionary`)
-   - UC / FR Backbone (`§ 2`, `2.1`, `3.1`, `3.3`)
-   - UX / UIF Backbone (`2.2`, `3.2`)
-   - UI Surface Definition (`3.4`, `3.5`)
-   - Outcome & Edge Signals (`N.1`, `N.2`)
+   - UC / FR Backbone (`§ 2`, `2.1`, per-UC `3.x`, per-UC `3.x.3`)
+   - UX / UIF Backbone (`2.2`, `2.3`, per-UC `3.x.2`)
+   - UI Surface & Exception Paths (per-UC `3.x.4`, per-UC `3.x.5`)
+   - Outcome & Edge Signals (`4.1`, `4.2`)
    - Dependencies, Constraints, and Open Questions
 3. Build a prioritized question queue:
    - ask only high-impact questions that change spec semantics or planning/test inputs

@@ -118,7 +118,7 @@ def _assert_packaged_runtime_templates(package_root: Path) -> None:
     spec_text = runtime_spec.read_text(encoding="utf-8")
     plan_text = runtime_plan.read_text(encoding="utf-8")
 
-    assert "### N.2 Environment Edge Cases" in spec_text
+    assert "### 4.2 Environment Edge Cases" in spec_text
     assert "EC-001" in spec_text and "EC-005" in spec_text
     assert "Planning Control Plane" in plan_text
 

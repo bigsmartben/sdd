@@ -207,6 +207,7 @@ This section MUST describe the executable method-level call chain, including man
 Mandatory rules:
 
 - Sequence MUST start from consumer/client entry and keep first-party hops at method-level anchors.
+- Sequence lifeline labels MUST use concrete participant/type names; do not embed method-level anchors in participant labels.
 - When `Boundary Anchor != Implementation Entry Anchor`, the first-party handoff from boundary to entry MUST be explicit and contiguous.
 - Sequence MUST be end-to-end contiguous: no broken hops, no orphan participants, and no disconnected request/response segments.
 - Sequence MUST explicitly represent every mandatory second-party call anchor on the main path.
@@ -234,17 +235,17 @@ Mandatory rules:
 ```mermaid
 sequenceDiagram
     participant Initiator as "<ClientOrCaller>"
-    participant Boundary as "ConcreteBoundary.method"
-    participant Middleware as "<AnchoredMiddlewareSymbol>"
-    participant Entry as "ConcreteEntry.method"
-    participant SecondParty as "<AnchoredSecondPartyCollaborator>"
-    participant ThirdParty as "<AnchoredThirdPartyDependency>"
+    participant Boundary as "ConcreteBoundary"
+    participant Middleware as "<AnchoredMiddlewareType>"
+    participant Entry as "ConcreteEntry"
+    participant SecondParty as "<AnchoredSecondPartyType>"
+    participant ThirdParty as "<AnchoredThirdPartyType>"
 
-    Initiator->>Boundary: [operation request] (S1)
-    Boundary->>Middleware: ingress / middleware traversal (S2)
-    Middleware->>Entry: handoff to implementation entry (S3)
-    Entry->>SecondParty: required second-party call (S4)
-    SecondParty->>ThirdParty: required third-party call (S5)
+    Initiator->>Boundary: ConcreteBoundary.method([operation request]) (S1)
+    Boundary->>Middleware: <AnchoredMiddlewareCallAnchor> (S2)
+    Middleware->>Entry: ConcreteEntry.method(...) (S3)
+    Entry->>SecondParty: <AnchoredSecondPartyCallAnchor> (S4)
+    SecondParty->>ThirdParty: <AnchoredThirdPartyCallAnchor> (S5)
     ThirdParty-->>SecondParty: third-party result / ack (S6)
     SecondParty-->>Entry: second-party result / ack (S7)
     alt failure
@@ -261,15 +262,15 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant Initiator as "<ClientOrCaller>"
-    participant Boundary as "ConcreteBoundary.method"
-    participant Entry as "ConcreteEntry.method"
-    participant SecondParty as "<AnchoredSecondPartyCollaborator>"
-    participant ThirdParty as "<AnchoredThirdPartyDependency>"
+    participant Boundary as "ConcreteBoundary"
+    participant Entry as "ConcreteEntry"
+    participant SecondParty as "<AnchoredSecondPartyType>"
+    participant ThirdParty as "<AnchoredThirdPartyType>"
 
-    Initiator->>Boundary: [operation request] (S1)
-    Boundary->>Entry: method-level handoff to implementation entry (S2)
-    Entry->>SecondParty: required second-party call anchor (S3)
-    SecondParty->>ThirdParty: required third-party call anchor (S4)
+    Initiator->>Boundary: ConcreteBoundary.method([operation request]) (S1)
+    Boundary->>Entry: ConcreteEntry.method(...) (S2)
+    Entry->>SecondParty: <AnchoredSecondPartyCallAnchor> (S3)
+    SecondParty->>ThirdParty: <AnchoredThirdPartyCallAnchor> (S4)
     ThirdParty-->>SecondParty: third-party result / ack (S5)
     SecondParty-->>Entry: second-party result / ack (S6)
     alt failure
@@ -288,16 +289,16 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant Initiator as "<ClientOrCaller>"
-    participant Boundary as "ConcreteBoundary.method"
-    participant Middleware as "<AnchoredMiddlewareSymbol>"
-    participant SecondParty as "<AnchoredSecondPartyCollaborator>"
-    participant ThirdParty as "<AnchoredThirdPartyDependency>"
+    participant Boundary as "ConcreteBoundary"
+    participant Middleware as "<AnchoredMiddlewareType>"
+    participant SecondParty as "<AnchoredSecondPartyType>"
+    participant ThirdParty as "<AnchoredThirdPartyType>"
 
-    Initiator->>Boundary: [operation request] (S1)
-    Boundary->>Middleware: ingress / middleware traversal (S2)
+    Initiator->>Boundary: ConcreteBoundary.method([operation request]) (S1)
+    Boundary->>Middleware: <AnchoredMiddlewareCallAnchor> (S2)
     Middleware->>Boundary: continue execution (S3)
-    Boundary->>SecondParty: required second-party call (S4)
-    SecondParty->>ThirdParty: required third-party call (S5)
+    Boundary->>SecondParty: <AnchoredSecondPartyCallAnchor> (S4)
+    SecondParty->>ThirdParty: <AnchoredThirdPartyCallAnchor> (S5)
     ThirdParty-->>SecondParty: third-party result / ack (S6)
     SecondParty-->>Boundary: second-party result / ack (S7)
     alt failure
@@ -312,13 +313,13 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant Initiator as "<ClientOrCaller>"
-    participant Boundary as "ConcreteBoundary.method"
-    participant SecondParty as "<AnchoredSecondPartyCollaborator>"
-    participant ThirdParty as "<AnchoredThirdPartyDependency>"
+    participant Boundary as "ConcreteBoundary"
+    participant SecondParty as "<AnchoredSecondPartyType>"
+    participant ThirdParty as "<AnchoredThirdPartyType>"
 
-    Initiator->>Boundary: [operation request] (S1)
-    Boundary->>SecondParty: required second-party call anchor (S2)
-    SecondParty->>ThirdParty: required third-party call anchor (S3)
+    Initiator->>Boundary: ConcreteBoundary.method([operation request]) (S1)
+    Boundary->>SecondParty: <AnchoredSecondPartyCallAnchor> (S2)
+    SecondParty->>ThirdParty: <AnchoredThirdPartyCallAnchor> (S3)
     ThirdParty-->>SecondParty: third-party result / ack (S4)
     SecondParty-->>Boundary: second-party result / ack (S5)
     alt failure

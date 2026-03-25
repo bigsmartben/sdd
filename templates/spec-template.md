@@ -48,23 +48,39 @@
 |---|---|---|---|---|
 | UC-001 | FR-001 | [Testable capability] | MUST/SHOULD | S1 |
 
-### 2.2 Global Interaction Rules
+### 2.2 UX - Interaction Flow *(mandatory)*
+**Global Main Flow (Mermaid)**:
+```mermaid
+graph TD
+    Start([Entry]) --> U01[UC-001]
+    U01 --> U02[UC-002]
+    U02 --> End([Outcome])
+```
+
+**Global Path Inventory**:
+| Path ID | Scenario Type | Start | End | Trigger / Guard | ref: UC/FR/EC |
+|---|---|---|---|---|---|
+| GIP-01 | happy | [Entry] | [Outcome] | [Guard] | UC-001 / FR-001 |
+
+### 2.3 Global Interaction Rules
 | Rule ID | Type (timeout/interrupt/duplicate/etc.) | Description | Applies To | Outcome |
 |---|---|---|---|---|
 | GIR-001 | [Type] | [Rule] | [Flow/UC] | [Result] |
 
 ---
 
-## § UC-001: [Use Case Name]
+## § 3 UC Details *(mandatory)*
 
-### 3.1 User Story & Acceptance Scenarios
+### 3.1 UC-001: [Use Case Name]
+
+#### 3.1.1 User Story & Acceptance Scenarios
 **Story**: As a **[actor]**, I want to **[action]**, so that **[value]**.
 
 | # | Given | When | Then |
 |---|---|---|---|
 | S1 | [Precondition] | [Trigger] | [Result] |
 
-### 3.2 UX - Interaction Flow *(mandatory)*
+#### 3.1.2 UX - Interaction Flow *(mandatory)*
 **Main Flow (Mermaid)**:
 ```mermaid
 graph TD
@@ -81,28 +97,41 @@ graph TD
 |---|---|---|
 | UIF-N01 | [Action] | `[Entity.field]` / FR-001 |
 
-### 3.3 Functional Requirements *(mandatory)*
-#### FR-001 - [Name] *(Level: MUST | ref: S1)*
+#### 3.1.3 Functional Requirements *(mandatory)*
+##### FR-001 - [Name] *(Level: MUST | ref: S1)*
 - **Capability**: System MUST [capability].
 - **Given/When/Then**: [G/W/T]
 - **UDD Refs**: Reads: `[Entity.field]`, Writes: `[Entity.field]`
 - **Success Criteria**: [Measurable]
 - **Failure / Edge Behavior**: [Behavior]
 
-### 3.4 UI Element Definitions & Dependencies
+#### 3.1.4 UI Element Definitions & Dependencies
 **Component**: `[id]` (Type: [Type])
 | Page | Route | Access |
 |---|---|---|
 | [Title] | [Path] | [Role] |
 
+| Component ID | Depends on Entity.field | Dependency Role |
+|---|---|---|
+| `[id]` | `[Entity.field]` | [Role] |
+
+#### 3.1.5 Exception Paths
+| Exception Path | Trigger | User-visible behavior | ref: EC |
+|---|---|---|---|
+| EX-001 | [Condition] | [Visible fallback/recovery behavior] | EC-001 |
+
 ---
 
-## § N Global Acceptance Criteria *(mandatory)*
+> Repeat the same UC detail block for each additional use case under Section 3:
+> `3.2 UC-002`, `3.2.1`~`3.2.5`; `3.3 UC-003`, `3.3.1`~`3.3.5`; ...
+> Keep all UC details under Chapter 3. Do not promote later UCs to `§ 4`, `§ 5`, etc.
 
-### N.1 Success Criteria
+## § 4 Global Acceptance Criteria *(mandatory)*
+
+### 4.1 Success Criteria
 - **SC-001**: [Measurable, agnostic outcome]
 
-### N.2 Environment Edge Cases
+### 4.2 Environment Edge Cases
 **Authority**: `EC-*` IDs are semantic anchors. **Prohibited**: Overloading IDs for unrelated behaviors.
 - **EC-001**: [Timeout/Interruption]
 - **EC-002**: [Validation/Boundary]

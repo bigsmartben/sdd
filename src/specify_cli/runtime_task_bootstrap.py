@@ -75,6 +75,7 @@ TASK_BASELINE_CODE_TO_CATEGORY = {
     "contract_binding_context_coverage_drift": "non_traceable",
     "contract_anchor_inventory_mismatch": "non_traceable",
     "contract_sequence_uml_anchor_mismatch": "non_traceable",
+    "contract_sequence_participant_labels_invalid": "non_traceable",
     "contract_anchor_status_invalid": "non_traceable",
     "new_anchor_strategy_evidence_missing": "non_traceable",
     "new_anchor_repo_path_overclaim": "non_traceable",
@@ -286,8 +287,8 @@ def anchor_symbol_looks_present(path: Path, symbol: str) -> bool:
     )
 
 
-def extract_sequence_participant_anchors(content: str) -> list[str]:
-    anchors: list[str] = []
+def extract_sequence_participant_label_violations(content: str) -> list[str]:
+    violations: list[str] = []
     seen: set[str] = set()
     mermaid_blocks = re.findall(r"```mermaid\s*\n(.*?)```", content, flags=re.DOTALL | re.IGNORECASE)
     for block in mermaid_blocks:
@@ -308,7 +309,21 @@ def extract_sequence_participant_anchors(content: str) -> list[str]:
             normalized = normalize_anchor_for_comparison(label)
             if normalized and normalized not in seen:
                 seen.add(normalized)
-                anchors.append(normalized)
+                violations.append(normalized)
+    return violations
+
+
+def extract_sequence_diagram_method_anchors(content: str) -> list[str]:
+    anchors: list[str] = []
+    seen: set[str] = set()
+    mermaid_blocks = re.findall(r"```mermaid\s*\n(.*?)```", content, flags=re.DOTALL | re.IGNORECASE)
+    for block in mermaid_blocks:
+        if re.search(r"(?im)^\s*sequenceDiagram\b", block) is None:
+            continue
+        for token in extract_sequence_method_level_tokens(block):
+            if token and token not in seen:
+                seen.add(token)
+                anchors.append(token)
     return anchors
 
 
@@ -328,14 +343,20 @@ def extract_sequence_method_level_tokens(text: str) -> list[str]:
             if token and token not in seen:
                 seen.add(token)
                 tokens.append(token)
-    return tokens
+
+    full_repo_tokens = [token for token in tokens if "::" in token]
+    return [
+        token
+        for token in tokens
+        if "::" in token or not any(full_token.endswith(f"::{token}") for full_token in full_repo_tokens)
+    ]
 
 
 def collect_sequence_anchor_set(content: str, behavior_paths_rows: list[dict[str, str]]) -> list[str]:
     anchors: list[str] = []
     seen: set[str] = set()
 
-    for anchor in extract_sequence_participant_anchors(content):
+    for anchor in extract_sequence_diagram_method_anchors(content):
         if anchor not in seen:
             seen.add(anchor)
             anchors.append(anchor)
@@ -389,6 +410,8 @@ def inspect_contract_artifact(contract_path_abs: str, *, repo_root_abs: str | No
         "anchor_inventory_mismatch_details": [],
         "sequence_uml_anchor_mismatch": False,
         "sequence_uml_anchor_mismatch_details": [],
+        "sequence_participant_labels_invalid": False,
+        "sequence_participant_labels_invalid_details": [],
         "boundary_anchor_status": "",
         "implementation_entry_anchor_status": "",
         "boundary_anchor_strategy_evidence": "",
@@ -624,6 +647,13 @@ def inspect_contract_artifact(contract_path_abs: str, *, repo_root_abs: str | No
     inspection["anchor_inventory_mismatch"] = bool(anchor_mismatch_details)
     inspection["anchor_inventory_mismatch_details"] = anchor_mismatch_details
 
+    sequence_participant_label_violations = extract_sequence_participant_label_violations(content)
+    inspection["sequence_participant_labels_invalid"] = bool(sequence_participant_label_violations)
+    inspection["sequence_participant_labels_invalid_details"] = [
+        f"Sequence participant label `{label}` embeds a method-level anchor"
+        for label in sequence_participant_label_violations
+    ]
+
     sequence_anchors = collect_sequence_anchor_set(content, behavior_paths_rows)
     inventory_anchor_by_role: dict[str, str] = {}
     inventory_anchor_set: set[str] = set()
@@ -825,6 +855,10 @@ def build_unit_inventory(
                 "anchor_inventory_mismatch_details": contract_inspection["anchor_inventory_mismatch_details"],
                 "sequence_uml_anchor_mismatch": contract_inspection["sequence_uml_anchor_mismatch"],
                 "sequence_uml_anchor_mismatch_details": contract_inspection["sequence_uml_anchor_mismatch_details"],
+                "sequence_participant_labels_invalid": contract_inspection["sequence_participant_labels_invalid"],
+                "sequence_participant_labels_invalid_details": contract_inspection[
+                    "sequence_participant_labels_invalid_details"
+                ],
             },
         }
         unit_inventory.append(unit)
@@ -863,6 +897,7 @@ def build_unit_inventory(
             and not unit["contract"]["binding_context_coverage_drift"]
             and not unit["contract"]["anchor_inventory_mismatch"]
             and not unit["contract"]["sequence_uml_anchor_mismatch"]
+            and not unit["contract"]["sequence_participant_labels_invalid"]
         ):
             ready_unit_inventory.append(unit)
 
@@ -1211,6 +1246,28 @@ def build_task_execution_readiness(
                 "code": "contract_sequence_uml_anchor_mismatch",
                 "message": "Some done contract rows mismatch Sequence anchors vs Resolved Type Inventory participant anchors.",
                 "details": {"rows": sequence_uml_anchor_mismatch_rows},
+            }
+        )
+
+    sequence_participant_labels_invalid_rows = sorted(
+        [
+            {
+                "binding_row_id": unit["binding_row_id"],
+                "details": unit["contract"]["sequence_participant_labels_invalid_details"],
+            }
+            for unit in unit_inventory
+            if unit["contract"]["status"] == "done"
+            and unit["contract"]["exists"]
+            and unit["contract"]["sequence_participant_labels_invalid"]
+        ],
+        key=lambda item: item["binding_row_id"],
+    )
+    if sequence_participant_labels_invalid_rows:
+        errors.append(
+            {
+                "code": "contract_sequence_participant_labels_invalid",
+                "message": "Some done contract rows embed method-level anchors in Sequence participant labels.",
+                "details": {"rows": sequence_participant_labels_invalid_rows},
             }
         )
 

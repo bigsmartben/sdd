@@ -82,6 +82,7 @@ If repo-backed verification finds a binding-projection error or shared-semantic 
 - MAY refine operation-scoped VO/DTO/field mappings within this binding.
 - MUST NOT mint new shared-semantic classes, owners/sources, lifecycle vocabulary, or invariants.
 - Sequence design MUST keep first-party execution hops at method-level call anchors.
+- Sequence lifeline labels MUST use concrete participant/type names; method-level anchors belong on call labels or notes, not on participant labels.
 - Sequence design MUST explicitly render mandatory second-party and third-party call anchors on the main path.
 - Sequence design MUST include middleware traversal only when a concrete middleware call anchor exists in bounded repo evidence.
 - Sequence design MUST NOT collapse multiple mandatory collaborators/dependencies into one synthetic participant label.

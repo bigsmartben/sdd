@@ -40,7 +40,22 @@ def test_spec_template_stays_unsplit_and_ui_html_template_exists():
     assert "**Input**: \"$ARGUMENTS\"" in spec_template
     assert "## § 1 Global Context *(mandatory)*" in spec_template
     assert "## § 2 UC Overview *(mandatory)*" in spec_template
-    assert "## § N Global Acceptance Criteria *(mandatory)*" in spec_template
+    assert "### 2.2 UX - Interaction Flow *(mandatory)*" in spec_template
+    assert "**Global Main Flow (Mermaid)**:" in spec_template
+    assert "### 2.3 Global Interaction Rules" in spec_template
+    assert "## § 3 UC Details *(mandatory)*" in spec_template
+    assert "### 3.1 UC-001: [Use Case Name]" in spec_template
+    assert "#### 3.1.1 User Story & Acceptance Scenarios" in spec_template
+    assert "#### 3.1.2 UX - Interaction Flow *(mandatory)*" in spec_template
+    assert "#### 3.1.3 Functional Requirements *(mandatory)*" in spec_template
+    assert "#### 3.1.4 UI Element Definitions & Dependencies" in spec_template
+    assert "#### 3.1.5 Exception Paths" in spec_template
+    assert "3.2 UC-002" in spec_template
+    assert "Do not promote later UCs to `§ 4`, `§ 5`, etc." in spec_template
+    assert "## § 4 Global Acceptance Criteria *(mandatory)*" in spec_template
+    assert "### 4.1 Success Criteria" in spec_template
+    assert "### 4.2 Environment Edge Cases" in spec_template
+    assert "| Component ID | Depends on Entity.field | Dependency Role |" in spec_template
     assert "`research.md` via `/sdd.plan.research`" in spec_template
     assert "`test-matrix.md` via `/sdd.plan.test-matrix`" in spec_template
     assert "`data-model.md` via `/sdd.plan.data-model`" in spec_template
@@ -66,14 +81,20 @@ def test_spec_and_commands_require_semantically_aligned_edge_case_refs():
     clarify = read("templates/commands/clarify.md")
 
     assert "Treat `EC-*` as semantic anchors, not a fixed four-item bucket list." in specify
+    assert "`§ 2 UC Overview` with UC list, FR index, global `2.2 UX - Interaction Flow` Mermaid, and `2.3 Global Interaction Rules`" in specify
+    assert "`§ 3 UC Details` with one nested five-part block per UC (`3.1`, `3.1.1`~`3.1.5`; `3.2`, `3.2.1`~`3.2.5`; ...)" in specify
+    assert "`§ 4 Global Acceptance Criteria` (`4.1 Success Criteria`, `4.2 Environment Edge Cases`)" in specify
     assert "Use `validation` as a first-class `Path Inventory` scenario type" in specify
     assert "`Path Inventory` scenario types stay within the allowed enum (`happy/alternate/validation/exception/retry/recovery/cancel/timeout/permission/duplicate`)" in specify
-    assert "EC-*` references remain semantically aligned across `Path Inventory`, `Exception Paths`, FR blocks, and `N.2 Environment Edge Cases`" in specify
+    assert "EC-*` references remain semantically aligned across `Path Inventory`, `Exception Paths`, FR blocks, and `4.2 Environment Edge Cases`" in specify
     assert "every FR block includes `Capability`, `Given/When/Then`, `UDD (user-visible data) refs`, and `Success criteria`" in specify
+    assert "per-UC `3.x`, per-UC `3.x.3`" in clarify
+    assert "`2.2`, `2.3`, per-UC `3.x.2`" in clarify
+    assert "per-UC `3.x.4`, per-UC `3.x.5`" in clarify
     assert "add `EC-005+` instead of overloading an unrelated edge-case id" in clarify
     assert "`EC-*` IDs are semantic anchors" in spec_template
     assert "Overloading IDs for unrelated behaviors" in spec_template
-    assert "### N.2 Environment Edge Cases" in spec_template
+    assert "### N.2 Environment Edge Cases" not in spec_template
     assert "EC-001" in spec_template and "EC-005" in spec_template
 
 

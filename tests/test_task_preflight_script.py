@@ -1467,10 +1467,10 @@ def test_task_preflight_helper_allows_sequence_uml_anchor_alignment(tmp_path):
 ```mermaid
 sequenceDiagram
     participant Initiator as "ClientCaller"
-    participant Boundary as "src/app/tasks_controller.py::TasksController.create_task"
-    participant Entry as "src/app/tasks_controller.py::TasksController.create_task"
-    Initiator->>Boundary: create task (S1)
-    Boundary->>Entry: handoff (S2)
+    participant Boundary as "TasksController"
+    participant Entry as "TasksController"
+    Initiator->>Boundary: src/app/tasks_controller.py::TasksController.create_task(request) (S1)
+    Boundary->>Entry: src/app/tasks_controller.py::TasksController.create_task(request) (S2)
 ```
 
 ## Test Projection""",
@@ -1523,10 +1523,10 @@ def test_task_preflight_helper_blocks_sequence_uml_anchor_mismatch(tmp_path):
 ```mermaid
 sequenceDiagram
     participant Initiator as "ClientCaller"
-    participant Boundary as "src/app/http_entry.py::HttpEntry.handle"
-    participant Entry as "src/app/tasks_controller.py::TasksController.create_task"
-    Initiator->>Boundary: create task (S1)
-    Boundary->>Entry: handoff (S2)
+    participant Boundary as "HttpEntry"
+    participant Entry as "TasksController"
+    Initiator->>Boundary: src/app/http_entry.py::HttpEntry.handle(request) (S1)
+    Boundary->>Entry: src/app/tasks_controller.py::TasksController.create_task(request) (S2)
 ```
 
 ## Test Projection""",
@@ -1562,6 +1562,61 @@ sequenceDiagram
     assert payload["execution_readiness"]["ready_for_task_generation"] is False
     error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
     assert "contract_sequence_uml_anchor_mismatch" in error_codes
+    assert "contract_units_not_execution_ready" in error_codes
+
+
+def test_task_preflight_helper_blocks_method_anchors_in_sequence_participant_labels(tmp_path):
+    feature_dir = tmp_path / "specs" / "001-demo"
+    _write_minimal_feature(feature_dir)
+    contract_path = feature_dir / "contracts" / "create-task.md"
+    contract_text = contract_path.read_text(encoding="utf-8")
+    contract_path.write_text(
+        contract_text.replace(
+            "## Test Projection",
+            """### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant Initiator as "ClientCaller"
+    participant Boundary as "src/app/tasks_controller.py::TasksController.create_task"
+    participant Entry as "src/app/tasks_controller.py::TasksController.create_task"
+    Initiator->>Boundary: src/app/tasks_controller.py::TasksController.create_task(request) (S1)
+    Boundary->>Entry: src/app/tasks_controller.py::TasksController.create_task(request) (S2)
+```
+
+## Test Projection""",
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "task_preflight.py"),
+            "--feature-dir",
+            str(feature_dir),
+            "--plan",
+            str(feature_dir / "plan.md"),
+            "--spec",
+            str(feature_dir / "spec.md"),
+            "--data-model",
+            str(feature_dir / "data-model.md"),
+            "--test-matrix",
+            str(feature_dir / "test-matrix.md"),
+            "--contracts-dir",
+            str(feature_dir / "contracts"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["execution_readiness"]["ready_for_task_generation"] is False
+    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
+    assert "contract_sequence_participant_labels_invalid" in error_codes
     assert "contract_units_not_execution_ready" in error_codes
 
 

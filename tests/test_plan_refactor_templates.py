@@ -111,6 +111,7 @@ def test_contract_command_uses_test_matrix_as_default_semantic_source():
     assert "- required owner/source symbols" in content
     assert "- middleware anchors only when bounded repo evidence closes them" in content
     assert "Sequence design MUST keep first-party execution hops at method-level call anchors." in content
+    assert "Sequence lifeline labels MUST use concrete participant/type names; method-level anchors belong on call labels or notes, not on participant labels." in content
     assert "Sequence design MUST explicitly render mandatory second-party and third-party call anchors on the main path." in content
     assert "Sequence design MUST include middleware traversal only when a concrete middleware call anchor exists in bounded repo evidence." in content
     assert "Sequence design MUST NOT collapse multiple mandatory collaborators/dependencies into one synthetic participant label" in content
@@ -249,6 +250,8 @@ def test_contract_template_contains_unified_realization_requirements():
     assert "`new` \\| `todo`" in content
     assert "ConcreteBoundary.method" in content
     assert "ConcreteEntry.method" in content
+    assert 'participant Boundary as "ConcreteBoundary"' in content
+    assert 'participant Entry as "ConcreteEntry"' in content
     assert "- Apply anchor decision order `existing -> extended -> new -> todo`." in content
     assert "- `new` is normative only when selected `spec.md` / `data-model.md` / `test-matrix.md` slices plus bounded repo reads fully close the binding design" in content
     assert "prefer repository-style names such as `*Controller.method`, `*Service.method`, or `*ServiceImpl.method`" in content
@@ -265,6 +268,7 @@ def test_contract_template_contains_unified_realization_requirements():
     assert "Sequence MUST NOT merge multiple mandatory collaborators/dependencies into one synthetic participant label." in content
     assert "Sequence MUST NOT merge multiple mandatory collaborators/dependencies into one synthetic participant label" in content
     assert "Middleware traversal MUST appear only when a concrete middleware call anchor exists in bounded repo evidence; do not insert middleware as a default participant." in content
+    assert "Sequence lifeline labels MUST use concrete participant/type names; do not embed method-level anchors in participant labels." in content
     assert "render both layers explicitly instead of replacing the design anchor with the nearest existing class." in content
     assert "owner, creator, reader, and writer closure" in content
     assert "the first hop MUST remain the new anchor and the reused repo-backed chain MUST appear as a subsequent explicit handoff." in content
@@ -282,9 +286,12 @@ def test_contract_sequence_variant_without_middleware_keeps_method_level_chain()
 
     a2_block = content.split("##### A2. Without Middleware Anchor", 1)[1].split("#### Sequence Variant B", 1)[0]
     assert "participant Middleware" not in a2_block
-    assert "Boundary->>Entry: method-level handoff to implementation entry" in a2_block
-    assert "Entry->>SecondParty: required second-party call anchor" in a2_block
-    assert "SecondParty->>ThirdParty: required third-party call anchor" in a2_block
+    assert 'participant Boundary as "ConcreteBoundary"' in a2_block
+    assert 'participant Entry as "ConcreteEntry"' in a2_block
+    assert "Initiator->>Boundary: ConcreteBoundary.method([operation request])" in a2_block
+    assert "Boundary->>Entry: ConcreteEntry.method(...)" in a2_block
+    assert "Entry->>SecondParty: <AnchoredSecondPartyCallAnchor>" in a2_block
+    assert "SecondParty->>ThirdParty: <AnchoredThirdPartyCallAnchor>" in a2_block
 
 
 def test_contract_sequence_variant_with_middleware_requires_explicit_anchor():
@@ -294,9 +301,9 @@ def test_contract_sequence_variant_with_middleware_requires_explicit_anchor():
         "##### A2. Without Middleware Anchor",
         1,
     )[0]
-    assert "participant Middleware as \"<AnchoredMiddlewareSymbol>\"" in a1_block
-    assert "Boundary->>Middleware: ingress / middleware traversal" in a1_block
-    assert "Middleware->>Entry: handoff to implementation entry" in a1_block
+    assert "participant Middleware as \"<AnchoredMiddlewareType>\"" in a1_block
+    assert "Boundary->>Middleware: <AnchoredMiddlewareCallAnchor>" in a1_block
+    assert "Middleware->>Entry: ConcreteEntry.method(...)" in a1_block
 
 def test_data_model_template_requires_new_anchor_evidence_and_owner_closure():
     content = read("templates/data-model-template.md")
