@@ -32,7 +32,8 @@ def test_constitution_template_defines_owner_boundaries_and_terms():
 def test_constitution_command_blocks_lint_detail_embedding_and_dual_authority_expansion():
     content = read("templates/commands/constitution.md")
 
-    assert "Use `.specify/templates/constitution-template.md` only." in content
+    assert "Use `.specify/templates/constitution-template.md` as constitution structure authority." in content
+    assert "Use `.specify/templates/technical-dependency-matrix-template.md` and `.specify/templates/module-invocation-spec-template.md` as repository-first structure authority." in content
     assert "`/sdd.constitution` owns:" in content
     assert "Unified Repository-First Gate Protocol (URFGP) authority." in content
     assert "Constitution defines boundaries; commands implement them." in content
@@ -55,8 +56,8 @@ def test_constitution_command_uses_active_agent_command_directory_guidance():
     assert "`.specify/templates/constitution-template.md` (structure)" in content
     assert "`.specify/memory/constitution.md` (existing state)" in content
     assert "Repository manifests (pom.xml, package.json, pyproject.toml, go.mod)" in content
-    assert "If `repo-first-affecting`, `.specify/templates/technical-dependency-matrix-template.md` (dependency baseline structure)" in content
-    assert "If `repo-first-affecting`, `.specify/templates/module-invocation-spec-template.md` (invocation baseline structure)" in content
+    assert "`.specify/templates/technical-dependency-matrix-template.md` (dependency baseline structure)" in content
+    assert "`.specify/templates/module-invocation-spec-template.md` (invocation baseline structure)" in content
     assert "For repo-first refresh, each artifact MUST be projected from its corresponding template; MUST NOT synthesize structure from constitution prose alone." in content
     assert "**Prohibited**: `plan.md` queue state, `tasks.md`, or ad hoc CLI guesses." in content
 
@@ -67,6 +68,8 @@ def test_constitution_command_uses_current_constitution_state_not_placeholder_pr
     assert "Update or initialize the project constitution and repository-first baselines under `.specify/memory/`." in content
     assert ".specify/templates/constitution-template.md" in content
     assert "Stop immediately if:" in content
+    assert ".specify/templates/technical-dependency-matrix-template.md" in content
+    assert ".specify/templates/module-invocation-spec-template.md" in content
     assert ".specify/memory/constitution.md" in content
     assert ".specify/memory/repository-first/technical-dependency-matrix.md" in content
     assert ".specify/memory/repository-first/module-invocation-spec.md" in content

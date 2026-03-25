@@ -172,8 +172,10 @@ def test_clarify_ui_and_checklist_commands_define_artifact_quality_contracts():
 
     assert "## Artifact Quality Contract" in ui_html
     assert "## Reasoning Order" in ui_html
-    assert "Must: produce one coherent review prototype that makes the dominant user intent obvious in one pass." in ui_html
-    assert "Strictly: every demonstrated interaction and state must trace back to `spec.md` and teach something real." in ui_html
+    assert "Must: read like a polished product prototype, not a requirements document." in ui_html
+    assert "Must: be interactive with live state changes in the page itself." in ui_html
+    assert "This command generates presentation and interaction only. It does **not** run gates, audits, or downstream checks." in ui_html
+    assert "Strictly: keep traceability secondary; do not make audit language the primary reading experience." in ui_html
 
     assert "## Artifact Quality Contract" in checklist
     assert "## Reasoning Order" in checklist

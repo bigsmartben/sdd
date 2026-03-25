@@ -117,11 +117,11 @@ In Git repositories, `/sdd.specify` resolves a feature branch and switches to it
 /sdd.specify Build an application that can help me organize my photos in separate photo albums. Albums are grouped by date and can be re-organized by dragging and dropping on the main page. Albums are never in other nested albums. Within each album, photos are previewed in a tile-like interface.
 ```
 
-### 4. Generate a focused interaction tool (optional)
+### 4. Generate an interactive prototype (optional)
 
-Use **`/sdd.specify.ui-html`** as an optional sidecar command when you need an HTML focused interaction tool derived from the current feature branch `spec.md`. Trigger it at your chosen time after `/sdd.specify`.
+Use **`/sdd.specify.ui-html`** as an optional sidecar command when you need a self-contained HTML prototype derived from the current feature branch `spec.md`. Trigger it at your chosen time after `/sdd.specify`.
 
-`spec.md` remains the authoritative feature-semantics artifact. `ui.html` is a derived review artifact only.
+`spec.md` remains the authoritative feature-semantics artifact. `ui.html` is a derived review prototype only, and this command does not run gates or downstream checks.
 
 ### 5. Create a planning control plane
 
@@ -335,7 +335,7 @@ Essential commands for the Spec-Driven Development workflow:
 | ----------------------- | ------------------------------------------------------------------------ |
 | `/sdd.constitution` | Create or update project governing principles and development guidelines |
 | `/sdd.specify`      | Define what you want to build (requirements and user stories)            |
-| `/sdd.specify.ui-html` | Optional sidecar command: generate a derived `ui.html` focused interaction tool from active feature `spec.md` when needed |
+| `/sdd.specify.ui-html` | Optional sidecar command: generate a derived `ui.html` interactive prototype from active feature `spec.md` when needed |
 | `/sdd.plan`         | Create `plan.md` as the planning control plane and Stage 0 shared context |
 | `/sdd.plan.research` | Generate the queued `research.md` artifact |
 | `/sdd.plan.test-matrix` | Generate the queued `test-matrix.md` artifact and binding rows |

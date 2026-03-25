@@ -3,423 +3,535 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>[FEATURE NAME] UI Preview</title>
+  <title>[FEATURE NAME] Prototype</title>
   <style>
     :root {
       color-scheme: light;
-      --bg: #f4efe5;
-      --panel: #fffaf2;
-      --ink: #1f1d1a;
-      --muted: #6b6258;
-      --line: #d9cfbf;
-      --accent: #16624f;
-      --accent-weak: #e2f0eb;
-      --warning: #aa6b16;
-      --danger: #a33b2f;
-      --radius: 18px;
-      --shadow: 0 18px 40px rgba(31, 29, 26, 0.08);
+      --bg: #f3efe8;
+      --panel: rgba(255, 252, 247, 0.92);
+      --surface: #fffdfa;
+      --surface-strong: #ffffff;
+      --ink: #1d1b18;
+      --muted: #6e6559;
+      --line: #d8cebf;
+      --accent: #0f6b57;
+      --accent-strong: #0b5444;
+      --accent-soft: #e1f2ec;
+      --warn-soft: #f5e8d8;
+      --warn-ink: #8c5718;
+      --danger-soft: #f8e1de;
+      --danger-ink: #9a3429;
+      --shadow: 0 24px 48px rgba(29, 27, 24, 0.10);
+      --radius-xl: 28px;
+      --radius-lg: 18px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
       font-family: "Segoe UI", "Helvetica Neue", sans-serif;
     }
 
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
+      min-height: 100vh;
       background:
-        radial-gradient(circle at top left, rgba(22, 98, 79, 0.12), transparent 32%),
-        linear-gradient(180deg, #f7f1e8 0%, var(--bg) 100%);
+        radial-gradient(circle at top left, rgba(15, 107, 87, 0.16), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(140, 87, 24, 0.10), transparent 28%),
+        linear-gradient(180deg, #f7f3ec 0%, var(--bg) 100%);
       color: var(--ink);
     }
 
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
     .shell {
-      min-height: 100vh;
-      padding: 32px 20px 48px;
+      width: min(1200px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 40px;
+      display: grid;
+      gap: 18px;
     }
 
     .hero,
     .panel {
-      width: min(1100px, 100%);
-      margin: 0 auto;
       background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
+      border: 1px solid rgba(216, 206, 191, 0.9);
+      border-radius: var(--radius-xl);
       box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
     }
 
     .hero {
       padding: 28px;
-      margin-bottom: 20px;
-    }
-
-    .hero h1 {
-      margin: 0 0 8px;
-      font-size: clamp(2rem, 4vw, 3.4rem);
-      line-height: 1.05;
-    }
-
-    .hero p {
-      margin: 0;
-      max-width: 64ch;
-      color: var(--muted);
-      line-height: 1.6;
-    }
-
-    .panel {
-      padding: 24px;
-      display: grid;
-      gap: 20px;
-    }
-
-    .tool-shell {
-      display: grid;
-      grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.9fr);
-      gap: 18px;
-      align-items: start;
-    }
-
-    .tool-stage {
-      position: relative;
-      min-height: 420px;
-      overflow: hidden;
-    }
-
-    .tool-stage::before {
-      content: "";
-      position: absolute;
-      inset: 28px;
-      border-radius: 50%;
-      border: 1px dashed rgba(22, 98, 79, 0.28);
-      background:
-        radial-gradient(circle at center, rgba(22, 98, 79, 0.08) 0 30%, transparent 31% 100%);
-      pointer-events: none;
-    }
-
-    .loop-grid {
-      position: relative;
-      z-index: 1;
-      min-height: 360px;
-      display: grid;
-      place-items: center;
-      padding: 26px;
-    }
-
-    .loop-core {
-      width: min(240px, 58vw);
-      aspect-ratio: 1;
-      border-radius: 50%;
-      display: grid;
-      place-items: center;
-      text-align: center;
-      background: linear-gradient(180deg, #1d7a63 0%, #145948 100%);
-      color: #f7f3eb;
-      box-shadow: 0 20px 40px rgba(22, 98, 79, 0.24);
-      padding: 22px;
-    }
-
-    .loop-core h2 {
-      margin: 0 0 8px;
-      font-size: 1.2rem;
-    }
-
-    .loop-core p {
-      color: rgba(247, 243, 235, 0.88);
-    }
-
-    .loop-node {
-      position: absolute;
-      width: 140px;
-      min-height: 84px;
-      border-radius: 16px;
-      background: rgba(255, 250, 242, 0.96);
-      border: 1px solid var(--line);
-      box-shadow: var(--shadow);
-      padding: 12px;
-    }
-
-    .loop-node strong {
-      display: block;
-      margin-bottom: 4px;
-      font-size: 0.82rem;
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
-    }
-
-    .node-anchor {
-      display: inline-block;
-      margin-bottom: 8px;
-      padding: 3px 8px;
-      border-radius: 999px;
-      background: var(--accent-weak);
-      color: var(--accent);
-      font-size: 0.76rem;
-      font-weight: 700;
-      letter-spacing: 0.03em;
-    }
-
-    .loop-node p {
-      font-size: 0.92rem;
-    }
-
-    .node-context { top: 6%; left: 6%; }
-    .node-action { top: 6%; right: 6%; }
-    .node-feedback { bottom: 10%; right: 10%; }
-    .node-result { bottom: 10%; left: 10%; }
-
-    .tool-side {
       display: grid;
       gap: 16px;
-    }
-
-    .panel h2 {
-      margin: 0 0 10px;
-      font-size: 1.1rem;
-    }
-
-    .panel p {
-      margin: 0;
-      line-height: 1.55;
-      color: var(--muted);
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 16px;
-    }
-
-    .card {
-      background: #fff;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 18px;
-    }
-
-    .positioning-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-      gap: 12px;
-      margin-top: 12px;
-    }
-
-    .positioning-cell {
-      border: 1px dashed var(--line);
-      border-radius: 12px;
-      padding: 12px;
-      background: #fffcf8;
-    }
-
-    .positioning-cell h3 {
-      margin: 0 0 6px;
-      font-size: 0.84rem;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--ink);
-    }
-
-    .trace-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 16px;
-    }
-
-    .trace-card {
-      background: #fff;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 18px;
-    }
-
-    .trace-badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: var(--accent-weak);
-      color: var(--accent);
-      font-size: 0.78rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-
-    .trace-card p {
-      margin: 10px 0 0;
-    }
-
-    .step-list,
-    .field-list {
-      margin: 14px 0 0;
-      color: var(--muted);
-      line-height: 1.6;
-    }
-
-    .step-list {
-      padding-left: 20px;
-    }
-
-    .field-list {
-      list-style: none;
-      padding-left: 0;
-      display: grid;
-      gap: 12px;
-    }
-
-    .field-item {
-      border: 1px dashed var(--line);
-      border-radius: 12px;
-      padding: 12px;
-      background: #fffcf8;
-    }
-
-    .field-item strong {
-      display: block;
-      margin-bottom: 6px;
-      color: var(--ink);
-    }
-
-    .field-meta {
-      display: block;
-      margin-top: 6px;
-      font-size: 0.88rem;
-      color: var(--muted);
-    }
-
-    .field-rule {
-      display: inline-block;
-      margin-top: 8px;
-      padding: 4px 8px;
-      border-radius: 999px;
-      background: #f3ead8;
-      color: var(--warning);
-      font-size: 0.8rem;
-      font-weight: 600;
-    }
-
-    .flow {
-      margin: 0;
-      padding-left: 20px;
-      color: var(--muted);
-      line-height: 1.6;
     }
 
     .eyebrow {
       display: inline-flex;
+      width: fit-content;
       align-items: center;
       gap: 8px;
       padding: 6px 10px;
       border-radius: 999px;
-      background: var(--accent-weak);
+      background: var(--accent-soft);
       color: var(--accent);
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       font-weight: 700;
       letter-spacing: 0.04em;
       text-transform: uppercase;
     }
 
-    .status {
-      display: inline-block;
-      margin-top: 12px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      font-size: 0.85rem;
-      font-weight: 600;
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(2.2rem, 4vw, 4.2rem);
+      line-height: 0.98;
+      letter-spacing: -0.03em;
     }
 
-    .status.default { background: var(--accent-weak); color: var(--accent); }
-    .status.empty { background: #f3ead8; color: var(--warning); }
-    .status.error { background: #f7e2df; color: var(--danger); }
-    .status.success { background: #e6f3ee; color: var(--accent); }
+    .hero p {
+      margin: 0;
+      max-width: 68ch;
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 1rem;
+    }
 
-    .rail {
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .hero-cell {
+      padding: 14px;
+      border-radius: var(--radius-md);
+      border: 1px dashed var(--line);
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .hero-cell h2 {
+      margin: 0 0 6px;
+      font-size: 0.82rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .hero-cell p {
+      font-size: 0.95rem;
+    }
+
+    .panel {
+      padding: 22px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .prototype-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .stage,
+    .rail-card,
+    .notes-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 12px 26px rgba(29, 27, 24, 0.06);
+    }
+
+    .stage {
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .stage-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .stage-copy h2,
+    .rail-card h2,
+    .notes-card h2 {
+      margin: 0 0 8px;
+      font-size: 1.05rem;
+    }
+
+    .stage-copy p,
+    .rail-card p,
+    .notes-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .chip-row {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
     }
 
-    .pill {
-      border: 1px solid var(--line);
-      border-radius: 999px;
+    .chip {
       padding: 8px 12px;
-      background: #fff;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--surface-strong);
       color: var(--muted);
-      font-size: 0.92rem;
+      font-size: 0.9rem;
     }
 
-    .action-entry {
+    .device {
+      position: relative;
+      overflow: hidden;
+      border-radius: 24px;
+      border: 1px solid #cabfaa;
+      background:
+        linear-gradient(180deg, rgba(15, 107, 87, 0.08) 0%, rgba(255, 255, 255, 0) 28%),
+        var(--surface-strong);
+      min-height: 520px;
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .device::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at top right, rgba(15, 107, 87, 0.08), transparent 30%),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.55), transparent 55%);
+      pointer-events: none;
+    }
+
+    .device-bar,
+    .state-rail,
+    .transcript,
+    .composer,
+    .completion-card {
+      position: relative;
+      z-index: 1;
+    }
+
+    .device-bar {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .device-title {
+      display: grid;
+      gap: 4px;
+    }
+
+    .device-title strong {
+      font-size: 1rem;
+    }
+
+    .device-title span {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .state-pill {
       display: inline-flex;
       align-items: center;
-      justify-content: center;
-      min-height: 40px;
-      padding: 0 14px;
-      border-radius: 10px;
-      border: 1px solid var(--accent);
-      background: var(--accent);
-      color: #f7f3eb;
-      font-weight: 600;
-      text-decoration: none;
-      cursor: pointer;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.85rem;
+      font-weight: 700;
     }
 
-    .action-entry-note {
-      margin-top: 10px;
-      font-size: 0.86rem;
+    .state-rail {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .state-card {
+      padding: 12px;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid var(--line);
+      min-height: 92px;
+    }
+
+    .state-card strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.82rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .state-card span {
       color: var(--muted);
+      line-height: 1.45;
+      font-size: 0.94rem;
+    }
+
+    .transcript {
+      display: grid;
+      gap: 10px;
+      align-content: start;
+      min-height: 220px;
+    }
+
+    .turn {
+      max-width: 88%;
+      padding: 12px 14px;
+      border-radius: 16px;
+      line-height: 1.5;
+      box-shadow: 0 8px 18px rgba(29, 27, 24, 0.05);
+    }
+
+    .turn.user {
+      justify-self: end;
+      background: #f4e7d9;
+      border-bottom-right-radius: 6px;
+    }
+
+    .turn.system {
+      justify-self: start;
+      background: #e9f5f0;
+      border-bottom-left-radius: 6px;
+    }
+
+    .turn strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+
+    .composer {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid var(--line);
+    }
+
+    .composer textarea {
+      width: 100%;
+      min-height: 88px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px 14px;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .composer-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .button,
+    .button-secondary {
+      min-height: 42px;
+      border-radius: 12px;
+      padding: 0 14px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: transform 120ms ease, filter 120ms ease, border-color 120ms ease;
+    }
+
+    .button:hover,
+    .button-secondary:hover {
+      transform: translateY(-1px);
+      filter: brightness(0.99);
+    }
+
+    .button {
+      background: var(--accent);
+      color: #f4f9f7;
+      font-weight: 700;
+    }
+
+    .button-secondary {
+      background: #fff;
+      border-color: var(--line);
+      color: var(--ink);
+    }
+
+    .button-secondary[hidden] {
+      display: none;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 0.88rem;
       line-height: 1.45;
     }
 
-    @media (max-width: 640px) {
-      .shell { padding: 20px 14px 32px; }
-      .hero, .panel { padding: 18px; }
+    .completion-card {
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(15, 107, 87, 0.06), rgba(255, 255, 255, 0.92));
+      display: grid;
+      gap: 10px;
     }
 
-    @media (max-width: 900px) {
-      .tool-shell {
+    .completion-card h3 {
+      margin: 0;
+      font-size: 0.98rem;
+    }
+
+    .completion-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .status-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .status-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .status-tag.warn {
+      background: var(--warn-soft);
+      color: var(--warn-ink);
+    }
+
+    .status-tag.error {
+      background: var(--danger-soft);
+      color: var(--danger-ink);
+    }
+
+    .side {
+      display: grid;
+      gap: 16px;
+    }
+
+    .rail-card,
+    .notes-card {
+      padding: 18px;
+    }
+
+    .state-list,
+    .notes-list {
+      margin: 14px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .notes-list {
+      margin-top: 10px;
+    }
+
+    .status-table {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .status-item {
+      padding: 12px;
+      border: 1px dashed var(--line);
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .status-item strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.85rem;
+    }
+
+    .status-item span {
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 0.92rem;
+    }
+
+    details {
+      border: 1px dashed var(--line);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.7);
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 0.92em;
+    }
+
+    @media (max-width: 980px) {
+      .prototype-grid {
         grid-template-columns: 1fr;
       }
 
-      .tool-stage {
-        min-height: 520px;
+      .state-rail {
+        grid-template-columns: 1fr;
       }
     }
 
-    @media (max-width: 640px) {
-      .tool-stage {
+    @media (max-width: 720px) {
+      .shell {
+        width: min(100% - 20px, 1200px);
+        padding-top: 18px;
+      }
+
+      .hero,
+      .panel {
+        padding: 18px;
+      }
+
+      .hero-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .device {
         min-height: auto;
-      }
-
-      .tool-stage::before {
-        display: none;
-      }
-
-      .loop-grid {
-        min-height: auto;
-        padding: 8px 0 0;
-        gap: 12px;
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        grid-template-areas:
-          "context action"
-          "core core"
-          "result feedback";
-        place-items: stretch;
-        align-items: stretch;
-      }
-
-      .loop-node {
-        position: static;
-        width: auto;
-        min-height: 0;
-      }
-
-      .node-context { grid-area: context; }
-      .node-action { grid-area: action; }
-      .node-feedback { grid-area: feedback; }
-      .node-result { grid-area: result; }
-
-      .loop-core {
-        grid-area: core;
-        justify-self: center;
-        width: min(220px, 72vw);
       }
     }
   </style>
@@ -427,172 +539,257 @@
 <body>
   <main class="shell">
     <section class="hero">
-      <div class="eyebrow">UI Preview</div>
+      <div class="eyebrow">Interactive Prototype</div>
       <h1>[FEATURE NAME]</h1>
-      <p>
-        [Write one plain-language sentence that makes the main expression of
-        <code>spec.md</code> obvious: who is trying to complete what, and what
-        visible result they should get.]
-      </p>
+      <p>[Write one plain-language sentence that makes the main user goal, the primary action, and the visible result obvious.]</p>
       <!-- Artifact Quality Signals
            - Must: feel like one coherent review prototype.
-           - Must not: read like a document dump or decorative mockup.
-           - Strictly: every visible interaction and state should teach a real spec-backed behavior.
+           - Must: feel like one coherent, self-contained, high-fidelity prototype.
+           - Must not: read like a spec dump, audit board, or placeholder mockup.
+           - Strictly: visible copy, states, and transitions must stay grounded in spec.md.
       -->
+      <div class="hero-grid">
+        <article class="hero-cell">
+          <h2>Target User</h2>
+          <p>[Primary user segment from spec.md]</p>
+        </article>
+        <article class="hero-cell">
+          <h2>Main Moment</h2>
+          <p>[The dominant review journey this prototype demonstrates]</p>
+        </article>
+        <article class="hero-cell">
+          <h2>Visible Outcome</h2>
+          <p>[The completion signal the reviewer should see after the main interaction]</p>
+        </article>
+      </div>
     </section>
 
     <section class="panel">
-      <article class="card">
-        <h2>Tool Intent</h2>
-        <p>[State the same core meaning as spec.md in tool form: who uses this tool, what they are trying to complete right now, and what visible result they expect.]</p>
-        <div class="positioning-grid">
-          <div class="positioning-cell">
-            <h3>Target User</h3>
-            <p>[Primary user segment]</p>
+      <div class="prototype-grid">
+        <section class="stage">
+          <div class="stage-top">
+            <div class="stage-copy">
+              <h2>Prototype Surface</h2>
+              <p>[Describe the current in-page prototype surface in product language, not audit language.]</p>
+            </div>
+            <div class="chip-row">
+              <span class="chip" id="journey-chip">Journey: [PRIMARY JOURNEY LABEL]</span>
+              <span class="chip" id="branch-chip">Branch: [OPTIONAL BRANCH LABEL OR NONE]</span>
+            </div>
           </div>
-          <div class="positioning-cell">
-            <h3>Core Scenario</h3>
-            <p>[Highest-priority use case]</p>
-          </div>
-          <div class="positioning-cell">
-            <h3>Value Promise</h3>
-            <p>[Visible outcome users get]</p>
-          </div>
-        </div>
-      </article>
 
-      <article class="card">
-        <h2>UIF + UDD Focus</h2>
-        <div class="trace-grid">
-          <section class="trace-card">
-            <span class="trace-badge">UIF Interaction View</span>
-            <p>[Make the selected `UIP` path and current `UIF` nodes explicit so engineering can review the user-perspective operation flow, not just the final screen. Render one ordered item per selected `UIF` node.]</p>
-            <ol class="step-list">
-              <li>[Selected `UIP-*` path and why it is the dominant walkthrough.]</li>
-              <li>[First selected `UIF` node in execution order and the user-visible action or decision it represents.]</li>
-              <li>[Next selected `UIF` node or meaningful branch/recovery node in execution order.]</li>
+          <section class="device" aria-labelledby="prototype-title">
+            <div class="device-bar">
+              <div class="device-title">
+                <strong id="prototype-title">[Prototype Surface Title]</strong>
+                <span id="prototype-subtitle">[Short subtitle that describes the live state]</span>
+              </div>
+              <div class="state-pill" id="stage-pill">[PRIMARY STATE LABEL]</div>
+            </div>
+
+            <div class="state-rail">
+              <article class="state-card">
+                <strong>Current Goal</strong>
+                <span id="goal-value">[Visible goal text]</span>
+              </article>
+              <article class="state-card">
+                <strong>Current Status</strong>
+                <span id="status-value">[Primary status text]</span>
+              </article>
+              <article class="state-card">
+                <strong>Next Signal</strong>
+                <span id="next-value">[Next visible feedback or step]</span>
+              </article>
+            </div>
+
+            <section class="transcript" id="transcript" aria-live="polite"></section>
+
+            <section class="composer" aria-label="Prototype controls">
+              <textarea id="input-box">[Optional user input shown in the prototype control surface]</textarea>
+              <div class="composer-actions">
+                <div class="button-row">
+                  <button class="button" id="primary-action" type="button">[Primary Action Label]</button>
+                  <button class="button-secondary" id="branch-action" type="button">[Optional Branch Label]</button>
+                  <button class="button-secondary" id="reset-action" type="button">Reset</button>
+                </div>
+                <div class="hint" id="control-hint">[Short control hint that explains what the primary action proves.]</div>
+              </div>
+            </section>
+
+            <section class="completion-card" aria-labelledby="completion-title">
+              <h3 id="completion-title">Visible Completion</h3>
+              <div class="status-row" id="completion-tags"></div>
+              <p id="completion-copy">[What the user should actually see or hear after the main interaction.]</p>
+            </section>
+          </section>
+        </section>
+
+        <aside class="side">
+          <section class="rail-card">
+            <h2>Review Notes</h2>
+            <p>[Summarize what reviewers should focus on while interacting with the prototype.]</p>
+            <ol class="notes-list" id="review-checks">
+              <li>[Primary action is obvious]</li>
+              <li>[Feedback is immediate and user-visible]</li>
+              <li>[Completion state is clear]</li>
             </ol>
           </section>
 
-          <section class="trace-card">
-            <span class="trace-badge">UDD-backed View State</span>
-            <p>[Show only the `Entity.field` rows that materially appear in the walkthrough, and map each selected `UIF` node to its step-level feedback and rule-driven state.]</p>
-            <ul class="field-list">
-              <li class="field-item">
-                <strong>[Entity.field]</strong>
-                [What the user sees at the first selected interaction step.]
-                <span class="field-meta">[Which `UIF` node causes this to appear and what feedback it provides.]</span>
-                <span class="field-rule">[Display / boundary / empty rule consumed from UDD]</span>
-              </li>
-              <li class="field-item">
-                <strong>[Entity.field]</strong>
-                [What changes at the next selected step or branch state.]
-                <span class="field-meta">[How the user perceives the change after acting.]</span>
-                <span class="field-rule">[Formatting / warning / error rule consumed from UDD]</span>
-              </li>
+          <section class="rail-card">
+            <h2>Visible States</h2>
+            <p>[List only the user-visible states that materially matter to the prototype.]</p>
+            <div class="status-table" id="visible-states">
+              <article class="status-item">
+                <strong>Default</strong>
+                <span>[Default state explanation]</span>
+              </article>
+              <article class="status-item">
+                <strong>Branch</strong>
+                <span>[Optional branch state explanation or remove this item if unused]</span>
+              </article>
+              <article class="status-item">
+                <strong>Completed</strong>
+                <span>[Completed state explanation]</span>
+              </article>
+            </div>
+          </section>
+
+          <section class="notes-card">
+            <h2>Prototype Constraints</h2>
+            <p>[State the non-visual constraints that must remain true in the prototype.]</p>
+            <ul class="state-list">
+              <li>[All visible copy remains grounded in spec.md]</li>
+              <li>[No dead clicks or hidden required steps]</li>
+              <li>[Desktop and mobile preserve the same primary action hierarchy]</li>
             </ul>
           </section>
-        </div>
-      </article>
 
-      <section class="tool-shell">
-        <article class="card tool-stage">
-          <div class="loop-grid">
-            <div class="loop-node node-context">
-              <strong>Context</strong>
-              <div class="node-anchor">[UIF Entry Node / UIP Ref]</div>
-              <p>[What the user knows before acting.]</p>
-            </div>
-            <div class="loop-node node-action">
-              <strong>Action</strong>
-              <div class="node-anchor">[UIF Action Node / Control]</div>
-              <p>[The one action that most directly expresses spec.md's main intent.]</p>
-            </div>
-            <div class="loop-core">
-              <div>
-                <h2>Primary Tool Loop</h2>
-                <p>[Name the single dominant task this tool helps the user finish, using spec.md terminology.]</p>
-              </div>
-            </div>
-            <div class="loop-node node-feedback">
-              <strong>Feedback</strong>
-              <div class="node-anchor">[UIF Feedback Node / FR Ref]</div>
-              <p>[Immediate system response or guidance that confirms the intended flow.]</p>
-            </div>
-            <div class="loop-node node-result">
-              <strong>Result</strong>
-              <div class="node-anchor">[Entity.field / UDD Rule]</div>
-              <p>[The completion content or changed state that proves spec.md's intended outcome.]</p>
-            </div>
-          </div>
-        </article>
-
-        <div class="tool-side">
-          <article class="card">
-            <h2>Action Surface</h2>
-            <p>[Describe the input controls, CTA, or direct manipulation area that powers the main tool loop.]</p>
-            <a class="action-entry" href="[replace-with-target-route-or-handler]">[Primary Action Entry]</a>
-            <p class="action-entry-note">
-              [This action entry MUST map to explicit semantics: entryLabel, targetMeaning, and targetRoute or named handler.
-              If no executable target exists, render non-clickable explanatory text instead of a dead CTA.]
-            </p>
-            <div class="rail">
-              <span class="pill">Entry Context</span>
-              <span class="pill">Primary Action</span>
-              <span class="pill">Visible Outcome</span>
-            </div>
-          </article>
-
-          <article class="card">
-            <h2>UIF Interaction View</h2>
-            <p>[Name the current screen/view, enumerate the selected `UIF` node order, and call out the branch signal the reviewer should watch during the interaction.]</p>
-            <div class="rail">
-              <span class="pill">Current Path</span>
-              <span class="pill">Active UIF Node</span>
-              <span class="pill">Branch State</span>
-            </div>
-          </article>
-
-          <article class="card">
-            <h2>UDD-backed View State</h2>
-            <p>[Describe the highest-value component and the completed user-visible data it must reveal during interaction, using only the selected `Entity.field` subset and mapping it to the selected `UIF` step order.]</p>
-            <div class="status default">Default State</div>
-            <div class="status empty">Empty State</div>
-            <div class="status error">Error State</div>
-            <div class="status success">Completed State</div>
-          </article>
-
-          <article class="card">
-            <h2>User-Visible Completion</h2>
-            <p>[Show the completed result content, confirmation, or changed state that the user should actually see after the key interaction.]</p>
-            <div class="rail">
-              <span class="pill">Completed State</span>
-              <span class="pill">Key Feedback</span>
-              <span class="pill">Next Action</span>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <article class="card">
-        <h2>Loop Steps</h2>
-        <ol class="flow">
-          <li>[Entry action and initial context.]</li>
-          <li>[Main user action and system feedback.]</li>
-          <li>[Completion signal or fallback branch with the user-visible result content.]</li>
-          <li>[What the user does next without leaving the tool shell.]</li>
-        </ol>
-      </article>
-
-      <article class="card">
-        <h2>Interaction Guardrails</h2>
-        <ul>
-          <li>[Copy and terminology stay aligned with spec.md]</li>
-          <li>[The primary action remains dominant on desktop/mobile]</li>
-          <li>[Accessibility + loading/empty/error/completed evidence]</li>
-        </ul>
-      </article>
+          <details>
+            <summary>Optional Review Metadata</summary>
+            <p>[Keep this secondary. Use only when lightweight reviewer metadata helps, and do not turn it into the primary reading experience.]</p>
+          </details>
+        </aside>
+      </div>
     </section>
   </main>
+
+  <script>
+    const prototypeModel = {
+      primary: {
+        journeyLabel: "[PRIMARY JOURNEY LABEL]",
+        branchLabel: "[OPTIONAL BRANCH LABEL OR NONE]",
+        surfaceTitle: "[Prototype Surface Title]",
+        subtitle: "[Short subtitle for the main path]",
+        stageLabel: "[PRIMARY STATE LABEL]",
+        goal: "[Visible goal text]",
+        status: "[Primary status text]",
+        next: "[Next visible feedback or step]",
+        inputValue: "[Optional user input shown in the prototype control surface]",
+        controlHint: "[Short control hint for the main path]",
+        completionTags: [
+          { label: "[Completed State]", tone: "default" },
+          { label: "[Primary Feedback]", tone: "default" },
+          { label: "[Next Action]", tone: "default" }
+        ],
+        completionCopy: "[What the user should actually see or hear after the main interaction.]",
+        reviewChecks: [
+          "[Primary action is obvious]",
+          "[Feedback is immediate and user-visible]",
+          "[Completion state is clear]"
+        ],
+        transcript: [
+          { role: "user", speaker: "[User Label]", text: "[User action or request]" },
+          { role: "system", speaker: "[System Label]", text: "[Visible system feedback]" }
+        ]
+      },
+      branch: null
+    };
+
+    const transcript = document.getElementById("transcript");
+    const goalValue = document.getElementById("goal-value");
+    const statusValue = document.getElementById("status-value");
+    const nextValue = document.getElementById("next-value");
+    const inputBox = document.getElementById("input-box");
+    const stagePill = document.getElementById("stage-pill");
+    const journeyChip = document.getElementById("journey-chip");
+    const branchChip = document.getElementById("branch-chip");
+    const prototypeTitle = document.getElementById("prototype-title");
+    const prototypeSubtitle = document.getElementById("prototype-subtitle");
+    const controlHint = document.getElementById("control-hint");
+    const completionTags = document.getElementById("completion-tags");
+    const completionCopy = document.getElementById("completion-copy");
+    const reviewChecks = document.getElementById("review-checks");
+    const primaryAction = document.getElementById("primary-action");
+    const branchAction = document.getElementById("branch-action");
+    const resetAction = document.getElementById("reset-action");
+
+    function renderTranscript(items) {
+      transcript.innerHTML = "";
+      items.forEach((item) => {
+        const turn = document.createElement("article");
+        turn.className = "turn " + item.role;
+
+        const speaker = document.createElement("strong");
+        speaker.textContent = item.speaker;
+
+        const text = document.createElement("div");
+        text.textContent = item.text;
+
+        turn.appendChild(speaker);
+        turn.appendChild(text);
+        transcript.appendChild(turn);
+      });
+    }
+
+    function renderChecks(items) {
+      reviewChecks.innerHTML = "";
+      items.forEach((item) => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        reviewChecks.appendChild(li);
+      });
+    }
+
+    function renderCompletionTags(items) {
+      completionTags.innerHTML = "";
+      items.forEach((item) => {
+        const tag = document.createElement("span");
+        tag.className = "status-tag" + (item.tone === "warn" ? " warn" : item.tone === "error" ? " error" : "");
+        tag.textContent = item.label;
+        completionTags.appendChild(tag);
+      });
+    }
+
+    function renderScenario(scenario) {
+      journeyChip.textContent = "Journey: " + scenario.journeyLabel;
+      branchChip.textContent = "Branch: " + scenario.branchLabel;
+      prototypeTitle.textContent = scenario.surfaceTitle;
+      prototypeSubtitle.textContent = scenario.subtitle;
+      stagePill.textContent = scenario.stageLabel;
+      goalValue.textContent = scenario.goal;
+      statusValue.textContent = scenario.status;
+      nextValue.textContent = scenario.next;
+      inputBox.value = scenario.inputValue;
+      controlHint.textContent = scenario.controlHint;
+      completionCopy.textContent = scenario.completionCopy;
+      renderTranscript(scenario.transcript);
+      renderChecks(scenario.reviewChecks);
+      renderCompletionTags(scenario.completionTags);
+    }
+
+    primaryAction.addEventListener("click", () => renderScenario(prototypeModel.primary));
+    resetAction.addEventListener("click", () => renderScenario(prototypeModel.primary));
+
+    if (prototypeModel.branch) {
+      branchAction.hidden = false;
+      branchAction.textContent = prototypeModel.branch.actionLabel || branchAction.textContent;
+      branchAction.addEventListener("click", () => renderScenario(prototypeModel.branch));
+    } else {
+      branchAction.hidden = true;
+      branchChip.textContent = "Branch: none";
+    }
+
+    renderScenario(prototypeModel.primary);
+  </script>
 </body>
 </html>

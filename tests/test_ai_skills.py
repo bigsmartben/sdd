@@ -27,6 +27,7 @@ from specify_cli import (
     DEFAULT_SKILLS_DIR,
     SKILL_DESCRIPTIONS,
     AGENT_CONFIG,
+    ensure_constitution_from_template,
     app,
 )
 
@@ -609,6 +610,46 @@ class TestSkipIfExists:
         assert (project_dir / ".claude" / "skills" / "sdd-plan" / "SKILL.md").exists()
         assert (project_dir / ".claude" / "skills" / "sdd-tasks" / "SKILL.md").exists()
 
+
+class TestRuntimeGovernanceBaselineSeeding:
+    """Test runtime memory seeding for constitution and repo-first baselines."""
+
+    def test_missing_governance_memory_files_are_seeded_from_templates(self, project_dir):
+        template_dir = project_dir / ".specify" / "templates"
+        template_dir.mkdir(parents=True, exist_ok=True)
+        (template_dir / "constitution-template.md").write_text("# Constitution Template\n", encoding="utf-8")
+        (template_dir / "technical-dependency-matrix-template.md").write_text("# Matrix Template\n", encoding="utf-8")
+        (template_dir / "module-invocation-spec-template.md").write_text("# Invocation Template\n", encoding="utf-8")
+
+        ensure_constitution_from_template(project_dir)
+
+        assert (project_dir / ".specify" / "memory" / "constitution.md").read_text(encoding="utf-8") == "# Constitution Template\n"
+        assert (
+            project_dir / ".specify" / "memory" / "repository-first" / "technical-dependency-matrix.md"
+        ).read_text(encoding="utf-8") == "# Matrix Template\n"
+        assert (
+            project_dir / ".specify" / "memory" / "repository-first" / "module-invocation-spec.md"
+        ).read_text(encoding="utf-8") == "# Invocation Template\n"
+
+    def test_existing_governance_memory_files_are_preserved(self, project_dir):
+        template_dir = project_dir / ".specify" / "templates"
+        template_dir.mkdir(parents=True, exist_ok=True)
+        (template_dir / "constitution-template.md").write_text("# Constitution Template\n", encoding="utf-8")
+        (template_dir / "technical-dependency-matrix-template.md").write_text("# Matrix Template\n", encoding="utf-8")
+        (template_dir / "module-invocation-spec-template.md").write_text("# Invocation Template\n", encoding="utf-8")
+
+        memory_dir = project_dir / ".specify" / "memory" / "repository-first"
+        memory_dir.mkdir(parents=True, exist_ok=True)
+        (project_dir / ".specify" / "memory" / "constitution.md").write_text("# Existing Constitution\n", encoding="utf-8")
+        (memory_dir / "technical-dependency-matrix.md").write_text("# Existing Matrix\n", encoding="utf-8")
+        (memory_dir / "module-invocation-spec.md").write_text("# Existing Invocation\n", encoding="utf-8")
+
+        ensure_constitution_from_template(project_dir)
+
+        assert (project_dir / ".specify" / "memory" / "constitution.md").read_text(encoding="utf-8") == "# Existing Constitution\n"
+        assert (memory_dir / "technical-dependency-matrix.md").read_text(encoding="utf-8") == "# Existing Matrix\n"
+        assert (memory_dir / "module-invocation-spec.md").read_text(encoding="utf-8") == "# Existing Invocation\n"
+
     def test_fresh_install_writes_all_skills(self, project_dir, templates_dir):
         """On first install (no pre-existing skills), all should be written."""
         result = install_ai_skills(project_dir, "claude")
@@ -841,7 +882,7 @@ class TestCliValidation:
         normalized = re.sub(r"[│╭╮╰╯─]+", " ", plain)
         normalized = re.sub(r"\s+", " ", normalized)
         assert "/sdd.specify - Create baseline specification" in normalized
-        assert "/sdd.specify.ui-html - Optional sidecar command; generate a focused interaction tool when needed" in normalized
+        assert "/sdd.specify.ui-html - Optional sidecar command; generate an interactive prototype when needed" in normalized
         assert "/sdd.plan - Initialize the planning control plane" in normalized
         assert "/sdd.plan.research - Start the planning queue" in normalized
         assert "/sdd.plan.data-model" in normalized

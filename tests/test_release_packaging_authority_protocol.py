@@ -32,10 +32,10 @@ EXPECTED_MARKERS = [
     "Repository-first explainable evidence",
     "Repository-first Validation Trace",
     "CRITICAL/HIGH findings MUST cite the authoritative source artifact(s)",
-    "## Interaction & Coverage Rules (MUST)",
-    "**UIF Coverage**: Prototype MUST trace to explicit `UIF` nodes.",
-    "**UDD Binding**: Visible data MUST trace to completed `Entity.field` rows.",
-    "**Review Surfaces**: Dedicate areas to `UIF Interaction View` and `UDD-backed View State` for audit.",
+    "Generate one self-contained interactive ui.html prototype from the resolved spec.md.",
+    "This command generates presentation and interaction only. It does **not** run gates, audits, or downstream checks.",
+    "Must: read like a polished product prototype, not a requirements document.",
+    "Strictly: default to one primary path plus zero or one branch.",
 ]
 
 

@@ -1255,39 +1255,75 @@ def ensure_executable_scripts(project_path: Path, tracker: StepTracker | None = 
                 console.print(f"  - {f}")
 
 def ensure_constitution_from_template(project_path: Path, tracker: StepTracker | None = None) -> None:
-    """Copy constitution template to memory if it doesn't exist (preserves existing constitution on reinitialization)."""
-    memory_constitution = project_path / ".specify" / "memory" / "constitution.md"
-    template_constitution = project_path / ".specify" / "templates" / "constitution-template.md"
+    """Seed runtime memory governance artifacts from templates when missing."""
+    template_root = project_path / ".specify" / "templates"
+    artifact_pairs = [
+        (
+            template_root / "constitution-template.md",
+            project_path / ".specify" / "memory" / "constitution.md",
+        ),
+        (
+            template_root / "technical-dependency-matrix-template.md",
+            project_path / ".specify" / "memory" / "repository-first" / "technical-dependency-matrix.md",
+        ),
+        (
+            template_root / "module-invocation-spec-template.md",
+            project_path / ".specify" / "memory" / "repository-first" / "module-invocation-spec.md",
+        ),
+    ]
 
-    # If constitution already exists in memory, preserve it
-    if memory_constitution.exists():
-        if tracker:
-            tracker.add("constitution", "Constitution setup")
-            tracker.skip("constitution", "existing file preserved")
+    copied: list[str] = []
+    preserved: list[str] = []
+    missing_templates: list[str] = []
+    copy_errors: list[str] = []
+
+    for template_path, memory_path in artifact_pairs:
+        if memory_path.exists():
+            preserved.append(memory_path.name)
+            continue
+
+        if not template_path.exists():
+            missing_templates.append(str(template_path.relative_to(project_path)))
+            continue
+
+        try:
+            memory_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(template_path, memory_path)
+            copied.append(memory_path.name)
+        except Exception as exc:
+            copy_errors.append(f"{memory_path.name}: {exc}")
+
+    if tracker:
+        tracker.add("constitution", "Constitution setup")
+        if missing_templates or copy_errors:
+            detail_parts = []
+            if copied:
+                detail_parts.append(f"copied {len(copied)}")
+            if preserved:
+                detail_parts.append(f"preserved {len(preserved)}")
+            if missing_templates:
+                detail_parts.append(f"missing templates: {', '.join(missing_templates)}")
+            if copy_errors:
+                detail_parts.append(f"errors: {'; '.join(copy_errors)}")
+            tracker.error("constitution", "; ".join(detail_parts) or "template seeding failed")
+        elif copied:
+            detail = f"seeded {len(copied)} file(s)"
+            if preserved:
+                detail += f", preserved {len(preserved)}"
+            tracker.complete("constitution", detail)
+        else:
+            tracker.skip("constitution", "existing files preserved")
         return
 
-    # If template doesn't exist, something went wrong with extraction
-    if not template_constitution.exists():
-        if tracker:
-            tracker.add("constitution", "Constitution setup")
-            tracker.error("constitution", "template not found")
-        return
-
-    # Copy template to memory directory
-    try:
-        memory_constitution.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(template_constitution, memory_constitution)
-        if tracker:
-            tracker.add("constitution", "Constitution setup")
-            tracker.complete("constitution", "copied from template")
-        else:
-            console.print("[cyan]Initialized constitution from template[/cyan]")
-    except Exception as e:
-        if tracker:
-            tracker.add("constitution", "Constitution setup")
-            tracker.error("constitution", str(e))
-        else:
-            console.print(f"[yellow]Warning: Could not initialize constitution: {e}[/yellow]")
+    if missing_templates or copy_errors:
+        details = []
+        if missing_templates:
+            details.append(f"missing templates: {', '.join(missing_templates)}")
+        if copy_errors:
+            details.append(f"errors: {'; '.join(copy_errors)}")
+        console.print(f"[yellow]Warning: Could not fully seed governance baselines: {'; '.join(details)}[/yellow]")
+    elif copied:
+        console.print(f"[cyan]Initialized {len(copied)} governance baseline file(s) from templates[/cyan]")
 
 # Agent-specific skill directory overrides for agents whose skills directory
 # doesn't follow the standard <agent_folder>/skills/ pattern
@@ -1301,7 +1337,7 @@ DEFAULT_SKILLS_DIR = ".agents/skills"
 # Enhanced descriptions for each SDD command skill
 SKILL_DESCRIPTIONS = {
     "specify": "Create or update feature specifications from natural language descriptions. Use when starting new features or refining requirements. Generates spec.md with user stories, functional requirements, and acceptance criteria following spec-driven development methodology.",
-    "specify.ui-html": "Generate the derived ui.html focused interaction tool artifact from the current feature branch spec.md. This is an optional sidecar command; invoke `/sdd.specify.ui-html` only when you want a reviewable interaction tool without changing spec.md authority.",
+    "specify.ui-html": "Generate a self-contained interactive ui.html prototype from the current feature branch spec.md. This is an optional sidecar command for reviewable product flows only; it does not run gates or downstream checks.",
     "plan": "Initialize the planning control plane from the current feature branch spec.md path. Use `/sdd.plan ...` after creating a spec to produce plan.md with Stage 0 shared context, queue state, and binding projection tracking for the /sdd.plan.* child commands.",
     "plan.research": "Generate the queued research.md artifact selected from the current feature branch plan.md. Use `/sdd.plan.research` after /sdd.plan to resolve the first pending research unit and emit the next runtime handoff decision.",
     "plan.data-model": "Generate the queued data-model.md artifact selected from the current feature branch plan.md. Use `/sdd.plan.data-model` after /sdd.plan.test-matrix to produce one backbone data model unit and emit the next runtime handoff decision.",
@@ -1973,7 +2009,7 @@ def init(
 
     steps_lines.append(f"   2.1 [cyan]/{COMMAND_NAMESPACE}.constitution[/] - Establish project principles")
     steps_lines.append(f"   2.2 [cyan]/{COMMAND_NAMESPACE}.specify[/] - Create baseline specification")
-    steps_lines.append(f"   2.3 [cyan]/{COMMAND_NAMESPACE}.specify.ui-html[/] - Optional sidecar command; generate a focused interaction tool when needed")
+    steps_lines.append(f"   2.3 [cyan]/{COMMAND_NAMESPACE}.specify.ui-html[/] - Optional sidecar command; generate an interactive prototype when needed")
     steps_lines.append(f"   2.4 [cyan]/{COMMAND_NAMESPACE}.plan[/] - Initialize the planning control plane")
     steps_lines.append(f"   2.5 [cyan]/{COMMAND_NAMESPACE}.plan.research[/] - Start the planning queue")
     steps_lines.append(f"   2.6 Follow runtime Handoff Decision through [cyan]/{COMMAND_NAMESPACE}.plan.test-matrix[/], [cyan]/{COMMAND_NAMESPACE}.plan.data-model[/], and repeated [cyan]/{COMMAND_NAMESPACE}.plan.contract[/]")

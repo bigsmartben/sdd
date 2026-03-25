@@ -133,7 +133,7 @@ Total: ~12 hours of documentation work
 # - Generates specs/20250708-chat-system/spec.md
 # - Populates it with structured requirements
 
-# Step 1b: Optional sidecar command for focused interaction tool (user chooses timing)
+# Step 1b: Optional sidecar command for interactive prototype (user chooses timing)
 /sdd.specify.ui-html
 
 # Step 2: Initialize planning control plane (5 minutes)

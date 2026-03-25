@@ -1,5 +1,5 @@
 ---
-description: Generate an interactive HTML tool prototype from spec.md for review.
+description: Generate one self-contained interactive ui.html prototype from the resolved spec.md.
 ---
 
 ## User Input
@@ -8,73 +8,67 @@ description: Generate an interactive HTML tool prototype from spec.md for review
 $ARGUMENTS
 ```
 
-You **MUST** consider the user input before proceeding (if not empty).
-
-## Argument Parsing
-
 Treat all `$ARGUMENTS` as optional direction.
 Resolve `SPEC_FILE` using branch defaults: `specs/YYYYMMDD-slug/spec.md`.
 
 ## Goal
 
-Generate one review-ready `ui.html` prototype for walkthroughs, UX review, and interaction validation.
-Use `.specify/templates/ui-html-template.html` only.
-
-`/sdd.specify.ui-html` owns:
-- Derived interaction tool that makes `spec.md` intent obvious.
-- Visualizing core user flows, interaction moments, and data states.
+Generate one high-fidelity, review-ready, interactive `ui.html` prototype from `SPEC_FILE`.
 
 ## Governance / Authority
 
-- **Authority rule**: `spec.md` is the semantic authority; `ui.html` is a derived artifact.
-- **Stage boundary rule**: No planning governance semantics (tuples/anchors/contracts) in the prototype.
-- **Protocol rule**: Final audit/PASS/FAIL is owned by `/sdd.analyze`.
+- **Authority rule**: `spec.md` is the semantic authority; `ui.html` is a derived prototype artifact.
+- `ui.html` is a derived artifact.
+- **Scope rule**: This command generates presentation and interaction only. It does **not** run gates, audits, or downstream checks.
+- **Output rule**: Produce a single-file prototype that opens directly in a browser with no build step and no external dependencies.
 
 ## Allowed Inputs
 
-- `.specify/templates/ui-html-template.html` (structure)
-- `SPEC_FILE` (UDD / UX Flow / Page Definitions)
+- `.specify/templates/ui-html-template.html`
+- `SPEC_FILE`
+- Optional user direction from `$ARGUMENTS`
 
-**Prohibited**: Planning artifacts, unrelated feature folders.
+**Prohibited**:
+- planning artifacts
+- unrelated feature folders
+- remote assets, frameworks, or build-time dependencies
+- business rules not grounded in `spec.md`
 
 ## Reasoning Order
 
-1. **Selection**: Lock one primary walkthrough and one minimal branch from `spec.md`.
-2. **Derivation**: Select minimal UIF/UDD slices for the locked walkthrough.
-3. **Construction**: Build a dominant interactive surface; verify spec-faithfulness.
+1. Lock one dominant user journey from `SPEC_FILE`.
+2. Add at most one critical branch only if it proves a core guard or recovery behavior.
+3. Derive the minimum visible states, copy, and controls needed to make the journey reviewable.
+4. Fill the runtime template with self-contained HTML, CSS, and JavaScript.
 
 ## Artifact Quality Contract
 
-- Must: produce one coherent review prototype that makes the dominant user intent obvious in one pass.
-- Strictly: every demonstrated interaction and state must trace back to `spec.md` and teach something real.
-- **Tool-First**: Deliver an interactive tool, not a document dump.
-- **Executable CTAs**: Every clickable entry MUST map to a target or handler; no "dead" CTAs.
-- **Spec-Faithful**: Terminology and states MUST trace back to UDD and UIF nodes.
-- **Positioning-Led**: State positioning once (actor / scenario / value).
-- **Prohibited**: Invention of business rules or product scope not in spec.
-
-## Interaction & Coverage Rules (MUST)
-
-- **UIF Coverage**: Prototype MUST trace to explicit `UIF` nodes.
-- **UDD Binding**: Visible data MUST trace to completed `Entity.field` rows.
-- **Rule-Driven**: Consume UDD boundary/null/display rules in UI states.
-- **Review Surfaces**: Dedicate areas to `UIF Interaction View` and `UDD-backed View State` for audit.
+- Must: read like a polished product prototype, not a requirements document.
+- Must: make the main user goal, primary action, visible feedback, and completion state obvious in one pass.
+- Must: be interactive with live state changes in the page itself.
+- Must: keep all visible copy and state names semantically grounded in `spec.md`.
+- Must: keep one dominant path visually primary on desktop and mobile.
+- Strictly: default to one primary path plus zero or one branch.
+- Strictly: keep traceability secondary; do not make audit language the primary reading experience.
+- Strictly: every clickable control must have a real inline handler or a real in-page target.
+- **Prohibited**: document dumps, dead CTAs, multi-scenario simulators, hidden required steps, external fetches, downstream handoff logic.
 
 ## Writeback Contract
 
-- Write to `specs/YYYYMMDD-slug/ui.html` only.
-- **MUST NOT** modify `spec.md`, `plan.md`, or any planning artifact.
+- Write `specs/YYYYMMDD-slug/ui.html` only.
+- Do **not** modify `spec.md`, `plan.md`, or any other artifact.
 
 ## Stop Conditions
 
 Stop immediately if:
 1. `.specify/templates/ui-html-template.html` is missing or unreadable.
-2. `SPEC_FILE` is missing or unresolvable from current branch context.
+2. `SPEC_FILE` is missing or unreadable.
+3. `SPEC_FILE` does not provide enough grounded user-visible behavior to produce a prototype without inventing product scope.
 
 ## Handoff Decision
 
 Emit exactly these fields:
-- `Next Command`: `/sdd.clarify` (to resolve ambiguity) or `/sdd.plan`.
-- `Decision Basis`: `ui.html` generation outcome.
-- `Selected Artifact`: `ui.html`.
-- `Ready/Blocked`: Local readiness only.
+- `Next Command`: `None`
+- `Decision Basis`: `ui.html` generated or blocked
+- `Selected Artifact`: `ui.html`
+- `Ready/Blocked`: local generation status only

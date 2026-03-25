@@ -17,7 +17,8 @@ You **MUST** consider the user input before proceeding (if not empty).
 ## Goal
 
 Update or initialize the project constitution and repository-first baselines under `.specify/memory/`.
-Use `.specify/templates/constitution-template.md` only.
+Use `.specify/templates/constitution-template.md` as constitution structure authority.
+Use `.specify/templates/technical-dependency-matrix-template.md` and `.specify/templates/module-invocation-spec-template.md` as repository-first structure authority.
 
 `/sdd.constitution` owns:
 - Long-lived normative rules and ownership boundaries.
@@ -35,8 +36,8 @@ Use `.specify/templates/constitution-template.md` only.
 - `.specify/templates/constitution-template.md` (structure)
 - `.specify/memory/constitution.md` (existing state)
 - Repository manifests (pom.xml, package.json, pyproject.toml, go.mod)
-- If `repo-first-affecting`, `.specify/templates/technical-dependency-matrix-template.md` (dependency baseline structure)
-- If `repo-first-affecting`, `.specify/templates/module-invocation-spec-template.md` (invocation baseline structure)
+- `.specify/templates/technical-dependency-matrix-template.md` (dependency baseline structure)
+- `.specify/templates/module-invocation-spec-template.md` (invocation baseline structure)
 - For repo-first refresh, each artifact MUST be projected from its corresponding template; MUST NOT synthesize structure from constitution prose alone.
 
 **Prohibited**: `plan.md` queue state, `tasks.md`, or ad hoc CLI guesses.
@@ -80,7 +81,8 @@ Use `.specify/templates/constitution-template.md` only.
 
 Stop immediately if:
 1. `.specify/templates/constitution-template.md` is missing or unreadable.
-2. Repository manifests cannot be located.
+2. `.specify/templates/technical-dependency-matrix-template.md` or `.specify/templates/module-invocation-spec-template.md` is missing or unreadable.
+3. Repository manifests cannot be located.
 
 ## Handoff Decision
 
