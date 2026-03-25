@@ -31,7 +31,7 @@ def _write_feature_fixture(
     packet_boundary_status: str = "existing",
     packet_entry_anchor: str = "src/web/demo_controller.py::DemoController.handle",
     packet_entry_status: str = "existing",
-    include_research_trigger: bool = False,
+    include_module_invocation_trigger: bool = False,
     plan_feature_status: str = "planning-in-progress",
     plan_packet_source: str = "test-matrix.md#Binding Packets:BR-001",
     plan_test_scope: str = "Integration",
@@ -349,10 +349,15 @@ def _write_feature_fixture(
         encoding="utf-8",
     )
 
-    if include_research_trigger:
-        (feature_dir / "research.md").write_text(
-            "northbound APIs in web/controller should stay controller-first for HTTP routes\n"
-            "web -> service handoff must happen after controller entry\n",
+    if include_module_invocation_trigger:
+        module_invocation_spec = feature_dir / ".specify" / "memory" / "repository-first" / "module-invocation-spec.md"
+        module_invocation_spec.parent.mkdir(parents=True, exist_ok=True)
+        module_invocation_spec.write_text(
+            "# Module Invocation Spec\n\n"
+            "## Allowed Direction\n\n"
+            "| From Module | To Module | Layer View | Rule | Rationale |\n"
+            "|-------------|-----------|------------|------|-----------|\n"
+            "| web | service | web -> service | MUST keep controller-first HTTP entry | northbound layering |\n",
             encoding="utf-8",
         )
 
@@ -631,7 +636,7 @@ def test_northbound_rule_flags_missing_label_entry_anchor_in_bash(tmp_path: Path
         tmp_path,
         contract_entry_anchor=None,
         contract_boundary_anchor="HTTP GET /demo",
-        include_research_trigger=True,
+        include_module_invocation_trigger=True,
         test_matrix_boundary_anchor="event.demo.created",
     )
 
@@ -648,7 +653,7 @@ def test_northbound_rule_flags_missing_label_entry_anchor_in_powershell(tmp_path
         tmp_path,
         contract_entry_anchor=None,
         contract_boundary_anchor="HTTP GET /demo",
-        include_research_trigger=True,
+        include_module_invocation_trigger=True,
         test_matrix_boundary_anchor="event.demo.created",
     )
 
@@ -663,7 +668,7 @@ def test_northbound_rule_flags_missing_label_entry_anchor_in_powershell(tmp_path
 def test_northbound_rule_accepts_escaped_pipe_in_boundary_anchor_cells_bash(tmp_path: Path):
     feature_dir = _write_feature_fixture(
         tmp_path,
-        include_research_trigger=True,
+        include_module_invocation_trigger=True,
         contract_boundary_anchor=r"HTTP GET /demo\|v2",
         test_matrix_boundary_anchor=r"HTTP GET /demo\|v2",
         packet_boundary_anchor=r"HTTP GET /demo\|v2",
@@ -675,7 +680,7 @@ def test_northbound_rule_accepts_escaped_pipe_in_boundary_anchor_cells_bash(tmp_
 def test_northbound_rule_accepts_escaped_pipe_in_boundary_anchor_cells_powershell(tmp_path: Path):
     feature_dir = _write_feature_fixture(
         tmp_path,
-        include_research_trigger=True,
+        include_module_invocation_trigger=True,
         contract_boundary_anchor=r"HTTP GET /demo\|v2",
         test_matrix_boundary_anchor=r"HTTP GET /demo\|v2",
         packet_boundary_anchor=r"HTTP GET /demo\|v2",

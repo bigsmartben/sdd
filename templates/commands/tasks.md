@@ -32,6 +32,7 @@ Use `.specify/templates/tasks-template.md` only.
 - `plan.md` — Stage Queue / Artifact Status / Shared Context Snapshot
 - `contracts/` — selected binding slices only
 - `data-model.md`, `test-matrix.md`, `research.md`
+- `.specify/memory/repository-first/module-invocation-spec.md`
 - `FEATURE_SPEC`
 - `LOCAL_EXECUTION_PROTOCOL` (from `TASKS_BOOTSTRAP`; includes `LOCAL_EXECUTION_PROTOCOL.python.runner_cmd` and `LOCAL_EXECUTION_PROTOCOL.runtime_tools`)
 - `LOCAL_EXECUTION_PROTOCOL.repo_search.list_files_cmd`
@@ -53,6 +54,7 @@ Treat `TASKS_BOOTSTRAP.execution_readiness` as the primary hard gate.
 - **Stage boundary rule**: No design/modeling; only task decomposition and orchestration.
 - **Shared protocol rule**: Apply **Unified Repository-First Gate Protocol (`URFGP`)**.
 - Keep contract projection authoritative for the current run.
+- Keep contract method-level `Sequence` / `UML` anchor closure authoritative for execution decomposition; do not remap participants or call anchors in this stage.
 - On projection drift, emit upstream writeback actions only:
   - `/sdd.specify` — if spec drift is the root cause
   - `/sdd.plan.test-matrix` — if binding-packet source resolution or packet authority is unstable

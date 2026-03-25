@@ -55,6 +55,7 @@ Use `.specify/templates/contract-template.md` only.
 - `test-matrix.md` (binding packet and scenario matrix)
 - `FEATURE_SPEC` (UC/FR/UIF/UDD authority)
 - `data-model.md` (shared semantics authority)
+- `.specify/memory/repository-first/module-invocation-spec.md` (first-party module invocation authority)
 - Bounded repo evidence (boundary/entry/DTO/collaborator targets)
 
 **Prohibited**: `research.md`, broad symbol scans, or non-resolved artifact reads.
@@ -63,11 +64,14 @@ Use `.specify/templates/contract-template.md` only.
 
 Reconstruct request / response meaning from `UC`, `FR`, `UIF`, `UDD`, and scenario refs before reading repo evidence.
 Use the selected `Binding Packets` row as binding semantic authority; resolve ambiguity by routing upstream instead of local reinterpretation.
+Use `.specify/memory/repository-first/module-invocation-spec.md` to lock first-party module invocation directions before landing sequence/UML anchors.
 
 Required scope for bounded repo reads:
-- required collaborators and middleware
+- required first-party method-level call anchors from module-invocation rules
+- required second-party and third-party call anchors
 - required owner/source symbols
 - `existing` boundary/entry anchors
+- middleware anchors only when bounded repo evidence closes them
 
 Keep repo-backed verification bounded to the selected `BindingRowID` and active blockers.
 
@@ -77,8 +81,12 @@ If repo-backed verification finds a binding-projection error or shared-semantic 
 
 - MAY refine operation-scoped VO/DTO/field mappings within this binding.
 - MUST NOT mint new shared-semantic classes, owners/sources, lifecycle vocabulary, or invariants.
-- Sequence design MUST explicitly render every mandatory repo-backed collaborator hop.
+- Sequence design MUST keep first-party execution hops at method-level call anchors.
+- Sequence design MUST explicitly render mandatory second-party and third-party call anchors on the main path.
+- Sequence design MUST include middleware traversal only when a concrete middleware call anchor exists in bounded repo evidence.
 - Sequence design MUST NOT collapse multiple mandatory collaborators/dependencies into one synthetic participant label.
+- UML class design MUST map first-party sequence participants to concrete method-level anchors.
+- UML collaborator/dependency participants for second-party and third-party hops MUST use concrete call anchors without expanding their internal chains.
 - `opt` blocks are valid only for truly conditional branches.
 - UML request/response class labels should use anchored symbols or repository boundary naming conventions; do not synthesize placeholder DTO labels.
 
@@ -113,7 +121,7 @@ After each run, check whether all `contract` rows are done. If so:
 1. **Requirement Projection**: Lock demand from selected binding packet and spec refs.
 2. **Spec Semantics**: Reconstruct I/O and outcome meaning from `spec.md`.
 3. **Shared Semantic Reuse**: Inherit owner/source/vocabulary from `data-model.md`.
-4. **Repo Closure**: Land design using `existing -> extended -> new -> todo` priority.
+4. **Layered Repo Closure**: Use `module-invocation-spec.md` and repo anchors to land method-level Sequence/UML with `existing -> extended -> new -> todo` priority.
 
 ## Artifact Quality Contract
 
@@ -138,8 +146,8 @@ After each run, check whether all `contract` rows are done. If so:
 - **Operation ID**: MUST be concrete (not `N/A`).
 - **Full Field Dictionary**: MUST cover all I/O fields present in the selected binding packet's UC/FR/UIF/UDD refs; classify each as `operation-critical` (field required for the operation to succeed) or `owner-residual` (field owned by a shared semantic class, not this operation).
 - **Anchor Strategy**: If `new`, MUST provide explicit rejection evidence for `existing` and `extended`.
-- **Sequence Design**: MUST be end-to-end contiguous, starting from client entry.
-- **UML Class Design**: MUST cover all sequence participants and methods.
+- **Sequence Design**: MUST be end-to-end contiguous; first-party hops stay method-level; mandatory second-party and third-party call anchors stay explicit; middleware appears only when anchored.
+- **UML Class Design**: MUST cover all sequence participants and map method-level call anchors consistently.
 - **Test Projection**: Derive `Main Pass Anchor` and smoke candidates from `test-matrix.md`.
 - **Closure Evidence**: each `Closure Check` row MUST include `Evidence Pointer(s)` that reference concrete rows/anchors from field dictionary, UML/package relations, sequence steps, TM/TC anchors, or repo symbols.
 

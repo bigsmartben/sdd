@@ -46,6 +46,7 @@ Treat `IMPLEMENT_BOOTSTRAP.analyze_readiness` as the primary analyze hard gate.
 - **Stage boundary rule**: Execute approved tasks only. **MUST NOT** backfill planning or design semantics.
 - **Shared protocol rule**: Apply **Unified Repository-First Gate Protocol (`URFGP`)**.
 - **Gate ownership rule**: Enforce run-local execution safety; final audit/PASS/FAIL remains with `/sdd.analyze`.
+- Treat contract method-level `Sequence` / `UML` anchors as fixed design input for this run; do not reinterpret participants or call layering in this stage.
 
 ## Repository-First Protocol
 

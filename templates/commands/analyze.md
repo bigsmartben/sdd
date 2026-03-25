@@ -38,7 +38,7 @@ Update `analyze-history.md` with the gate decision (`PASS|FAIL`).
 
 Evaluate in this order:
 1. **repo-anchor strategy priority compliance (`existing -> extended -> new`)**: any active tuple selecting `new` anchors without explicit rejection evidence for both `existing` and `extended` is `FAIL`.
-2. **Contract-projection drift governance**: check for upstream binding-projection drift across `plan.md` / `test-matrix.md`; check for unresolved placeholder class/type labels in contract artifacts.
+2. **Contract-projection drift governance**: check for upstream binding-projection drift across `plan.md` / `test-matrix.md`; check for unresolved placeholder class/type labels in contract artifacts; check `Sequence` / `UML` participant and anchor consistency in contract artifacts.
 3. **matrix dependency facts plus `SIG-*` governance signals including divergence, version-source-mix, and `unresolved`**: audit using concrete module-to-module rows as the primary representation.
 4. **Coverage completeness**: all planned bindings have matching contract artifacts.
 
@@ -54,6 +54,7 @@ Projection drift routing:
 
 - For upstream binding-projection drift across `plan.md` / `test-matrix.md`: route `/sdd.plan.test-matrix` to repair the upstream binding projection.
 - For unresolved placeholder class/type labels in contract artifacts: regenerate `/sdd.plan.contract` for the affected `BindingRowID`.
+- For `Sequence` / `UML` participant or anchor mismatch in contract artifacts: regenerate `/sdd.plan.contract` for the affected `BindingRowID`.
 - For spec-level drift: route `/sdd.specify`.
 
 ## Reasoning Order
