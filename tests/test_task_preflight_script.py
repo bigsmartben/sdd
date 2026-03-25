@@ -452,7 +452,7 @@ def test_task_preflight_helper_emits_contract_unit_inventory(tmp_path):
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
 
-    assert payload["schema_version"] == "1.4"
+    assert payload["schema_version"] == "1.5"
     assert payload["required_sections"]["summary"] is True
     assert payload["required_sections"]["stage_queue"] is True
     assert payload["required_sections"]["handoff_protocol"] is True
@@ -490,7 +490,6 @@ def test_task_preflight_helper_emits_contract_unit_inventory(tmp_path):
     assert unit["contract"]["uml_closure_check_present"] is True
     assert unit["contract"]["sequence_closure_check_present"] is True
     assert unit["contract"]["test_closure_check_present"] is True
-    assert unit["contract"]["has_unresolved_field_gaps"] is False
     assert "interface_detail" not in unit
 
 
@@ -860,7 +859,6 @@ def test_task_preflight_helper_blocks_missing_contract_required_sections(tmp_pat
     assert "cross_interface_smoke_candidate_missing" in error_codes
     assert "upstream_references_section_missing" in error_codes
     assert "boundary_notes_section_missing" in error_codes
-    assert "contract_units_not_execution_ready" in error_codes
     warning_codes = [entry["code"] for entry in payload["execution_readiness"]["warnings"]]
     assert "field_dictionary_tier_missing" in warning_codes
     assert "test_projection_section_missing" in warning_codes
@@ -868,7 +866,7 @@ def test_task_preflight_helper_blocks_missing_contract_required_sections(tmp_pat
     assert "closure_check_rows_missing" in warning_codes
 
 
-def test_task_preflight_helper_warns_unresolved_contract_field_gaps(tmp_path):
+def test_task_preflight_helper_ignores_contract_field_gap_markers(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
     _write_minimal_feature(feature_dir)
     contract_path = feature_dir / "contracts" / "create-task.md"
@@ -905,12 +903,10 @@ def test_task_preflight_helper_warns_unresolved_contract_field_gaps(tmp_path):
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["ready_unit_inventory"] == []
-    assert payload["execution_readiness"]["ready_for_task_generation"] is False
-    error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
-    assert "contract_units_not_execution_ready" in error_codes
+    assert len(payload["ready_unit_inventory"]) == 1
+    assert payload["execution_readiness"]["ready_for_task_generation"] is True
     warning_codes = [entry["code"] for entry in payload["execution_readiness"]["warnings"]]
-    assert "contract_field_gap_unresolved" in warning_codes
+    assert "contract_field_gap_unresolved" not in warning_codes
 
 
 def test_task_preflight_helper_warns_http_controller_first_violation(tmp_path):
@@ -957,7 +953,6 @@ def test_task_preflight_helper_warns_http_controller_first_violation(tmp_path):
     assert payload["execution_readiness"]["ready_for_task_generation"] is True
     error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
     assert "contract_anchor_inventory_mismatch" not in error_codes
-    assert "contract_units_not_execution_ready" not in error_codes
     warning_codes = [entry["code"] for entry in payload["execution_readiness"]["warnings"]]
     assert "controller_first_violation" not in warning_codes
 
@@ -1203,7 +1198,7 @@ def test_task_preflight_helper_blocks_duplicate_required_contract_sections(tmp_p
     assert "contract_duplicate_required_sections" in error_codes
 
 
-def test_task_preflight_helper_blocks_binding_context_coverage_drift(tmp_path):
+def test_task_preflight_helper_does_not_emit_binding_context_coverage_drift(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
     _write_minimal_feature(
         feature_dir,
@@ -1277,9 +1272,8 @@ def test_task_preflight_helper_blocks_binding_context_coverage_drift(tmp_path):
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["execution_readiness"]["ready_for_task_generation"] is False
     error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
-    assert "contract_binding_context_coverage_drift" in error_codes
+    assert "contract_binding_context_coverage_drift" not in error_codes
 
 
 def test_task_preflight_helper_allows_reference_case_and_separator_variants(tmp_path):
@@ -1329,10 +1323,9 @@ def test_task_preflight_helper_allows_reference_case_and_separator_variants(tmp_
     assert payload["execution_readiness"]["ready_for_task_generation"] is True
     error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
     assert "contract_binding_context_coverage_drift" not in error_codes
-    assert "contract_units_not_execution_ready" not in error_codes
 
 
-def test_task_preflight_helper_blocks_uif_ref_without_path_prefix(tmp_path):
+def test_task_preflight_helper_allows_uif_ref_without_path_prefix(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
     _write_minimal_feature(feature_dir)
     contract_path = feature_dir / "contracts" / "create-task.md"
@@ -1363,10 +1356,10 @@ def test_task_preflight_helper_blocks_uif_ref_without_path_prefix(tmp_path):
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["execution_readiness"]["ready_for_task_generation"] is False
+    assert len(payload["ready_unit_inventory"]) == 1
+    assert payload["execution_readiness"]["ready_for_task_generation"] is True
     error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
-    assert "contract_binding_context_coverage_drift" in error_codes
-    assert "contract_units_not_execution_ready" in error_codes
+    assert "contract_binding_context_coverage_drift" not in error_codes
 
 
 def test_task_preflight_helper_allows_anchor_spacing_variants(tmp_path):
@@ -1410,7 +1403,6 @@ def test_task_preflight_helper_allows_anchor_spacing_variants(tmp_path):
     assert payload["execution_readiness"]["ready_for_task_generation"] is True
     error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
     assert "contract_anchor_inventory_mismatch" not in error_codes
-    assert "contract_units_not_execution_ready" not in error_codes
 
 
 def test_task_preflight_helper_blocks_anchor_inventory_mismatch(tmp_path):
@@ -1507,10 +1499,9 @@ sequenceDiagram
     assert payload["execution_readiness"]["ready_for_task_generation"] is True
     error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
     assert "contract_sequence_uml_anchor_mismatch" not in error_codes
-    assert "contract_units_not_execution_ready" not in error_codes
 
 
-def test_task_preflight_helper_blocks_sequence_uml_anchor_mismatch(tmp_path):
+def test_task_preflight_helper_allows_sequence_uml_anchor_mismatch(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
     _write_minimal_feature(feature_dir)
     contract_path = feature_dir / "contracts" / "create-task.md"
@@ -1559,13 +1550,13 @@ sequenceDiagram
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["execution_readiness"]["ready_for_task_generation"] is False
+    assert len(payload["ready_unit_inventory"]) == 1
+    assert payload["execution_readiness"]["ready_for_task_generation"] is True
     error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
-    assert "contract_sequence_uml_anchor_mismatch" in error_codes
-    assert "contract_units_not_execution_ready" in error_codes
+    assert "contract_sequence_uml_anchor_mismatch" not in error_codes
 
 
-def test_task_preflight_helper_blocks_method_anchors_in_sequence_participant_labels(tmp_path):
+def test_task_preflight_helper_allows_method_anchors_in_sequence_participant_labels(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
     _write_minimal_feature(feature_dir)
     contract_path = feature_dir / "contracts" / "create-task.md"
@@ -1614,10 +1605,10 @@ sequenceDiagram
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["execution_readiness"]["ready_for_task_generation"] is False
+    assert len(payload["ready_unit_inventory"]) == 1
+    assert payload["execution_readiness"]["ready_for_task_generation"] is True
     error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
-    assert "contract_sequence_participant_labels_invalid" in error_codes
-    assert "contract_units_not_execution_ready" in error_codes
+    assert "contract_sequence_participant_labels_invalid" not in error_codes
 
 
 def test_task_preflight_helper_flags_missing_binding_projection_tuple_fields(tmp_path):
@@ -1694,7 +1685,6 @@ def test_task_preflight_helper_blocks_missing_binding_contract_packet(tmp_path):
     assert payload["execution_readiness"]["ready_for_task_generation"] is False
     error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
     assert "test_matrix_required_sections_missing" in error_codes
-    assert "contract_units_not_execution_ready" in error_codes
     warning_codes = [entry["code"] for entry in payload["execution_readiness"]["warnings"]]
     assert "missing_binding_contract_packet" in warning_codes
 
@@ -1996,7 +1986,7 @@ def test_task_preflight_helper_allows_new_anchor_design_target_name_without_repo
     assert "new_anchor_repo_path_overclaim" not in error_codes
 
 
-def test_task_preflight_helper_warns_when_new_anchor_symbol_not_observable_in_repo_file(tmp_path):
+def test_task_preflight_helper_does_not_warn_when_new_anchor_symbol_is_not_observable(tmp_path):
     feature_dir = tmp_path / "specs" / "001-demo"
     _write_minimal_feature(
         feature_dir,
@@ -2038,7 +2028,7 @@ def test_task_preflight_helper_warns_when_new_anchor_symbol_not_observable_in_re
     payload = json.loads(result.stdout)
     assert payload["execution_readiness"]["ready_for_task_generation"] is True
     warning_codes = [entry["code"] for entry in payload["execution_readiness"]["warnings"]]
-    assert "new_anchor_symbol_unverified" in warning_codes
+    assert "new_anchor_symbol_unverified" not in warning_codes
     error_codes = [entry["code"] for entry in payload["execution_readiness"]["errors"]]
     assert "new_anchor_repo_path_overclaim" not in error_codes
 
@@ -2344,7 +2334,7 @@ def test_bash_check_prerequisites_task_preflight_uses_branch_inferred_plan_file(
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert payload["FEATURE_DIR"].replace("\\", "/").endswith("/repo/specs/20250708-demo")
-    assert payload["TASKS_BOOTSTRAP"]["schema_version"] == "1.4"
+    assert payload["TASKS_BOOTSTRAP"]["schema_version"] == "1.5"
     assert payload["TASKS_BOOTSTRAP"]["execution_readiness"]["ready_for_task_generation"] is True
 
 

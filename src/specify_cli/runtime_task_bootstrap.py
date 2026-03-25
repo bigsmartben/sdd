@@ -25,7 +25,7 @@ from specify_cli.runtime_common import (
 from specify_cli.runtime_gate_protocol import build_repository_first_gate_protocol
 
 
-TASK_BOOTSTRAP_SCHEMA_VERSION = "1.4"
+TASK_BOOTSTRAP_SCHEMA_VERSION = "1.5"
 TASK_SECTION_HEADINGS = (
     "Summary",
     "Shared Context Snapshot",
@@ -44,14 +44,6 @@ TASK_REQUIRED_TEST_MATRIX_SECTIONS = (
 )
 TASK_ALLOWED_SMOKE_CANDIDATE_ROLES = {"entry", "middle", "exit", "none"}
 TASK_ALLOWED_ANCHOR_STATUSES = {"existing", "extended", "new", "todo"}
-TASK_SEQUENCE_UML_PARTICIPANT_ROLES = {
-    "boundary-entry",
-    "implementation-entry",
-    "service",
-    "collaborator",
-    "middleware",
-    "external-dependency",
-}
 TASK_BASELINE_CODE_TO_CATEGORY = {
     "missing_required_sections": "missing",
     "required_stage_rows_missing": "missing",
@@ -72,14 +64,10 @@ TASK_BASELINE_CODE_TO_CATEGORY = {
     "test_matrix_required_sections_missing": "missing",
     "contract_placeholder_names_present": "non_traceable",
     "contract_duplicate_required_sections": "non_traceable",
-    "contract_binding_context_coverage_drift": "non_traceable",
     "contract_anchor_inventory_mismatch": "non_traceable",
-    "contract_sequence_uml_anchor_mismatch": "non_traceable",
-    "contract_sequence_participant_labels_invalid": "non_traceable",
     "contract_anchor_status_invalid": "non_traceable",
     "new_anchor_strategy_evidence_missing": "non_traceable",
     "new_anchor_repo_path_overclaim": "non_traceable",
-    "new_anchor_symbol_unverified": "non_traceable",
     "operation_id_missing": "non_traceable",
     "binding_context_section_missing": "missing",
     "interface_definition_section_missing": "missing",
@@ -89,13 +77,11 @@ TASK_BASELINE_CODE_TO_CATEGORY = {
     "cross_interface_smoke_candidate_missing": "missing",
     "cross_interface_smoke_candidate_invalid": "non_traceable",
     "cross_interface_smoke_candidate_all_none": "non_traceable",
-    "contract_units_not_execution_ready": "non_traceable",
     "full_field_dictionary_missing": "non_traceable",
     "field_dictionary_tier_missing": "non_traceable",
     "test_projection_section_missing": "non_traceable",
     "closure_check_section_missing": "non_traceable",
     "closure_check_rows_missing": "non_traceable",
-    "contract_field_gap_unresolved": "non_traceable",
     "orphan_contract_artifact_rows": "non_traceable",
 }
 
@@ -141,53 +127,6 @@ def parse_binding_context(section: str | None) -> dict[str, str]:
 
 def normalize_symbol(value: str) -> str:
     return clean_cell(value).strip("`").strip()
-
-
-REFERENCE_TOKEN_PATTERNS: dict[str, re.Pattern[str]] = {
-    "uif_path": re.compile(r"\bUIF-Path-[A-Za-z0-9_.-]+\b", flags=re.IGNORECASE),
-    "tm_id": re.compile(r"\bTM-[A-Za-z0-9_.-]+\b", flags=re.IGNORECASE),
-    "tc_id": re.compile(r"\bTC-[A-Za-z0-9_.-]+\b", flags=re.IGNORECASE),
-}
-
-
-def normalize_reference_token(value: str) -> str:
-    normalized = normalize_symbol(value).strip("[]")
-    if not normalized:
-        return ""
-    return normalized.upper()
-
-
-def build_declared_reference_index(values: list[str]) -> dict[str, str]:
-    refs: dict[str, str] = {}
-    for value in values:
-        normalized = normalize_reference_token(value)
-        if normalized and normalized not in refs:
-            refs[normalized] = normalize_symbol(value)
-    return refs
-
-
-def collect_reference_tokens(*sections: str) -> dict[str, set[str]]:
-    observed = {key: set() for key in REFERENCE_TOKEN_PATTERNS}
-    candidate_slices: list[str] = []
-    for section in sections:
-        if not section:
-            continue
-        candidate_slices.append(section)
-        candidate_slices.extend(
-            value
-            for row in parse_markdown_table(section)
-            for value in row.values()
-            if clean_cell(value)
-        )
-
-    for candidate in candidate_slices:
-        for key, pattern in REFERENCE_TOKEN_PATTERNS.items():
-            observed[key].update(
-                normalized
-                for match in pattern.finditer(candidate)
-                if (normalized := normalize_reference_token(match.group(0)))
-            )
-    return observed
 
 
 def normalize_anchor_for_comparison(anchor: str) -> str:
@@ -247,129 +186,6 @@ def extract_repo_path_from_anchor(anchor: str) -> str:
     return path_part
 
 
-def extract_symbol_from_anchor(anchor: str) -> str:
-    normalized = normalize_anchor_for_comparison(anchor)
-    if "::" not in normalized:
-        return ""
-    symbol_part = normalize_symbol(normalized.split("::", 1)[1])
-    if not symbol_part or symbol_part.upper() == "TODO(REPO_ANCHOR)":
-        return ""
-    return symbol_part
-
-
-def anchor_symbol_looks_present(path: Path, symbol: str) -> bool:
-    if not symbol:
-        return True
-
-    try:
-        content = path.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
-        return False
-
-    normalized_symbol = normalize_symbol(symbol)
-    if not normalized_symbol:
-        return True
-    if normalized_symbol in content:
-        return True
-
-    symbol_parts = [
-        re.sub(r"\(\)$", "", part)
-        for part in re.split(r"[.$]", normalized_symbol)
-        if part
-    ]
-    required_tokens = symbol_parts[-2:] if len(symbol_parts) >= 2 else symbol_parts
-    if not required_tokens:
-        return True
-
-    return all(
-        re.search(rf"(?<![A-Za-z0-9_]){re.escape(token)}(?![A-Za-z0-9_])", content) is not None
-        for token in required_tokens
-    )
-
-
-def extract_sequence_participant_label_violations(content: str) -> list[str]:
-    violations: list[str] = []
-    seen: set[str] = set()
-    mermaid_blocks = re.findall(r"```mermaid\s*\n(.*?)```", content, flags=re.DOTALL | re.IGNORECASE)
-    for block in mermaid_blocks:
-        if re.search(r"(?im)^\s*sequenceDiagram\b", block) is None:
-            continue
-        for participant in re.finditer(
-            r'(?im)^\s*participant\s+[A-Za-z0-9_]+(?:\s+as\s+"([^"]+)")?\s*$',
-            block,
-        ):
-            label = normalize_symbol(participant.group(1) or "")
-            if not label:
-                continue
-            if "::" not in label and re.search(
-                r"[A-Z][A-Za-z0-9_$-]*(?:\.[A-Za-z0-9_$-]+)*\.[A-Za-z_$][A-Za-z0-9_$-]*",
-                label,
-            ) is None:
-                continue
-            normalized = normalize_anchor_for_comparison(label)
-            if normalized and normalized not in seen:
-                seen.add(normalized)
-                violations.append(normalized)
-    return violations
-
-
-def extract_sequence_diagram_method_anchors(content: str) -> list[str]:
-    anchors: list[str] = []
-    seen: set[str] = set()
-    mermaid_blocks = re.findall(r"```mermaid\s*\n(.*?)```", content, flags=re.DOTALL | re.IGNORECASE)
-    for block in mermaid_blocks:
-        if re.search(r"(?im)^\s*sequenceDiagram\b", block) is None:
-            continue
-        for token in extract_sequence_method_level_tokens(block):
-            if token and token not in seen:
-                seen.add(token)
-                anchors.append(token)
-    return anchors
-
-
-def extract_sequence_method_level_tokens(text: str) -> list[str]:
-    if not text:
-        return []
-
-    tokens: list[str] = []
-    seen: set[str] = set()
-    patterns = (
-        r"[A-Za-z0-9_./-]+\.[A-Za-z0-9_]+::[A-Za-z_$][A-Za-z0-9_$.-]*",
-        r"[A-Z][A-Za-z0-9_$-]*(?:\.[A-Za-z0-9_$-]+)*\.[A-Za-z_$][A-Za-z0-9_$-]*",
-    )
-    for pattern in patterns:
-        for match in re.finditer(pattern, text):
-            token = normalize_anchor_for_comparison(match.group(0))
-            if token and token not in seen:
-                seen.add(token)
-                tokens.append(token)
-
-    full_repo_tokens = [token for token in tokens if "::" in token]
-    return [
-        token
-        for token in tokens
-        if "::" in token or not any(full_token.endswith(f"::{token}") for full_token in full_repo_tokens)
-    ]
-
-
-def collect_sequence_anchor_set(content: str, behavior_paths_rows: list[dict[str, str]]) -> list[str]:
-    anchors: list[str] = []
-    seen: set[str] = set()
-
-    for anchor in extract_sequence_diagram_method_anchors(content):
-        if anchor not in seen:
-            seen.add(anchor)
-            anchors.append(anchor)
-
-    for row in behavior_paths_rows:
-        for key in ("Key Steps", "Trigger", "Outcome", "Contract-Visible Failure"):
-            for token in extract_sequence_method_level_tokens(clean_cell(row.get(key, ""))):
-                if token not in seen:
-                    seen.add(token)
-                    anchors.append(token)
-    return anchors
-
-
 def infer_repo_root_from_feature_dir(feature_dir: Path) -> Path:
     for candidate in (feature_dir, *feature_dir.parents):
         if candidate.name == "specs":
@@ -397,21 +213,12 @@ def inspect_contract_artifact(contract_path_abs: str, *, repo_root_abs: str | No
         "uml_closure_check_present": False,
         "sequence_closure_check_present": False,
         "test_closure_check_present": False,
-        "has_unresolved_field_gaps": False,
         "placeholder_names_present": False,
         "placeholder_names": [],
         "duplicate_required_sections_present": False,
         "duplicate_required_sections": [],
-        "binding_context_coverage_drift": False,
-        "missing_uif_path_refs_in_behavior_or_test_projection": [],
-        "missing_tm_ids_in_behavior_or_test_projection": [],
-        "missing_tc_ids_in_behavior_or_test_projection": [],
         "anchor_inventory_mismatch": False,
         "anchor_inventory_mismatch_details": [],
-        "sequence_uml_anchor_mismatch": False,
-        "sequence_uml_anchor_mismatch_details": [],
-        "sequence_participant_labels_invalid": False,
-        "sequence_participant_labels_invalid_details": [],
         "boundary_anchor_status": "",
         "implementation_entry_anchor_status": "",
         "boundary_anchor_strategy_evidence": "",
@@ -420,8 +227,6 @@ def inspect_contract_artifact(contract_path_abs: str, *, repo_root_abs: str | No
         "missing_new_anchor_strategy_evidence_fields": [],
         "new_anchor_nonexistent_repo_path_fields": [],
         "new_anchor_nonexistent_repo_path_rows": [],
-        "new_anchor_symbol_unverified_fields": [],
-        "new_anchor_symbol_unverified_rows": [],
         "operation_id": "",
     }
     if not contract_path_abs or not Path(contract_path_abs).is_file():
@@ -451,10 +256,6 @@ def inspect_contract_artifact(contract_path_abs: str, *, repo_root_abs: str | No
     inspection["uml_closure_check_present"] = "| UML closure |" in content
     inspection["sequence_closure_check_present"] = "| Sequence closure |" in content
     inspection["test_closure_check_present"] = "| Test closure |" in content
-    inspection["has_unresolved_field_gaps"] = "TODO(REPO_ANCHOR)" in content or re.search(
-        r"(?i)\|\s*gap\s*\|",
-        content,
-    ) is not None
     placeholder_names = sorted(set(UNRESOLVED_CONTRACT_NAME_RE.findall(content)))
     inspection["placeholder_names_present"] = bool(placeholder_names)
     inspection["placeholder_names"] = placeholder_names
@@ -542,26 +343,6 @@ def inspect_contract_artifact(contract_path_abs: str, *, repo_root_abs: str | No
             )
             continue
 
-        anchor_symbol = extract_symbol_from_anchor(anchor_value)
-        if anchor_symbol and not anchor_symbol_looks_present(anchor_repo_path_abs, anchor_symbol):
-            inspection["new_anchor_symbol_unverified_fields"].append(field_name)
-            inspection["new_anchor_symbol_unverified_rows"].append(
-                {
-                    "field": field_name,
-                    "anchor": normalize_symbol(anchor_value),
-                    "path": anchor_repo_path,
-                    "path_abs": str(anchor_repo_path_abs),
-                    "symbol": anchor_symbol,
-                }
-            )
-    declared_uif_refs = build_declared_reference_index(split_ref_cell(binding_context.get("UIF Path Ref(s)", "")))
-    declared_tm_ids = build_declared_reference_index(split_ref_cell(binding_context.get("TM IDs", "")))
-    declared_tc_ids = build_declared_reference_index(split_ref_cell(binding_context.get("TC IDs", "")))
-
-    behavior_paths = extract_subsection(content, "Behavior Paths", level=3) or ""
-    behavior_paths_rows = parse_markdown_table(behavior_paths)
-    test_projection_slice = extract_subsection(content, "Test Projection Slice", level=3) or ""
-    observed_reference_tokens = collect_reference_tokens(behavior_paths, test_projection_slice)
     smoke_candidate_rows = parse_markdown_table(
         extract_subsection(content, "Cross-Interface Smoke Candidate (Required)", level=3)
     )
@@ -587,31 +368,6 @@ def inspect_contract_artifact(contract_path_abs: str, *, repo_root_abs: str | No
                         "fields": missing_signal_fields,
                     }
                 )
-
-    if declared_uif_refs and (behavior_paths.strip() or test_projection_slice.strip()):
-        inspection["missing_uif_path_refs_in_behavior_or_test_projection"] = [
-            canonical_ref
-            for normalized_ref, canonical_ref in declared_uif_refs.items()
-            if normalized_ref not in observed_reference_tokens["uif_path"]
-        ]
-    if declared_tm_ids and (behavior_paths.strip() or test_projection_slice.strip()):
-        inspection["missing_tm_ids_in_behavior_or_test_projection"] = [
-            canonical_ref
-            for normalized_ref, canonical_ref in declared_tm_ids.items()
-            if normalized_ref not in observed_reference_tokens["tm_id"]
-        ]
-    if declared_tc_ids and (behavior_paths.strip() or test_projection_slice.strip()):
-        inspection["missing_tc_ids_in_behavior_or_test_projection"] = [
-            canonical_ref
-            for normalized_ref, canonical_ref in declared_tc_ids.items()
-            if normalized_ref not in observed_reference_tokens["tc_id"]
-        ]
-
-    inspection["binding_context_coverage_drift"] = bool(
-        inspection["missing_uif_path_refs_in_behavior_or_test_projection"]
-        or inspection["missing_tm_ids_in_behavior_or_test_projection"]
-        or inspection["missing_tc_ids_in_behavior_or_test_projection"]
-    )
 
     top_boundary_anchor = extract_required_anchor(content, "Boundary Anchor (Required)")
     top_entry_anchor = extract_required_anchor(content, "Implementation Entry Anchor (Required)")
@@ -646,40 +402,6 @@ def inspect_contract_artifact(contract_path_abs: str, *, repo_root_abs: str | No
         anchor_mismatch_details.append("Implementation Entry Anchor != Resolved Type Inventory implementation-entry")
     inspection["anchor_inventory_mismatch"] = bool(anchor_mismatch_details)
     inspection["anchor_inventory_mismatch_details"] = anchor_mismatch_details
-
-    sequence_participant_label_violations = extract_sequence_participant_label_violations(content)
-    inspection["sequence_participant_labels_invalid"] = bool(sequence_participant_label_violations)
-    inspection["sequence_participant_labels_invalid_details"] = [
-        f"Sequence participant label `{label}` embeds a method-level anchor"
-        for label in sequence_participant_label_violations
-    ]
-
-    sequence_anchors = collect_sequence_anchor_set(content, behavior_paths_rows)
-    inventory_anchor_by_role: dict[str, str] = {}
-    inventory_anchor_set: set[str] = set()
-    for row in resolved_type_inventory:
-        role = normalize_symbol(row.get("Role", "")).lower()
-        concrete_name = normalize_anchor_for_comparison(row.get("Concrete Name", ""))
-        if not concrete_name:
-            continue
-        inventory_anchor_set.add(concrete_name)
-        if role in TASK_SEQUENCE_UML_PARTICIPANT_ROLES:
-            inventory_anchor_by_role[role] = concrete_name
-
-    sequence_uml_mismatch_details: list[str] = []
-    if sequence_anchors:
-        for anchor in sequence_anchors:
-            if anchor not in inventory_anchor_set:
-                sequence_uml_mismatch_details.append(
-                    f"Sequence anchor `{anchor}` is missing in Resolved Type Inventory"
-                )
-        for role, anchor in sorted(inventory_anchor_by_role.items()):
-            if anchor not in sequence_anchors:
-                sequence_uml_mismatch_details.append(
-                    f"Resolved Type Inventory role `{role}` anchor `{anchor}` is missing in Sequence"
-                )
-    inspection["sequence_uml_anchor_mismatch"] = bool(sequence_uml_mismatch_details)
-    inspection["sequence_uml_anchor_mismatch_details"] = sequence_uml_mismatch_details
     return inspection
 
 
@@ -823,12 +545,6 @@ def build_unit_inventory(
                 "new_anchor_nonexistent_repo_path_rows": contract_inspection[
                     "new_anchor_nonexistent_repo_path_rows"
                 ],
-                "new_anchor_symbol_unverified_fields": contract_inspection[
-                    "new_anchor_symbol_unverified_fields"
-                ],
-                "new_anchor_symbol_unverified_rows": contract_inspection[
-                    "new_anchor_symbol_unverified_rows"
-                ],
                 "closure_check_section_present": contract_inspection["closure_check_section_present"],
                 "interface_definition_closure_check_present": contract_inspection[
                     "interface_definition_closure_check_present"
@@ -836,29 +552,12 @@ def build_unit_inventory(
                 "uml_closure_check_present": contract_inspection["uml_closure_check_present"],
                 "sequence_closure_check_present": contract_inspection["sequence_closure_check_present"],
                 "test_closure_check_present": contract_inspection["test_closure_check_present"],
-                "has_unresolved_field_gaps": contract_inspection["has_unresolved_field_gaps"],
                 "placeholder_names_present": contract_inspection["placeholder_names_present"],
                 "placeholder_names": contract_inspection["placeholder_names"],
                 "duplicate_required_sections_present": contract_inspection["duplicate_required_sections_present"],
                 "duplicate_required_sections": contract_inspection["duplicate_required_sections"],
-                "binding_context_coverage_drift": contract_inspection["binding_context_coverage_drift"],
-                "missing_uif_path_refs_in_behavior_or_test_projection": contract_inspection[
-                    "missing_uif_path_refs_in_behavior_or_test_projection"
-                ],
-                "missing_tm_ids_in_behavior_or_test_projection": contract_inspection[
-                    "missing_tm_ids_in_behavior_or_test_projection"
-                ],
-                "missing_tc_ids_in_behavior_or_test_projection": contract_inspection[
-                    "missing_tc_ids_in_behavior_or_test_projection"
-                ],
                 "anchor_inventory_mismatch": contract_inspection["anchor_inventory_mismatch"],
                 "anchor_inventory_mismatch_details": contract_inspection["anchor_inventory_mismatch_details"],
-                "sequence_uml_anchor_mismatch": contract_inspection["sequence_uml_anchor_mismatch"],
-                "sequence_uml_anchor_mismatch_details": contract_inspection["sequence_uml_anchor_mismatch_details"],
-                "sequence_participant_labels_invalid": contract_inspection["sequence_participant_labels_invalid"],
-                "sequence_participant_labels_invalid_details": contract_inspection[
-                    "sequence_participant_labels_invalid_details"
-                ],
             },
         }
         unit_inventory.append(unit)
@@ -891,13 +590,9 @@ def build_unit_inventory(
             and unit["contract"]["uml_closure_check_present"]
             and unit["contract"]["sequence_closure_check_present"]
             and unit["contract"]["test_closure_check_present"]
-            and not unit["contract"]["has_unresolved_field_gaps"]
             and not unit["contract"]["placeholder_names_present"]
             and not unit["contract"]["duplicate_required_sections_present"]
-            and not unit["contract"]["binding_context_coverage_drift"]
             and not unit["contract"]["anchor_inventory_mismatch"]
-            and not unit["contract"]["sequence_uml_anchor_mismatch"]
-            and not unit["contract"]["sequence_participant_labels_invalid"]
         ):
             ready_unit_inventory.append(unit)
 
@@ -1181,30 +876,6 @@ def build_task_execution_readiness(
             }
         )
 
-    binding_context_coverage_drift_rows = sorted(
-        [
-            {
-                "binding_row_id": unit["binding_row_id"],
-                "missing_uif_path_refs": unit["contract"]["missing_uif_path_refs_in_behavior_or_test_projection"],
-                "missing_tm_ids": unit["contract"]["missing_tm_ids_in_behavior_or_test_projection"],
-                "missing_tc_ids": unit["contract"]["missing_tc_ids_in_behavior_or_test_projection"],
-            }
-            for unit in unit_inventory
-            if unit["contract"]["status"] == "done"
-            and unit["contract"]["exists"]
-            and unit["contract"]["binding_context_coverage_drift"]
-        ],
-        key=lambda item: item["binding_row_id"],
-    )
-    if binding_context_coverage_drift_rows:
-        errors.append(
-            {
-                "code": "contract_binding_context_coverage_drift",
-                "message": "Some done contract rows do not fully close Binding Context UIF/TM/TC refs in behavior paths or test projection.",
-                "details": {"rows": binding_context_coverage_drift_rows},
-            }
-        )
-
     anchor_inventory_mismatch_rows = sorted(
         [
             {
@@ -1224,50 +895,6 @@ def build_task_execution_readiness(
                 "code": "contract_anchor_inventory_mismatch",
                 "message": "Some done contract rows mismatch top-level anchors vs Resolved Type Inventory anchors.",
                 "details": {"rows": anchor_inventory_mismatch_rows},
-            }
-        )
-
-    sequence_uml_anchor_mismatch_rows = sorted(
-        [
-            {
-                "binding_row_id": unit["binding_row_id"],
-                "details": unit["contract"]["sequence_uml_anchor_mismatch_details"],
-            }
-            for unit in unit_inventory
-            if unit["contract"]["status"] == "done"
-            and unit["contract"]["exists"]
-            and unit["contract"]["sequence_uml_anchor_mismatch"]
-        ],
-        key=lambda item: item["binding_row_id"],
-    )
-    if sequence_uml_anchor_mismatch_rows:
-        errors.append(
-            {
-                "code": "contract_sequence_uml_anchor_mismatch",
-                "message": "Some done contract rows mismatch Sequence anchors vs Resolved Type Inventory participant anchors.",
-                "details": {"rows": sequence_uml_anchor_mismatch_rows},
-            }
-        )
-
-    sequence_participant_labels_invalid_rows = sorted(
-        [
-            {
-                "binding_row_id": unit["binding_row_id"],
-                "details": unit["contract"]["sequence_participant_labels_invalid_details"],
-            }
-            for unit in unit_inventory
-            if unit["contract"]["status"] == "done"
-            and unit["contract"]["exists"]
-            and unit["contract"]["sequence_participant_labels_invalid"]
-        ],
-        key=lambda item: item["binding_row_id"],
-    )
-    if sequence_participant_labels_invalid_rows:
-        errors.append(
-            {
-                "code": "contract_sequence_participant_labels_invalid",
-                "message": "Some done contract rows embed method-level anchors in Sequence participant labels.",
-                "details": {"rows": sequence_participant_labels_invalid_rows},
             }
         )
 
@@ -1338,28 +965,6 @@ def build_task_execution_readiness(
                 "code": "new_anchor_repo_path_overclaim",
                 "message": "Some done contract rows mark anchors as `new` but overclaim non-existent repo file anchors; prefer design-target naming or TODO(REPO_ANCHOR) until landing is closed.",
                 "details": {"rows": new_anchor_repo_path_overclaim_rows},
-            }
-        )
-
-    new_anchor_symbol_unverified_rows = sorted(
-        [
-            {
-                "binding_row_id": unit["binding_row_id"],
-                "rows": unit["contract"]["new_anchor_symbol_unverified_rows"],
-            }
-            for unit in unit_inventory
-            if unit["contract"]["status"] == "done"
-            and unit["contract"]["exists"]
-            and unit["contract"]["new_anchor_symbol_unverified_fields"]
-        ],
-        key=lambda item: item["binding_row_id"],
-    )
-    if new_anchor_symbol_unverified_rows:
-        warnings.append(
-            {
-                "code": "new_anchor_symbol_unverified",
-                "message": "Some done contract rows use `new` repo anchors whose `::Symbol` is not clearly observable in the target file; verify landing or prefer design-target naming / TODO(REPO_ANCHOR).",
-                "details": {"rows": new_anchor_symbol_unverified_rows},
             }
         )
 
@@ -1644,24 +1249,6 @@ def build_task_execution_readiness(
             }
         )
 
-    unresolved_field_gap_rows = sorted(
-        [
-            unit["binding_row_id"]
-            for unit in unit_inventory
-            if unit["contract"]["status"] == "done"
-            and unit["contract"]["exists"]
-            and unit["contract"]["has_unresolved_field_gaps"]
-        ]
-    )
-    if unresolved_field_gap_rows:
-        warnings.append(
-            {
-                "code": "contract_field_gap_unresolved",
-                "message": "Some done contract rows still carry unresolved field-level gaps.",
-                "details": {"binding_row_ids": unresolved_field_gap_rows},
-            }
-        )
-
     known_binding_ids = {row["binding_row_id"] for row in binding_projection_index if row.get("binding_row_id")}
     orphan_contract_rows = sorted(
         [
@@ -1676,22 +1263,6 @@ def build_task_execution_readiness(
                 "code": "orphan_contract_artifact_rows",
                 "message": "Some contract rows do not map to Binding Projection Index rows.",
                 "details": {"binding_row_ids": orphan_contract_rows},
-            }
-        )
-
-    not_ready_binding_rows = sorted(
-        [
-            unit["binding_row_id"]
-            for unit in unit_inventory
-            if unit["binding_row_id"] not in {ready_unit["binding_row_id"] for ready_unit in ready_unit_inventory}
-        ]
-    )
-    if unit_inventory and not_ready_binding_rows:
-        errors.append(
-            {
-                "code": "contract_units_not_execution_ready",
-                "message": "One or more binding units are not execution-ready for /sdd.tasks.",
-                "details": {"binding_row_ids": not_ready_binding_rows},
             }
         )
 
