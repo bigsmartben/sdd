@@ -783,7 +783,7 @@ while IFS= read -r raw_rule_line || [[ -n "$raw_rule_line" ]]; do
 
         northbound_controller_required)
             trigger_rel="$(get_param "$params" "trigger_file")"
-            [[ -z "$trigger_rel" ]] && trigger_rel="research.md"
+            [[ -z "$trigger_rel" ]] && trigger_rel=".specify/memory/repository-first/module-invocation-spec.md"
             trigger_regex="$(get_param "$params" "trigger_regex")"
             boundary_http_regex="$(get_param "$params" "boundary_http_regex")"
             boundary_forbidden_regex="$(get_param "$params" "boundary_forbidden_regex")"

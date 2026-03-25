@@ -44,7 +44,7 @@ def test_constitution_command_groups_alignment_work_and_avoids_redundant_restate
     assert "**Impact Mapping**" in content
     assert "Identify if the change is `governance-only`, `template-affecting`, or `repo-first-affecting`" in content
     assert "**Downstream Alignment**: Update impacted alignment families only (skip if governance-only)." in content
-    assert "Refresh `.specify/memory/repository-first/*.md` only when the impact mapping identifies a `repo-first-affecting` change." in content
+    assert "MUST write exactly three files in every run:" in content
     assert "**MUST NOT** modify `plan.md`, `tasks.md`, or any spec artifact." in content
 
 
@@ -64,10 +64,12 @@ def test_constitution_command_uses_active_agent_command_directory_guidance():
 def test_constitution_command_uses_current_constitution_state_not_placeholder_premise():
     content = read("templates/commands/constitution.md")
 
-    assert "Update or initialize the project constitution at `.specify/memory/constitution.md`." in content
+    assert "Update or initialize the project constitution and repository-first baselines under `.specify/memory/`." in content
     assert ".specify/templates/constitution-template.md" in content
     assert "Stop immediately if:" in content
-    assert "Write to `.specify/memory/constitution.md` only." in content
+    assert ".specify/memory/constitution.md" in content
+    assert ".specify/memory/repository-first/technical-dependency-matrix.md" in content
+    assert ".specify/memory/repository-first/module-invocation-spec.md" in content
     assert "This file is a TEMPLATE containing placeholder tokens" not in content
 
 
@@ -98,7 +100,7 @@ def test_constitution_command_defines_runtime_fast_path_and_bounded_reads():
     assert "`template-affecting`" in content
     assert "`repo-first-affecting`" in content
     assert "Baseline Refresh" in content
-    assert "Reproject repo-first artifacts only when manifests change or `repo-first-affecting`." in content
+    assert "Reproject both repo-first artifacts from template authority in every run." in content
 
 
 def test_constitution_command_enforces_repo_anchor_priority_and_ownership_split():

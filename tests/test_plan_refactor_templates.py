@@ -104,10 +104,17 @@ def test_contract_command_uses_test_matrix_as_default_semantic_source():
     assert "If repo-backed verification finds a binding-projection error or shared-semantic gap" in content
     assert "Use the repo-anchor decision protocol in `.specify/templates/contract-template.md` as the authority for this stage." in content
     assert "Keep repo-backed verification bounded to the selected `BindingRowID` and active blockers" in content
-    assert "- required collaborators and middleware" in content
+    assert "- `.specify/memory/repository-first/module-invocation-spec.md` (first-party module invocation authority)" in content
+    assert "Use `.specify/memory/repository-first/module-invocation-spec.md` to lock first-party module invocation directions before landing sequence/UML anchors." in content
+    assert "- required first-party method-level call anchors from module-invocation rules" in content
+    assert "- required second-party and third-party call anchors" in content
     assert "- required owner/source symbols" in content
-    assert "Sequence design MUST explicitly render every mandatory repo-backed collaborator hop" in content
+    assert "- middleware anchors only when bounded repo evidence closes them" in content
+    assert "Sequence design MUST keep first-party execution hops at method-level call anchors." in content
+    assert "Sequence design MUST explicitly render mandatory second-party and third-party call anchors on the main path." in content
+    assert "Sequence design MUST include middleware traversal only when a concrete middleware call anchor exists in bounded repo evidence." in content
     assert "Sequence design MUST NOT collapse multiple mandatory collaborators/dependencies into one synthetic participant label" in content
+    assert "UML class design MUST map first-party sequence participants to concrete method-level anchors." in content
     assert "`opt` blocks are valid only for truly conditional branches" in content
     assert "UML request/response class labels should use anchored symbols or repository boundary naming conventions; do not synthesize placeholder DTO labels." in content
     assert "MAY refine operation-scoped VO/DTO/field mappings" in content
@@ -130,6 +137,7 @@ def test_contract_command_uses_test_matrix_as_default_semantic_source():
     assert "do not rewrite upstream planning artifacts from this command" in content
     assert "## Artifact Quality Contract" in content
     assert "## Reasoning Order" in content
+    assert "**Layered Repo Closure**: Use `module-invocation-spec.md` and repo anchors to land method-level Sequence/UML" in content
     assert "## Writeback Contract" in content
     assert "## Output Contract" in content
     assert "Must: close one `BindingRowID` with concrete names, anchors, field semantics, realization, and test projection." in content
@@ -236,8 +244,8 @@ def test_contract_template_contains_unified_realization_requirements():
     assert "### Cross-Interface Smoke Candidate (Required)" in content
     assert "### Resolved Type Inventory" in content
     assert "Angle-bracket labels in the examples below are template scaffolding only and MUST be replaced before the artifact can be `done`." in content
-    assert "| Sequence closure | success/failure paths include mandatory second-party, third-party, and middleware calls | [Behavior Paths rows, Sequence Sx refs] | [ok / gap] |" in content
-    assert "| UML closure | class diagram and two-party package relations both present and consistent with sequence | [Class Diagram refs, Two-Party Package Relations rows] | [ok / gap] |" in content
+    assert "| Sequence closure | success/failure paths are contiguous, include mandatory second-party and third-party call anchors, and include middleware only when anchored | [Behavior Paths rows, Sequence Sx refs, repo anchor evidence] | [ok / gap] |" in content
+    assert "| UML closure | class diagram and two-party package relations are present, and sequence participants/method anchors are mapped consistently | [Class Diagram refs, Two-Party Package Relations rows, Resolved Type Inventory rows] | [ok / gap] |" in content
     assert "`new` \\| `todo`" in content
     assert "ConcreteBoundary.method" in content
     assert "ConcreteEntry.method" in content
@@ -246,20 +254,49 @@ def test_contract_template_contains_unified_realization_requirements():
     assert "prefer repository-style names such as `*Controller.method`, `*Service.method`, or `*ServiceImpl.method`" in content
     assert "#### Sequence Variant A (Boundary != Entry)" in content
     assert "#### Sequence Variant B (Boundary == Entry)" in content
+    assert "##### A1. With Anchored Middleware (Optional)" in content
+    assert "##### A2. Without Middleware Anchor" in content
+    assert "##### B1. With Anchored Middleware (Optional)" in content
+    assert "##### B2. Without Middleware Anchor" in content
     assert "#### UML Variant A (Boundary != Entry)" in content
     assert "#### UML Variant B (Boundary == Entry)" in content
+    assert "UML MUST keep first-party executable participants at method-level anchors." in content
+    assert "If middleware is present as a concrete first-party call anchor in Sequence, include the same middleware type and call edge in UML." in content
     assert "Sequence MUST NOT merge multiple mandatory collaborators/dependencies into one synthetic participant label." in content
     assert "Sequence MUST NOT merge multiple mandatory collaborators/dependencies into one synthetic participant label" in content
+    assert "Middleware traversal MUST appear only when a concrete middleware call anchor exists in bounded repo evidence; do not insert middleware as a default participant." in content
     assert "render both layers explicitly instead of replacing the design anchor with the nearest existing class." in content
     assert "owner, creator, reader, and writer closure" in content
     assert "the first hop MUST remain the new anchor and the reused repo-backed chain MUST appear as a subsequent explicit handoff." in content
-    assert "- If repo evidence is insufficient for `existing` or `extended`, this stage may design concrete `new` operation-scoped boundary/entry/DTO/collaborator/middleware surfaces when they remain bounded to this binding." in content
+    assert "- If repo evidence is insufficient for `existing` or `extended`, this stage may design concrete `new` operation-scoped boundary/entry/DTO/collaborator/dependency surfaces when they remain bounded to this binding; include middleware only when a concrete middleware anchor is available." in content
     assert "- `new` anchors are planning-final for this binding and MUST stay concrete, uniquely named, and consistent across Interface Definition, UML, Sequence, and Test Projection." in content
     assert "- If `new` anchors reuse `existing` repo-backed implementation, keep the design anchor and reused realization chain distinct instead of collapsing both into one symbol." in content
     assert "- Any `new` operation-scoped holder/state class must close owner, creator, reader, and writer responsibilities before the binding can be treated as design-final." in content
-    assert "- repo anchors: [boundary / entry / request-response model / collaborator / middleware / dependency symbols]" in content
+    assert "- repo anchors: [boundary / entry / request-response model / collaborator / dependency symbols / middleware (when anchored)]" in content
+    assert "- Sequence and UML MUST stay aligned at method-level anchors for first-party participants." in content
     assert "- `contract` is responsible for first-time production of `Boundary Anchor`, `Implementation Entry Anchor`, request/response surface, UML closure, sequence closure, and test projection for this binding." in content
 
+
+def test_contract_sequence_variant_without_middleware_keeps_method_level_chain():
+    content = read("templates/contract-template.md")
+
+    a2_block = content.split("##### A2. Without Middleware Anchor", 1)[1].split("#### Sequence Variant B", 1)[0]
+    assert "participant Middleware" not in a2_block
+    assert "Boundary->>Entry: method-level handoff to implementation entry" in a2_block
+    assert "Entry->>SecondParty: required second-party call anchor" in a2_block
+    assert "SecondParty->>ThirdParty: required third-party call anchor" in a2_block
+
+
+def test_contract_sequence_variant_with_middleware_requires_explicit_anchor():
+    content = read("templates/contract-template.md")
+
+    a1_block = content.split("##### A1. With Anchored Middleware (Optional)", 1)[1].split(
+        "##### A2. Without Middleware Anchor",
+        1,
+    )[0]
+    assert "participant Middleware as \"<AnchoredMiddlewareSymbol>\"" in a1_block
+    assert "Boundary->>Middleware: ingress / middleware traversal" in a1_block
+    assert "Middleware->>Entry: handoff to implementation entry" in a1_block
 
 def test_data_model_template_requires_new_anchor_evidence_and_owner_closure():
     content = read("templates/data-model-template.md")
@@ -320,6 +357,7 @@ def test_tasks_command_uses_contract_as_realization_source():
     assert "Treat `TASKS_BOOTSTRAP.execution_readiness` as the primary hard gate." in content
     assert "stop immediately and report the runtime bootstrap blocker" in content
     assert "Keep contract projection authoritative for the current run." in content
+    assert "Keep contract method-level `Sequence` / `UML` anchor closure authoritative for execution decomposition" in content
     assert "On projection drift, emit upstream writeback actions only:" in content
     assert "/sdd.specify" in content
     assert "/sdd.plan.test-matrix" in content
@@ -357,6 +395,7 @@ def test_analyze_routes_contract_projection_drift():
     assert "Projection drift routing:" in content
     assert "upstream binding-projection drift across `plan.md` / `test-matrix.md`" in content
     assert "unresolved placeholder class/type labels in contract artifacts" in content
+    assert "Sequence` / `UML` participant and anchor consistency in contract artifacts" in content
     assert "CRITICAL/HIGH findings MUST cite the authoritative source artifact(s) with concise supporting facts." in content
     assert "interface-detail" not in content
     assert "contract/interface DTO drift" not in content
@@ -455,6 +494,7 @@ def test_lint_rules_for_unified_contract_runtime_rows():
     assert "PLN-DM-009" in content
     assert "PLN-RA-013" in content
     assert "PLN-RA-014" in content
+    assert "trigger_file=.specify/memory/repository-first/module-invocation-spec.md" in content
     assert "\tcontracts\tcontracts/*\t" in content
     assert "Interface details are missing" not in content
 

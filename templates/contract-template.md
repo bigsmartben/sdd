@@ -133,7 +133,8 @@ Mandatory rules:
 
 - UML MUST cover `Boundary Anchor`, `Implementation Entry Anchor`, request/response models, key entity/value object ownership, and required collaborators.
 - UML MUST include explicit two-party package relations; class-only diagrams are insufficient.
-- Every sequence participant that is a first-party executable class/interface MUST appear in UML with at least one mapped method.
+- UML MUST keep first-party executable participants at method-level anchors.
+- Every first-party sequence participant MUST appear in UML with at least one mapped method anchor.
 - For contract-visible request/response and behavior-significant fields, each field MUST have explicit UML ownership.
 - Any newly introduced field/method/call not already in anchored sources MUST be explicitly marked as `new`.
 - If `Boundary Anchor` / `Implementation Entry Anchor` are `new` but reuse an `existing` realization chain downstream, render both layers explicitly instead of replacing the design anchor with the nearest existing class.
@@ -143,7 +144,7 @@ Mandatory rules:
 
 | Role | Concrete Name | Resolution | Source / Evidence | Notes |
 |------|---------------|------------|-------------------|-------|
-| [`boundary-entry` / `implementation-entry` / `request-dto` / `response-dto` / `entity` / `value-object` / `service` / `collaborator` / `middleware` / `external-dependency`] | [`path/to/file.ext::Symbol` or concrete new name] | [`existing` / `extended` / `new`] | [spec ref / data-model ref / repo anchor / contract-local rationale] | [why this concrete name is final for this contract run] |
+| [`boundary-entry` / `implementation-entry` / `request-dto` / `response-dto` / `entity` / `value-object` / `service` / `collaborator` / `middleware` (when anchored) / `external-dependency`] | [`path/to/file.ext::Symbol` or concrete new name] | [`existing` / `extended` / `new`] | [spec ref / data-model ref / repo anchor / contract-local rationale] | [why this concrete name is final for this contract run] |
 
 Use `Notes` to make layering explicit whenever `new` and `existing` types coexist in the same design:
 
@@ -152,6 +153,8 @@ Use `Notes` to make layering explicit whenever `new` and `existing` types coexis
 - mark any operation-scoped holder such as a new set/state/value object with owner + creator + reader + writer closure
 
 ### Class Diagram
+
+If middleware is present as a concrete first-party call anchor in Sequence, include the same middleware type and call edge in UML.
 
 #### UML Variant A (Boundary != Entry)
 
@@ -199,15 +202,16 @@ Minimum closure requirements:
 
 ## Sequence Design
 
-This section MUST describe the executable call chain, including second-party, third-party, and middleware calls.
+This section MUST describe the executable method-level call chain, including mandatory second-party and third-party calls, and middleware only when anchored.
 
 Mandatory rules:
 
-- Sequence MUST start from consumer/client entry and reach `Implementation Entry Anchor` within the first two request hops.
+- Sequence MUST start from consumer/client entry and keep first-party hops at method-level anchors.
+- When `Boundary Anchor != Implementation Entry Anchor`, the first-party handoff from boundary to entry MUST be explicit and contiguous.
 - Sequence MUST be end-to-end contiguous: no broken hops, no orphan participants, and no disconnected request/response segments.
-- Sequence MUST explicitly represent every mandatory second-party call on the main path.
-- Sequence MUST explicitly represent every mandatory third-party call on the main path.
-- Sequence MUST explicitly represent middleware traversal or middleware invocation points; do not collapse middleware into a silent internal step.
+- Sequence MUST explicitly represent every mandatory second-party call anchor on the main path.
+- Sequence MUST explicitly represent every mandatory third-party call anchor on the main path.
+- Middleware traversal MUST appear only when a concrete middleware call anchor exists in bounded repo evidence; do not insert middleware as a default participant.
 - Sequence MUST NOT merge multiple mandatory collaborators/dependencies into one synthetic participant label.
 - When `new` boundary/entry anchors hand off to an `existing` realization chain, the first hop MUST remain the new anchor and the reused repo-backed chain MUST appear as a subsequent explicit handoff.
 - Do not substitute the nearest `existing` controller/service for a `new` boundary when the new northbound interaction semantics are not identical.
@@ -224,6 +228,8 @@ Mandatory rules:
 ### Sequence Diagram
 
 #### Sequence Variant A (Boundary != Entry)
+
+##### A1. With Anchored Middleware (Optional)
 
 ```mermaid
 sequenceDiagram
@@ -250,7 +256,34 @@ sequenceDiagram
     end
 ```
 
+##### A2. Without Middleware Anchor
+
+```mermaid
+sequenceDiagram
+    participant Initiator as "<ClientOrCaller>"
+    participant Boundary as "ConcreteBoundary.method"
+    participant Entry as "ConcreteEntry.method"
+    participant SecondParty as "<AnchoredSecondPartyCollaborator>"
+    participant ThirdParty as "<AnchoredThirdPartyDependency>"
+
+    Initiator->>Boundary: [operation request] (S1)
+    Boundary->>Entry: method-level handoff to implementation entry (S2)
+    Entry->>SecondParty: required second-party call anchor (S3)
+    SecondParty->>ThirdParty: required third-party call anchor (S4)
+    ThirdParty-->>SecondParty: third-party result / ack (S5)
+    SecondParty-->>Entry: second-party result / ack (S6)
+    alt failure
+        Entry-->>Boundary: mapped error/result handoff (S7)
+        Boundary-->>Initiator: contract error response (S8)
+    else success
+        Entry-->>Boundary: contract response handoff (S9)
+        Boundary-->>Initiator: success response (S10)
+    end
+```
+
 #### Sequence Variant B (Boundary == Entry)
+
+##### B1. With Anchored Middleware (Optional)
 
 ```mermaid
 sequenceDiagram
@@ -271,6 +304,27 @@ sequenceDiagram
         Boundary-->>Initiator: contract error response (S8)
     else success
         Boundary-->>Initiator: success response (S9)
+    end
+```
+
+##### B2. Without Middleware Anchor
+
+```mermaid
+sequenceDiagram
+    participant Initiator as "<ClientOrCaller>"
+    participant Boundary as "ConcreteBoundary.method"
+    participant SecondParty as "<AnchoredSecondPartyCollaborator>"
+    participant ThirdParty as "<AnchoredThirdPartyDependency>"
+
+    Initiator->>Boundary: [operation request] (S1)
+    Boundary->>SecondParty: required second-party call anchor (S2)
+    SecondParty->>ThirdParty: required third-party call anchor (S3)
+    ThirdParty-->>SecondParty: third-party result / ack (S4)
+    SecondParty-->>Boundary: second-party result / ack (S5)
+    alt failure
+        Boundary-->>Initiator: contract error response (S6)
+    else success
+        Boundary-->>Initiator: success response (S7)
     end
 ```
 
@@ -301,8 +355,8 @@ Keep this section short and explicit.
 | Check Item | Required Evidence | Evidence Pointer(s) | Status |
 |------------|-------------------|---------------------|--------|
 | Interface-definition closure | request/response surface + full field dictionary + shared semantic reuse are all present | [Contract Summary rows, Field Dictionary rows, Shared Semantic Reuse rows] | [ok / gap] |
-| UML closure | class diagram and two-party package relations both present and consistent with sequence | [Class Diagram refs, Two-Party Package Relations rows] | [ok / gap] |
-| Sequence closure | success/failure paths include mandatory second-party, third-party, and middleware calls | [Behavior Paths rows, Sequence Sx refs] | [ok / gap] |
+| UML closure | class diagram and two-party package relations are present, and sequence participants/method anchors are mapped consistently | [Class Diagram refs, Two-Party Package Relations rows, Resolved Type Inventory rows] | [ok / gap] |
+| Sequence closure | success/failure paths are contiguous, include mandatory second-party and third-party call anchors, and include middleware only when anchored | [Behavior Paths rows, Sequence Sx refs, repo anchor evidence] | [ok / gap] |
 | Test closure | `TM/TC`, pass/failure anchors, and command/assertion signal are present | [Test Projection Slice row, Smoke Candidate row, TM/TC refs] | [ok / gap] |
 
 ## Upstream References
@@ -310,18 +364,19 @@ Keep this section short and explicit.
 - `spec.md`: [canonical source for UC / FR / UIF / UDD / scenario refs]
 - `test-matrix.md`: [TM / TC / scenario / success / edge refs captured above]
 - `data-model.md`: [shared semantic elements, owner/source alignment, field vocabulary, lifecycle/invariant, downstream contract constraints]
-- repo anchors: [boundary / entry / request-response model / collaborator / middleware / dependency symbols]
+- repo anchors: [boundary / entry / request-response model / collaborator / dependency symbols / middleware (when anchored)]
 
 ## Boundary Notes
 
 - Keep field completeness in `Full Field Dictionary (Operation-scoped)`.
 - Keep shared owner/source/lifecycle/invariant definitions upstream in `data-model.md`; reuse them here instead of re-declaring them.
 - `contract` is responsible for first-time production of `Boundary Anchor`, `Implementation Entry Anchor`, request/response surface, UML closure, sequence closure, and test projection for this binding.
-- If repo evidence is insufficient for `existing` or `extended`, this stage may design concrete `new` operation-scoped boundary/entry/DTO/collaborator/middleware surfaces when they remain bounded to this binding.
+- If repo evidence is insufficient for `existing` or `extended`, this stage may design concrete `new` operation-scoped boundary/entry/DTO/collaborator/dependency surfaces when they remain bounded to this binding; include middleware only when a concrete middleware anchor is available.
 - `new` anchors are planning-final for this binding and MUST stay concrete, uniquely named, and consistent across Interface Definition, UML, Sequence, and Test Projection.
 - If `new` anchors reuse `existing` repo-backed implementation, keep the design anchor and reused realization chain distinct instead of collapsing both into one symbol.
 - Any `new` operation-scoped holder/state class must close owner, creator, reader, and writer responsibilities before the binding can be treated as design-final.
 - the first hop MUST remain the new anchor and the reused repo-backed chain MUST appear as a subsequent explicit handoff.
+- Sequence and UML MUST stay aligned at method-level anchors for first-party participants.
 - owner, creator, reader, and writer closure MUST be explicit for any new holder/state class.
 - render both layers explicitly instead of replacing the design anchor with the nearest existing class.
 - If a gap is truly shared-semantic, route upstream to `/sdd.plan.data-model`.

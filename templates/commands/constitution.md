@@ -1,5 +1,5 @@
 ---
-description: Update the project constitution at .specify/memory/constitution.md.
+description: Update the project constitution and repository-first baselines under .specify/memory/.
 handoffs: 
   - label: Build Specification
     agent: sdd.specify
@@ -16,7 +16,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Goal
 
-Update or initialize the project constitution at `.specify/memory/constitution.md`.
+Update or initialize the project constitution and repository-first baselines under `.specify/memory/`.
 Use `.specify/templates/constitution-template.md` only.
 
 `/sdd.constitution` owns:
@@ -46,7 +46,7 @@ Use `.specify/templates/constitution-template.md` only.
 1. **Impact Mapping**: Identify if the change is `governance-only`, `template-affecting`, or `repo-first-affecting`.
 2. **Constitution Update**: Amend `constitution.md` with semantic versioning (MAJOR/MINOR/PATCH).
 3. **Downstream Alignment**: Update impacted alignment families only (skip if governance-only).
-4. **Baseline Refresh**: Reproject repo-first artifacts only when manifests change or `repo-first-affecting`.
+4. **Baseline Refresh**: Reproject both repo-first artifacts from template authority in every run.
 
 ## Artifact Quality Contract
 
@@ -70,15 +70,17 @@ Use `.specify/templates/constitution-template.md` only.
 
 ## Writeback Contract
 
-- Write to `.specify/memory/constitution.md` only.
-- Refresh `.specify/memory/repository-first/*.md` only when the impact mapping identifies a `repo-first-affecting` change.
+- MUST write exactly three files in every run:
+  - `.specify/memory/constitution.md`
+  - `.specify/memory/repository-first/technical-dependency-matrix.md`
+  - `.specify/memory/repository-first/module-invocation-spec.md`
 - **MUST NOT** modify `plan.md`, `tasks.md`, or any spec artifact.
 
 ## Stop Conditions
 
 Stop immediately if:
 1. `.specify/templates/constitution-template.md` is missing or unreadable.
-2. Repository manifests cannot be located and the change is `repo-first-affecting`.
+2. Repository manifests cannot be located.
 
 ## Handoff Decision
 

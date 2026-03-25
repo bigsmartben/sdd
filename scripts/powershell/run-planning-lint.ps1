@@ -1039,7 +1039,7 @@ foreach ($row in $rows) {
         'northbound_controller_required' {
             $triggerRel = $params['trigger_file']
             if ([string]::IsNullOrWhiteSpace($triggerRel)) {
-                $triggerRel = 'research.md'
+                $triggerRel = '.specify/memory/repository-first/module-invocation-spec.md'
             }
 
             $triggerRegex = $params['trigger_regex']

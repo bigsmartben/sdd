@@ -71,6 +71,7 @@ def test_manifest_schema_contract_between_tasks_and_implement():
     assert "parse `FEATURE_DIR`, `AVAILABLE_DOCS`, `LOCAL_EXECUTION_PROTOCOL`, `IMPLEMENT_BOOTSTRAP`, and `TASKS_MANIFEST_BOOTSTRAP`" in implement_command
     assert "Execute approved task packages from `tasks.md`." in implement_command
     assert "Active execution targets rely on `new` repo anchors without explicit rejection evidence." in implement_command
+    assert "Treat contract method-level `Sequence` / `UML` anchors as fixed design input for this run" in implement_command
     assert "LOCAL_EXECUTION_PROTOCOL" in implement_command
     assert "no bypass of repo-anchor strategy priority (`existing -> extended -> new`)" in implement_command
     assert "Unified Repository-First Gate Protocol (`URFGP`)" in implement_command
